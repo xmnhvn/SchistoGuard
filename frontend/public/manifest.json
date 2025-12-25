@@ -1,0 +1,21 @@
+{
+  "name": "SchistoGuard",
+  "short_name": "SchistoGuard",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
+  "description": "A PWA-enabled dashboard for SchistoGuard.",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
