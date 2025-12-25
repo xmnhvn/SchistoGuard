@@ -25,7 +25,7 @@ import {
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import logoImage from "../assets/SG.png";
+import logoImage from "../../assets/SG.png";
 
 interface NavigationProps {
   currentView?: string;

@@ -1,0 +1,22 @@
+{
+  "name": "schistoguard-backend",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

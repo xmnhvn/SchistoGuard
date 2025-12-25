@@ -89,7 +89,7 @@ export function ResponsiveDashboard() {
   const mockSensorData = {
     siteName: "Barangay San Miguel River",
     barangay: "San Miguel",
-    readings: { turbidity: 3.2, temperature: 26.5, ph: 7.1, uv: 2.1 },
+    readings: { turbidity: 3.2, temperature: 26.5, ph: 7.1 },
     riskLevel: "safe" as const,
     timestamp: "2025-09-20 14:30",
     trend: "stable" as const
@@ -172,7 +172,7 @@ export function ResponsiveDashboard() {
                 siteName="Barangay Malinao Canal"
                 barangay="Malinao"
                 riskLevel="warning"
-                readings={{ turbidity: 12.8, temperature: 28.2, ph: 6.8, uv: 4.2 }}
+                readings={{ turbidity: 12.8, temperature: 28.2, ph: 6.8 }}
                 trend="up"
               />
             </TabsContent>
@@ -209,7 +209,7 @@ export function ResponsiveDashboard() {
               siteName="Barangay Malinao Canal"
               barangay="Malinao"
               riskLevel="warning"
-              readings={{ turbidity: 12.8, temperature: 28.2, ph: 6.8, uv: 4.2 }}
+              readings={{ turbidity: 12.8, temperature: 28.2, ph: 6.8 }}
               trend="up"
             />
           </div>
