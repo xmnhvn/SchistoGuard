@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Shield, Mail, Lock, User, Phone, MapPin } from "lucide-react";
 import { useState } from "react";
-import logoImage from "../assets/SG.png";
 
 interface LoginFormProps {
   onLogin?: (credentials: { email: string; password: string; role: string }) => void;
@@ -54,7 +53,7 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <img src={logoImage} alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
+            <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
             <h1 className="text-2xl" style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
               SchistoGuard
             </h1>
@@ -66,7 +65,7 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label htmlFor="email">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -175,7 +174,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <img src={logoImage} alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
+            <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
             <h1 className="text-2xl" style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
               SchistoGuard
             </h1>

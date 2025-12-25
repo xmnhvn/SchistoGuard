@@ -25,7 +25,6 @@ import {
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import logoImage from "../../assets/SG.png";
 
 interface NavigationProps {
   currentView?: string;
@@ -87,7 +86,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
     <Sidebar>
       <SidebarHeader className="border-b bg-white">
         <div className="flex items-center gap-3 px-4 py-3">
-          <img src={logoImage} alt="SchistoGuard Logo" className="w-10 h-10 object-contain" />
+          <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-10 h-10 object-contain" />
           <h1 className="text-xl" style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
             SchistoGuard
           </h1>

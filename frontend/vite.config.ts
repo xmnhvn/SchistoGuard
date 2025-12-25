@@ -37,6 +37,13 @@ export default defineConfig({
       filename: 'sw.js',
     }),
   ],
+  optimizeDeps: {
+    exclude: [
+      "chunk-Q5ZT5IC4",
+      "chunk-JDRGZOYC",
+      "chunk-JEAVCTLQ"
+    ]
+  },
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {

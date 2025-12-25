@@ -12,7 +12,7 @@ import {
   AlertsQuickviewModal,
   SensorIcon,
 } from "./LandingComponents";
-import logoImage from "../assets/SG.png";
+
 interface LandingPageProps {
   onViewMap?: () => void;
   onLearnMore?: () => void;
@@ -59,7 +59,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <img
-                src={logoImage}
+                src="/schistoguard.png"
                 alt="SchistoGuard Logo"
                 className="w-10 h-10 object-contain"
               />
@@ -223,7 +223,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-2">
               <img
-                src={logoImage}
+                src="/schistoguard.png"
                 alt="SchistoGuard Logo"
                 className="w-5 h-5 object-contain"
               />
