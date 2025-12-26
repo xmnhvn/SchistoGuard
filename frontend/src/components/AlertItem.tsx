@@ -59,18 +59,39 @@ export function AlertItem({
           <div className="flex items-start gap-3 flex-1">
             {getAlertIcon(level, isAcknowledged)}
             <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <Badge 
-                  variant={level === "critical" ? "destructive" : "secondary"}
-                  className={level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
-                >
-                  {level.charAt(0).toUpperCase() + level.slice(1)}
-                </Badge>
-                {isAcknowledged && (
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    Acknowledged
+              <div className="flex items-center justify-between min-h-6 w-full">
+                <div className="flex items-center gap-2">
+                  <Badge 
+                    variant={level === "critical" ? "destructive" : "secondary"}
+                    className={level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
+                  >
+                    {level.charAt(0).toUpperCase() + level.slice(1)}
                   </Badge>
-                )}
+                  {isAcknowledged && (
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      Acknowledged
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-row gap-2 items-center">
+                  {!isAcknowledged && (
+                    <Button
+                      size="sm"
+                      onClick={handleAcknowledge}
+                      className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 py-0.5 px-2 text-xs h-6 min-h-0"
+                    >
+                      Acknowledge
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExpand}
+                    className="py-0.5 px-2 text-xs h-6 min-h-0"
+                  >
+                    {isExpanded ? "Less" : "Details"}
+                  </Button>
+                </div>
               </div>
               <p className="font-medium">{message}</p>
               <div className="text-sm text-muted-foreground space-y-1">
@@ -94,24 +115,7 @@ export function AlertItem({
             </div>
           </div>
           
-          <div className="flex flex-col gap-2">
-            {!isAcknowledged && (
-              <Button
-                size="sm"
-                onClick={handleAcknowledge}
-                className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-              >
-                Acknowledge
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExpand}
-            >
-              {isExpanded ? "Less" : "Details"}
-            </Button>
-          </div>
+          {/* Buttons moved up to align with badge */}
         </div>
       </CardContent>
     </Card>

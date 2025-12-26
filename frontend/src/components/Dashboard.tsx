@@ -217,7 +217,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
           </Card>
         </div>
         {/* Right column: Alerts Stream */}
-        <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide" style={{ maxWidth: 380, height: 480 }}>
+        <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide h-full" style={{ maxWidth: 380, height: '100%' }}>
           <Card className="flex flex-col h-full">
             <CardHeader className="pb-1">
               <CardTitle className="flex items-center justify-between text-sm font-bold">
