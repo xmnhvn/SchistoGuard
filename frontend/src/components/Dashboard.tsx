@@ -126,8 +126,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-schistoguard-navy mb-0">Mang Jose's Fish Pond</h1>
-          <p className="text-gray-600">100 square meters • San Miguel, Tacloban City</p>
+          <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">Mang Jose's Fish Pond</h1>
+          <p className="text-gray-600 mb-2">100 square meters • San Miguel, Tacloban City</p>
           <p className="text-sm text-gray-500">Data updates every hour • Last update: {siteData.timestamp}</p>
         </div>
         <Button 
@@ -141,42 +141,41 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
       </div>
 
       {/* Main Section: Left column (summary cards + Current Water Quality), Right column (Alerts Stream) */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Left column: summary cards + Current Water Quality */}
-        <div className="flex-1">
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+        <div className="flex-1 flex flex-col">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="h-60">
+              <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
                 <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-500">{unacknowledgedAlerts}</div>
-                <p className="text-xs text-muted-foreground">
-                  {criticalAlerts} critical alerts
+              <CardContent className="flex flex-col items-center justify-center h-full">
+                <div className="text-3xl font-bold text-red-500 text-center">{unacknowledgedAlerts}</div>
+                <p className="text-xs text-muted-foreground mb-2 text-center">
+                  Critical alerts
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="h-60">
+              <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
                 <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-schistoguard-navy">{hourlyReadings.length}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="flex flex-col items-center justify-center h-full">
+                <div className="text-3xl font-bold text-schistoguard-navy text-center">{hourlyReadings.length}</div>
+                <p className="text-xs text-muted-foreground mb-2 text-center">
                   Last 24 hours
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="h-60">
+              <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
                 <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
                 <Droplets className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col items-center mt-[-32px] justify-center h-full">
                 <Badge 
                   className={
                     siteData.riskLevel === 'safe' 
@@ -188,7 +187,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
                 >
                   {siteData.riskLevel.toUpperCase()}
                 </Badge>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-2 mb-2 text-center">
                   Based on turbidity
                 </p>
               </CardContent>
@@ -198,7 +197,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Current Water Quality</CardTitle>
+                <CardTitle className="font-bold">Current Water Quality</CardTitle>
                 <Button variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export Data
@@ -218,15 +217,15 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
           </Card>
         </div>
         {/* Right column: Alerts Stream */}
-        <div className="lg:max-w-[200px] h-[00px] flex-shrink-0">
-          <Card className="self-start">
+        <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide" style={{ maxWidth: 380, height: 480 }}>
+          <Card className="flex flex-col h-full">
             <CardHeader className="pb-1">
               <CardTitle className="flex items-center justify-between text-sm font-bold">
                 Alerts Stream
                 <Badge variant="secondary">{unacknowledgedAlerts} unread</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 mt-0 max-h-[250px] overflow-y-auto">
+            <CardContent className="space-y-3 mt-0 flex-1 overflow-y-auto scrollbar-hide">
               {alerts.map((alert) => (
                 <AlertItem
                   key={alert.id}

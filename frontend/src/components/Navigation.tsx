@@ -147,9 +147,10 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
   );
 }
 
-export function NavigationHeader({ currentView, onNavigateToAlerts }: { 
+export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus = "operational" }: { 
   currentView?: string;
   onNavigateToAlerts?: () => void;
+  systemStatus?: "operational" | "degraded" | "down";
 }) {
   const getPageTitle = (view?: string) => {
     switch (view) {
@@ -165,6 +166,21 @@ export function NavigationHeader({ currentView, onNavigateToAlerts }: {
 
   const pageInfo = getPageTitle(currentView);
 
+  let statusBg = "bg-green-100";
+  let statusText = "text-green-700";
+  let dotColor = "bg-green-500";
+  let label = "System Operational";
+  if (systemStatus === "down") {
+    statusBg = "bg-red-100";
+    statusText = "text-red-700";
+    dotColor = "bg-red-500";
+    label = "System Down";
+  } else if (systemStatus === "degraded") {
+    statusBg = "bg-yellow-100";
+    statusText = "text-yellow-700";
+    dotColor = "bg-yellow-500";
+    label = "Degraded Performance";
+  }
   return (
     <header className="border-b bg-white px-4 py-4 flex items-center justify-between">
       <div className="flex items-center gap-6 px-4 py-1.5 min-h-[48px]">
@@ -174,11 +190,11 @@ export function NavigationHeader({ currentView, onNavigateToAlerts }: {
           <p className="text-sm text-muted-foreground leading-tight">{pageInfo.subtitle}</p>
         </div>
       </div>
-      {/* System Status Indicator */}
+      {/* System Status Indicator (pill style) */}
       <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1 px-3 py-1 rounded bg-green-100 text-green-700 text-xs font-medium">
-          <CheckCircle className="w-4 h-4 text-green-500" />
-          Operational
+        <span className={`flex items-center px-4 py-1.5 rounded-full ${statusBg} ${statusText} text-sm font-medium`}>
+          <span className={`w-2 h-2 rounded-full ${dotColor} inline-block mr-2`}></span>
+          {label}
         </span>
       </div>
     </header>
@@ -208,6 +224,7 @@ export function NavigationProvider({
           <NavigationHeader 
             currentView={currentView}
             onNavigateToAlerts={() => onNavigate?.('alerts')}
+            // systemStatus can be passed here from a parent or state
           />
           <div className="flex-1 overflow-auto">
             {children}

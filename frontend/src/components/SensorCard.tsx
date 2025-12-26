@@ -78,15 +78,15 @@ export function SensorCard({ siteName, barangay, readings, riskLevel, timestamp,
            <div className="grid grid-cols-3 gap-4 justify-center text-center mb-8">
              <div className="space-y-1">
                <span className="text-xs text-muted-foreground">Turbidity</span>
-               <p className="text-lg font-medium">{readings.turbidity} NTU</p>
+               <p className="text-3xl font-bold">{readings.turbidity} NTU</p>
              </div>
              <div className="space-y-1">
                <span className="text-xs text-muted-foreground">Temperature</span>
-               <p className="text-lg font-medium">{readings.temperature}°C</p>
+               <p className="text-3xl font-bold">{readings.temperature}°C</p>
              </div>
              <div className="space-y-1">
                <span className="text-xs text-muted-foreground">pH Level</span>
-               <p className="text-lg font-medium">{readings.ph}</p>
+               <p className="text-3xl font-bold">{readings.ph}</p>
              </div>
            </div>
         <div className="pt-2 border-t">
