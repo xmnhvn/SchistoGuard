@@ -76,130 +76,113 @@ export function SubscriptionPanel({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-schistoguard-teal" />
-          Alert Settings
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Configure notifications for {siteName}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
+     <CardContent className="space-y-6 mt-6">
         {/* Alert Types */}
         <div className="space-y-4">
-          <h4 className="font-medium flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Notification Methods
-          </h4>
-          
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                <Label htmlFor="sms-alerts" className="text-sm">SMS Alerts</Label>
+            <div className="flex items-center justify-between h-[-4] min-h-0 w-full max-w-[340px]">
+              <div className="flex items-center gap-4">
+                  <MessageSquare className="w-6 h-6 text-schistoguard-navy font-semibold" />
+                  <Label htmlFor="sms-alerts" className="text-base font-semibold text-schistoguard-navy">SMS Alerts</Label>
               </div>
               <Switch
                 id="sms-alerts"
                 checked={settings.smsAlerts}
                 onCheckedChange={() => handleToggle('smsAlerts')}
+                className="scale-90"
               />
             </div>
             
-            {settings.smsAlerts && (
-              <div className="ml-6 space-y-3">
-                <p className="text-xs text-muted-foreground">Upload a CSV file with contact numbers</p>
-                
-                {/* File Upload Section */}
-                {!fileName ? (
+            <div className="ml-6 space-y-3">
+              <p className="text-xs text-muted-foreground">Upload a CSV file with contact numbers</p>
+              {/* File Upload Section */}
+              {!fileName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="contacts-upload"
+                  />
+                  <Label 
+                    htmlFor="contacts-upload"
+                    className="flex items-center gap-2 px-3 py-1.5 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer text-sm h-9 min-h-0"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Choose File
+                  </Label>
+                </div>
+              ) : (
+                /* Display Uploaded File with CRUD Actions */
+                <div className="p-3 bg-muted/50 rounded-md space-y-3">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-5 h-5 text-schistoguard-teal mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{fileName}</p>
+                      {uploadDate && (
+                        <p className="text-xs text-muted-foreground">Uploaded: {uploadDate}</p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Action Buttons */}
                   <div className="flex items-center gap-2">
+                    {/* Update/Replace File */}
                     <Input
                       type="file"
                       accept=".csv,.xlsx,.xls"
                       onChange={handleFileUpload}
                       className="hidden"
-                      id="contacts-upload"
+                      id="contacts-update"
                     />
                     <Label 
-                      htmlFor="contacts-upload"
-                      className="flex items-center gap-2 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer text-sm"
+                      htmlFor="contacts-update"
+                      className="flex items-center gap-2 px-3 py-1.5 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer text-xs h-9 min-h-0"
                     >
-                      <Upload className="w-4 h-4" />
-                      Choose File
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Update
                     </Label>
-                  </div>
-                ) : (
-                  /* Display Uploaded File with CRUD Actions */
-                  <div className="p-3 bg-muted/50 rounded-md space-y-3">
-                    <div className="flex items-start gap-3">
-                      <FileText className="w-5 h-5 text-schistoguard-teal mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{fileName}</p>
-                        {uploadDate && (
-                          <p className="text-xs text-muted-foreground">Uploaded: {uploadDate}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
-                      {/* Update/Replace File */}
-                      <Input
-                        type="file"
-                        accept=".csv,.xlsx,.xls"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                        id="contacts-update"
-                      />
-                      <Label 
-                        htmlFor="contacts-update"
-                        className="flex items-center gap-2 px-3 py-1.5 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer text-xs"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Update
-                      </Label>
-                      
-                      {/* Delete File */}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-auto py-1.5 px-3"
+                    {/* Delete File */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-auto py-1.5 px-3"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete contact file?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove the uploaded contact file. You'll need to upload a new file to receive SMS alerts.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteFile}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                             Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete contact file?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will remove the uploaded contact file. You'll need to upload a new file to receive SMS alerts.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDeleteFile}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         <Button 
           onClick={handleSave}
           className="w-full bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+          disabled={!settings.smsAlerts}
         >
           Save
         </Button>

@@ -112,7 +112,7 @@ export const UserManagement: React.FC = () => {
 
   // Filter users
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.barangay?.toLowerCase().includes(searchQuery.toLowerCase());
     

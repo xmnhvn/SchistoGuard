@@ -9,7 +9,7 @@ import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm } from './components/LoginForm';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-detail' | 'alerts' | 'reports'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports'>('landing');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
 
@@ -29,7 +29,7 @@ export default function App() {
 
   const handleViewSiteDetail = (siteId: string) => {
     setSelectedSiteId(siteId);
-    setCurrentView('site-detail');
+    setCurrentView('site-details');
   };
 
   const handleBackFromSiteDetail = () => {
@@ -55,9 +55,11 @@ export default function App() {
 
   // Authenticated views
   if (isAuthenticated) {
+    // Normalize currentView for NavigationHeader: treat both 'site-detail' and 'site-details' as 'site-detail'
+    const navHeaderView = currentView === 'site-details' ? 'site-detail' : currentView;
     return (
       <NavigationProvider
-        currentView={currentView}
+        currentView={navHeaderView}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
       >
@@ -65,8 +67,8 @@ export default function App() {
         {currentView === 'alerts' && <AlertsPage />}
         {currentView === 'reports' && <ReportsPage />}
         {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}
-        {currentView === 'site-detail' && selectedSiteId && (
-          <SiteDetailView siteId={selectedSiteId} onBack={handleBackFromSiteDetail} />
+        {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
+          <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} />
         )}
         {currentView === 'map' && (
           <div className="p-6">

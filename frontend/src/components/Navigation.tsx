@@ -57,18 +57,18 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
         isActive: currentView === "sites",
         onClick: () => onNavigate?.("sites")
       },
+      {
+        title: "Site Details",
+        icon: MapPin,
+        view: "site-details",
+        isActive: currentView === "site-details",
+        onClick: () => onNavigate?.("site-details")
+      },
     ],
   },
   {
     title: "Reports",
     items: [
-      // { 
-      //   title: "Alerts", 
-      //   icon: AlertTriangle, 
-      //   view: "alerts", 
-      //   isActive: currentView === "alerts",
-      //   onClick: () => onNavigate?.("alerts")
-      // },
       { 
         title: "Reports", 
         icon: FileText, 
@@ -106,6 +106,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
                       isActive={item.isActive}
                       className="data-[active=true]:bg-schistoguard-teal data-[active=true]:text-white cursor-pointer"
                       onClick={item.onClick}
+                      data-active={item.isActive ? 'true' : undefined}
                     >
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>

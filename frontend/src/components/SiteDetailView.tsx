@@ -6,9 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { SubscriptionPanel } from "./SubscriptionPanel";
 import { AlertItem } from "./AlertItem";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { ArrowLeft, Download, Settings, Bell, Calendar } from "lucide-react";
+import { ArrowLeft, Download, Settings, Bell, Calendar, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
 // Mock time series data
 const mockTimeSeriesData = [
@@ -77,15 +78,13 @@ export function SiteDetailView({
     }
   }
 
+  const [infoOpen, setInfoOpen] = useState(false);
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
+          {/* Removed Back to Dashboard button */}
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-schistoguard-navy">{siteName}</h1>
@@ -93,37 +92,69 @@ export function SiteDetailView({
                 {currentRisk.charAt(0).toUpperCase() + currentRisk.slice(1)}
               </Badge>
             </div>
-            <p className="text-muted-foreground">{barangay} • Site ID: {siteId}</p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">Last 24h</SelectItem>
-              <SelectItem value="72h">Last 72h</SelectItem>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export Data
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="w-4 h-4 mr-2" />
-            Configure
-          </Button>
+        <div className="flex flex-col gap-4 min-w-[260px]">
+          <div className="flex items-center gap-2">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="24h">Last 24h</SelectItem>
+                <SelectItem value="72h">Last 72h</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-4">
+              <Button variant="outline" size="default">
+                <Download className="w-4 h-4 mr-2" />
+                Export Data
+              </Button>
+              <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+                <DialogTrigger asChild>
+                  <span className="relative group">
+                    <Info className="w-7 h-7 text-schistoguard-navy cursor-pointer" onClick={() => setInfoOpen(true)} />
+                  </span>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Site Information</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <span className="font-medium">Location:</span>
+                      <p className="text-muted-foreground">{barangay}, Leyte Province</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Coordinates:</span>
+                      <p className="text-muted-foreground">11.2436° N, 124.9936° E</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Installation Date:</span>
+                      <p className="text-muted-foreground">March 15, 2025</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Last Maintenance:</span>
+                      <p className="text-muted-foreground">September 10, 2025</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Sensor Type:</span>
+                      <p className="text-muted-foreground">Multi-parameter Water Quality</p>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Main Charts Area */}
-        <div className="lg:col-span-2">
-          <Card>
+        <div className="lg:col-span-1">
+          <Card className="w-full">
             <CardHeader>
               <CardTitle>Real-time Monitoring ({timeRange})</CardTitle>
             </CardHeader>
@@ -135,8 +166,8 @@ export function SiteDetailView({
                   <TabsTrigger value="ph">pH Level</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="turbidity" className="space-y-4">
-                  <div className="h-80">
+                <TabsContent value="turbidity" className="space-y-4 min-h-96">
+                  <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={mockTimeSeriesData}>
                         <defs>
@@ -170,8 +201,8 @@ export function SiteDetailView({
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="temperature" className="space-y-4">
-                  <div className="h-80">
+                <TabsContent value="temperature" className="space-y-4 min-h-96">
+                  <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={mockTimeSeriesData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -195,8 +226,8 @@ export function SiteDetailView({
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="ph" className="space-y-4">
-                  <div className="h-80">
+                <TabsContent value="ph" className="space-y-4 min-h-96">
+                  <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={mockTimeSeriesData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -222,107 +253,53 @@ export function SiteDetailView({
               </Tabs>
             </CardContent>
           </Card>
-
-          {/* History Table */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Recent Readings History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Turbidity</TableHead>
-                    <TableHead>Temperature</TableHead>
-                    <TableHead>pH</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockHistoryData.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{row.date} {row.time}</TableCell>
-                      <TableCell>{row.turbidity} NTU</TableCell>
-                      <TableCell>{row.temperature}°C</TableCell>
-                      <TableCell>{row.ph}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={row.status === "Critical" ? "destructive" : row.status === "Warning" ? "secondary" : "default"}
-                          className={
-                            row.status === "Critical" ? "bg-red-500 hover:bg-red-600" : 
-                            row.status === "Warning" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : 
-                            "bg-green-500 hover:bg-green-600"
-                          }
-                        >
-                          {row.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Right Sidebar */}
-        <div className="space-y-6">
-          {/* Site Alerts */}
+        <div className="space-y-6 lg:w-[620px] xl:w-[720px]">
+            <SubscriptionPanel 
+              siteName={siteName}
+              onSave={(settings: any) => console.log('Subscription settings saved:', settings)}
+            />
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-schistoguard-coral" />
-                Site Alerts
-              </CardTitle>
+              <CardTitle>Recent Readings History</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {alerts.map((alert) => (
-                <AlertItem
-                  key={alert.id}
-                  {...alert}
-                  onAcknowledge={handleAcknowledgeAlert}
-                />
-              ))}
-              {alerts.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No active alerts for this site
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Subscription Panel */}
-          <SubscriptionPanel 
-            siteName={siteName}
-            onSave={(settings) => console.log('Subscription settings saved:', settings)}
-          />
-
-          {/* Site Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Site Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <span className="font-medium">Location:</span>
-                <p className="text-muted-foreground">{barangay}, Leyte Province</p>
-              </div>
-              <div>
-                <span className="font-medium">Coordinates:</span>
-                <p className="text-muted-foreground">11.2436° N, 124.9936° E</p>
-              </div>
-              <div>
-                <span className="font-medium">Installation Date:</span>
-                <p className="text-muted-foreground">March 15, 2025</p>
-              </div>
-              <div>
-                <span className="font-medium">Last Maintenance:</span>
-                <p className="text-muted-foreground">September 10, 2025</p>
-              </div>
-              <div>
-                <span className="font-medium">Sensor Type:</span>
-                <p className="text-muted-foreground">Multi-parameter Water Quality</p>
+            <CardContent className="h-80 p-0">
+              <div className="h-full overflow-y-auto px-6 py-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Turbidity</TableHead>
+                      <TableHead>Temperature</TableHead>
+                      <TableHead>pH</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mockHistoryData.map((row, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{row.date} {row.time}</TableCell>
+                        <TableCell>{row.turbidity} NTU</TableCell>
+                        <TableCell>{row.temperature}°C</TableCell>
+                        <TableCell>{row.ph}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={row.status === "Critical" ? "destructive" : row.status === "Warning" ? "secondary" : "default"}
+                            className={
+                              row.status === "Critical" ? "bg-red-500 hover:bg-red-600" : 
+                              row.status === "Warning" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : 
+                              "bg-green-500 hover:bg-green-600"
+                            }
+                          >
+                            {row.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

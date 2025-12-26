@@ -273,33 +273,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             )}
           </CardContent>
         </Card>
-
-        {/* Site Info Footer */}
-        <Card className="mt-6">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-schistoguard-navy mb-1">Monitoring Configuration</h3>
-                <p className="text-sm text-gray-600">
-                  Data reading interval: <span className="font-medium">Every 1 hour</span>
-                </p>
-                <p className="text-sm text-gray-600">
-                  Location: <span className="font-medium">Mang Jose's Fish Pond, San Miguel, Tacloban City</span>
-                </p>
-                <p className="text-sm text-gray-600">
-                  Area: <span className="font-medium">100 square meters</span>
-                </p>
-              </div>
-              <Button 
-                className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-                onClick={() => onViewSiteDetail('site-1')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                View Site Details
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
