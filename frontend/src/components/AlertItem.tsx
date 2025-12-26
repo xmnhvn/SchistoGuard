@@ -95,8 +95,6 @@ export function AlertItem({
               </div>
               <p className="font-medium">{message}</p>
               <div className="text-sm text-muted-foreground space-y-1">
-                <p>Site: {siteName}</p>
-                <p>{parameter} reached {value}</p>
                 <p>{timestamp}</p>
               </div>
               

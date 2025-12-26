@@ -18,7 +18,7 @@ import {
   Droplets,
   Bell
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // Generate hourly readings for the past 24 hours
 const generateHourlyReadings = () => {
@@ -106,6 +106,22 @@ const mockAlerts = [
 
 export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [alerts, setAlerts] = useState(mockAlerts);
+  const waterQualityRef = useRef<HTMLDivElement>(null);
+  const alertsStreamRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const setHeight = () => {
+      if (waterQualityRef.current && alertsStreamRef.current) {
+        const height = waterQualityRef.current.offsetHeight;
+        alertsStreamRef.current.style.height = height + "px";
+      }
+    };
+    setHeight();
+    if (waterQualityRef.current) {
+      const resizeObserver = new window.ResizeObserver(setHeight);
+      resizeObserver.observe(waterQualityRef.current);
+      return () => resizeObserver.disconnect();
+    }
+  }, [alerts]);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert => 
@@ -141,7 +157,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
       </div>
 
       {/* Main Section: Left column (summary cards + Current Water Quality), Right column (Alerts Stream) */}
-      <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch" style={{ minHeight: 320 }}>
         <div className="flex-1 flex flex-col">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             <Card className="h-60">
@@ -194,7 +210,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
             </Card>
           </div>
           {/* Current Water Quality below summary cards */}
-          <Card>
+          <Card ref={waterQualityRef}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-bold">Current Water Quality</CardTitle>
@@ -217,25 +233,27 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
           </Card>
         </div>
         {/* Right column: Alerts Stream */}
-        <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide h-full" style={{ maxWidth: 380, height: '100%' }}>
-          <Card className="flex flex-col h-full">
+        <div ref={alertsStreamRef} className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide" style={{ maxWidth: 380 }}>
+          <Card className="flex flex-col h-full flex-1">
             <CardHeader className="pb-1">
               <CardTitle className="flex items-center justify-between text-sm font-bold">
                 Alerts Stream
                 <Badge variant="secondary">{unacknowledgedAlerts} unread</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 mt-0 flex-1 overflow-y-auto scrollbar-hide">
-              {alerts.map((alert) => (
-                <AlertItem
-                  key={alert.id}
-                  {...alert}
-                  onAcknowledge={handleAcknowledgeAlert}
-                />
-              ))}
-              {alerts.length === 0 && (
-                <p className="text-center text-gray-500 py-4">No alerts</p>
-              )}
+            <CardContent className="space-y-3 mt-0 flex-1 p-4 h-full" style={{ overflow: 'hidden' }}>
+              <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-3 h-full" style={{ maxHeight: '100%' }}>
+                {alerts.map((alert) => (
+                  <AlertItem
+                    key={alert.id}
+                    {...alert}
+                    onAcknowledge={handleAcknowledgeAlert}
+                  />
+                ))}
+                {alerts.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">No alerts</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
