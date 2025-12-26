@@ -61,7 +61,7 @@ export default function App() {
         onNavigate={handleNavigate}
         onLogout={handleLogout}
       >
-        {currentView === 'dashboard' && <Dashboard />}
+        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
         {currentView === 'alerts' && <AlertsPage />}
         {currentView === 'reports' && <ReportsPage />}
         {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}

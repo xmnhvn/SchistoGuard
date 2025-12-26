@@ -15,7 +15,8 @@ import {
   Filter,
   Download,
   TrendingUp,
-  Droplets
+  Droplets,
+  Bell
 } from "lucide-react";
 import { useState } from "react";
 
@@ -103,7 +104,7 @@ const mockAlerts = [
   }
 ];
 
-export function Dashboard() {
+export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [alerts, setAlerts] = useState(mockAlerts);
 
   const handleAcknowledgeAlert = (alertId: string) => {
@@ -123,83 +124,77 @@ export function Dashboard() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">Mang Jose's Fish Pond</h1>
-        <p className="text-gray-600">100 square meters • San Miguel, Tacloban City</p>
-        <p className="text-sm text-gray-500">Data updates every hour • Last update: {siteData.timestamp}</p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold text-schistoguard-navy mb-0">Mang Jose's Fish Pond</h1>
+          <p className="text-gray-600">100 square meters • San Miguel, Tacloban City</p>
+          <p className="text-sm text-gray-500">Data updates every hour • Last update: {siteData.timestamp}</p>
+        </div>
+        <Button 
+          size="sm" 
+          className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 h-10 flex items-center self-start"
+          onClick={() => onNavigate?.("alerts")}
+        >
+          <Bell className="w-4 h-4 mr-2" />
+          Alerts (3)
+        </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current Status</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="text-sm font-medium">Operational</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Monitoring active
-            </p>
-          </CardContent>
-        </Card>
+      {/* Main Section: Left column (summary cards + Current Water Quality), Right column (Alerts Stream) */}
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        {/* Left column: summary cards + Current Water Quality */}
+        <div className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-500">{unacknowledgedAlerts}</div>
+                <p className="text-xs text-muted-foreground">
+                  {criticalAlerts} critical alerts
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{unacknowledgedAlerts}</div>
-            <p className="text-xs text-muted-foreground">
-              {criticalAlerts} critical alerts
-            </p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-schistoguard-navy">{hourlyReadings.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  Last 24 hours
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-schistoguard-navy">{hourlyReadings.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Last 24 hours
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
-            <Droplets className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <Badge 
-              className={
-                siteData.riskLevel === 'safe' 
-                  ? 'bg-status-safe hover:bg-status-safe/80 text-white' 
-                  : siteData.riskLevel === 'warning'
-                  ? 'bg-status-warning hover:bg-status-warning/80 text-black'
-                  : 'bg-status-critical hover:bg-status-critical/80 text-white'
-              }
-            >
-              {siteData.riskLevel.toUpperCase()}
-            </Badge>
-            <p className="text-xs text-muted-foreground mt-2">
-              Based on turbidity
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Current Readings */}
-        <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
+                <Droplets className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <Badge 
+                  className={
+                    siteData.riskLevel === 'safe' 
+                      ? 'bg-status-safe hover:bg-status-safe/80 text-white' 
+                      : siteData.riskLevel === 'warning'
+                      ? 'bg-status-warning hover:bg-status-warning/80 text-black'
+                      : 'bg-status-critical hover:bg-status-critical/80 text-white'
+                  }
+                >
+                  {siteData.riskLevel.toUpperCase()}
+                </Badge>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Based on turbidity
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Current Water Quality below summary cards */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -221,45 +216,17 @@ export function Dashboard() {
               />
             </CardContent>
           </Card>
-
-          {/* 24-Hour Averages */}
-          <Card>
-            <CardHeader>
-              <CardTitle>24-Hour Average Readings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 justify-center text-center">
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-600">Turbidity</p>
-                  <p className="text-2xl font-bold text-schistoguard-navy">{avgTurbidity}</p>
-                  <p className="text-xs text-gray-500">NTU</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-600">Temperature</p>
-                  <p className="text-2xl font-bold text-schistoguard-navy">{avgTemperature}</p>
-                  <p className="text-xs text-gray-500">°C</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-600">pH Level</p>
-                  <p className="text-2xl font-bold text-schistoguard-navy">{avgPh}</p>
-                  <p className="text-xs text-gray-500">pH</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
-
-        {/* Right Column - Alerts & Map */}
-        <div className="space-y-4">
-          {/* Recent Alerts */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+        {/* Right column: Alerts Stream */}
+        <div className="lg:max-w-[200px] h-[00px] flex-shrink-0">
+          <Card className="self-start">
+            <CardHeader className="pb-1">
+              <CardTitle className="flex items-center justify-between text-sm font-bold">
                 Alerts Stream
                 <Badge variant="secondary">{unacknowledgedAlerts} unread</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 mt-0 max-h-[250px] overflow-y-auto">
               {alerts.map((alert) => (
                 <AlertItem
                   key={alert.id}
@@ -270,31 +237,6 @@ export function Dashboard() {
               {alerts.length === 0 && (
                 <p className="text-center text-gray-500 py-4">No alerts</p>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Mini Map */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Site Location</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative bg-gray-100 rounded-lg h-48 flex items-center justify-center">
-                <div className="absolute inset-4 bg-blue-50 rounded border-2 border-dashed border-blue-200 flex items-center justify-center text-sm text-muted-foreground">
-                  <div className="text-center">
-                    <p>Mang Jose's Fish Pond</p>
-                    <p className="text-xs mt-1">100 sq meters</p>
-                  </div>
-                </div>
-                
-                {/* Single pin in center */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <MapPin riskLevel={siteData.riskLevel} size="md" siteName="Fish Pond" />
-                </div>
-              </div>
-              <Button variant="outline" className="w-full mt-4">
-                Open Full Map
-              </Button>
             </CardContent>
           </Card>
         </div>
