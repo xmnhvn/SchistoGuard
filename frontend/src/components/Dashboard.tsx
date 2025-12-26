@@ -48,7 +48,17 @@ const hourlyReadings = generateHourlyReadings();
 const latestReading = hourlyReadings[hourlyReadings.length - 1];
 
 // Mock site data - single location
-const siteData = {
+const siteData: {
+  id: string;
+  siteName: string;
+  barangay: string;
+  municipality: string;
+  area: string;
+  readings: typeof latestReading;
+  riskLevel: "critical" | "warning" | "safe";
+  timestamp: string;
+  trend: "stable";
+} = {
   id: "site-1",
   siteName: "Mang Jose's Fish Pond",
   barangay: "San Miguel",
@@ -57,7 +67,7 @@ const siteData = {
   readings: latestReading,
   riskLevel: latestReading.turbidity > 15 ? "critical" : latestReading.turbidity > 5 ? "warning" : "safe",
   timestamp: new Date(latestReading.timestamp).toLocaleString(),
-  trend: "stable" as const
+  trend: "stable"
 };
 
 const mockAlerts = [
@@ -80,6 +90,16 @@ const mockAlerts = [
     value: "28.2°C",
     timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toLocaleString(),
     isAcknowledged: true
+  },
+  {
+    id: "alert-3",
+    level: "critical" as const,
+    message: "Turbidity levels critically high!",
+    siteName: "Mang Jose's Fish Pond",
+    parameter: "Turbidity",
+    value: "16.2 NTU",
+    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toLocaleString(),
+    isAcknowledged: false
   }
 ];
 
@@ -208,7 +228,7 @@ export function Dashboard() {
               <CardTitle>24-Hour Average Readings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 justify-center text-center">
                 <div className="space-y-1">
                   <p className="text-sm text-gray-600">Turbidity</p>
                   <p className="text-2xl font-bold text-schistoguard-navy">{avgTurbidity}</p>

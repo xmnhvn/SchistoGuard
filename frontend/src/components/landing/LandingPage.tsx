@@ -85,13 +85,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               {/* Content Block */}
-              <div className="space-y-4">
+              <div className="space-y-6 max-w-xl lg:pl-8">
                 <h2 className="text-3xl lg:text-4xl font-bold text-schistoguard-navy leading-tight">
-                  {headlines[0]}
+                  {headlines[1]}. {headlines[0]}
                 </h2>
 
                 <p className="text-lg text-gray-700 leading-relaxed">
-                  Free, real-time monitoring of barangay water
+                  Real-time monitoring of barangay water
                   sites to help prevent schistosomiasis.
                 </p>
 

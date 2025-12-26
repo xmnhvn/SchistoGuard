@@ -74,24 +74,21 @@ export function SensorCard({ siteName, barangay, readings, riskLevel, timestamp,
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Turbidity</span>
-              <TrendIcon trend={trend} />
-            </div>
-            <p className="text-lg font-medium">{readings.turbidity} NTU</p>
-          </div>
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">Temperature</span>
-            <p className="text-lg font-medium">{readings.temperature}°C</p>
-          </div>
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">pH Level</span>
-            <p className="text-lg font-medium">{readings.ph}</p>
-          </div>
-        </div>
+         <CardContent className="space-y-3">
+           <div className="grid grid-cols-3 gap-4 justify-center text-center mb-8">
+             <div className="space-y-1">
+               <span className="text-xs text-muted-foreground">Turbidity</span>
+               <p className="text-lg font-medium">{readings.turbidity} NTU</p>
+             </div>
+             <div className="space-y-1">
+               <span className="text-xs text-muted-foreground">Temperature</span>
+               <p className="text-lg font-medium">{readings.temperature}°C</p>
+             </div>
+             <div className="space-y-1">
+               <span className="text-xs text-muted-foreground">pH Level</span>
+               <p className="text-lg font-medium">{readings.ph}</p>
+             </div>
+           </div>
         <div className="pt-2 border-t">
           <p className="text-xs text-muted-foreground">
             Last updated: {timestamp}

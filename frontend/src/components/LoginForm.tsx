@@ -104,19 +104,27 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="resident">Resident</SelectItem>
                   <SelectItem value="bhw">Barangay Health Worker</SelectItem>
                   <SelectItem value="lgu">LGU Officer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <Button 
-              type="submit" 
-              className="w-full bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-            >
-              Sign In
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                onClick={() => window.location.replace('/')}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+              >
+                Sign In
+              </Button>
+            </div>
             
             <div className="text-center space-y-2">
               <Button 

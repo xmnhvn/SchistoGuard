@@ -85,7 +85,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
   return (
     <Sidebar>
       <SidebarHeader className="border-b bg-white">
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-4">
           <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-10 h-10 object-contain" />
           <h1 className="text-xl" style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
             SchistoGuard
@@ -165,22 +165,21 @@ export function NavigationHeader({ currentView, onNavigateToAlerts }: {
   const pageInfo = getPageTitle(currentView);
 
   return (
-    <header className="border-b bg-white px-4 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-4">
+    <header className="border-b bg-white px-4 py-6 flex items-center justify-between">
+      <div className="flex items-center gap-4 h-full min-h-[48px]">
         <SidebarTrigger />
-        <div>
-          <h2 className="font-semibold text-schistoguard-navy">{pageInfo.title}</h2>
-          <p className="text-sm text-muted-foreground">{pageInfo.subtitle}</p>
+        <div className="flex flex-col justify-center h-full">
+          <h2 className="font-semibold text-schistoguard-navy leading-tight">{pageInfo.title}</h2>
+          <p className="text-sm text-muted-foreground leading-tight">{pageInfo.subtitle}</p>
         </div>
       </div>
-      
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm">
+      <div className="flex items-center gap-2 h-full min-h-[48px]">
+        <Button variant="outline" size="sm" className="h-10 flex items-center">
           Export Data
         </Button>
         <Button 
           size="sm" 
-          className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+          className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 h-10 flex items-center"
           onClick={onNavigateToAlerts}
         >
           <Bell className="w-4 h-4 mr-2" />
