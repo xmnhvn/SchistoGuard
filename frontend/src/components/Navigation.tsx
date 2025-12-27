@@ -27,6 +27,10 @@ import {
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { UserProfileDetails } from "./UserProfileDetails";
+import React, { useState } from "react";
+import { User } from "lucide-react";
 
 interface NavigationProps {
   currentView?: string;
@@ -84,6 +88,7 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
 export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProps & { onLogout?: () => void }) {
   const navigationItems = getNavigationItems(currentView, onNavigate);
   
+  const [showProfile, setShowProfile] = useState(false);
   return (
     <Sidebar>
       <SidebarHeader className="border-b bg-white">
@@ -134,15 +139,20 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>
-              <Bell className="w-4 h-4 mr-2" />
-              Notification Settings
+            <DropdownMenuItem onClick={() => setShowProfile(true)}>
+              <User className="w-4 h-4 mr-2" />
+              User Profile
             </DropdownMenuItem>
             <DropdownMenuItem className="text-red-600" onClick={onLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
+          <Popover open={showProfile} onOpenChange={setShowProfile}>
+            <PopoverContent align="end" className="z-50">
+              <UserProfileDetails />
+            </PopoverContent>
+          </Popover>
         </DropdownMenu>
       </div>
     </Sidebar>

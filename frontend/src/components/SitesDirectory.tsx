@@ -162,40 +162,40 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 -mt-6">
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 text-center">
               <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-schistoguard-navy">{filteredReadings.length}</div>
               <p className="text-xs text-muted-foreground">In selected range</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 text-center">
               <CardTitle className="text-sm font-medium">Safe Readings</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-green-600">{safeCount}</div>
               <p className="text-xs text-muted-foreground">Turbidity ≤5 NTU</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 text-center">
               <CardTitle className="text-sm font-medium">Warning Readings</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-yellow-600">{warningCount}</div>
               <p className="text-xs text-muted-foreground">Turbidity 6-15 NTU</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 text-center">
               <CardTitle className="text-sm font-medium">Critical Readings</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-red-600">{criticalCount}</div>
               <p className="text-xs text-muted-foreground">Turbidity &gt;15 NTU</p>
             </CardContent>
@@ -221,7 +221,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                     <TableHead className="text-center">Temperature (°C)</TableHead>
                     <TableHead className="text-center">pH Level</TableHead>
                     <TableHead className="text-center">Risk Level</TableHead>
-                    <TableHead className="text-right">Age</TableHead>
+                    <TableHead className="text-right"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
