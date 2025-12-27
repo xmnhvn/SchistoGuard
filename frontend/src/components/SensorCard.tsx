@@ -19,14 +19,24 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings }) => {
             <Thermometer className="h-10 w-10 text-red-500 mb-8" />
         {(() => {
           const temp = readings.temperature;
-          let color = "text-green-600"; // safe
-          if (temp >= 30 && temp < 35) color = "text-yellow-500"; // warning
-          else if (temp >= 35 && temp < 38) color = "text-orange-500"; // alert
-          else if (temp >= 38) color = "text-red-600"; // critical
+          // WHO schistosomiasis risk label and color
+          let riskLabel = "Low schisto risk";
+          let riskColor = "text-green-600";
+          if (temp >= 22 && temp <= 28) {
+            riskLabel = "High schisto risk";
+            riskColor = "text-red-600";
+          } else if ((temp >= 20 && temp < 22) || (temp > 28 && temp <= 32)) {
+            riskLabel = "Possible Schistosomiasis Risk";
+            riskColor = "text-yellow-500";
+          }
+
           return (
-            <div className={`text-3xl font-bold mt-6 mb-1 text-center ${color}`}>
-              {temp?.toFixed(2)}<span className="text-2xl font-bold align-top">°C</span>
-            </div>
+            <>
+              <div className={`text-3xl font-bold mt-6 mb-1 text-center ${riskColor}`}>
+                {temp?.toFixed(2)}<span className="text-2xl font-bold align-top">°C</span>
+              </div>
+              <div className={`text-sm font-semibold text-center ${riskColor}`}>{riskLabel}</div>
+            </>
           );
         })()}
       </div>
