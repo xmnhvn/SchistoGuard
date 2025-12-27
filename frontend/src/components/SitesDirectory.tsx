@@ -105,16 +105,62 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     : '0';
 
   return (
-    <div className="min-h-screen bg-schistoguard-light-bg">
+    <div className="bg-schistoguard-light-bg">
       <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">Hourly Data Readings</h1>
-          <p className="text-gray-600">Mang Jose's Fish Pond - 100 square meters</p>
-          <p className="text-sm text-gray-500">Water quality data collected every hour • {hourlyReadings.length} total readings</p>
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+          {/* Labels and info (col 1) */}
+          <div className="col-span-1">
+            <h1 className="text-3xl font-bold text-schistoguard-navy mb-1">Hourly Data Readings</h1>
+            <p className="text-gray-600 leading-tight mb-1">Mang Jose's Fish Pond - 100 square meters</p>
+            <p className="text-sm text-gray-500 leading-tight mb-1">Water quality data collected every hour</p>
+          </div>
+          {/* Search and filters (cols 2-3) */}
+          <div className="col-span-1 lg:col-span-2 flex flex-col lg:flex-row gap-4 lg:justify-end">
+            <div className="flex-1 max-w-xs">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search by time, turbidity, or temperature..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 border border-gray-300 bg-gray-50 focus:bg-white focus:border-schistoguard-teal transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
+                <SelectTrigger className="w-40 border border-gray-300 bg-gray-50 focus:bg-white focus:border-schistoguard-teal transition-colors">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="6h">Last 6 Hours</SelectItem>
+                  <SelectItem value="12h">Last 12 Hours</SelectItem>
+                  <SelectItem value="24h">Last 24 Hours</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterRisk} onValueChange={setFilterRisk}>
+                <SelectTrigger className="w-40 border border-gray-300 bg-gray-50 focus:bg-white focus:border-schistoguard-teal transition-colors">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Risk Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Risk Levels</SelectItem>
+                  <SelectItem value="safe">Safe</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 -mt-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
@@ -147,76 +193,25 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Avg Turbidity</CardTitle>
+              <CardTitle className="text-sm font-medium">Critical Readings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-schistoguard-navy">{avgTurbidity}</div>
-              <p className="text-xs text-muted-foreground">NTU (selected range)</p>
+              <div className="text-2xl font-bold text-red-600">{criticalCount}</div>
+              <p className="text-xs text-muted-foreground">Turbidity &gt;15 NTU</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search and Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search by time, turbidity, or temperature..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
-                  <SelectTrigger className="w-40">
-                    <Clock className="w-4 h-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="6h">Last 6 Hours</SelectItem>
-                    <SelectItem value="12h">Last 12 Hours</SelectItem>
-                    <SelectItem value="24h">Last 24 Hours</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={filterRisk} onValueChange={setFilterRisk}>
-                  <SelectTrigger className="w-40">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Risk Level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Risk Levels</SelectItem>
-                    <SelectItem value="safe">Safe</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Readings Table */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-[-20]">
               <CardTitle>Time-Series Data</CardTitle>
               <Badge variant="outline">{filteredReadings.length} records</Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-md border overflow-x-auto h-80 overflow-y-auto scrollbar-hide">
               <Table>
                 <TableHeader>
                   <TableRow>

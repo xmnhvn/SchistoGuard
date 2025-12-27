@@ -112,48 +112,14 @@ export function SiteDetailView({
                 <Download className="w-4 h-4 mr-2" />
                 Export Data
               </Button>
-              <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
-                <DialogTrigger asChild>
-                  <span className="relative group">
-                    <Info className="w-7 h-7 text-schistoguard-navy cursor-pointer" onClick={() => setInfoOpen(true)} />
-                  </span>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Site Information</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <span className="font-medium">Location:</span>
-                      <p className="text-muted-foreground">{barangay}, Leyte Province</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Coordinates:</span>
-                      <p className="text-muted-foreground">11.2436° N, 124.9936° E</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Installation Date:</span>
-                      <p className="text-muted-foreground">March 15, 2025</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Last Maintenance:</span>
-                      <p className="text-muted-foreground">September 10, 2025</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Sensor Type:</span>
-                      <p className="text-muted-foreground">Multi-parameter Water Quality</p>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Main Charts Area */}
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Charts Area (span 2 columns) */}
+        <div className="min-w-0 lg:col-span-2">
           <Card className="w-full">
             <CardHeader>
               <CardTitle>Real-time Monitoring ({timeRange})</CardTitle>
@@ -255,51 +221,38 @@ export function SiteDetailView({
           </Card>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="space-y-6 lg:w-[620px] xl:w-[720px]">
-            <SubscriptionPanel 
-              siteName={siteName}
-              onSave={(settings: any) => console.log('Subscription settings saved:', settings)}
-            />
+        {/* Right Sidebar: Subscription Panel and Site Info stacked in 3rd column */}
+        <div className="space-y-6 w-full max-w-full lg:col-span-1">
+          <SubscriptionPanel 
+            siteName={siteName}
+            onSave={(settings: any) => console.log('Subscription settings saved:', settings)}
+          />
           <Card>
             <CardHeader>
-              <CardTitle>Recent Readings History</CardTitle>
+              <CardTitle>Site Information</CardTitle>
             </CardHeader>
-            <CardContent className="h-80 p-0">
-              <div className="h-full overflow-y-auto px-6 py-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date & Time</TableHead>
-                      <TableHead>Turbidity</TableHead>
-                      <TableHead>Temperature</TableHead>
-                      <TableHead>pH</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockHistoryData.map((row, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{row.date} {row.time}</TableCell>
-                        <TableCell>{row.turbidity} NTU</TableCell>
-                        <TableCell>{row.temperature}°C</TableCell>
-                        <TableCell>{row.ph}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={row.status === "Critical" ? "destructive" : row.status === "Warning" ? "secondary" : "default"}
-                            className={
-                              row.status === "Critical" ? "bg-red-500 hover:bg-red-600" : 
-                              row.status === "Warning" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : 
-                              "bg-green-500 hover:bg-green-600"
-                            }
-                          >
-                            {row.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            <CardContent>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-medium">Location:</span>
+                  <p className="text-muted-foreground">{barangay}, Leyte Province</p>
+                </div>
+                <div>
+                  <span className="font-medium">Coordinates:</span>
+                  <p className="text-muted-foreground">11.2436° N, 124.9936° E</p>
+                </div>
+                <div>
+                  <span className="font-medium">Installation Date:</span>
+                  <p className="text-muted-foreground">March 15, 2025</p>
+                </div>
+                <div>
+                  <span className="font-medium">Last Maintenance:</span>
+                  <p className="text-muted-foreground">September 10, 2025</p>
+                </div>
+                <div>
+                  <span className="font-medium">Sensor Type:</span>
+                  <p className="text-muted-foreground">Multi-parameter Water Quality</p>
+                </div>
               </div>
             </CardContent>
           </Card>

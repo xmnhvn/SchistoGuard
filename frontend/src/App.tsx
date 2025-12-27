@@ -55,11 +55,10 @@ export default function App() {
 
   // Authenticated views
   if (isAuthenticated) {
-    // Normalize currentView for NavigationHeader: treat both 'site-detail' and 'site-details' as 'site-detail'
-    const navHeaderView = currentView === 'site-details' ? 'site-detail' : currentView;
+    // Pass currentView directly so 'site-details' matches sidebar logic
     return (
       <NavigationProvider
-        currentView={navHeaderView}
+        currentView={currentView}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
       >

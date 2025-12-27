@@ -21,7 +21,8 @@ import {
   Shield,
   FileText,
   MapPin,
-  CheckCircle
+  CheckCircle,
+  Info
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -59,7 +60,7 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
       },
       {
         title: "Site Details",
-        icon: MapPin,
+        icon: Info,
         view: "site-details",
         isActive: currentView === "site-details",
         onClick: () => onNavigate?.("site-details")
