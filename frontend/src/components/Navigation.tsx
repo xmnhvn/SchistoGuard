@@ -98,19 +98,19 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
       <SidebarContent>
         {navigationItems.map((group) => (
           <SidebarGroup key={group.title}>
-            <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-base font-medium mb-2 mt-2">{group.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton 
                       isActive={item.isActive}
-                      className="data-[active=true]:bg-schistoguard-teal data-[active=true]:text-white cursor-pointer"
+                      className="data-[active=true]:bg-schistoguard-teal data-[active=true]:text-white cursor-pointer gap-3 px-4 py-6 text-md font-normal"
                       onClick={item.onClick}
                       data-active={item.isActive ? 'true' : undefined}
                     >
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="w-7 h-7" />
+                      <span className="text-md font-normal">{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

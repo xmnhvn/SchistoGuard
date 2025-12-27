@@ -375,7 +375,7 @@ export const ReportsPage: React.FC = () => {
                       </div>
                       <Progress value={85} className="h-2" />
                     </div>
-                    <div>
+                    <div className="mb-3">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium">pH Balance</span>
                         <span className="text-sm text-gray-600">7.2 avg</span>
@@ -393,17 +393,17 @@ export const ReportsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Critical Alerts</span>
-                      <span className="text-sm font-medium text-red-600">3 (37.5%)</span>
+                    <div className="flex items-center justify-between pb-2 border-b">
+                      <span className="text-md font-medium">Critical Alerts</span>
+                      <span className="text-md font-medium text-red-600">3 (37.5%)</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Warning Alerts</span>
-                      <span className="text-sm font-medium text-yellow-600">4 (50%)</span>
+                    <div className="flex items-center justify-between pt-2 pb-2 border-b">
+                      <span className="text-md font-medium">Warning Alerts</span>
+                      <span className="text-md font-medium text-yellow-600">4 (50%)</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Info Alerts</span>
-                      <span className="text-sm font-medium text-blue-600">1 (12.5%)</span>
+                    <div className="flex items-center justify-between pt-2 pb-2 border-b">
+                      <span className="text-md font-medium">Info Alerts</span>
+                      <span className="text-md font-medium text-blue-600">1 (12.5%)</span>
                     </div>
                   </div>
                 </CardContent>
@@ -419,18 +419,18 @@ export const ReportsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 ">
                   <div className="text-center">
                     <div className="text-3xl font-bold text-green-600 mb-2">98.5%</div>
-                    <div className="text-sm text-gray-600">Sensor Uptime</div>
-                    <div className="text-xs text-gray-500 mt-1 mb-1">Last 30 days</div>
+                    <div className="text-md font-medium text-gray-600">Sensor Uptime</div>
+                    <div className="text-md text-gray-500 mt-1 mb-1">Last 30 days</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold text-blue-600 mb-2">2.3 min</div>
-                    <div className="text-sm text-gray-600">Avg Response Time</div>
-                    <div className="text-xs text-gray-500 mt-1 mb-1">Alert to notification</div>
+                    <div className="text-md font-medium text-gray-600">Avg Response Time</div>
+                    <div className="text-md text-gray-500 mt-1 mb-1">Alert to notification</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold text-purple-600 mb-2">247</div>
-                    <div className="text-sm text-gray-600">Active Subscribers</div>
-                    <div className="text-xs text-gray-500 mt-1 mb-1">Receiving alerts</div>
+                    <div className="text-md font-medium text-gray-600">Active Subscribers</div>
+                    <div className="text-md text-gray-500 mt-1 mb-1">Receiving alerts</div>
                   </div>
                 </div>
               </CardContent>
