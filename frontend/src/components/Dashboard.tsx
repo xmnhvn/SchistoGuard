@@ -100,8 +100,27 @@ const mockAlerts = [
 
 export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [alerts, setAlerts] = useState(mockAlerts);
+  const [liveTemperature, setLiveTemperature] = useState<number | null>(null);
   const waterQualityRef = useRef<HTMLDivElement>(null);
   const alertsStreamRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Fetch temperature from backend every 5 seconds
+    const fetchTemperature = () => {
+      fetch("http://localhost:3001/api/sensors/latest")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && typeof data.temperature === "number") {
+            setLiveTemperature(data.temperature);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchTemperature();
+    const interval = setInterval(fetchTemperature, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const setHeight = () => {
       if (waterQualityRef.current && alertsStreamRef.current) {
@@ -155,7 +174,12 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
         <div className="flex-1 flex flex-col">
           {/* Sensor Data UI at the top */}
           <div className="mb-6 mt-2">
-            <SensorCard readings={latestReading}/>
+            <SensorCard
+              readings={{
+                ...latestReading,
+                temperature: liveTemperature !== null ? liveTemperature : latestReading.temperature,
+              }}
+            />
           </div>
           {/* Summary Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">

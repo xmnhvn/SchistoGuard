@@ -162,7 +162,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
 export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus = "operational" }: { 
   currentView?: string;
   onNavigateToAlerts?: () => void;
-  systemStatus?: "operational" | "degraded" | "down";
+  systemStatus?: "operational" | "down";
 }) {
   const getPageTitle = (view?: string) => {
     switch (view) {
@@ -187,11 +187,6 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
     statusText = "text-red-700";
     dotColor = "bg-red-500";
     label = "System Down";
-  } else if (systemStatus === "degraded") {
-    statusBg = "bg-yellow-100";
-    statusText = "text-yellow-700";
-    dotColor = "bg-yellow-500";
-    label = "Degraded Performance";
   }
   return (
     <header className="border-b bg-white px-4 py-4 flex items-center justify-between">
@@ -217,12 +212,14 @@ export function NavigationProvider({
   children, 
   currentView, 
   onNavigate, 
-  onLogout 
+  onLogout, 
+  systemStatus = "operational"
 }: { 
   children: React.ReactNode;
   currentView?: string;
   onNavigate?: (view: string) => void;
   onLogout?: () => void;
+  systemStatus?: "operational" | "down";
 }) {
   return (
     <SidebarProvider defaultOpen={false}>
@@ -236,7 +233,7 @@ export function NavigationProvider({
           <NavigationHeader 
             currentView={currentView}
             onNavigateToAlerts={() => onNavigate?.('alerts')}
-            // systemStatus can be passed here from a parent or state
+            systemStatus={systemStatus}
           />
           <div className="flex-1 overflow-auto">
             {children}
