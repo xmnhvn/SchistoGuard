@@ -1,8 +1,4 @@
-import { Card, CardContent, CardHeader } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { MoreHorizontal, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Thermometer, Waves, Droplet } from "lucide-react";
 
 interface SensorReading {
   turbidity: number;
@@ -11,90 +7,32 @@ interface SensorReading {
 }
 
 interface SensorCardProps {
-  siteName: string;
-  barangay: string;
   readings: SensorReading;
-  riskLevel: "safe" | "warning" | "critical";
-  timestamp: string;
-  trend?: "up" | "down" | "stable";
 }
 
-function getRiskBadgeVariant(risk: string) {
-  switch (risk) {
-    case "safe": return "default";
-    case "warning": return "secondary";
-    case "critical": return "destructive";
-    default: return "default";
-  }
-}
-
-function getRiskBadgeStyle(risk: string) {
-  switch (risk) {
-    case "safe": return "bg-status-safe hover:bg-status-safe/80 text-white";
-    case "warning": return "bg-status-warning hover:bg-status-warning/80 text-black";
-    case "critical": return "bg-status-critical hover:bg-status-critical/80 text-white";
-    default: return "";
-  }
-}
-
-function TrendIcon({ trend }: { trend?: "up" | "down" | "stable" }) {
-  if (trend === "up") return <TrendingUp className="w-3 h-3 text-red-500" />;
-  if (trend === "down") return <TrendingDown className="w-3 h-3 text-green-500" />;
-  return <Minus className="w-3 h-3 text-gray-400" />;
-}
-
-export function SensorCard({ siteName, barangay, readings, riskLevel, timestamp, trend }: SensorCardProps) {
+const SensorCard: React.FC<SensorCardProps> = ({ readings }) => {
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="font-medium">{siteName}</h3>
-            <p className="text-sm text-muted-foreground">{barangay}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant={getRiskBadgeVariant(riskLevel)}
-              className={getRiskBadgeStyle(riskLevel)}
-            >
-              {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)}
-            </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="h-8 w-8 p-0 rounded-md hover:bg-gray-100 transition-colors flex items-center justify-center">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>View Details</DropdownMenuItem>
-                <DropdownMenuItem>Export Data</DropdownMenuItem>
-                <DropdownMenuItem>Configure Alerts</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </CardHeader>
-         <CardContent className="space-y-3">
-           <div className="grid grid-cols-3 gap-4 justify-center text-center mb-8">
-             <div className="space-y-1">
-               <span className="text-xs text-muted-foreground">Turbidity</span>
-               <p className="text-3xl font-bold">{readings.turbidity} NTU</p>
-             </div>
-             <div className="space-y-1">
-               <span className="text-xs text-muted-foreground">Temperature</span>
-               <p className="text-3xl font-bold">{readings.temperature}°C</p>
-             </div>
-             <div className="space-y-1">
-               <span className="text-xs text-muted-foreground">pH Level</span>
-               <p className="text-3xl font-bold">{readings.ph}</p>
-             </div>
-           </div>
-        <div className="pt-2 border-t">
-          <p className="text-xs text-muted-foreground">
-            Last updated: {timestamp}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex gap-4 justify-center w-full">
+      {/* Temperature Card */}
+      <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
+        <div className="text-md font-bold text-schistoguard-navy mb-4 pb-2 text-center">Temperature</div>
+            <Thermometer className="h-10 w-10 text-red-500 mb-8" />
+        <div className="text-3xl font-bold text-schistoguard-navy mt-6 mb-1 text-center">{readings.temperature}<span className="text-2xl font-bold align-top">°C</span></div>
+      </div>
+      {/* Turbidity Card */}
+      <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
+        <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">Turbidity</div>
+            <Waves className="h-10 w-10 text-blue-500 mb-8" />
+        <div className="text-3xl font-bold text-schistoguard-navy mt-6 mb-1 text-center">{readings.turbidity} <span className="text-2xl font-bold align-top">NTU</span></div>
+      </div>
+      {/* pH Level Card */}
+      <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
+        <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">pH Level</div>
+            <Droplet className="h-10 w-10 text-cyan-500 mb-8" style={{ color: '#78c2cfff' }} />
+        <div className="text-3xl font-bold text-schistoguard-navy mt-6 mb-1 text-center">{readings.ph}</div>
+      </div>
+    </div>
   );
-}
+};
+
+export default SensorCard;

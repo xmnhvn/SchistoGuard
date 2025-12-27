@@ -63,7 +63,7 @@ export default function App() {
         onLogout={handleLogout}
       >
         {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
-        {currentView === 'alerts' && <AlertsPage />}
+        {currentView === 'alerts' && <AlertsPage onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsPage />}
         {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}
         {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (

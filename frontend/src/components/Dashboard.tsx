@@ -3,17 +3,11 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { SensorCard } from "./SensorCard";
+import SensorCard from "./SensorCard";
 import { AlertItem } from "./AlertItem";
 import { MapPin } from "./MapPin";
 import { 
-  Activity, 
   AlertTriangle, 
-  CheckCircle, 
-  MapPinIcon, 
-  Search,
-  Filter,
-  Download,
   TrendingUp,
   Droplets,
   Bell
@@ -156,84 +150,77 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
         </Button>
       </div>
 
-      {/* Main Section: Left column (summary cards + Current Water Quality), Right column (Alerts Stream) */}
+      {/* Main Section: Left column (sensor cards + summary cards), Right column (Alerts Stream) */}
       <div className="flex flex-col lg:flex-row gap-4 items-stretch" style={{ minHeight: 320 }}>
         <div className="flex-1 flex flex-col">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            <Card className="h-60">
-              <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
-                <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center h-full">
-                <div className="text-3xl font-bold text-red-500 text-center">{unacknowledgedAlerts}</div>
-                <p className="text-xs text-muted-foreground mb-2 text-center">
-                  Critical alerts
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="h-60">
-              <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
-                <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center h-full">
-                <div className="text-3xl font-bold text-schistoguard-navy text-center">{hourlyReadings.length}</div>
-                <p className="text-xs text-muted-foreground mb-2 text-center">
-                  Last 24 hours
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="h-60">
-              <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
-                <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
-                <Droplets className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="flex flex-col items-center mt-[-32px] justify-center h-full">
-                <Badge 
-                  className={
-                    siteData.riskLevel === 'safe' 
-                      ? 'bg-status-safe hover:bg-status-safe/80 text-white' 
-                      : siteData.riskLevel === 'warning'
-                      ? 'bg-status-warning hover:bg-status-warning/80 text-black'
-                      : 'bg-status-critical hover:bg-status-critical/80 text-white'
-                  }
-                >
-                  {siteData.riskLevel.toUpperCase()}
-                </Badge>
-                <p className="text-xs text-muted-foreground mt-2 mb-2 text-center">
-                  Based on turbidity
-                </p>
-              </CardContent>
-            </Card>
+          {/* Sensor Data UI at the top */}
+          <div className="mb-6 mt-2">
+            <SensorCard readings={latestReading}/>
           </div>
-          {/* Current Water Quality below summary cards */}
-          <Card ref={waterQualityRef}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="font-bold">Current Water Quality</CardTitle>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Data
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <SensorCard
-                siteName={siteData.siteName}
-                barangay={siteData.barangay}
-                readings={siteData.readings}
-                riskLevel={siteData.riskLevel}
-                timestamp={siteData.timestamp}
-                trend={siteData.trend}
-              />
-            </CardContent>
-          </Card>
+          {/* Summary Cards Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              {/* Active Alerts Card */}
+              <Card className="h-60">
+                <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
+                  <CardTitle className="text-md font-medium">Active Alerts</CardTitle>
+                  <AlertTriangle className="h-10 w-10 text-yellow-500" />
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center h-full">
+                  <div className="text-3xl font-bold text-red-500 text-center">{unacknowledgedAlerts}</div>
+                  <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
+                    Critical alerts
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Total Readings Card */}
+              <Card className="h-60">
+                <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
+                  <CardTitle className="text-md font-medium">Total Readings</CardTitle>
+                  <TrendingUp className="h-10 w-10 text-green-500" />
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center h-full">
+                  <div className="text-3xl font-bold text-schistoguard-navy text-center">{hourlyReadings.length}</div>
+                  <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
+                    Last 24 hours
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Risk Level Card */}
+              <Card className="h-60">
+                <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
+                  <CardTitle className="text-md font-medium">Risk Level</CardTitle>
+                  <Droplets className={
+                    siteData.riskLevel === 'safe'
+                      ? 'h-10 w-10 text-green-500'
+                      : siteData.riskLevel === 'warning'
+                      ? 'h-10 w-10 text-yellow-500'
+                      : 'h-10 w-10 text-red-500'
+                  } />
+                </CardHeader>
+                <CardContent className="flex flex-col items-center mt-[-32px] justify-center h-full">
+                  <Badge 
+                    className={
+                      siteData.riskLevel === 'safe' 
+                        ? 'bg-status-safe hover:bg-status-safe/80 text-white' 
+                        : siteData.riskLevel === 'warning'
+                        ? 'bg-status-warning hover:bg-status-warning/80 text-black'
+                        : 'bg-status-critical hover:bg-status-critical/80 text-white'
+                    }
+                  >
+                    {siteData.riskLevel.toUpperCase()}
+                  </Badge>
+                  <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
+                    Based on turbidity
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          {/* Removed Current Water Quality card and SensorCard */}
         </div>
         {/* Right column: Alerts Stream */}
-        <div ref={alertsStreamRef} className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide" style={{ maxWidth: 380 }}>
+        <div ref={alertsStreamRef} className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide mt-2" style={{ maxWidth: 380 }}>
           <Card className="flex flex-col h-full flex-1">
             <CardHeader className="pb-1">
               <CardTitle className="flex items-center justify-between text-sm font-bold">

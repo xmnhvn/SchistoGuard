@@ -16,9 +16,11 @@ import {
   Clock,
   Calendar,
   MapPin as MapPinIcon,
-  Bell
+  Bell,
+  ChevronLeft
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const mockAlerts = [
   {
@@ -75,7 +77,7 @@ const mockAlerts = [
   }
 ];
 
-export function AlertsPage() {
+export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [alerts, setAlerts] = useState(mockAlerts);
   const [selectedAlerts, setSelectedAlerts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -83,6 +85,7 @@ export function AlertsPage() {
   const [filterLevel, setFilterLevel] = useState("all");
   const [filterBarangay, setFilterBarangay] = useState("all");
   const [selectedAlert, setSelectedAlert] = useState<typeof mockAlerts[0] | null>(null);
+  // Removed useNavigate, using onNavigate prop instead
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert => 
@@ -141,9 +144,20 @@ export function AlertsPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-schistoguard-navy">Alert Management</h1>
-          <p className="text-muted-foreground">Monitor and manage water quality alerts across all sites</p>
+        <div className="flex items-center gap-2 mb-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="mr-1 p-1"
+            aria-label="Back"
+            onClick={() => onNavigate && onNavigate('dashboard')}
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold text-schistoguard-navy">Alert Management</h1>
+            <p className="text-muted-foreground">Monitor and manage water quality alerts across all sites</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
@@ -300,7 +314,7 @@ export function AlertsPage() {
                   <Checkbox
                     id={`alert-${alert.id}`}
                     checked={selectedAlerts.includes(alert.id)}
-                    onCheckedChange={(checked) => handleSelectAlert(alert.id, checked as boolean)}
+                    onCheckedChange={(checked: boolean) => handleSelectAlert(alert.id, checked)}
                     className="mt-4"
                   />
                   <div className="flex-1">
