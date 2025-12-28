@@ -171,12 +171,20 @@ router.post("/", (req, res) => {
 });
 
 
-// Get the latest reading from SQLite
+// Get the most recent sensor value (even if not yet logged)
 router.get("/latest", (req, res) => {
-  db.get("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(row || null);
-  });
+  if (latestData) {
+    res.json({
+      ...latestData,
+      timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp
+    });
+  } else {
+    // Fallback to last logged reading if no latestData
+    db.get("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(row || null);
+    });
+  }
 });
 
 // Get all readings for the last 24 hours (max 288)
