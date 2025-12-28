@@ -87,10 +87,10 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
 
 export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProps & { onLogout?: () => void }) {
   const navigationItems = getNavigationItems(currentView, onNavigate);
-  
   const [showProfile, setShowProfile] = useState(false);
+  // Sidebar always open, not collapsible
   return (
-    <Sidebar>
+    <Sidebar collapsible="none">
       <SidebarHeader className="border-b bg-white">
         <div className="flex items-center gap-3 px-4 py-4 ">
           <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-8 h-8 object-contain" />
@@ -191,7 +191,7 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
   return (
     <header className="border-b bg-white px-4 py-4 flex items-center justify-between">
       <div className="flex items-center gap-6 px-4 py-1.5 min-h-[48px]">
-        <SidebarTrigger />
+        {/* SidebarTrigger removed: sidebar always open */}
         <div className="flex flex-col justify-center h-full">
           <h2 className="font-semibold text-schistoguard-navy leading-tight">{pageInfo.title}</h2>
           <p className="text-sm text-muted-foreground leading-tight">{pageInfo.subtitle}</p>
@@ -222,7 +222,7 @@ export function NavigationProvider({
   systemStatus?: "operational" | "down";
 }) {
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-schistoguard-light-bg">
         <AppSidebar 
           currentView={currentView}

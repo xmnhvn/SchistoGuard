@@ -175,8 +175,15 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
             <SensorCard
               readings={{
                 temperature: liveTemperature !== null ? liveTemperature : latestReading.temperature,
-                turbidity: 8.5, // mock value
-                ph: 7.2 // mock value
+                turbidity: latestReading.turbidity,
+                ph: latestReading.ph
+              }}
+              alerts={alerts}
+              summary={{
+                avgTurbidity: Number(avgTurbidity),
+                avgTemperature: Number(avgTemperature),
+                avgPh: Number(avgPh),
+                totalReadings: fiveMinReadings.length
               }}
             />
           </div>
