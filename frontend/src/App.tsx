@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { NavigationProvider } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
 import { AlertsPage } from './components/AlertsPage';
@@ -8,34 +9,98 @@ import { SiteDetailView } from './components/SiteDetailView';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm } from './components/LoginForm';
 
+type ViewType = 'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports';
+
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports'>(
+    () => localStorage.getItem('currentView') as any || 'landing'
+  );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+
+  // Type guard for ViewType
+  const isViewType = (view: string | null): view is ViewType => {
+    return (
+      view === 'landing' ||
+      view === 'login' ||
+      view === 'dashboard' ||
+      view === 'map' ||
+      view === 'sites' ||
+      view === 'site-details' ||
+      view === 'alerts' ||
+      view === 'reports'
+    );
+  };
 
   const handleLogin = () => {
     setIsAuthenticated(true);
-    setCurrentView('dashboard');
+    const storedView = localStorage.getItem('currentView');
+    // Only allow dashboard, alerts, reports, sites, map after login
+    const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'map'];
+    if (storedView && allowedViews.includes(storedView as ViewType)) {
+      setCurrentView(storedView as ViewType);
+    } else {
+      setCurrentView('dashboard');
+    }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentView('landing');
+    localStorage.setItem('currentView', 'landing');
   };
 
   const handleNavigate = (view: string) => {
-    setCurrentView(view as any);
+    if (isViewType(view)) {
+      setCurrentView(view);
+      localStorage.setItem('currentView', view);
+    }
   };
 
   const handleViewSiteDetail = (siteId: string) => {
     setSelectedSiteId(siteId);
     setCurrentView('site-details');
+    localStorage.setItem('currentView', 'site-details');
   };
 
   const handleBackFromSiteDetail = () => {
     setCurrentView('sites');
     setSelectedSiteId(null);
+    localStorage.setItem('currentView', 'sites');
   };
+
+
+  // On mount, check session and restore view
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/session", { credentials: "include" });
+        const data = await res.json();
+        if (data.loggedIn) {
+          setIsAuthenticated(true);
+          // Restore last view except landing/login
+          const lastView = localStorage.getItem('currentView');
+          if (isViewType(lastView) && lastView !== 'landing' && lastView !== 'login') {
+            setCurrentView(lastView); // This line remains unchanged
+          } else {
+            setCurrentView('dashboard');
+          }
+        } else {
+          setCurrentView('landing');
+        }
+      } catch {
+        setCurrentView('landing');
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
 
   // Landing page view
   if (currentView === 'landing') {
