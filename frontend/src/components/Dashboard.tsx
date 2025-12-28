@@ -13,54 +13,9 @@ import {
   Bell
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+// ...existing code...
 
-// Generate readings every 5 minutes for the past 24 hours
-const generateFiveMinReadings = () => {
-  const readings = [];
-  const now = new Date();
-  const intervals = 24 * 60 / 5; // 288 readings for 24 hours
-  for (let i = intervals - 1; i >= 0; i--) {
-    const timestamp = new Date(now.getTime() - i * 5 * 60 * 1000);
-    const hour = timestamp.getHours();
-    // Simulate realistic variations throughout the day
-    const baseTemp = 26 + Math.sin(hour / 24 * Math.PI * 2) * 3;
-    const baseTurbidity = 4.5 + Math.random() * 2;
-    const basePh = 7.0 + (Math.random() - 0.5) * 0.4;
-    readings.push({
-      timestamp: timestamp.toISOString(),
-      turbidity: parseFloat(baseTurbidity.toFixed(1)),
-      temperature: parseFloat(baseTemp.toFixed(1)),
-      ph: parseFloat(basePh.toFixed(1))
-    });
-  }
-  return readings;
-};
 
-const fiveMinReadings = generateFiveMinReadings();
-const latestReading = fiveMinReadings[fiveMinReadings.length - 1];
-
-// Mock site data - single location
-const siteData: {
-  id: string;
-  siteName: string;
-  barangay: string;
-  municipality: string;
-  area: string;
-  readings: typeof latestReading;
-  riskLevel: "critical" | "warning" | "safe";
-  timestamp: string;
-  trend: "stable";
-} = {
-  id: "site-1",
-  siteName: "Mang Jose's Fish Pond",
-  barangay: "San Miguel",
-  municipality: "Tacloban City",
-  area: "100 sq meters",
-  readings: latestReading,
-  riskLevel: latestReading.turbidity > 15 ? "critical" : latestReading.turbidity > 5 ? "warning" : "safe",
-  timestamp: new Date(latestReading.timestamp).toLocaleString(),
-  trend: "stable"
-};
 
 
 
@@ -75,24 +30,46 @@ type Alert = {
 
 export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [liveTemperature, setLiveTemperature] = useState<number | null>(null);
+  const [latestReading, setLatestReading] = useState<any>(null);
+  const [readings, setReadings] = useState<any[]>([]);
+  const [siteData, setSiteData] = useState<any>({
+    siteName: "Mang Jose's Fish Pond",
+    barangay: "San Miguel",
+    municipality: "Tacloban City",
+    area: "100 square meters"
+  });
   const waterQualityRef = useRef<HTMLDivElement>(null);
   const alertsStreamRef = useRef<HTMLDivElement>(null);
 
+  // Fetch latest reading and 5-min readings from backend
   useEffect(() => {
-    // Fetch temperature from backend every 5 seconds
-    const fetchTemperature = () => {
+    const fetchLatest = () => {
       fetch("http://localhost:3001/api/sensors/latest")
         .then((res) => res.json())
         .then((data) => {
-          if (data && typeof data.temperature === "number") {
-            setLiveTemperature(data.temperature);
-          }
+          setLatestReading(data);
+          // Optionally update site info if backend provides it
+          if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
         })
         .catch(() => {});
     };
-    fetchTemperature();
-    const interval = setInterval(fetchTemperature, 5000);
+    fetchLatest();
+    const interval = setInterval(fetchLatest, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Fetch 5-min interval readings for last 24h
+    const fetchReadings = () => {
+      fetch("http://localhost:3001/api/sensors/history?interval=5min&range=24h")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) setReadings(data);
+        })
+        .catch(() => {});
+    };
+    fetchReadings();
+    const interval = setInterval(fetchReadings, 60000); // refresh every 1 min
     return () => clearInterval(interval);
   }, []);
 
@@ -143,9 +120,9 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
   const criticalAlerts = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged).length;
 
   // Calculate 24-hour averages
-  const avgTurbidity = (fiveMinReadings.reduce((sum, r) => sum + r.turbidity, 0) / fiveMinReadings.length).toFixed(1);
-  const avgTemperature = (fiveMinReadings.reduce((sum, r) => sum + r.temperature, 0) / fiveMinReadings.length).toFixed(1);
-  const avgPh = (fiveMinReadings.reduce((sum, r) => sum + r.ph, 0) / fiveMinReadings.length).toFixed(1);
+  const avgTurbidity = readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.turbidity || 0), 0) / readings.length).toFixed(1) : "-";
+  const avgTemperature = readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.temperature || 0), 0) / readings.length).toFixed(1) : "-";
+  const avgPh = readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.ph || 0), 0) / readings.length).toFixed(1) : "-";
 
   return (
     <div className="p-6 space-y-6">
@@ -171,21 +148,14 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
         <div className="flex-1 flex flex-col">
           {/* Sensor Data UI at the top */}
           <div className="mb-6 mt-2">
-            {/* Only temperature is real, turbidity and pH are mock for now */}
-            <SensorCard
-              readings={{
-                temperature: liveTemperature !== null ? liveTemperature : latestReading.temperature,
+            {/* Show latest reading in SensorCard (real data) */}
+            {latestReading && (
+              <SensorCard readings={{
                 turbidity: latestReading.turbidity,
+                temperature: latestReading.temperature,
                 ph: latestReading.ph
-              }}
-              alerts={alerts}
-              summary={{
-                avgTurbidity: Number(avgTurbidity),
-                avgTemperature: Number(avgTemperature),
-                avgPh: Number(avgPh),
-                totalReadings: fiveMinReadings.length
-              }}
-            />
+              }} />
+            )}
           </div>
           {/* Summary Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
@@ -210,7 +180,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
                   <TrendingUp className="h-10 w-10 text-green-500" />
                 </CardHeader>
                 <CardContent className="flex flex-col items-center justify-center h-full">
-                  <div className="text-3xl font-bold text-schistoguard-navy text-center">{fiveMinReadings.length}</div>
+                  <div className="text-3xl font-bold text-schistoguard-navy text-center">{readings.length}</div>
                   <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
                     Total readings (5 min interval, last 24 hours)
                   </p>
@@ -218,11 +188,10 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
               </Card>
 
               {/* Risk Level Card (based on all parameters) */}
-              {(() => {
-                // Use real temperature, mock turbidity and pH
-                const temp = liveTemperature !== null ? liveTemperature : latestReading.temperature;
-                const turbidity = 8.5;
-                const ph = 7.2;
+              {latestReading && (() => {
+                const temp = latestReading.temperature;
+                const turbidity = latestReading.turbidity;
+                const ph = latestReading.ph;
                 let tempRisk: 'critical' | 'warning' | 'safe' = 'safe';
                 if (temp >= 22 && temp <= 28) tempRisk = 'critical';
                 else if ((temp >= 20 && temp < 22) || (temp > 28 && temp <= 32)) tempRisk = 'warning';
@@ -293,8 +262,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
                         level={level}
                         onAcknowledge={handleAcknowledgeAlert}
                         siteName={siteData.siteName}
-                        value={alert.value ?? (liveTemperature !== null ? liveTemperature : latestReading.temperature)}
-                        timestamp={alert.timestamp ?? siteData.timestamp}
+                        value={alert.value ?? (latestReading ? latestReading.temperature : undefined)}
+                        timestamp={alert.timestamp ?? (latestReading ? latestReading.timestamp : undefined)}
                         message={alert.message ?? ""}
                       />
                     );

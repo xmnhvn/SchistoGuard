@@ -2,32 +2,41 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { SensorCard } from "./SensorCard";
+import SensorCard from "./SensorCard";
 import { AlertItem } from "./AlertItem";
 import { MapPin, MapPinDetailed } from "./MapPin";
 import { SubscriptionPanel } from "./SubscriptionPanel";
 import { Shield, Home, AlertTriangle, Settings, Bell, Download, Search, Mail, Lock } from "lucide-react";
 
-export function DesignSystem() {
-  const mockSensorData = {
-    siteName: "Barangay San Miguel River",
-    barangay: "San Miguel",
-    readings: { turbidity: 3.2, temperature: 26.5, ph: 7.1, uv: 2.1 },
-    riskLevel: "safe" as const,
-    timestamp: "2025-09-20 14:30",
-    trend: "stable" as const
-  };
+// Example mock sensor data for demonstration (must match SensorCardProps)
+const mockSensorData = {
+  readings: {
+    turbidity: 18.2,
+    temperature: 29.5,
+    ph: 7.2
+  },
+  summary: {
+    avgTurbidity: 18.2,
+    avgTemperature: 29.5,
+    avgPh: 7.2,
+    totalReadings: 1
+  }
+};
 
-  const mockAlert = {
-    id: "alert-demo",
-    level: "warning" as const,
-    message: "Temperature readings elevated above normal range",
-    siteName: "Barangay Malinao Canal",
-    parameter: "Temperature",
-    value: "28.2°C",
-    timestamp: "2025-09-20 13:45",
-    isAcknowledged: false
-  };
+// Example mock alert data for demonstration (must match AlertItemProps)
+const mockAlert = {
+  id: "1",
+  level: "critical" as "critical" | "warning",
+  message: "Turbidity levels have exceeded safe thresholds at Barangay San Miguel River.",
+  siteName: "Barangay San Miguel River",
+  parameter: "Turbidity",
+  value: "18.2 NTU",
+  timestamp: new Date().toISOString(),
+  isAcknowledged: false
+};
+
+export function DesignSystem() {
+  // TODO: Remove mockSensorData and use real data from backend or props
 
   return (
     <div className="p-6 space-y-8">

@@ -11,14 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
-// TODO: Replace with real time series data from backend or props
-const mockTimeSeriesData: any[] = [];
-
-// TODO: Replace with real history data from backend or props
-const mockHistoryData: any[] = [];
-
-// TODO: Replace with real site alerts from backend or props
-const mockSiteAlerts: any[] = [];
+import { useEffect } from "react";
+// TODO: Fetch real time series, history, and alerts from backend
 
 
 export interface SiteDetailViewProps {
@@ -29,6 +23,8 @@ export interface SiteDetailViewProps {
   onBack?: () => void;
 }
 
+// Alerts will be fetched from backend in the future
+
 export function SiteDetailView({ 
   siteId,
   siteName = "Mang Jose's Fishpond",
@@ -37,7 +33,15 @@ export function SiteDetailView({
   onBack
 }: SiteDetailViewProps) {
   const [timeRange, setTimeRange] = useState("24h");
-  const [alerts, setAlerts] = useState<any[]>(mockSiteAlerts);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch 5-min interval readings from backend
+    fetch("http://localhost:3001/api/sensors/history")
+      .then(res => res.json())
+      .then(data => setHistory(Array.isArray(data) ? data : []));
+  }, []);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert => 
@@ -55,6 +59,14 @@ export function SiteDetailView({
   }
 
   const [infoOpen, setInfoOpen] = useState(false);
+  // Prepare chart data for recharts
+  const chartData = history.map(r => ({
+    time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    turbidity: r.turbidity,
+    temperature: r.temperature,
+    ph: r.ph ?? 7.2
+  }));
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -109,12 +121,12 @@ export function SiteDetailView({
                 </TabsList>
                 
                 <TabsContent value="turbidity" className="space-y-4 min-h-96">
-                  {mockTimeSeriesData.length === 0 ? (
+                  {chartData.length === 0 ? (
                     <div className="h-96 flex items-center justify-center text-gray-400">No turbidity data available.</div>
                   ) : (
                     <div className="h-96">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={mockTimeSeriesData}>
+                        <AreaChart data={chartData}>
                           <defs>
                             <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3}/>
@@ -148,12 +160,12 @@ export function SiteDetailView({
                 </TabsContent>
                 
                 <TabsContent value="temperature" className="space-y-4 min-h-96">
-                  {mockTimeSeriesData.length === 0 ? (
+                  {chartData.length === 0 ? (
                     <div className="h-96 flex items-center justify-center text-gray-400">No temperature data available.</div>
                   ) : (
                     <div className="h-96">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={mockTimeSeriesData}>
+                        <LineChart data={chartData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="time" />
                           <YAxis />
@@ -177,12 +189,12 @@ export function SiteDetailView({
                 </TabsContent>
                 
                 <TabsContent value="ph" className="space-y-4 min-h-96">
-                  {mockTimeSeriesData.length === 0 ? (
+                  {chartData.length === 0 ? (
                     <div className="h-96 flex items-center justify-center text-gray-400">No pH data available.</div>
                   ) : (
                     <div className="h-96">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={mockTimeSeriesData}>
+                        <LineChart data={chartData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="time" />
                           <YAxis domain={[6, 8]} />

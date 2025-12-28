@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { SensorCard } from "./SensorCard";
+import SensorCard from "./SensorCard";
 import { AlertItem } from "./AlertItem";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { 
@@ -86,37 +86,54 @@ export function ResponsiveDashboard() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const mockSensorData = {
-    siteName: "Barangay San Miguel River",
-    barangay: "San Miguel",
-    readings: { turbidity: 3.2, temperature: 26.5, ph: 7.1 },
-    riskLevel: "safe" as const,
-    timestamp: "2025-09-20 14:30",
-    trend: "stable" as const
-  };
 
-  const mockAlert = {
-    id: "alert-demo",
-    level: "warning" as const,
-    message: "Temperature readings elevated above normal range",
-    siteName: "Barangay Malinao Canal",
-    parameter: "Temperature",
-    value: "28.2°C",
-    timestamp: "2025-09-20 13:45",
-    isAcknowledged: false
-  };
+  // Fetch real sensor readings and alerts from backend
+  const [readings, setReadings] = useState<any[]>([]);
+  const [latestReading, setLatestReading] = useState<any>(null);
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch("http://localhost:3001/api/sensors/history");
+        const data = await res.json();
+        setReadings(data);
+        if (data && data.length > 0) setLatestReading(data[data.length - 1]);
+      } catch {
+        setReadings([]);
+        setLatestReading(null);
+      }
+    };
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchAlerts = () => {
+      fetch("http://localhost:3001/api/alerts")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setAlerts(data);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (isMobile) {
     return (
       <div className="min-h-screen bg-schistoguard-light-bg">
         <MobileNavigation />
-        
         {/* Mobile header */}
         <div className="pt-16 pb-4 px-4 bg-white border-b">
           <h1 className="text-xl font-semibold text-schistoguard-navy">SchistoGuard</h1>
           <p className="text-sm text-muted-foreground">Water Quality Monitoring</p>
         </div>
-
         {/* Mobile tabs */}
         <div className="px-4 py-4">
           <Tabs defaultValue="overview" className="w-full">
@@ -125,68 +142,61 @@ export function ResponsiveDashboard() {
               <TabsTrigger value="sites">Sites</TabsTrigger>
               <TabsTrigger value="alerts">Alerts</TabsTrigger>
             </TabsList>
-            
             <TabsContent value="overview" className="space-y-4 mt-4">
               {/* Mobile summary cards */}
               <div className="grid grid-cols-2 gap-3">
                 <Card>
                   <CardContent className="p-3 text-center">
-                    <div className="text-lg font-bold text-schistoguard-navy">5</div>
-                    <div className="text-xs text-muted-foreground">Active Sites</div>
+                    <div className="text-lg font-bold text-schistoguard-navy">{readings.length}</div>
+                    <div className="text-xs text-muted-foreground">Total Readings</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-3 text-center">
-                    <div className="text-lg font-bold text-red-500">2</div>
+                    <div className="text-lg font-bold text-red-500">{alerts.length}</div>
                     <div className="text-xs text-muted-foreground">Alerts</div>
                   </CardContent>
                 </Card>
               </div>
-              
               {/* Mobile status indicators */}
               <Card>
                 <CardContent className="p-4">
                   <h3 className="font-medium mb-3">System Status</h3>
                   <div className="space-y-2">
+                    {/* Example: count by risk level if available */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Safe Sites</span>
-                      <Badge className="bg-status-safe text-white">3</Badge>
+                      <Badge className="bg-status-safe text-white">{readings.filter(r => r.turbidity <= 5).length}</Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Warning Sites</span>
-                      <Badge className="bg-status-warning text-black">2</Badge>
+                      <Badge className="bg-status-warning text-black">{readings.filter(r => r.turbidity > 5 && r.turbidity <= 15).length}</Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Critical Sites</span>
-                      <Badge className="bg-status-critical text-white">0</Badge>
+                      <Badge className="bg-status-critical text-white">{readings.filter(r => r.turbidity > 15).length}</Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
-            
             <TabsContent value="sites" className="space-y-4 mt-4">
-              <SensorCard {...mockSensorData} />
-              <SensorCard 
-                {...mockSensorData} 
-                siteName="Barangay Malinao Canal"
-                barangay="Malinao"
-                riskLevel="warning"
-                readings={{ turbidity: 12.8, temperature: 28.2, ph: 6.8 }}
-                trend="up"
-              />
+              {latestReading && (
+                <SensorCard
+                  readings={latestReading}
+                  summary={{
+                    avgTurbidity: readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.turbidity ?? 0), 0) / readings.length) : 0,
+                    avgTemperature: readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.temperature ?? 0), 0) / readings.length) : 0,
+                    avgPh: readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.ph ?? 0), 0) / readings.length) : 0,
+                    totalReadings: readings.length
+                  }}
+                />
+              )}
             </TabsContent>
-            
             <TabsContent value="alerts" className="space-y-4 mt-4">
-              <AlertItem {...mockAlert} />
-              <AlertItem 
-                {...mockAlert}
-                id="alert-2"
-                level="critical"
-                message="Turbidity levels critically high"
-                parameter="Turbidity"
-                value="18.2 NTU"
-              />
+              {alerts.length > 0 ? alerts.map(alert => (
+                <AlertItem key={alert.id} {...alert} />
+              )) : <div className="text-center text-gray-500">No alerts</div>}
             </TabsContent>
           </Tabs>
         </div>
@@ -200,26 +210,28 @@ export function ResponsiveDashboard() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">SchistoGuard Desktop</h1>
         <p className="text-muted-foreground mb-8">Full desktop experience with sidebar navigation</p>
-        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <SensorCard {...mockSensorData} />
-            <SensorCard 
-              {...mockSensorData} 
-              siteName="Barangay Malinao Canal"
-              barangay="Malinao"
-              riskLevel="warning"
-              readings={{ turbidity: 12.8, temperature: 28.2, ph: 6.8 }}
-              trend="up"
-            />
+            {latestReading && (
+              <SensorCard
+                readings={latestReading}
+                summary={{
+                  avgTurbidity: readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.turbidity ?? 0), 0) / readings.length) : 0,
+                  avgTemperature: readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.temperature ?? 0), 0) / readings.length) : 0,
+                  avgPh: readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.ph ?? 0), 0) / readings.length) : 0,
+                  totalReadings: readings.length
+                }}
+              />
+            )}
           </div>
-          
           <div className="space-y-6">
             <Card>
               <CardContent className="p-4">
                 <h3 className="font-medium mb-4">Recent Alerts</h3>
                 <div className="space-y-3">
-                  <AlertItem {...mockAlert} />
+                  {alerts.length > 0 ? alerts.map(alert => (
+                    <AlertItem key={alert.id} {...alert} />
+                  )) : <div className="text-center text-gray-500">No alerts</div>}
                 </div>
               </CardContent>
             </Card>

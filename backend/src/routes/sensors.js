@@ -3,6 +3,7 @@ const classifyWater = require("../utils/classifyWater");
 
 let latestData = null;
 let alerts = [];
+let readings = [];
 
 function classifyLevel(status) {
   if (status === "high-risk") return "critical";
@@ -10,16 +11,34 @@ function classifyLevel(status) {
   return "safe";
 }
 
+
 router.post("/", (req, res) => {
-  const { turbidity, temperature } = req.body;
+  const { turbidity, temperature, ph } = req.body;
 
   const status = classifyWater(temperature); // classify by temperature
   latestData = {
     turbidity,
     temperature,
+    ph,
     status,
     timestamp: new Date()
   };
+
+  // Store reading every 5 minutes (rounded down)
+  const now = new Date();
+  const rounded = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
+  // Only store if not already stored for this 5-min slot
+  if (!readings.length || new Date(readings[readings.length-1].timestamp).getTime() !== rounded.getTime()) {
+    readings.push({
+      turbidity,
+      temperature,
+      ph,
+      status,
+      timestamp: rounded.toISOString()
+    });
+    // Keep only last 288 readings (24h at 5min interval)
+    if (readings.length > 288) readings = readings.slice(readings.length - 288);
+  }
 
   // Always generate alert for every reading in possible-risk or high-risk
   const level = classifyLevel(status);
@@ -53,8 +72,15 @@ router.post("/", (req, res) => {
   });
 });
 
+
+// Get the latest reading
 router.get("/latest", (req, res) => {
   res.json(latestData);
+});
+
+// Get all readings for the last 24 hours (5-min interval)
+router.get("/history", (req, res) => {
+  res.json(readings);
 });
 
 // New endpoint: get alerts (temperature only)

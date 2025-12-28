@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SensorCard from './SensorCard';
 import { Clock, Search, Filter, Activity, Droplets, Thermometer, Eye, Download, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -8,38 +9,69 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 
-// TODO: Replace with real site readings from backend or props
-const generateHourlyReadings = () => [];
+
+import { useEffect } from 'react';
+
+// Fetch real site readings from backend
+const fetchReadings = async () => {
+  try {
+    const res = await fetch('http://localhost:3001/api/sensors/latest');
+    if (!res.ok) return [];
+    const data = await res.json();
+    // Wrap in array for table, add id if missing
+    if (data) {
+      return [{
+        ...data,
+        id: data.timestamp || Date.now(),
+        riskLevel: data.turbidity > 15 ? 'critical' : data.turbidity > 5 ? 'warning' : 'safe',
+        ph: data.ph ?? 7.2 // fallback if no pH
+      }];
+    }
+    return [];
+  } catch {
+    return [];
+  }
+};
 
 interface SitesDirectoryProps {
   onViewSiteDetail: (siteId: string) => void;
 }
 
+
 export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [filterTimeRange, setFilterTimeRange] = useState<string>('24h');
+  const [readings, setReadings] = useState<any[]>([]);
 
-  const hourlyReadings: any[] = generateHourlyReadings();
+  useEffect(() => {
+    const getData = async () => {
+      const data = await fetchReadings();
+      setReadings(data);
+    };
+    getData();
+    const interval = setInterval(getData, 5000); // refresh every 5s
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter readings based on search and filters
-  const filteredReadings = hourlyReadings.filter(reading => {
+  const filteredReadings = readings.filter(reading => {
     const timestamp = new Date(reading.timestamp);
     const searchMatch = timestamp.toLocaleString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       reading.turbidity.toString().includes(searchQuery) ||
-                       reading.temperature.toString().includes(searchQuery);
-    
+      reading.turbidity?.toString().includes(searchQuery) ||
+      reading.temperature?.toString().includes(searchQuery);
+
     const matchesRisk = filterRisk === 'all' || reading.riskLevel === filterRisk;
-    
+
     // Time range filter
     const now = new Date();
     const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
     let matchesTime = true;
-    
+
     if (filterTimeRange === '6h') matchesTime = hoursDiff <= 6;
     else if (filterTimeRange === '12h') matchesTime = hoursDiff <= 12;
     else if (filterTimeRange === '24h') matchesTime = hoursDiff <= 24;
-    
+
     return searchMatch && matchesRisk && matchesTime;
   });
 
@@ -106,6 +138,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   return (
     <div className="bg-schistoguard-light-bg">
       <div className="max-w-7xl mx-auto p-6">
+
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
           {/* Labels and info (col 1) */}
           <div className="col-span-1">
