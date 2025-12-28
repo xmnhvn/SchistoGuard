@@ -324,45 +324,79 @@ export const ReportsPage: React.FC = () => {
             </Card>
           </TabsContent>
           <TabsContent value="analytics" className="space-y-6">
-            {/* Analytics Dashboard - show real metrics */}
+            {/* Analytics Dashboard - dashboard style layout */}
             {analytics ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card className="h-40 flex flex-col justify-center items-center">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-md font-medium">Avg Turbidity</CardTitle>
-                    <Droplets className="w-6 h-6 text-blue-500" />
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-blue-700 text-center">{analytics.avgTurbidity}</div>
-                  </CardContent>
-                </Card>
-                <Card className="h-40 flex flex-col justify-center items-center">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-md font-medium">Avg Temperature</CardTitle>
-                    <Thermometer className="w-6 h-6 text-red-500" />
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-red-700 text-center">{analytics.avgTemperature}</div>
-                  </CardContent>
-                </Card>
-                <Card className="h-40 flex flex-col justify-center items-center">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-md font-medium">Avg pH</CardTitle>
-                    <Activity className="w-6 h-6 text-green-500" />
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-green-700 text-center">{analytics.avgPh}</div>
-                  </CardContent>
-                </Card>
-                <Card className="h-40 flex flex-col justify-center items-center">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-md font-medium">Total Readings</CardTitle>
-                    <FileText className="w-6 h-6 text-gray-500" />
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-gray-700 text-center">{analytics.totalReadings}</div>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Water Quality Trends */}
+                  <div className="bg-white rounded-xl p-6 shadow-sm flex-1">
+                    <div className="font-semibold text-lg mb-6">Water Quality Trends</div>
+                    <div className="mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-sm">Average Turbidity</span>
+                        <span className="text-blue-700 font-bold">{analytics.avgTurbidity} NTU</span>
+                      </div>
+                      <div className="w-full h-3 bg-blue-100 rounded-full mb-4">
+                        <div className="h-3 bg-teal-700 rounded-full" style={{ width: `${Math.min(Number(analytics.avgTurbidity) * 10, 100)}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-sm">Average Temperature</span>
+                        <span className="text-red-700 font-bold">{analytics.avgTemperature}°C</span>
+                      </div>
+                      <div className="w-full h-3 bg-red-100 rounded-full mb-4">
+                        <div className="h-3 bg-red-500 rounded-full" style={{ width: `${Math.min(Number(analytics.avgTemperature) * 2, 100)}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="mb-2">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-sm">Average pH Level</span>
+                        <span className="text-green-700 font-bold">{analytics.avgPh}</span>
+                      </div>
+                      <div className="w-full h-3 bg-green-100 rounded-full mb-2">
+                        <div className="h-3 bg-green-500 rounded-full" style={{ width: `${Math.min(Number(analytics.avgPh) * 12, 100)}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Alert Distribution */}
+                  <div className="bg-white rounded-xl p-6 shadow-sm flex-1">
+                    <div className="font-semibold text-lg mb-4">Alert Distribution</div>
+                  <hr className="mb-8" />
+                    <div className="flex flex-col gap-5">
+                    <div className="flex justify-between items-center mb-6">
+                        <span>Critical Alerts</span>
+                        <span className="font-bold text-red-600">3 (37.5%)</span>
+                      </div>
+                    <div className="flex justify-between items-center mb-6">
+                        <span>Warning Alerts</span>
+                        <span className="font-bold text-yellow-600">4 (50%)</span>
+                      </div>
+                    <div className="flex justify-between items-center mb-6">
+                        <span>Info Alerts</span>
+                        <span className="font-bold text-blue-600">1 (12.5%)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* System Performance */}
+                <div className="bg-white rounded-xl p-6 shadow-sm mt-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                  <div className="flex flex-col items-center justify-center h-32">
+                    <div className="text-2xl font-bold text-green-600 mb-1">98.5%</div>
+                    <div className="text-base font-medium text-schistoguard-navy">Sensor Uptime</div>
+                    <div className="text-xs text-gray-400 mt-1">Last 30 days</div>
+                  </div>
+                  <div className="flex flex-col items-center justify-center h-32">
+                    <div className="text-2xl font-bold text-blue-600 mb-1">2.3 min</div>
+                    <div className="text-base font-medium text-schistoguard-navy">Avg Response Time</div>
+                    <div className="text-sm text-gray-400 mt-1">Alert to notification</div>
+                  </div>
+                  <div className="flex flex-col items-center justify-center h-32">
+                    <div className="text-2xl font-bold text-purple-600 mb-1">247</div>
+                    <div className="text-base font-medium text-schistoguard-navy">Active Subscribers</div>
+                    <div className="text-sm text-gray-400 mt-1">Receiving alerts</div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="col-span-full text-center text-gray-400 py-12">No analytics data available.</div>
