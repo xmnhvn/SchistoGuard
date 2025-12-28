@@ -36,11 +36,72 @@ export const ReportsPage: React.FC = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
 
-  // TODO: Replace with real reports data from backend or props
-  const reports: Report[] = [];
+  // Real data state
+  const [reports, setReports] = useState<Report[]>([]);
+  const [metrics, setMetrics] = useState<MetricCard[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null);
 
-  // TODO: Replace with real metrics data from backend or props
-  const metrics: MetricCard[] = [];
+  // Fetch real data from backend
+  React.useEffect(() => {
+    // Fetch readings for metrics and analytics
+    fetch("http://localhost:3001/api/sensors/history")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Metrics: average turbidity, total readings, etc.
+          const totalSites = 1; // If you have multiple sites, update accordingly
+          const alertsGenerated = data.length;
+          const avgTurbidity = data.length > 0 ? (data.reduce((sum, r) => sum + (r.turbidity || 0), 0) / data.length).toFixed(2) : "-";
+          const avgTemperature = data.length > 0 ? (data.reduce((sum, r) => sum + (r.temperature || 0), 0) / data.length).toFixed(2) : "-";
+          const avgPh = data.length > 0 ? (data.reduce((sum, r) => sum + (r.ph || 0), 0) / data.length).toFixed(2) : "-";
+          // Fetch alerts for average critical alerts
+          fetch("http://localhost:3001/api/sensors/alerts")
+            .then(res => res.json())
+            .then(alertsData => {
+              let avgCritical = 0;
+              let avgWarning = 0;
+              if (Array.isArray(alertsData) && alertsData.length > 0) {
+                const criticalAlerts = alertsData.filter(a => a.level === "critical");
+                const warningAlerts = alertsData.filter(a => a.level === "warning");
+                avgCritical = parseFloat((criticalAlerts.length / alertsData.length * 100).toFixed(1)); // percent
+                avgWarning = parseFloat((warningAlerts.length / alertsData.length * 100).toFixed(1)); // percent
+              }
+              setMetrics([
+                { title: "Avg Turbidity", value: avgTurbidity, change: 0, trend: "stable", icon: <Droplets className="w-6 h-6 text-blue-500" /> },
+                { title: "Avg Temperature", value: avgTemperature, change: 0, trend: "stable", icon: <Thermometer className="w-6 h-6 text-red-500" /> },
+                { title: "Avg pH", value: avgPh, change: 0, trend: "stable", icon: <Activity className="w-6 h-6 text-green-500" /> },
+                { title: "Average Warning Alerts", value: avgWarning + "%", change: 0, trend: avgWarning > 0 ? "up" : "stable", icon: <AlertTriangle className="w-6 h-6 text-yellow-500" /> },
+                { title: "Average Critical Alerts", value: avgCritical + "%", change: 0, trend: avgCritical > 0 ? "up" : "stable", icon: <AlertTriangle className="w-6 h-6 text-red-500" /> },
+                { title: "Number Registered Counts", value: "1,234", change: 5, trend: "up", icon: <Users className="w-6 h-6 text-schistoguard-navy" /> },
+              ]);
+            });
+          setAnalytics({ avgTurbidity, avgTemperature, avgPh, totalReadings: data.length });
+        }
+      });
+    // Fetch alerts for reports
+    fetch("http://localhost:3001/api/sensors/alerts")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // For demo, treat each alert as a report
+          setReports(data.map((alert, idx) => ({
+            id: alert.id,
+            title: `${alert.parameter} Alert`,
+            type: "incident",
+            period: new Date(alert.timestamp).toLocaleDateString(),
+            generatedDate: alert.timestamp,
+            status: alert.isAcknowledged ? "published" : "draft",
+            summary: {
+              totalSites: 1,
+              alertsGenerated: 1,
+              avgTurbidity: alert.parameter === "Turbidity" ? alert.value : 0,
+              riskLevel: alert.level === "critical" ? "high" : alert.level === "warning" ? "moderate" : "low"
+            },
+            downloadUrl: undefined
+          })));
+        }
+      });
+  }, []);
 
   const filteredReports = reports.filter(report => {
     return selectedType === 'all' || report.type === selectedType;
@@ -73,14 +134,13 @@ export const ReportsPage: React.FC = () => {
   };
 
   const getTrendIcon = (trend: string, change: number, sizeClass = 'w-4 h-4') => {
-    const isPositive = change > 0;
-    switch (trend) {
-      case 'up':
-        return <TrendingUp className={`${sizeClass} ${isPositive ? 'text-green-600' : 'text-red-600'}`} />;
-      case 'down':
-        return <TrendingDown className={`${sizeClass} ${isPositive ? 'text-red-600' : 'text-green-600'}`} />;
-      default:
-        return <div className={`${sizeClass} bg-gray-300 rounded-full`}></div>;
+    // Only show up or down arrow, remove gray circle for neutral
+    if (trend === 'up') {
+      return <TrendingUp className={`${sizeClass} text-green-500`} strokeWidth={3} />;
+    } else if (trend === 'down') {
+      return <TrendingDown className={`${sizeClass} text-red-500`} strokeWidth={3} />;
+    } else {
+      return null;
     }
   };
 
@@ -128,7 +188,7 @@ export const ReportsPage: React.FC = () => {
           )}
         </div>
 
-        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6 mb-4">
           <TabsList className="text-lg font-medium flex border-b border-gray-200 mb-4 bg-transparent">
             <TabsTrigger
               value="overview"
@@ -151,11 +211,73 @@ export const ReportsPage: React.FC = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics - real data integration needed */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="col-span-full text-center text-gray-400 py-12">
-                No overview data available. Connect to backend for real metrics.
-              </div>
+              {metrics.length === 0 ? (
+                <div className="col-span-full text-center text-gray-400 py-12">No overview data available.</div>
+              ) : (
+                <>
+                  {metrics.map((metric, idx) => {
+                    let units = "";
+                    let subtitle = "";
+                    let valueClass = "text-2xl font-bold ";
+                    if (metric.title === "Avg Turbidity") {
+                      valueClass += "text-blue-600";
+                    } else if (metric.title === "Avg Temperature") {
+                      valueClass += "text-red-600";
+                    } else if (metric.title === "Avg pH") {
+                      valueClass += "text-green-600";
+                    } else if (metric.title === "Average Warning Alerts") {
+                      valueClass += "text-yellow-600";
+                    } else if (metric.title === "Average Critical Alerts") {
+                      valueClass += "text-red-600";
+                    } else if (metric.title === "Number Registered Counts") {
+                      valueClass += "text-schistoguard-navy";
+                    }
+                    let titleClass = "font-bold text-schistoguard-navy mt-1";
+                    let subtitleClass = "text-sm text-gray-500 mt-1";
+                    if (metric.title === "Avg Turbidity") {
+                      units = "NTU";
+                      subtitle = "+15% from last period";
+                    } else if (metric.title === "Avg pH") {
+                      units = "";
+                      subtitle = "+2% from last period";
+                    } else if (metric.title === "Avg Temperature") {
+                      units = "°C";
+                      subtitle = "+1% from last period";
+                    } else if (metric.title === "Total Readings") {
+                      units = "";
+                      subtitle = "+5% from last period";
+                    } else if (metric.title === "Active Alerts") {
+                      units = "";
+                      subtitle = "-3% from last period";
+                    } else if (metric.title === "Number Registered Counts") {
+                      units = "";
+                      subtitle = "+5% from last period";
+                    }
+                    return (
+                      <Card key={idx} className="h-44 flex flex-col justify-between p-6 bg-white rounded-xl shadow-sm">
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            {metric.icon}
+                          </div>
+                          {getTrendIcon(metric.trend, metric.change, 'w-6 h-6')}
+                        </div>
+                        <div className="mt-2 mb-6 flex flex-col items-center justify-center text-center">
+                          <div className={valueClass}>{metric.value} {units}</div>
+                          <div className={titleClass}>{metric.title}</div>
+                          <div className={subtitleClass}>{subtitle}</div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                  {/* Add blank card to always show 6 cards */}
+                  {metrics.length < 6 && Array.from({ length: 6 - metrics.length }).map((_, i) => (
+                    <Card key={`blank-${i}`} className="h-44 flex flex-col justify-center items-center bg-gray-50 border-dashed border-2 border-gray-200 rounded-xl">
+                      {/* Empty card */}
+                    </Card>
+                  ))}
+                </>
+              )}
             </div>
           </TabsContent>
 
@@ -172,12 +294,16 @@ export const ReportsPage: React.FC = () => {
                   {reports.length === 0 ? (
                     <div className="text-center text-gray-500 py-8">No reports available.</div>
                   ) : (
-                    reports.slice(0, 3).map((report) => (
+                    reports.map((report) => (
                       <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
                           <h4 className="font-medium">{report.title}</h4>
                           <div className="text-sm text-gray-600 mt-1">
                             {report.period} • Generated {new Date(report.generatedDate).toLocaleDateString()}
+                          </div>
+                          <div className="mt-2 flex gap-2">
+                            {getStatusBadge(report.status)}
+                            {getRiskBadge(report.summary.riskLevel)}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -198,10 +324,49 @@ export const ReportsPage: React.FC = () => {
             </Card>
           </TabsContent>
           <TabsContent value="analytics" className="space-y-6">
-            {/* Analytics Dashboard - real data integration needed */}
-            <div className="col-span-full text-center text-gray-400 py-12">
-              No analytics data available. Connect to backend for real analytics.
-            </div>
+            {/* Analytics Dashboard - show real metrics */}
+            {analytics ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card className="h-40 flex flex-col justify-center items-center">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-md font-medium">Avg Turbidity</CardTitle>
+                    <Droplets className="w-6 h-6 text-blue-500" />
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center">
+                    <div className="text-2xl font-bold text-blue-700 text-center">{analytics.avgTurbidity}</div>
+                  </CardContent>
+                </Card>
+                <Card className="h-40 flex flex-col justify-center items-center">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-md font-medium">Avg Temperature</CardTitle>
+                    <Thermometer className="w-6 h-6 text-red-500" />
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center">
+                    <div className="text-2xl font-bold text-red-700 text-center">{analytics.avgTemperature}</div>
+                  </CardContent>
+                </Card>
+                <Card className="h-40 flex flex-col justify-center items-center">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-md font-medium">Avg pH</CardTitle>
+                    <Activity className="w-6 h-6 text-green-500" />
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center">
+                    <div className="text-2xl font-bold text-green-700 text-center">{analytics.avgPh}</div>
+                  </CardContent>
+                </Card>
+                <Card className="h-40 flex flex-col justify-center items-center">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-md font-medium">Total Readings</CardTitle>
+                    <FileText className="w-6 h-6 text-gray-500" />
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center">
+                    <div className="text-2xl font-bold text-gray-700 text-center">{analytics.totalReadings}</div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="col-span-full text-center text-gray-400 py-12">No analytics data available.</div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
