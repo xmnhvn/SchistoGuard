@@ -40,6 +40,7 @@ export const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [metrics, setMetrics] = useState<MetricCard[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [alertCounts, setAlertCounts] = useState({ critical: 0, warning: 0, info: 0, total: 0 });
 
   // Fetch real data from backend
   React.useEffect(() => {
@@ -60,12 +61,15 @@ export const ReportsPage: React.FC = () => {
             .then(alertsData => {
               let avgCritical = 0;
               let avgWarning = 0;
+              let critical = 0, warning = 0, info = 0;
               if (Array.isArray(alertsData) && alertsData.length > 0) {
-                const criticalAlerts = alertsData.filter(a => a.level === "critical");
-                const warningAlerts = alertsData.filter(a => a.level === "warning");
-                avgCritical = parseFloat((criticalAlerts.length / alertsData.length * 100).toFixed(1)); // percent
-                avgWarning = parseFloat((warningAlerts.length / alertsData.length * 100).toFixed(1)); // percent
+                critical = alertsData.filter(a => a.level === "critical").length;
+                warning = alertsData.filter(a => a.level === "warning").length;
+                info = alertsData.filter(a => a.level === "info").length;
+                avgCritical = parseFloat((critical / alertsData.length * 100).toFixed(1)); // percent
+                avgWarning = parseFloat((warning / alertsData.length * 100).toFixed(1)); // percent
               }
+              setAlertCounts({ critical, warning, info, total: alertsData.length });
               setMetrics([
                 { title: "Avg Turbidity", value: avgTurbidity, change: 0, trend: "stable", icon: <Droplets className="w-6 h-6 text-blue-500" /> },
                 { title: "Avg Temperature", value: avgTemperature, change: 0, trend: "stable", icon: <Thermometer className="w-6 h-6 text-red-500" /> },
@@ -78,29 +82,54 @@ export const ReportsPage: React.FC = () => {
           setAnalytics({ avgTurbidity, avgTemperature, avgPh, totalReadings: data.length });
         }
       });
-    // Fetch alerts for reports
-    fetch("http://localhost:3001/api/sensors/alerts")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          // For demo, treat each alert as a report
-          setReports(data.map((alert, idx) => ({
-            id: alert.id,
-            title: `${alert.parameter} Alert`,
-            type: "incident",
-            period: new Date(alert.timestamp).toLocaleDateString(),
-            generatedDate: alert.timestamp,
-            status: alert.isAcknowledged ? "published" : "draft",
-            summary: {
-              totalSites: 1,
-              alertsGenerated: 1,
-              avgTurbidity: alert.parameter === "Turbidity" ? alert.value : 0,
-              riskLevel: alert.level === "critical" ? "high" : alert.level === "warning" ? "moderate" : "low"
-            },
-            downloadUrl: undefined
-          })));
-        }
-      });
+    // Autogenerate summary reports for demo
+    setReports([
+      {
+        id: 'monthly',
+        title: 'Monthly Report',
+        type: 'monthly',
+        period: 'December 2025',
+        generatedDate: new Date().toISOString(),
+        status: 'published',
+        summary: {
+          totalSites: 12,
+          alertsGenerated: 8,
+          avgTurbidity: 2.1,
+          riskLevel: 'moderate'
+        },
+        downloadUrl: '/reports/monthly-dec-2025.pdf'
+      },
+      {
+        id: 'quarterly',
+        title: 'Quarterly Report',
+        type: 'quarterly',
+        period: 'Q4 2025',
+        generatedDate: new Date().toISOString(),
+        status: 'published',
+        summary: {
+          totalSites: 12,
+          alertsGenerated: 22,
+          avgTurbidity: 2.3,
+          riskLevel: 'moderate'
+        },
+        downloadUrl: '/reports/quarterly-q4-2025.pdf'
+      },
+      {
+        id: 'annual',
+        title: 'Annual Report',
+        type: 'annual',
+        period: '2025',
+        generatedDate: new Date().toISOString(),
+        status: 'published',
+        summary: {
+          totalSites: 12,
+          alertsGenerated: 80,
+          avgTurbidity: 2.4,
+          riskLevel: 'low'
+        },
+        downloadUrl: '/reports/annual-2025.pdf'
+      }
+    ]);
   }, []);
 
   const filteredReports = reports.filter(report => {
@@ -180,7 +209,6 @@ export const ReportsPage: React.FC = () => {
                     <SelectItem value="monthly">Monthly</SelectItem>
                     <SelectItem value="quarterly">Quarterly</SelectItem>
                     <SelectItem value="annual">Annual</SelectItem>
-                    <SelectItem value="incident">Incident Reports</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -282,7 +310,7 @@ export const ReportsPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <Card className="min-h-[60vh] max-h-[80vh] flex flex-col">
+            <Card className="flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center text-lg font-medium">
                   <FileText className="w-5 h-5 mr-2" />
@@ -290,30 +318,26 @@ export const ReportsPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
-                <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="flex-1 overflow-y-auto space-y-3">
                   {reports.length === 0 ? (
                     <div className="text-center text-gray-500 py-8">No reports available.</div>
                   ) : (
                     reports.map((report) => (
-                      <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={report.id} className="flex items-center justify-between p-6 border rounded-lg bg-white">
                         <div className="flex-1">
-                          <h4 className="font-medium">{report.title}</h4>
-                          <div className="text-sm text-gray-600 mt-1">
-                            {report.period} • Generated {new Date(report.generatedDate).toLocaleDateString()}
+                          <h4 className="font-semibold text-schistoguard-navy text-lg mb-1">{report.title}</h4>
+                          <div className="text-sm text-gray-600 mb-2">
+                            {report.period} &nbsp;•&nbsp; Generated {new Date(report.generatedDate).toLocaleDateString()}
                           </div>
-                          <div className="mt-2 flex gap-2">
-                            {getStatusBadge(report.status)}
-                            {getRiskBadge(report.summary.riskLevel)}
-                          </div>
+                          {/* Removed risk badge */}
+                          <div className="text-xs text-gray-500">Total Sites: {report.summary.totalSites} &nbsp;|&nbsp; Alerts: {report.summary.alertsGenerated} &nbsp;|&nbsp; Avg Turbidity: {report.summary.avgTurbidity}</div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm" disabled={!report.downloadUrl}>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download
+                          <Button variant="outline" size="sm" asChild disabled={!report.downloadUrl}>
+                            <a href={report.downloadUrl} download>
+                              <Download className="w-4 h-4 mr-2" />
+                              Download
+                            </a>
                           </Button>
                         </div>
                       </div>
@@ -362,19 +386,25 @@ export const ReportsPage: React.FC = () => {
                   {/* Alert Distribution */}
                   <div className="bg-white rounded-xl p-6 shadow-sm flex-1">
                     <div className="font-semibold text-lg mb-4">Alert Distribution</div>
-                  <hr className="mb-8" />
+                    <hr className="mb-8" />
                     <div className="flex flex-col gap-5">
-                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex justify-between items-center mb-6">
                         <span>Critical Alerts</span>
-                        <span className="font-bold text-red-600">3 (37.5%)</span>
+                        <span className="font-bold text-red-600">
+                          {alertCounts.critical} ({alertCounts.total > 0 ? ((alertCounts.critical / alertCounts.total) * 100).toFixed(1) : 0}%)
+                        </span>
                       </div>
-                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex justify-between items-center mb-6">
                         <span>Warning Alerts</span>
-                        <span className="font-bold text-yellow-600">4 (50%)</span>
+                        <span className="font-bold text-yellow-600">
+                          {alertCounts.warning} ({alertCounts.total > 0 ? ((alertCounts.warning / alertCounts.total) * 100).toFixed(1) : 0}%)
+                        </span>
                       </div>
-                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex justify-between items-center mb-6">
                         <span>Info Alerts</span>
-                        <span className="font-bold text-blue-600">1 (12.5%)</span>
+                        <span className="font-bold text-blue-600">
+                          {alertCounts.info} ({alertCounts.total > 0 ? ((alertCounts.info / alertCounts.total) * 100).toFixed(1) : 0}%)
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -382,17 +412,23 @@ export const ReportsPage: React.FC = () => {
                 {/* System Performance */}
                 <div className="bg-white rounded-xl p-6 shadow-sm mt-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                   <div className="flex flex-col items-center justify-center h-32">
-                    <div className="text-2xl font-bold text-green-600 mb-1">98.5%</div>
+                    <div className="text-2xl font-bold text-green-600 mb-1">
+                      {analytics && analytics.sensorUptime !== undefined ? `${analytics.sensorUptime}%` : '--'}
+                    </div>
                     <div className="text-base font-medium text-schistoguard-navy">Sensor Uptime</div>
                     <div className="text-xs text-gray-400 mt-1">Last 30 days</div>
                   </div>
                   <div className="flex flex-col items-center justify-center h-32">
-                    <div className="text-2xl font-bold text-blue-600 mb-1">2.3 min</div>
+                    <div className="text-2xl font-bold text-blue-600 mb-1">
+                      {analytics && analytics.avgResponseTime !== undefined ? `${analytics.avgResponseTime} min` : '--'}
+                    </div>
                     <div className="text-base font-medium text-schistoguard-navy">Avg Response Time</div>
                     <div className="text-sm text-gray-400 mt-1">Alert to notification</div>
                   </div>
                   <div className="flex flex-col items-center justify-center h-32">
-                    <div className="text-2xl font-bold text-purple-600 mb-1">247</div>
+                    <div className="text-2xl font-bold text-purple-600 mb-1">
+                      {analytics && analytics.activeSubscribers !== undefined ? analytics.activeSubscribers : '--'}
+                    </div>
                     <div className="text-base font-medium text-schistoguard-navy">Active Subscribers</div>
                     <div className="text-sm text-gray-400 mt-1">Receiving alerts</div>
                   </div>
