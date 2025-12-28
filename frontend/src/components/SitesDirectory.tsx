@@ -12,22 +12,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 
 import { useEffect } from 'react';
 
-// Fetch real site readings from backend
+// Fetch all time series readings from backend
 const fetchReadings = async () => {
   try {
-    const res = await fetch('http://localhost:3001/api/sensors/latest');
+    const res = await fetch('http://localhost:3001/api/sensors/history');
     if (!res.ok) return [];
     const data = await res.json();
-    // Wrap in array for table, add id if missing
-    if (data) {
-      return [{
-        ...data,
-        id: data.timestamp || Date.now(),
-        riskLevel: data.turbidity > 15 ? 'critical' : data.turbidity > 5 ? 'warning' : 'safe',
-        ph: data.ph ?? 7.2 // fallback if no pH
-      }];
-    }
-    return [];
+    // Add id and riskLevel if missing
+    return Array.isArray(data)
+      ? data
+          .map((r, idx) => ({
+            ...r,
+            id: r.timestamp || idx,
+            riskLevel: r.turbidity > 15 ? 'critical' : r.turbidity > 5 ? 'warning' : 'safe',
+            ph: r.ph ?? 7.2
+          }))
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      : [];
   } catch {
     return [];
   }

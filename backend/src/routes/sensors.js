@@ -5,6 +5,22 @@ let latestData = null;
 let alerts = [];
 let readings = [];
 
+// Timer-based 5-min logging
+setInterval(() => {
+  if (!latestData) return;
+  const now = new Date();
+  const rounded = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
+  // Only store if not already stored for this 5-min slot
+  if (!readings.length || new Date(readings[readings.length-1].timestamp).getTime() !== rounded.getTime()) {
+    readings.push({
+      ...latestData,
+      timestamp: rounded.toISOString()
+    });
+    // Keep only last 288 readings (24h at 5min interval)
+    if (readings.length > 288) readings = readings.slice(readings.length - 288);
+  }
+}, 300000); // 5 minutes
+
 function classifyLevel(status) {
   if (status === "high-risk") return "critical";
   if (status === "possible-risk") return "warning";
@@ -24,21 +40,7 @@ router.post("/", (req, res) => {
     timestamp: new Date()
   };
 
-  // Store reading every 5 minutes (rounded down)
-  const now = new Date();
-  const rounded = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
-  // Only store if not already stored for this 5-min slot
-  if (!readings.length || new Date(readings[readings.length-1].timestamp).getTime() !== rounded.getTime()) {
-    readings.push({
-      turbidity,
-      temperature,
-      ph,
-      status,
-      timestamp: rounded.toISOString()
-    });
-    // Keep only last 288 readings (24h at 5min interval)
-    if (readings.length > 288) readings = readings.slice(readings.length - 288);
-  }
+  // No more time series logging here; handled by timer above
 
   // Always generate alert for every reading in possible-risk or high-risk
   const level = classifyLevel(status);
