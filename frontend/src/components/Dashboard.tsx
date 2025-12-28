@@ -14,20 +14,18 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
-// Generate hourly readings for the past 24 hours
-const generateHourlyReadings = () => {
+// Generate readings every 5 minutes for the past 24 hours
+const generateFiveMinReadings = () => {
   const readings = [];
   const now = new Date();
-  
-  for (let i = 23; i >= 0; i--) {
-    const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
+  const intervals = 24 * 60 / 5; // 288 readings for 24 hours
+  for (let i = intervals - 1; i >= 0; i--) {
+    const timestamp = new Date(now.getTime() - i * 5 * 60 * 1000);
     const hour = timestamp.getHours();
-    
     // Simulate realistic variations throughout the day
     const baseTemp = 26 + Math.sin(hour / 24 * Math.PI * 2) * 3;
     const baseTurbidity = 4.5 + Math.random() * 2;
     const basePh = 7.0 + (Math.random() - 0.5) * 0.4;
-    
     readings.push({
       timestamp: timestamp.toISOString(),
       turbidity: parseFloat(baseTurbidity.toFixed(1)),
@@ -35,12 +33,11 @@ const generateHourlyReadings = () => {
       ph: parseFloat(basePh.toFixed(1))
     });
   }
-  
   return readings;
 };
 
-const hourlyReadings = generateHourlyReadings();
-const latestReading = hourlyReadings[hourlyReadings.length - 1];
+const fiveMinReadings = generateFiveMinReadings();
+const latestReading = fiveMinReadings[fiveMinReadings.length - 1];
 
 // Mock site data - single location
 const siteData: {
@@ -142,13 +139,19 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
     ));
   };
 
-  const unacknowledgedAlerts = alerts.filter(alert => !alert.isAcknowledged).length;
+  // Only count unacknowledged alerts for temperature (real data), both warning and critical
+  const unacknowledgedAlerts = alerts.filter(
+    alert =>
+      !alert.isAcknowledged &&
+      alert.parameter === "Temperature" &&
+      (alert.level === "critical" || alert.level === "warning")
+  ).length;
   const criticalAlerts = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged).length;
 
   // Calculate 24-hour averages
-  const avgTurbidity = (hourlyReadings.reduce((sum, r) => sum + r.turbidity, 0) / hourlyReadings.length).toFixed(1);
-  const avgTemperature = (hourlyReadings.reduce((sum, r) => sum + r.temperature, 0) / hourlyReadings.length).toFixed(1);
-  const avgPh = (hourlyReadings.reduce((sum, r) => sum + r.ph, 0) / hourlyReadings.length).toFixed(1);
+  const avgTurbidity = (fiveMinReadings.reduce((sum, r) => sum + r.turbidity, 0) / fiveMinReadings.length).toFixed(1);
+  const avgTemperature = (fiveMinReadings.reduce((sum, r) => sum + r.temperature, 0) / fiveMinReadings.length).toFixed(1);
+  const avgPh = (fiveMinReadings.reduce((sum, r) => sum + r.ph, 0) / fiveMinReadings.length).toFixed(1);
 
   return (
     <div className="p-6 space-y-6">
@@ -174,10 +177,12 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
         <div className="flex-1 flex flex-col">
           {/* Sensor Data UI at the top */}
           <div className="mb-6 mt-2">
+            {/* Only temperature is real, turbidity and pH are mock for now */}
             <SensorCard
               readings={{
-                ...latestReading,
                 temperature: liveTemperature !== null ? liveTemperature : latestReading.temperature,
+                turbidity: 8.5, // mock value
+                ph: 7.2 // mock value
               }}
             />
           </div>
@@ -197,49 +202,71 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
                 </CardContent>
               </Card>
 
-              {/* Total Readings Card */}
+              {/* Total Readings Card (all parameters) */}
               <Card className="h-60">
                 <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
-                  <CardTitle className="text-md font-medium">Total Readings</CardTitle>
+                  <CardTitle className="text-md font-medium">Total Parameter Readings</CardTitle>
                   <TrendingUp className="h-10 w-10 text-green-500" />
                 </CardHeader>
                 <CardContent className="flex flex-col items-center justify-center h-full">
-                  <div className="text-3xl font-bold text-schistoguard-navy text-center">{hourlyReadings.length}</div>
+                  <div className="text-3xl font-bold text-schistoguard-navy text-center">{fiveMinReadings.length}</div>
                   <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
-                    Last 24 hours
+                    Total readings (5 min interval, last 24 hours)
                   </p>
                 </CardContent>
               </Card>
 
-              {/* Risk Level Card */}
-              <Card className="h-60">
-                <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
-                  <CardTitle className="text-md font-medium">Risk Level</CardTitle>
-                  <Droplets className={
-                    siteData.riskLevel === 'safe'
-                      ? 'h-10 w-10 text-green-500'
-                      : siteData.riskLevel === 'warning'
-                      ? 'h-10 w-10 text-yellow-500'
-                      : 'h-10 w-10 text-red-500'
-                  } />
-                </CardHeader>
-                <CardContent className="flex flex-col items-center mt-[-32px] justify-center h-full">
-                  <Badge 
-                    className={
-                      siteData.riskLevel === 'safe' 
-                        ? 'bg-status-safe hover:bg-status-safe/80 text-white' 
-                        : siteData.riskLevel === 'warning'
-                        ? 'bg-status-warning hover:bg-status-warning/80 text-black'
-                        : 'bg-status-critical hover:bg-status-critical/80 text-white'
-                    }
-                  >
-                    {siteData.riskLevel.toUpperCase()}
-                  </Badge>
-                  <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
-                    Based on turbidity
-                  </p>
-                </CardContent>
-              </Card>
+              {/* Risk Level Card (based on all parameters) */}
+              {(() => {
+                // Use real temperature, mock turbidity and pH
+                const temp = liveTemperature !== null ? liveTemperature : latestReading.temperature;
+                const turbidity = 8.5; // mock
+                const ph = 7.2; // mock
+
+                // Determine risk for each
+                let tempRisk: 'critical' | 'warning' | 'safe' = 'safe';
+                if (temp >= 22 && temp <= 28) tempRisk = 'critical';
+                else if ((temp >= 20 && temp < 22) || (temp > 28 && temp <= 32)) tempRisk = 'warning';
+
+                let turbidityRisk: 'critical' | 'warning' | 'safe' = 'safe';
+                if (turbidity > 15) turbidityRisk = 'critical';
+                else if (turbidity > 5) turbidityRisk = 'warning';
+
+                let phRisk: 'critical' | 'warning' | 'safe' = 'safe';
+                if (ph < 6.5 || ph > 8.5) phRisk = 'critical';
+                else if ((ph >= 6.5 && ph < 7) || (ph > 8 && ph <= 8.5)) phRisk = 'warning';
+
+                // Highest risk wins: critical > warning > safe
+                let overallRisk: 'critical' | 'warning' | 'safe' = 'safe';
+                if ([tempRisk, turbidityRisk, phRisk].includes('critical')) overallRisk = 'critical';
+                else if ([tempRisk, turbidityRisk, phRisk].includes('warning')) overallRisk = 'warning';
+
+                let badgeClass = overallRisk === 'critical'
+                  ? 'bg-status-critical hover:bg-status-critical/80 text-white'
+                  : overallRisk === 'warning'
+                  ? 'bg-status-warning hover:bg-status-warning/80 text-black'
+                  : 'bg-status-safe hover:bg-status-safe/80 text-white';
+                let iconClass = overallRisk === 'critical'
+                  ? 'h-10 w-10 text-red-500'
+                  : overallRisk === 'warning'
+                  ? 'h-10 w-10 text-yellow-500'
+                  : 'h-10 w-10 text-green-500';
+
+                return (
+                  <Card className="h-60">
+                    <CardHeader className="flex flex-col items-center justify-center space-y-2 pb-2 h-full">
+                      <CardTitle className="text-md font-medium">Risk Level</CardTitle>
+                      <Droplets className={iconClass} />
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center mt-[-32px] justify-center h-full">
+                      <Badge className={badgeClass}>{overallRisk.toUpperCase()}</Badge>
+                      <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
+                        Based on temperature, turbidity, and pH
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
             </div>
           {/* Removed Current Water Quality card and SensorCard */}
         </div>

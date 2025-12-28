@@ -11,12 +11,15 @@ interface SensorCardProps {
 }
 
 const SensorCard: React.FC<SensorCardProps> = ({ readings }) => {
+  // Only temperature is real, turbidity and pH are mock for now
+  const mockTurbidity = 8.5; // mock value
+  const mockPh = 7.2; // mock value
   return (
     <div className="flex gap-4 justify-center w-full">
-      {/* Temperature Card */}
+      {/* Temperature Card (real data) */}
       <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
         <div className="text-md font-bold text-schistoguard-navy mb-4 pb-2 text-center">Temperature</div>
-            <Thermometer className="h-10 w-10 text-red-500 mb-8" />
+            <Thermometer className="h-10 w-10 text-red-500 mb-4" />
         {(() => {
           const temp = readings.temperature;
           // WHO schistosomiasis risk label and color
@@ -40,17 +43,17 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings }) => {
           );
         })()}
       </div>
-      {/* Turbidity Card */}
+      {/* Turbidity Card (mock data) */}
       <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
         <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">Turbidity</div>
-            <Waves className="h-10 w-10 text-blue-500 mb-8" />
-        <div className="text-3xl font-bold text-schistoguard-navy mt-6 mb-1 text-center">{readings.turbidity} <span className="text-2xl font-bold align-top">NTU</span></div>
+            <Waves className="h-10 w-10 text-blue-500 mb-4" />
+        <div className="text-3xl font-bold text-schistoguard-navy mt-6 mb-1 text-center">{mockTurbidity} <span className="text-2xl font-bold align-top">NTU</span></div>
       </div>
-      {/* pH Level Card */}
+      {/* pH Level Card (mock data) */}
       <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
         <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">pH Level</div>
-            <Droplet className="h-10 w-10 text-cyan-500 mb-8" style={{ color: '#78c2cfff' }} />
-        <div className="text-3xl font-bold text-schistoguard-navy mt-6 mb-1 text-center">{readings.ph}</div>
+            <Droplet className="h-10 w-10 text-cyan-500 mb-4" style={{ color: '#78c2cfff' }} />
+        <div className="text-3xl font-bold text-schistoguard-navy mt-6 mb-1 text-center">{mockPh}</div>
       </div>
     </div>
   );

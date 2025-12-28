@@ -21,11 +21,26 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// Only temperature alert is real, turbidity and pH are mock for now
 const mockAlerts = [
   {
     id: "alert-1",
+    level: "warning" as const,
+    message: "Temperature readings elevated above normal range",
+    siteName: "Barangay Malinao Canal", 
+    parameter: "Temperature",
+    value: "28.2°C", // Replace with real value if available
+    timestamp: "2025-09-20 13:45",
+    isAcknowledged: true,
+    acknowledgedBy: "Maria Santos (BHW)",
+    duration: "8 minutes",
+    barangay: "Malinao"
+  },
+  // Mock alert for Turbidity
+  {
+    id: "alert-2",
     level: "critical" as const,
-    message: "Turbidity levels critically high at monitoring site",
+    message: "Turbidity levels critically high at monitoring site (mock)",
     siteName: "Mang Jose's Fishpond",
     parameter: "Turbidity",
     value: "18.2 NTU",
@@ -35,23 +50,11 @@ const mockAlerts = [
     duration: "15 minutes",
     barangay: "Riverside"
   },
-  {
-    id: "alert-2", 
-    level: "warning" as const,
-    message: "Temperature readings elevated above normal range",
-    siteName: "Barangay Malinao Canal", 
-    parameter: "Temperature",
-    value: "28.2°C",
-    timestamp: "2025-09-20 13:45",
-    isAcknowledged: true,
-    acknowledgedBy: "Maria Santos (BHW)",
-    duration: "8 minutes",
-    barangay: "Malinao"
-  },
+  // Mock alert for pH
   {
     id: "alert-3",
     level: "critical" as const,
-    message: "pH levels critically low - potential contamination",
+    message: "pH levels critically low - potential contamination (mock)",
     siteName: "Barangay Central Plaza",
     parameter: "pH Level",
     value: "5.8",
@@ -61,10 +64,11 @@ const mockAlerts = [
     duration: "45 minutes",
     barangay: "Central"
   },
+  // Another mock alert for Turbidity
   {
     id: "alert-4",
     level: "warning" as const,
-    message: "Turbidity levels elevated during heavy rainfall",
+    message: "Turbidity levels elevated during heavy rainfall (mock)",
     siteName: "Barangay San Miguel River",
     parameter: "Turbidity",
     value: "12.1 NTU",
@@ -117,8 +121,9 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
     return matchesSearch && matchesStatus && matchesLevel && matchesBarangay;
   });
 
-  const unacknowledgedCount = alerts.filter(alert => !alert.isAcknowledged).length;
-  const criticalCount = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged).length;
+  // Only count temperature alerts as real for summary cards
+  const unacknowledgedCount = alerts.filter(alert => !alert.isAcknowledged && alert.parameter === "Temperature").length;
+  const criticalCount = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged && alert.parameter === "Temperature").length;
 
   return (
     <div className="p-6 space-y-6">
