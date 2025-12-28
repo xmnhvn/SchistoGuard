@@ -3,7 +3,6 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { Checkbox } from "./ui/checkbox";
 import { AlertItem } from "./AlertItem";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -79,13 +78,20 @@ const mockAlerts = [
 
 export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [alerts, setAlerts] = useState(mockAlerts);
-  const [selectedAlerts, setSelectedAlerts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterLevel, setFilterLevel] = useState("all");
   const [filterBarangay, setFilterBarangay] = useState("all");
   const [selectedAlert, setSelectedAlert] = useState<typeof mockAlerts[0] | null>(null);
-  // Removed useNavigate, using onNavigate prop instead
+  const handleExport = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredAlerts, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "alerts_export.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert => 
@@ -97,32 +103,6 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
     ));
   };
 
-  const handleBulkAcknowledge = () => {
-    setAlerts(prev => prev.map(alert => 
-      selectedAlerts.includes(alert.id) ? { 
-        ...alert, 
-        isAcknowledged: true,
-        acknowledgedBy: "Current User (LGU)"
-      } : alert
-    ));
-    setSelectedAlerts([]);
-  };
-
-  const handleSelectAlert = (alertId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedAlerts(prev => [...prev, alertId]);
-    } else {
-      setSelectedAlerts(prev => prev.filter(id => id !== alertId));
-    }
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedAlerts(filteredAlerts.map(alert => alert.id));
-    } else {
-      setSelectedAlerts([]);
-    }
-  };
 
   const filteredAlerts = alerts.filter(alert => {
     const matchesSearch = alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -142,32 +122,60 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mr-1 p-1"
-            aria-label="Back"
-            onClick={() => onNavigate && onNavigate('dashboard')}
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold text-schistoguard-navy">Alert Management</h1>
-            <p className="text-muted-foreground">Monitor and manage water quality alerts across all sites</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+          {/* Column 1: Title and Subtitle (stacked) */}
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mr-1 p-1"
+                aria-label="Back"
+                onClick={() => onNavigate && onNavigate('dashboard')}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
+              <h1 className="text-2xl font-semibold text-schistoguard-navy">Alert Management</h1>
+            </div>
+            <div className="text-muted-foreground text-sm pl-10 md:pl-12">Monitor and manage water quality alerts across all sites</div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export Alerts
-          </Button>
-          <Button size="sm" className="bg-schistoguard-teal hover:bg-schistoguard-teal/90">
-            <Bell className="w-4 h-4 mr-2" />
-            Alert Settings
-          </Button>
+          {/* Column 2: Empty for spacing */}
+          <div></div>
+          {/* Column 3: Filters and Export (stacked, right-aligned) */}
+          <div className="flex flex-row items-center gap-3 w-full md:w-auto">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-[140px] border border-gray-300 rounded-lg bg-gray-50">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="unacknowledged">Unacknowledged</SelectItem>
+                <SelectItem value="acknowledged">Acknowledged</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filterLevel}
+              onValueChange={setFilterLevel}
+            >
+              <SelectTrigger className="w-40 border border-gray-200">
+                <SelectValue placeholder="All Levels" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Levels</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              className="w-40 flex items-center justify-center gap-2 border border-gray-200"
+              onClick={handleExport}
+            >
+              <Download className="w-4 h-4" /> Export Alerts
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -175,45 +183,45 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-md font-medium">Total Alerts</CardTitle>
+               <AlertTriangle className="h-7 w-7 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-schistoguard-navy">{alerts.length}</div>
-            <p className="text-xs text-muted-foreground">Last 24 hours</p>
+          <CardContent className="flex flex-col items-center justify-center">
+            <div className="text-2xl font-bold text-schistoguard-navy text-center">{alerts.length}</div>
+            <p className="text-xs text-muted-foreground text-center">Last 24 hours</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unacknowledged</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-md font-medium">Unacknowledged</CardTitle>
+               <Clock className="h-7 w-7 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{unacknowledgedCount}</div>
-            <p className="text-xs text-muted-foreground">Require attention</p>
+          <CardContent className="flex flex-col items-center justify-center">
+            <div className="text-2xl font-bold text-red-500 text-center">{unacknowledgedCount}</div>
+            <p className="text-xs text-muted-foreground text-center">Require attention</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <CardTitle className="text-md font-medium">Critical Alerts</CardTitle>
+               <AlertTriangle className="h-7 w-7 text-red-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{criticalCount}</div>
-            <p className="text-xs text-muted-foreground">High priority</p>
+          <CardContent className="flex flex-col items-center justify-center">
+            <div className="text-2xl font-bold text-red-500 text-center">{criticalCount}</div>
+            <p className="text-xs text-muted-foreground text-center">High priority</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Response Time</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-md font-medium">Response Time</CardTitle>
+               <CheckCircle2 className="h-7 w-7 text-green-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">12m</div>
-            <p className="text-xs text-muted-foreground">Average response</p>
+          <CardContent className="flex flex-col items-center justify-center">
+            <div className="text-2xl font-bold text-green-500 text-center">12m</div>
+            <p className="text-xs text-muted-foreground text-center">Average response</p>
           </CardContent>
         </Card>
       </div>
@@ -222,101 +230,17 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle>Alert List</CardTitle>
-            {selectedAlerts.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {selectedAlerts.length} selected
-                </span>
-                <Button 
-                  size="sm" 
-                  onClick={handleBulkAcknowledge}
-                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Acknowledge Selected
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          {/* Filter Controls */}
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search alerts, sites, or parameters..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-[160px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="unacknowledged">Unacknowledged</SelectItem>
-                  <SelectItem value="acknowledged">Acknowledged</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={filterLevel} onValueChange={setFilterLevel}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <SelectValue placeholder="Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={filterBarangay} onValueChange={setFilterBarangay}>
-                <SelectTrigger className="w-full sm:w-[160px]">
-                  <SelectValue placeholder="Barangay" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Barangays</SelectItem>
-                  <SelectItem value="Riverside">Riverside</SelectItem>
-                  <SelectItem value="Malinao">Malinao</SelectItem>
-                  <SelectItem value="Central">Central</SelectItem>
-                  <SelectItem value="San Miguel">San Miguel</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <CardTitle className="font-bold">Alert List</CardTitle>
+            {/* Bulk acknowledge button removed as requested */}
           </div>
         </CardHeader>
         
         <CardContent>
-          {/* Select All Checkbox */}
-          {filteredAlerts.length > 0 && (
-            <div className="flex items-center space-x-2 mb-4 pb-2 border-b">
-              <Checkbox
-                id="select-all"
-                checked={selectedAlerts.length === filteredAlerts.length && filteredAlerts.length > 0}
-                onCheckedChange={handleSelectAll}
-              />
-              <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-                Select all alerts ({filteredAlerts.length})
-              </label>
-            </div>
-          )}
-
-          {/* Alert List */}
-          <div className="space-y-4">
+          {/* Alert List - fixed height, scrollable, styled like SitesDirectory */}
+          <div className="rounded-md border overflow-x-auto h-80 overflow-y-auto scrollbar-hide space-y-4">
             {filteredAlerts.length > 0 ? (
               filteredAlerts.map((alert) => (
                 <div key={alert.id} className="flex items-start gap-3">
-                  <Checkbox
-                    id={`alert-${alert.id}`}
-                    checked={selectedAlerts.includes(alert.id)}
-                    onCheckedChange={(checked: boolean) => handleSelectAlert(alert.id, checked)}
-                    className="mt-4"
-                  />
                   <div className="flex-1">
                     <Dialog>
                       <DialogTrigger asChild>
@@ -368,6 +292,17 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
                               <div>
                                 <h4 className="font-medium mb-2">Site Information</h4>
                                 <div className="space-y-2 text-sm">
+                                <div className="flex flex-col lg:flex-row gap-4">
+                                  <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                                    <Input
+                                      placeholder="Search alerts, sites, or parameters..."
+                                      value={searchTerm}
+                                      onChange={(e) => setSearchTerm(e.target.value)}
+                                      className="pl-10"
+                                    />
+                                  </div>
+                                </div>
                                   <div className="flex justify-between">
                                     <span className="text-muted-foreground">Site:</span>
                                     <span>{selectedAlert.siteName}</span>

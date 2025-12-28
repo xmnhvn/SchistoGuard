@@ -317,15 +317,15 @@ export const ReportsPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <Card>
+            <Card className="min-h-[60vh] max-h-[80vh] flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center text-lg font-medium">
                   <FileText className="w-5 h-5 mr-2" />
                   Reports
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="flex-1 flex flex-col">
+                <div className="flex-1 overflow-y-auto space-y-4">
                   {reports.slice(0, 3).map((report) => (
                     <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex-1">

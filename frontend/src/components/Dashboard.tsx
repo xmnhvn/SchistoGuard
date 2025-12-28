@@ -245,15 +245,15 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
         </div>
         {/* Right column: Alerts Stream */}
         <div ref={alertsStreamRef} className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide mt-2" style={{ maxWidth: 380 }}>
-          <Card className="flex flex-col h-full flex-1">
+          <Card className="flex flex-col h-60 border rounded-md">
             <CardHeader className="pb-1">
               <CardTitle className="flex items-center justify-between text-sm font-bold">
                 Alerts Stream
                 <Badge variant="secondary">{unacknowledgedAlerts} unread</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 mt-0 flex-1 p-4 h-full" style={{ overflow: 'hidden' }}>
-              <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-3 h-full" style={{ maxHeight: '100%' }}>
+            <CardContent className="space-y-3 mt-0 flex-1 p-4 h-full">
+              <div className="overflow-y-auto scrollbar-hide flex flex-col gap-3 h-44">
                 {alerts.map((alert) => (
                   <AlertItem
                     key={alert.id}
