@@ -6,20 +6,24 @@ let alerts = [];
 let readings = [];
 
 // Timer-based 5-min logging
+let firstLogged = false;
 setInterval(() => {
   if (!latestData) return;
   const now = new Date();
-  const rounded = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
-  // Only store if not already stored for this 5-min slot
-  if (!readings.length || new Date(readings[readings.length-1].timestamp).getTime() !== rounded.getTime()) {
-    readings.push({
-      ...latestData,
-      timestamp: rounded.toISOString()
-    });
-    // Keep only last 288 readings (24h at 5min interval)
-    if (readings.length > 288) readings = readings.slice(readings.length - 288);
+  if (!firstLogged) {
+    readings.push({ ...latestData, timestamp: now.toISOString() });
+    firstLogged = true;
+    return;
   }
-}, 300000); // 5 minutes
+  // Only store if at least 5 minutes have passed since last record
+  if (readings.length > 0) {
+    const last = new Date(readings[readings.length-1].timestamp);
+    if (now.getTime() - last.getTime() >= 5 * 60 * 1000) {
+      readings.push({ ...latestData, timestamp: now.toISOString() });
+      if (readings.length > 288) readings = readings.slice(readings.length - 288);
+    }
+  }
+}, 1000); // check every second for more accurate first log
 
 function classifyLevel(status) {
   if (status === "high-risk") return "critical";
