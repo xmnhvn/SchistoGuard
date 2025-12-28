@@ -32,6 +32,7 @@ export function SiteDetailView({
   currentRisk = "critical",
   onBack
 }: SiteDetailViewProps) {
+  console.log("SiteDetailView mounted");
   const [timeRange, setTimeRange] = useState("24h");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
@@ -39,8 +40,17 @@ export function SiteDetailView({
   useEffect(() => {
     // Fetch 5-min interval readings from backend
     fetch("http://localhost:3001/api/sensors/history")
-      .then(res => res.json())
-      .then(data => setHistory(Array.isArray(data) ? data : []));
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch time series data");
+        return res.json();
+      })
+      .then(data => {
+        console.log("Site Details time series data:", data);
+        setHistory(Array.isArray(data) ? data : []);
+      })
+      .catch(err => {
+        console.error("Error fetching time series data:", err);
+      });
   }, []);
 
   const handleAcknowledgeAlert = (alertId: string) => {
@@ -106,128 +116,93 @@ export function SiteDetailView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Charts Area (span 2 columns) */}
+        {/* New Real-Time Monitoring Graph based on time series table */}
         <div className="min-w-0 lg:col-span-2">
           <Card className="w-full">
             <CardHeader>
-              <CardTitle>Real-time Monitoring ({timeRange})</CardTitle>
+              <CardTitle>Real-Time Monitoring (5mins intervals)</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="turbidity" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="turbidity">Turbidity</TabsTrigger>
-                  <TabsTrigger value="temperature">Temperature</TabsTrigger>
-                  <TabsTrigger value="ph">pH Level</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="turbidity" className="space-y-4 min-h-96">
-                  {chartData.length === 0 ? (
-                    <div className="h-96 flex items-center justify-center text-gray-400">No turbidity data available.</div>
-                  ) : (
-                    <div className="h-96">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData}>
-                          <defs>
-                            <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" />
-                          <YAxis />
-                          <Tooltip 
-                            formatter={(value) => [`${value} NTU`, "Turbidity"]}
-                            labelFormatter={(time) => `Time: ${time}`}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="turbidity" 
-                            stroke="#FF6B6B" 
-                            strokeWidth={2}
-                            fill="url(#turbidityGradient)" 
-                          />
-                          {/* Threshold lines */}
-                          <Line type="monotone" dataKey={() => 5} stroke="#28A745" strokeDasharray="5 5" />
-                          <Line type="monotone" dataKey={() => 15} stroke="#ffc107" strokeDasharray="5 5" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                  <div className="text-sm text-muted-foreground">
-                    <p>• Safe: ≤5 NTU (Green line) • Warning: 6-15 NTU (Yellow line) • Critical: &gt;15 NTU</p>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="temperature" className="space-y-4 min-h-96">
-                  {chartData.length === 0 ? (
-                    <div className="h-96 flex items-center justify-center text-gray-400">No temperature data available.</div>
-                  ) : (
-                    <div className="h-96">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" />
-                          <YAxis />
-                          <Tooltip 
-                            formatter={(value) => [`${value}°C`, "Temperature"]}
-                            labelFormatter={(time) => `Time: ${time}`}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="temperature" 
-                            stroke="#007E88" 
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                  <div className="text-sm text-muted-foreground">
-                    <p>• Normal range: 22-30°C</p>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="ph" className="space-y-4 min-h-96">
-                  {chartData.length === 0 ? (
-                    <div className="h-96 flex items-center justify-center text-gray-400">No pH data available.</div>
-                  ) : (
-                    <div className="h-96">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" />
-                          <YAxis domain={[6, 8]} />
-                          <Tooltip 
-                            formatter={(value) => [value, "pH Level"]}
-                            labelFormatter={(time) => `Time: ${time}`}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="ph" 
-                            stroke="#28A745" 
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                  <div className="text-sm text-muted-foreground">
-                    <p>• Normal range: 6.5-8.0</p>
-                  </div>
-                </TabsContent>
-              </Tabs>
+              {chartData.length === 0 ? (
+                <div className="h-96 flex items-center justify-center text-gray-400">No time series data available.</div>
+              ) : (
+                <div style={{ minHeight: 400, minWidth: 300, width: '100%', height: 475 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#007E88" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#007E88" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#28A745" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#28A745" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis />
+                      <Tooltip labelFormatter={(time) => `Time: ${time}`} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="turbidity" 
+                        stroke="#FF6B6B" 
+                        strokeWidth={2}
+                        fill="url(#turbidityGradient)" 
+                        name="Turbidity (NTU)"
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="temperature" 
+                        stroke="#007E88" 
+                        strokeWidth={2}
+                        fill="url(#temperatureGradient)" 
+                        name="Temperature (°C)"
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="ph" 
+                        stroke="#28A745" 
+                        strokeWidth={2}
+                        fill="url(#phGradient)" 
+                        name="pH Level"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              <div className="text-sm text-muted-foreground mt-2 text-center">
+                <p>All parameters shown per 5-min interval (from time series table)</p>
+                <div className="flex gap-4 mt-2 justify-center">
+                  <span className="flex items-center gap-1">
+                    <span style={{ display: 'inline-block', width: 16, height: 4, background: '#FF6B6B', borderRadius: 2 }}></span>
+                    Turbidity
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span style={{ display: 'inline-block', width: 16, height: 4, background: '#007E88', borderRadius: 2 }}></span>
+                    Temperature
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span style={{ display: 'inline-block', width: 16, height: 4, background: '#28A745', borderRadius: 2 }}></span>
+                    pH Level
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Right Sidebar: Subscription Panel and Site Info stacked in 3rd column */}
-        <div className="space-y-6 w-full max-w-full lg:col-span-1">
+        <div className="space-y-6 w-full max-w-full lg:col-span-1 h-full flex flex-col">
           <SubscriptionPanel 
             siteName={siteName}
             onSave={(settings: any) => console.log('Subscription settings saved:', settings)}
           />
-          <Card>
+          <Card style={{ flex: 1, height: '100%' }}>
             <CardHeader>
               <CardTitle>Site Information</CardTitle>
             </CardHeader>

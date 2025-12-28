@@ -171,7 +171,7 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
       case 'sites': return { title: 'Sites Directory', subtitle: 'Browse All Monitoring Stations' };
       case 'alerts': return { title: 'Alerts', subtitle: 'Water Quality Notifications' };
       case 'reports': return { title: 'Reports & Analytics', subtitle: 'Water Quality Insights' };
-      case 'site-detail': return { title: 'Site Details', subtitle: 'Detailed Site Information' };
+      case 'site-details': return { title: 'Site Details', subtitle: 'Detailed Site Information' };
       default: return { title: 'Dashboard', subtitle: 'Water Quality Monitoring Overview' };
     }
   };
