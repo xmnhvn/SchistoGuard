@@ -37,18 +37,21 @@ void loop() {
   float phVoltage = phRaw * (5.0 / 1023.0);
   float phValue = 7 + ((2.5 - phVoltage) / 0.18); // Adjust calibration as needed
 
+  // LCD format:
+  // Line 1: Te:x.xxC pH:zz.zz
+  // Line 2: Tu:yyNTU
   lcd.setCursor(0, 0);
-  lcd.print("Temp: ");
+  lcd.print("T:");
   lcd.print(tempC, 2);
-  lcd.print(" C   ");
-
-  lcd.setCursor(0, 1);
-  lcd.print("Turb: ");
-  lcd.print(turbidityVoltage, 2);
-  lcd.print(" NTU ");
-  lcd.print(" pH:");
+  lcd.print("C pH:");
   lcd.print(phValue, 2);
 
+  lcd.setCursor(0, 1);
+  lcd.print("Tu:");
+  lcd.print(turbidityVoltage, 2);
+  lcd.print(" NTU   ");
+
+  // Send all values to backend, comma-separated
   Serial.print(tempC, 2);
   Serial.print(",");
   Serial.print(turbidityVoltage, 2);

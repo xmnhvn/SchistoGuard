@@ -28,7 +28,7 @@ type Alert = {
   [key: string]: any;
 };
 
-export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void }) {
+export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view: string) => void, setSystemStatus?: (status: "operational" | "down") => void }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
@@ -38,6 +38,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
     municipality: "Tacloban City",
     area: "100 square meters"
   });
+  const [backendOk, setBackendOk] = useState(true);
+  const [dataOk, setDataOk] = useState(true);
   const waterQualityRef = useRef<HTMLDivElement>(null);
   const alertsStreamRef = useRef<HTMLDivElement>(null);
 
@@ -45,13 +47,20 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
   useEffect(() => {
     const fetchLatest = () => {
       fetch("http://localhost:3001/api/sensors/latest")
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error("Backend down");
+          setBackendOk(true);
+          return res.json();
+        })
         .then((data) => {
           setLatestReading(data);
-          // Optionally update site info if backend provides it
+          setDataOk(!!data && Object.keys(data).length > 0);
           if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
         })
-        .catch(() => {});
+        .catch(() => {
+          setBackendOk(false);
+          setDataOk(false);
+        });
     };
     fetchLatest();
     const interval = setInterval(fetchLatest, 5000);
@@ -62,16 +71,33 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
     // Fetch 5-min interval readings for last 24h
     const fetchReadings = () => {
       fetch("http://localhost:3001/api/sensors/history?interval=5min&range=24h")
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error("Backend down");
+          setBackendOk(true);
+          return res.json();
+        })
         .then((data) => {
           if (Array.isArray(data)) setReadings(data);
         })
-        .catch(() => {});
+        .catch(() => {
+          setBackendOk(false);
+        });
     };
     fetchReadings();
     const interval = setInterval(fetchReadings, 60000); // refresh every 1 min
     return () => clearInterval(interval);
   }, []);
+
+  // Update system status for NavigationHeader
+  useEffect(() => {
+    if (setSystemStatus) {
+      if (!backendOk || !dataOk) {
+        setSystemStatus("down");
+      } else {
+        setSystemStatus("operational");
+      }
+    }
+  }, [backendOk, dataOk, setSystemStatus]);
 
   useEffect(() => {
     const fetchAlerts = () => {
