@@ -28,8 +28,8 @@ export interface SiteDetailViewProps {
 export function SiteDetailView({ 
   siteId,
   siteName = "Mang Jose's Fishpond",
-  barangay = "Riverside", 
-  currentRisk = "critical",
+  barangay = "Riverside",
+  currentRisk,
   onBack
 }: SiteDetailViewProps) {
   console.log("SiteDetailView mounted");
@@ -86,9 +86,6 @@ export function SiteDetailView({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-schistoguard-navy">{siteName}</h1>
-              <Badge className={getRiskBadgeStyle(currentRisk)}>
-                {currentRisk.charAt(0).toUpperCase() + currentRisk.slice(1)}
-              </Badge>
             </div>
           </div>
         </div>

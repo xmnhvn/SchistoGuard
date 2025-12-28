@@ -23,9 +23,11 @@ interface SensorCardProps {
     avgPh?: number;
     totalReadings?: number;
   };
+  offline?: boolean;
 }
 
-const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary }) => {
+
+const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offline }) => {
   // Only use real sensor readings
   const turbidity = readings.turbidity;
   const ph = readings.ph;
@@ -35,6 +37,31 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary }) =>
     if (risk === 'critical') return 'Critical';
     if (risk === 'warning') return 'Warning';
     return 'Safe';
+  }
+
+  if (offline) {
+    return (
+      <div className="flex gap-4 justify-center w-full">
+        <div className="flex-1 bg-gray-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px] opacity-60">
+          <div className="text-md font-bold text-schistoguard-navy mb-4 pb-2 text-center">Temperature</div>
+          <Thermometer className="h-10 w-10 text-gray-400 mb-4" />
+          <div className="text-3xl font-bold mt-6 mb-1 text-center text-gray-400">--<span className="text-2xl font-bold align-top">°C</span></div>
+          <div className="text-sm font-semibold text-center text-gray-400">Offline</div>
+        </div>
+        <div className="flex-1 bg-gray-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px] opacity-60">
+          <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">Turbidity</div>
+          <Waves className="h-10 w-10 text-gray-400 mb-4" />
+          <div className="text-3xl font-bold mt-6 mb-1 text-center text-gray-400">-- <span className="text-2xl font-bold align-top">NTU</span></div>
+          <div className="text-sm font-semibold text-center text-gray-400">Offline</div>
+        </div>
+        <div className="flex-1 bg-gray-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px] opacity-60">
+          <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">pH Level</div>
+          <Droplet className="h-10 w-10 text-gray-400 mb-4" style={{ color: '#b0b0b0' }} />
+          <div className="text-3xl font-bold mt-6 mb-1 text-center text-gray-400">--</div>
+          <div className="text-sm font-semibold text-center text-gray-400">Offline</div>
+        </div>
+      </div>
+    );
   }
 
   return (

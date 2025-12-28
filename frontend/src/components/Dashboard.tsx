@@ -101,17 +101,17 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
 
   useEffect(() => {
     const fetchAlerts = () => {
-      fetch("http://localhost:3001/api/alerts")
+      fetch("http://localhost:3001/api/sensors/alerts")
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
-            setAlerts(data.filter(alert => alert.parameter === "Temperature"));
+            setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));
           }
         })
         .catch(() => {});
     };
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 10000); // refresh every 10s
+    const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -131,16 +131,32 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
   }, [alerts]);
 
   const handleAcknowledgeAlert = (alertId: string) => {
-    setAlerts(prev => prev.map(alert => 
+    // Optimistically update UI
+    setAlerts(prev => prev.map(alert =>
       alert.id === alertId ? { ...alert, isAcknowledged: true } : alert
     ));
+    // Persist to backend
+    fetch(`http://localhost:3001/api/sensors/alerts/${alertId}/acknowledge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acknowledgedBy: "Current User (LGU)" })
+    })
+      .then(res => res.json())
+      .then(data => {
+        // Optionally update state with backend response
+        if (data.success && data.alert) {
+          setAlerts(prev => prev.map(alert =>
+            alert.id === alertId ? { ...alert, ...data.alert } : alert
+          ));
+        }
+      })
+      .catch(() => {});
   };
 
-  // Only count unacknowledged alerts for temperature (real data), both warning and critical
+  // Count all unacknowledged warning and critical alerts for any parameter
   const unacknowledgedAlerts = alerts.filter(
     alert =>
       !alert.isAcknowledged &&
-      alert.parameter === "Temperature" &&
       (alert.level === "critical" || alert.level === "warning")
   ).length;
   const criticalAlerts = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged).length;
@@ -157,7 +173,7 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
         <div>
           <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">Mang Jose's Fish Pond</h1>
           <p className="text-gray-600 mb-2">100 square meters • San Miguel, Tacloban City</p>
-          <p className="text-sm text-gray-500">Data updates every hour • Last update: {siteData.timestamp}</p>
+          <p className="text-sm text-gray-500">Last update: {siteData.timestamp ? new Date(siteData.timestamp).toLocaleString() : '-'}</p>
         </div>
         <Button 
           size="sm" 
@@ -165,25 +181,27 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
           onClick={() => onNavigate?.("alerts")}
         >
           <Bell className="w-4 h-4 mr-2" />
-          Alerts (3)
+          Alerts
         </Button>
       </div>
 
       {/* Main Section: Left column (sensor cards + summary cards), Right column (Alerts Stream) */}
       <div className="flex flex-col lg:flex-row gap-4 items-stretch" style={{ minHeight: 320 }}>
         <div className="flex-1 flex flex-col">
-          {/* Sensor Data UI at the top */}
+          {/* Sensor Data UI at the top - always show, even if backend is down */}
           <div className="mb-6 mt-2">
-            {/* Show latest reading in SensorCard (real data) */}
-            {latestReading && (
-              <SensorCard readings={{
+            <SensorCard readings={latestReading && backendOk && dataOk ? {
                 turbidity: latestReading.turbidity,
                 temperature: latestReading.temperature,
                 ph: latestReading.ph
-              }} />
-            )}
+              } : {
+                turbidity: null,
+                temperature: null,
+                ph: null
+              }} offline={!backendOk || !dataOk} />
           </div>
-          {/* Summary Cards Row */}
+          {/* Summary Cards Row - hide if backend is down */}
+          {(backendOk && dataOk) && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               {/* Active Alerts Card */}
               <Card className="h-60">
@@ -261,11 +279,11 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
                 );
               })()}
             </div>
-          {/* Removed Current Water Quality card and SensorCard */}
+          )}
         </div>
         {/* Right column: Alerts Stream */}
         <div ref={alertsStreamRef} className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide mt-2" style={{ maxWidth: 380 }}>
-          <Card className="flex flex-col h-60 border rounded-md">
+          <Card className="flex flex-col border rounded-md" style={{ height: 545 }}>
             <CardHeader className="pb-1">
               <CardTitle className="flex items-center justify-between text-sm font-bold">
                 Alerts Stream
@@ -273,10 +291,9 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 mt-0 flex-1 p-4 h-full">
-              <div className="overflow-y-auto scrollbar-hide flex flex-col gap-3 h-44">
-                {alerts
-                  .filter(alert => alert.parameter === "Temperature")
-                  .map((alert) => {
+              <div className="overflow-y-auto scrollbar-hide flex flex-col gap-3" style={{ maxHeight: 440 }}>
+                {alerts.filter(a => !a.isAcknowledged).length > 0 ? (
+                  alerts.filter(a => !a.isAcknowledged).map((alert) => {
                     // Only allow "critical" or "warning" for level prop
                     const level: "critical" | "warning" = alert.level === "critical"
                       ? "critical"
@@ -288,13 +305,13 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
                         level={level}
                         onAcknowledge={handleAcknowledgeAlert}
                         siteName={siteData.siteName}
-                        value={alert.value ?? (latestReading ? latestReading.temperature : undefined)}
-                        timestamp={alert.timestamp ?? (latestReading ? latestReading.timestamp : undefined)}
+                        value={alert.value}
+                        timestamp={alert.timestamp}
                         message={alert.message ?? ""}
                       />
                     );
-                  })}
-                {alerts.length === 0 && (
+                  })
+                ) : (
                   <p className="text-center text-gray-500 py-4">No alerts</p>
                 )}
               </div>

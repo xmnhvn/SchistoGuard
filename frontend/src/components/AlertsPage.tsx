@@ -18,14 +18,29 @@ import {
   Bell,
   ChevronLeft
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 
 
 export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void }) {
-  // TODO: Replace with real alert data from backend or props
   const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchAlerts = () => {
+      fetch("http://localhost:3001/api/sensors/alerts")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));
+          }
+        })
+        .catch(() => {});
+    };
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 10000); // refresh every 10s
+    return () => clearInterval(interval);
+  }, []);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterLevel, setFilterLevel] = useState("all");
@@ -65,9 +80,24 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
     return matchesSearch && matchesStatus && matchesLevel && matchesBarangay;
   });
 
-  // Only count temperature alerts as real for summary cards
-  const unacknowledgedCount = alerts.filter(alert => !alert.isAcknowledged && alert.parameter === "Temperature").length;
-  const criticalCount = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged && alert.parameter === "Temperature").length;
+  // Count all alerts for summary cards
+  const unacknowledgedCount = alerts.filter(alert => !alert.isAcknowledged).length;
+  const criticalCount = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged).length;
+
+  // Compute average response time for acknowledged alerts
+  function getAverageResponseTime(alerts: any[]): string {
+    const acknowledged = alerts.filter(a => a.isAcknowledged && a.timestamp && a.acknowledgedAt);
+    if (acknowledged.length === 0) return "-";
+    const totalMs = acknowledged.reduce((sum, a) => {
+      const created = new Date(a.timestamp).getTime();
+      const acked = new Date(a.acknowledgedAt).getTime();
+      return sum + (acked - created);
+    }, 0);
+    const avgMs = totalMs / acknowledged.length;
+    const avgMin = Math.round(avgMs / 60000);
+    return avgMin < 1 ? "<1m" : `${avgMin}m`;
+  }
+  const avgResponseTime = getAverageResponseTime(alerts);
 
   return (
     <div className="p-6 space-y-6">
@@ -133,21 +163,21 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-md font-medium">Total Alerts</CardTitle>
-               <AlertTriangle className="h-7 w-7 text-muted-foreground" />
+            <Bell className="h-7 w-7 text-blue-500" />
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-schistoguard-navy text-center">{alerts.length}</div>
-            <p className="text-xs text-muted-foreground text-center">Last 24 hours</p>
+            <div className="text-2xl font-bold text-blue-700 text-center">{alerts.length}</div>
+            <p className="text-xs text-muted-foreground text-center">All alerts (history)</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-md font-medium">Unacknowledged</CardTitle>
-               <Clock className="h-7 w-7 text-muted-foreground" />
+            <AlertTriangle className="h-7 w-7 text-yellow-500" />
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-red-500 text-center">{unacknowledgedCount}</div>
+            <div className="text-2xl font-bold text-yellow-700 text-center">{unacknowledgedCount}</div>
             <p className="text-xs text-muted-foreground text-center">Require attention</p>
           </CardContent>
         </Card>
@@ -155,10 +185,10 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-md font-medium">Critical Alerts</CardTitle>
-               <AlertTriangle className="h-7 w-7 text-red-500" />
+            <AlertTriangle className="h-7 w-7 text-red-500" />
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-red-500 text-center">{criticalCount}</div>
+            <div className="text-2xl font-bold text-red-600 text-center">{criticalCount}</div>
             <p className="text-xs text-muted-foreground text-center">High priority</p>
           </CardContent>
         </Card>
@@ -166,11 +196,11 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-md font-medium">Response Time</CardTitle>
-               <CheckCircle2 className="h-7 w-7 text-green-500" />
+            <CheckCircle2 className="h-7 w-7 text-green-500" />
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-green-500 text-center">12m</div>
-            <p className="text-xs text-muted-foreground text-center">Average response</p>
+            <div className="text-2xl font-bold text-green-600 text-center">{avgResponseTime}</div>
+            <p className="text-xs text-muted-foreground text-center">Average response (acknowledged alerts)</p>
           </CardContent>
         </Card>
       </div>
