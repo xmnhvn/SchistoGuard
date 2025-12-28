@@ -11,38 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
-// Mock time series data
-const mockTimeSeriesData = [
-  { time: "00:00", turbidity: 2.1, temperature: 24.5, ph: 7.2 },
-  { time: "03:00", turbidity: 2.3, temperature: 24.2, ph: 7.1 },
-  { time: "06:00", turbidity: 3.1, temperature: 25.8, ph: 7.3 },
-  { time: "09:00", turbidity: 4.2, temperature: 27.1, ph: 7.0 },
-  { time: "12:00", turbidity: 12.8, temperature: 28.2, ph: 6.8 },
-  { time: "15:00", turbidity: 18.2, temperature: 30.1, ph: 6.2 },
-  { time: "18:00", turbidity: 15.1, temperature: 29.5, ph: 6.5 },
-  { time: "21:00", turbidity: 8.9, temperature: 27.8, ph: 6.9 },
-];
+// TODO: Replace with real time series data from backend or props
+const mockTimeSeriesData: any[] = [];
 
-const mockHistoryData = [
-  { date: "2025-09-20", time: "14:31", turbidity: 18.2, temperature: 30.1, ph: 6.2, status: "Critical" },
-  { date: "2025-09-20", time: "14:00", turbidity: 15.1, temperature: 29.5, ph: 6.5, status: "Warning" },
-  { date: "2025-09-20", time: "13:30", turbidity: 12.8, temperature: 28.2, ph: 6.8, status: "Warning" },
-  { date: "2025-09-20", time: "13:00", turbidity: 8.9, temperature: 27.8, ph: 6.9, status: "Safe" },
-  { date: "2025-09-20", time: "12:30", turbidity: 4.2, temperature: 27.1, ph: 7.0, status: "Safe" },
-];
+// TODO: Replace with real history data from backend or props
+const mockHistoryData: any[] = [];
 
-const mockSiteAlerts = [
-  {
-    id: "site-alert-1",
-    level: "critical" as const,
-    message: "Turbidity levels critically high",
-    siteName: "Mang Jose's Fishpond",
-    parameter: "Turbidity",
-    value: "18.2 NTU",
-    timestamp: "2025-09-20 14:31",
-    isAcknowledged: false
-  }
-];
+// TODO: Replace with real site alerts from backend or props
+const mockSiteAlerts: any[] = [];
 
 
 export interface SiteDetailViewProps {
@@ -61,7 +37,7 @@ export function SiteDetailView({
   onBack
 }: SiteDetailViewProps) {
   const [timeRange, setTimeRange] = useState("24h");
-  const [alerts, setAlerts] = useState(mockSiteAlerts);
+  const [alerts, setAlerts] = useState<any[]>(mockSiteAlerts);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert => 
@@ -133,85 +109,97 @@ export function SiteDetailView({
                 </TabsList>
                 
                 <TabsContent value="turbidity" className="space-y-4 min-h-96">
-                  <div className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={mockTimeSeriesData}>
-                        <defs>
-                          <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" />
-                        <YAxis />
-                        <Tooltip 
-                          formatter={(value) => [`${value} NTU`, "Turbidity"]}
-                          labelFormatter={(time) => `Time: ${time}`}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="turbidity" 
-                          stroke="#FF6B6B" 
-                          strokeWidth={2}
-                          fill="url(#turbidityGradient)" 
-                        />
-                        {/* Threshold lines */}
-                        <Line type="monotone" dataKey={() => 5} stroke="#28A745" strokeDasharray="5 5" />
-                        <Line type="monotone" dataKey={() => 15} stroke="#ffc107" strokeDasharray="5 5" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {mockTimeSeriesData.length === 0 ? (
+                    <div className="h-96 flex items-center justify-center text-gray-400">No turbidity data available.</div>
+                  ) : (
+                    <div className="h-96">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={mockTimeSeriesData}>
+                          <defs>
+                            <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="time" />
+                          <YAxis />
+                          <Tooltip 
+                            formatter={(value) => [`${value} NTU`, "Turbidity"]}
+                            labelFormatter={(time) => `Time: ${time}`}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="turbidity" 
+                            stroke="#FF6B6B" 
+                            strokeWidth={2}
+                            fill="url(#turbidityGradient)" 
+                          />
+                          {/* Threshold lines */}
+                          <Line type="monotone" dataKey={() => 5} stroke="#28A745" strokeDasharray="5 5" />
+                          <Line type="monotone" dataKey={() => 15} stroke="#ffc107" strokeDasharray="5 5" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     <p>• Safe: ≤5 NTU (Green line) • Warning: 6-15 NTU (Yellow line) • Critical: &gt;15 NTU</p>
                   </div>
                 </TabsContent>
                 
                 <TabsContent value="temperature" className="space-y-4 min-h-96">
-                  <div className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={mockTimeSeriesData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" />
-                        <YAxis />
-                        <Tooltip 
-                          formatter={(value) => [`${value}°C`, "Temperature"]}
-                          labelFormatter={(time) => `Time: ${time}`}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="temperature" 
-                          stroke="#007E88" 
-                          strokeWidth={2}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {mockTimeSeriesData.length === 0 ? (
+                    <div className="h-96 flex items-center justify-center text-gray-400">No temperature data available.</div>
+                  ) : (
+                    <div className="h-96">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={mockTimeSeriesData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="time" />
+                          <YAxis />
+                          <Tooltip 
+                            formatter={(value) => [`${value}°C`, "Temperature"]}
+                            labelFormatter={(time) => `Time: ${time}`}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="temperature" 
+                            stroke="#007E88" 
+                            strokeWidth={2}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     <p>• Normal range: 22-30°C</p>
                   </div>
                 </TabsContent>
                 
                 <TabsContent value="ph" className="space-y-4 min-h-96">
-                  <div className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={mockTimeSeriesData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" />
-                        <YAxis domain={[6, 8]} />
-                        <Tooltip 
-                          formatter={(value) => [value, "pH Level"]}
-                          labelFormatter={(time) => `Time: ${time}`}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="ph" 
-                          stroke="#28A745" 
-                          strokeWidth={2}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {mockTimeSeriesData.length === 0 ? (
+                    <div className="h-96 flex items-center justify-center text-gray-400">No pH data available.</div>
+                  ) : (
+                    <div className="h-96">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={mockTimeSeriesData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="time" />
+                          <YAxis domain={[6, 8]} />
+                          <Tooltip 
+                            formatter={(value) => [value, "pH Level"]}
+                            labelFormatter={(time) => `Time: ${time}`}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="ph" 
+                            stroke="#28A745" 
+                            strokeWidth={2}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     <p>• Normal range: 6.5-8.0</p>
                   </div>

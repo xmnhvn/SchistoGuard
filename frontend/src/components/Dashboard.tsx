@@ -62,41 +62,19 @@ const siteData: {
   trend: "stable"
 };
 
-const mockAlerts = [
-  {
-    id: "alert-1",
-    level: "warning" as const,
-    message: "Turbidity levels slightly elevated during morning hours",
-    siteName: "Mang Jose's Fish Pond",
-    parameter: "Turbidity",
-    value: "5.8 NTU",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleString(),
-    isAcknowledged: false
-  },
-  {
-    id: "alert-2", 
-    level: "warning" as const,
-    message: "Temperature readings elevated during midday",
-    siteName: "Mang Jose's Fish Pond", 
-    parameter: "Temperature",
-    value: "28.2°C",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toLocaleString(),
-    isAcknowledged: true
-  },
-  {
-    id: "alert-3",
-    level: "critical" as const,
-    message: "Turbidity levels critically high!",
-    siteName: "Mang Jose's Fish Pond",
-    parameter: "Turbidity",
-    value: "16.2 NTU",
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toLocaleString(),
-    isAcknowledged: false
-  }
-];
+
+
+type Alert = {
+  id: string;
+  parameter: string;
+  level: "critical" | "warning" | "info" | string;
+  isAcknowledged: boolean;
+  message?: string;
+  [key: string]: any;
+};
 
 export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void }) {
-  const [alerts, setAlerts] = useState(mockAlerts);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [liveTemperature, setLiveTemperature] = useState<number | null>(null);
   const waterQualityRef = useRef<HTMLDivElement>(null);
   const alertsStreamRef = useRef<HTMLDivElement>(null);
@@ -115,6 +93,22 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
     };
     fetchTemperature();
     const interval = setInterval(fetchTemperature, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchAlerts = () => {
+      fetch("http://localhost:3001/api/alerts")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setAlerts(data.filter(alert => alert.parameter === "Temperature"));
+          }
+        })
+        .catch(() => {});
+    };
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 10000); // refresh every 10s
     return () => clearInterval(interval);
   }, []);
 
@@ -197,7 +191,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
                 <CardContent className="flex flex-col items-center justify-center h-full">
                   <div className="text-3xl font-bold text-red-500 text-center">{unacknowledgedAlerts}</div>
                   <p className="text-sm text-muted-foreground mt-6 mb-2 text-center">
-                    Critical alerts
+                    Warning and critical temperature alerts
                   </p>
                 </CardContent>
               </Card>
@@ -220,10 +214,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
               {(() => {
                 // Use real temperature, mock turbidity and pH
                 const temp = liveTemperature !== null ? liveTemperature : latestReading.temperature;
-                const turbidity = 8.5; // mock
-                const ph = 7.2; // mock
-
-                // Determine risk for each
+                const turbidity = 8.5;
+                const ph = 7.2;
                 let tempRisk: 'critical' | 'warning' | 'safe' = 'safe';
                 if (temp >= 22 && temp <= 28) tempRisk = 'critical';
                 else if ((temp >= 20 && temp < 22) || (temp > 28 && temp <= 32)) tempRisk = 'warning';
@@ -236,7 +228,6 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
                 if (ph < 6.5 || ph > 8.5) phRisk = 'critical';
                 else if ((ph >= 6.5 && ph < 7) || (ph > 8 && ph <= 8.5)) phRisk = 'warning';
 
-                // Highest risk wins: critical > warning > safe
                 let overallRisk: 'critical' | 'warning' | 'safe' = 'safe';
                 if ([tempRisk, turbidityRisk, phRisk].includes('critical')) overallRisk = 'critical';
                 else if ([tempRisk, turbidityRisk, phRisk].includes('warning')) overallRisk = 'warning';
@@ -281,13 +272,26 @@ export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void 
             </CardHeader>
             <CardContent className="space-y-3 mt-0 flex-1 p-4 h-full">
               <div className="overflow-y-auto scrollbar-hide flex flex-col gap-3 h-44">
-                {alerts.map((alert) => (
-                  <AlertItem
-                    key={alert.id}
-                    {...alert}
-                    onAcknowledge={handleAcknowledgeAlert}
-                  />
-                ))}
+                {alerts
+                  .filter(alert => alert.parameter === "Temperature")
+                  .map((alert) => {
+                    // Only allow "critical" or "warning" for level prop
+                    const level: "critical" | "warning" = alert.level === "critical"
+                      ? "critical"
+                      : "warning";
+                    return (
+                      <AlertItem
+                        key={alert.id}
+                        {...alert}
+                        level={level}
+                        onAcknowledge={handleAcknowledgeAlert}
+                        siteName={siteData.siteName}
+                        value={alert.value ?? (liveTemperature !== null ? liveTemperature : latestReading.temperature)}
+                        timestamp={alert.timestamp ?? siteData.timestamp}
+                        message={alert.message ?? ""}
+                      />
+                    );
+                  })}
                 {alerts.length === 0 && (
                   <p className="text-center text-gray-500 py-4">No alerts</p>
                 )}

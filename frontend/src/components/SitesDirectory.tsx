@@ -7,32 +7,9 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
-// Generate hourly readings for the past 24 hours
-const generateHourlyReadings = () => {
-  const readings = [];
-  const now = new Date();
-  
-  for (let i = 23; i >= 0; i--) {
-    const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
-    const hour = timestamp.getHours();
-    
-    // Simulate realistic variations throughout the day
-    const baseTemp = 26 + Math.sin(hour / 24 * Math.PI * 2) * 3;
-    const baseTurbidity = 4.5 + Math.random() * 2;
-    const basePh = 7.0 + (Math.random() - 0.5) * 0.4;
-    
-    readings.push({
-      id: `reading-${i}`,
-      timestamp: timestamp.toISOString(),
-      turbidity: parseFloat(baseTurbidity.toFixed(1)),
-      temperature: parseFloat(baseTemp.toFixed(1)),
-      ph: parseFloat(basePh.toFixed(1)),
-      riskLevel: baseTurbidity > 15 ? 'critical' : baseTurbidity > 5 ? 'warning' : 'safe'
-    });
-  }
-  
-  return readings.reverse(); // Most recent first
-};
+
+// TODO: Replace with real site readings from backend or props
+const generateHourlyReadings = () => [];
 
 interface SitesDirectoryProps {
   onViewSiteDetail: (siteId: string) => void;
@@ -43,7 +20,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [filterTimeRange, setFilterTimeRange] = useState<string>('24h');
 
-  const hourlyReadings = generateHourlyReadings();
+  const hourlyReadings: any[] = generateHourlyReadings();
 
   // Filter readings based on search and filters
   const filteredReadings = hourlyReadings.filter(reading => {
@@ -96,13 +73,35 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     }
   };
 
-  // Calculate statistics
-  const safeCount = filteredReadings.filter(r => r.riskLevel === 'safe').length;
-  const warningCount = filteredReadings.filter(r => r.riskLevel === 'warning').length;
-  const criticalCount = filteredReadings.filter(r => r.riskLevel === 'critical').length;
-  const avgTurbidity = filteredReadings.length > 0 
-    ? (filteredReadings.reduce((sum, r) => sum + r.turbidity, 0) / filteredReadings.length).toFixed(1)
-    : '0';
+  // Calculate statistics for all parameters (turbidity, temperature, pH)
+  function getRiskLevel(param: string, value: number) {
+    if (param === 'turbidity') {
+      if (value > 15) return 'critical';
+      if (value > 5) return 'warning';
+      return 'safe';
+    }
+    if (param === 'temperature') {
+      if (value < 22 || value > 30) return 'critical';
+      if ((value >= 22 && value < 24) || (value > 28 && value <= 30)) return 'warning';
+      return 'safe';
+    }
+    if (param === 'ph') {
+      if (value < 6.5 || value > 8.0) return 'critical';
+      if ((value >= 6.5 && value < 7.0) || (value > 7.5 && value <= 8.0)) return 'warning';
+      return 'safe';
+    }
+    return 'safe';
+  }
+
+  let safeCount = 0, warningCount = 0, criticalCount = 0;
+  filteredReadings.forEach(r => {
+    ['turbidity', 'temperature', 'ph'].forEach(param => {
+      const risk = getRiskLevel(param, r[param]);
+      if (risk === 'safe') safeCount++;
+      else if (risk === 'warning') warningCount++;
+      else if (risk === 'critical') criticalCount++;
+    });
+  });
 
   return (
     <div className="bg-schistoguard-light-bg">
@@ -166,8 +165,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-schistoguard-navy">{filteredReadings.length}</div>
-              <p className="text-xs text-muted-foreground">In selected range</p>
+              <div className="text-2xl font-bold text-schistoguard-navy">{filteredReadings.length * 3}</div>
+              <p className="text-xs text-muted-foreground">All parameters in All range</p>
             </CardContent>
           </Card>
 
@@ -177,7 +176,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-green-600">{safeCount}</div>
-              <p className="text-xs text-muted-foreground">Turbidity ≤5 NTU</p>
+              <p className="text-xs text-muted-foreground">All parameters in safe range</p>
             </CardContent>
           </Card>
 
@@ -187,7 +186,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-yellow-600">{warningCount}</div>
-              <p className="text-xs text-muted-foreground">Turbidity 6-15 NTU</p>
+              <p className="text-xs text-muted-foreground">All parameters in warning range</p>
             </CardContent>
           </Card>
 
@@ -197,7 +196,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-red-600">{criticalCount}</div>
-              <p className="text-xs text-muted-foreground">Turbidity &gt;15 NTU</p>
+              <p className="text-xs text-muted-foreground">All parameters in critical range</p>
             </CardContent>
           </Card>
         </div>
@@ -207,7 +206,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           <CardHeader>
             <div className="flex items-center justify-between mb-[-20]">
               <CardTitle>Time-Series Data</CardTitle>
-              <Badge variant="outline">{filteredReadings.length} records</Badge>
+
             </div>
           </CardHeader>
           <CardContent>
@@ -225,47 +224,51 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReadings.map((reading) => {
-                    const time = formatTimestamp(reading.timestamp);
-                    return (
-                      <TableRow key={reading.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">{time.time}</TableCell>
-                        <TableCell className="text-sm text-gray-600">{time.date}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Droplets className="w-4 h-4 text-blue-500" />
-                            <span className="font-medium">{reading.turbidity}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Thermometer className="w-4 h-4 text-orange-500" />
-                            <span className="font-medium">{reading.temperature}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center font-medium">{reading.ph}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge className={getRiskBadgeClass(reading.riskLevel)}>
-                            {reading.riskLevel}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-sm text-gray-500">
-                          {formatRelativeTime(reading.timestamp)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {filteredReadings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No readings found</h3>
+                          <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredReadings.map((reading) => {
+                      const time = formatTimestamp(reading.timestamp);
+                      return (
+                        <TableRow key={reading.id} className="hover:bg-gray-50">
+                          <TableCell className="font-medium">{time.time}</TableCell>
+                          <TableCell className="text-sm text-gray-600">{time.date}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Droplets className="w-4 h-4 text-blue-500" />
+                              <span className="font-medium">{reading.turbidity}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Thermometer className="w-4 h-4 text-orange-500" />
+                              <span className="font-medium">{reading.temperature}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center font-medium">{reading.ph}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={getRiskBadgeClass(reading.riskLevel)}>
+                              {reading.riskLevel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-sm text-gray-500">
+                            {formatRelativeTime(reading.timestamp)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </div>
-
-            {filteredReadings.length === 0 && (
-              <div className="text-center py-12">
-                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No readings found</h3>
-                <p className="text-gray-600">Try adjusting your search or filter criteria</p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

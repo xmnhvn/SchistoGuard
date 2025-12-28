@@ -21,72 +21,16 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Only temperature alert is real, turbidity and pH are mock for now
-const mockAlerts = [
-  {
-    id: "alert-1",
-    level: "warning" as const,
-    message: "Temperature readings elevated above normal range",
-    siteName: "Barangay Malinao Canal", 
-    parameter: "Temperature",
-    value: "28.2°C", // Replace with real value if available
-    timestamp: "2025-09-20 13:45",
-    isAcknowledged: true,
-    acknowledgedBy: "Maria Santos (BHW)",
-    duration: "8 minutes",
-    barangay: "Malinao"
-  },
-  // Mock alert for Turbidity
-  {
-    id: "alert-2",
-    level: "critical" as const,
-    message: "Turbidity levels critically high at monitoring site (mock)",
-    siteName: "Mang Jose's Fishpond",
-    parameter: "Turbidity",
-    value: "18.2 NTU",
-    timestamp: "2025-09-20 14:31",
-    isAcknowledged: false,
-    acknowledgedBy: null,
-    duration: "15 minutes",
-    barangay: "Riverside"
-  },
-  // Mock alert for pH
-  {
-    id: "alert-3",
-    level: "critical" as const,
-    message: "pH levels critically low - potential contamination (mock)",
-    siteName: "Barangay Central Plaza",
-    parameter: "pH Level",
-    value: "5.8",
-    timestamp: "2025-09-20 11:30",
-    isAcknowledged: true,
-    acknowledgedBy: "Dr. Juan Dela Cruz (LGU)",
-    duration: "45 minutes",
-    barangay: "Central"
-  },
-  // Another mock alert for Turbidity
-  {
-    id: "alert-4",
-    level: "warning" as const,
-    message: "Turbidity levels elevated during heavy rainfall (mock)",
-    siteName: "Barangay San Miguel River",
-    parameter: "Turbidity",
-    value: "12.1 NTU",
-    timestamp: "2025-09-20 09:20",
-    isAcknowledged: true,
-    acknowledgedBy: "Ana Rodriguez (BHW)",
-    duration: "1 hour 20 minutes",
-    barangay: "San Miguel"
-  }
-];
+
 
 export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void }) {
-  const [alerts, setAlerts] = useState(mockAlerts);
+  // TODO: Replace with real alert data from backend or props
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterLevel, setFilterLevel] = useState("all");
   const [filterBarangay, setFilterBarangay] = useState("all");
-  const [selectedAlert, setSelectedAlert] = useState<typeof mockAlerts[0] | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const handleExport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredAlerts, null, 2));
     const downloadAnchorNode = document.createElement('a');
