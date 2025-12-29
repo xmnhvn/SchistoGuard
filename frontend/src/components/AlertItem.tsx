@@ -112,8 +112,6 @@ export function AlertItem({
               )}
             </div>
           </div>
-          
-          {/* Buttons moved up to align with badge */}
         </div>
       </CardContent>
     </Card>

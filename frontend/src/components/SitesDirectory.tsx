@@ -7,18 +7,13 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-
-
-
 import { useEffect } from 'react';
 
-// Fetch all time series readings from backend
 const fetchReadings = async () => {
   try {
     const res = await fetch('http://localhost:3001/api/sensors/history');
     if (!res.ok) return [];
     const data = await res.json();
-    // Add id and riskLevel if missing
     return Array.isArray(data)
       ? data
           .map((r, idx) => ({
@@ -51,11 +46,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       setReadings(data);
     };
     getData();
-    const interval = setInterval(getData, 5000); // refresh every 5s
+    const interval = setInterval(getData, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // Filter readings based on search and filters
   const filteredReadings = readings.filter(reading => {
     const timestamp = new Date(reading.timestamp);
     const searchMatch = timestamp.toLocaleString().toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -63,8 +57,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       reading.temperature?.toString().includes(searchQuery);
 
     const matchesRisk = filterRisk === 'all' || reading.riskLevel === filterRisk;
-
-    // Time range filter
     const now = new Date();
     const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
     let matchesTime = true;
@@ -106,7 +98,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     }
   };
 
-  // Calculate statistics for all parameters (turbidity, temperature, pH)
   function getRiskLevel(param: string, value: number) {
     if (param === 'turbidity') {
       if (value > 15) return 'critical';
@@ -141,13 +132,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       <div className="max-w-7xl mx-auto p-6">
 
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
-          {/* Labels and info (col 1) */}
           <div className="col-span-1">
             <h1 className="text-3xl font-bold text-schistoguard-navy mb-1">Hourly Data Readings</h1>
             <p className="text-gray-600 leading-tight mb-1">Mang Jose's Fish Pond - 100 square meters</p>
             <p className="text-sm text-gray-500 leading-tight mb-1">Water quality data collected every hour</p>
           </div>
-          {/* Search and filters (cols 2-3) */}
           <div className="col-span-1 lg:col-span-2 flex flex-col lg:flex-row gap-4 lg:justify-end">
             <div className="flex-1 max-w-xs">
               <div className="relative">
@@ -192,7 +181,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           </div>
         </div>
 
-        {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 -mt-6">
           <Card>
             <CardHeader className="pb-2 text-center">
@@ -235,7 +223,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           </Card>
         </div>
 
-        {/* Readings Table */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between mb-[-20]">

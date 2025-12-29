@@ -38,7 +38,6 @@ export const UserManagement: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
-  // Sample users data
   const users: User[] = [
     {
       id: 'user-001',
@@ -110,7 +109,6 @@ export const UserManagement: React.FC = () => {
     lgu_official: 'outline'
   };
 
-  // Filter users
   const filteredUsers = users.filter(user => {
   const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,7 +120,6 @@ export const UserManagement: React.FC = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // Calculate stats
   const stats: UserStats = {
     total: users.length,
     active: users.filter(u => u.status === 'active').length,
@@ -230,7 +227,6 @@ export const UserManagement: React.FC = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            {/* User Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardContent className="p-6">
@@ -281,7 +277,6 @@ export const UserManagement: React.FC = () => {
               </Card>
             </div>
 
-            {/* Role Distribution */}
             <Card>
               <CardHeader>
                 <CardTitle>User Distribution by Role</CardTitle>
@@ -305,7 +300,6 @@ export const UserManagement: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
-            {/* Search and Filters */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1">
@@ -350,7 +344,6 @@ export const UserManagement: React.FC = () => {
               </div>
             </div>
 
-            {/* Users List */}
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">

@@ -56,7 +56,6 @@ export function SubscriptionPanel({
       }));
       setFileName(file.name);
       setUploadDate(new Date().toLocaleString());
-      // Reset the input value to allow re-uploading the same file
       e.target.value = '';
     }
   };
@@ -77,7 +76,6 @@ export function SubscriptionPanel({
   return (
     <Card>
      <CardContent className="space-y-6 mt-6">
-        {/* Alert Types */}
         <div className="space-y-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between h-[-4] min-h-0 w-full max-w-[340px]">
@@ -95,7 +93,6 @@ export function SubscriptionPanel({
             
             <div className="ml-6 space-y-3">
               <p className="text-xs text-muted-foreground">Upload a CSV file with contact numbers</p>
-              {/* File Upload Section */}
               {!fileName ? (
                 <div className="flex items-center gap-2">
                   <Input
@@ -114,7 +111,6 @@ export function SubscriptionPanel({
                   </Label>
                 </div>
               ) : (
-                /* Display Uploaded File with CRUD Actions */
                 <div className="p-3 bg-muted/50 rounded-md space-y-3">
                   <div className="flex items-start gap-3">
                     <FileText className="w-5 h-5 text-schistoguard-teal mt-0.5" />
@@ -125,9 +121,7 @@ export function SubscriptionPanel({
                       )}
                     </div>
                   </div>
-                  {/* Action Buttons */}
                   <div className="flex items-center gap-2">
-                    {/* Update/Replace File */}
                     <Input
                       type="file"
                       accept=".csv,.xlsx,.xls"
@@ -142,7 +136,6 @@ export function SubscriptionPanel({
                       <RefreshCw className="w-3.5 h-3.5" />
                       Update
                     </Label>
-                    {/* Delete File */}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button

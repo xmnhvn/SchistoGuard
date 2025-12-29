@@ -1,16 +1,10 @@
-// This script reads temperature from Arduino Serial and posts to backend
-// Requirements: npm install serialport axios
-
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const axios = require('axios');
-
-// Change this to your Arduino COM port (e.g., 'COM3' on Windows)
 const port = new SerialPort({ path: 'COM6', baudRate: 9600 });
 const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
 
 parser.on('data', async (line) => {
-  // Expecting: tempC,turbidityVoltage,phValue\n
   const parts = line.trim().split(',');
   if (parts.length === 3) {
     const temp = parseFloat(parts[0]);

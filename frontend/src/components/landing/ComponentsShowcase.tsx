@@ -51,7 +51,6 @@ export const ComponentsShowcase: React.FC = () => {
         <p className="text-gray-600 mb-8">Complete design system for the SchistoGuard landing page and application</p>
       </div>
 
-      {/* Tokens Section */}
       <section>
         <h2 className="text-2xl font-bold text-schistoguard-navy mb-6">00 — Design Tokens</h2>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -59,16 +58,13 @@ export const ComponentsShowcase: React.FC = () => {
         </div>
       </section>
 
-      {/* Components Section */}
       <section>
         <h2 className="text-2xl font-bold text-schistoguard-navy mb-6">01 — Components</h2>
-        
-        {/* Buttons */}
+
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Buttons & CTAs</h3>
           <div className="space-y-4">
-            
-            {/* Button sizes */}
+
             <div>
               <h4 className="text-md font-medium mb-3">Sizes</h4>
               <div className="flex flex-wrap gap-4 items-end">
@@ -77,8 +73,7 @@ export const ComponentsShowcase: React.FC = () => {
                 <CTAButton variant="primary" size="lg">Large Button</CTAButton>
               </div>
             </div>
-            
-            {/* Button variants */}
+
             <div>
               <h4 className="text-md font-medium mb-3">Variants</h4>
               <div className="flex flex-wrap gap-4">
@@ -87,8 +82,7 @@ export const ComponentsShowcase: React.FC = () => {
                 <CTAButton variant="tertiary">Tertiary Link</CTAButton>
               </div>
             </div>
-            
-            {/* Button states */}
+
             <div>
               <h4 className="text-md font-medium mb-3">States (hover for effects)</h4>
               <div className="flex flex-wrap gap-4">
@@ -102,12 +96,10 @@ export const ComponentsShowcase: React.FC = () => {
           </div>
         </div>
 
-        {/* Badges */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Badges</h3>
           <div className="space-y-4">
-            
-            {/* Status badges */}
+
             <div>
               <h4 className="text-md font-medium mb-3">Status Badges</h4>
               <div className="flex flex-wrap gap-3">
@@ -117,8 +109,7 @@ export const ComponentsShowcase: React.FC = () => {
                 <StatusBadge variant="info">Info</StatusBadge>
               </div>
             </div>
-            
-            {/* Trust badges */}
+
             <div>
               <h4 className="text-md font-medium mb-3">Trust Badges</h4>
               <div className="flex flex-wrap gap-3">
@@ -136,8 +127,7 @@ export const ComponentsShowcase: React.FC = () => {
                 />
               </div>
             </div>
-            
-            {/* Badge sizes */}
+
             <div>
               <h4 className="text-md font-medium mb-3">Sizes</h4>
               <div className="flex flex-wrap gap-3 items-center">
@@ -148,7 +138,6 @@ export const ComponentsShowcase: React.FC = () => {
           </div>
         </div>
 
-        {/* Icons */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Icon Set</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -179,7 +168,6 @@ export const ComponentsShowcase: React.FC = () => {
           </div>
         </div>
 
-        {/* Alert Overlay */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Alert Overlay</h3>
           <div className="space-y-4 max-w-sm">
@@ -203,7 +191,6 @@ export const ComponentsShowcase: React.FC = () => {
         </div>
       </section>
 
-      {/* Hero & Layout Section */}
       <section>
         <h2 className="text-2xl font-bold text-schistoguard-navy mb-6">02 — Hero Components</h2>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -221,11 +208,9 @@ export const ComponentsShowcase: React.FC = () => {
         </div>
       </section>
 
-      {/* Site Spotlight Section */}
       <section>
         <h2 className="text-2xl font-bold text-schistoguard-navy mb-6">03 — Site Spotlight & Modal</h2>
-        
-        {/* Site Cards */}
+
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Site Spotlight Cards</h3>
           <div className="grid md:grid-cols-2 gap-4">
@@ -250,7 +235,6 @@ export const ComponentsShowcase: React.FC = () => {
           </div>
         </div>
 
-        {/* Modal Demo */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold mb-4">Alerts Quickview Modal</h3>
           <p className="text-gray-600 mb-4">
@@ -262,7 +246,6 @@ export const ComponentsShowcase: React.FC = () => {
         </div>
       </section>
 
-      {/* Implementation Notes */}
       <section>
         <h2 className="text-2xl font-bold text-schistoguard-navy mb-6">04 — Implementation Notes</h2>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -308,7 +291,6 @@ export const ComponentsShowcase: React.FC = () => {
         </div>
       </section>
 
-      {/* Alerts Modal */}
       <AlertsQuickviewModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}

@@ -3,8 +3,6 @@ const router = require("express").Router();
 const classifyWater = require("../utils/classifyWater");
 const db = require("../db");
 
-// Acknowledge an alert by id
-// Acknowledge an alert by id (SQLite)
 router.post("/alerts/:id/acknowledge", (req, res) => {
   const { id } = req.params;
   const { acknowledgedBy } = req.body;
@@ -24,7 +22,6 @@ router.post("/alerts/:id/acknowledge", (req, res) => {
 
 let latestData = null;
 
-// Timer-based 5-min logging
 let firstLogged = false;
 setInterval(() => {
   if (!latestData) return;
@@ -49,7 +46,6 @@ setInterval(() => {
           if (!err) generateAlertsFromData(latestData, now);
         }
       );
-      // Optionally: delete old readings if >288
       db.all("SELECT id FROM readings ORDER BY timestamp", [], (err, rows) => {
         if (!err && rows.length > 288) {
           const toDelete = rows.slice(0, rows.length - 288);
@@ -60,10 +56,8 @@ setInterval(() => {
   });
 }, 1000);
 
-// Helper function to generate alerts for all parameters
 function generateAlertsFromData(data, now = new Date()) {
 
-  // Temperature alert
   const status = classifyWater(data.temperature);
   const level = classifyLevel(status);
   if (level !== "safe") {
@@ -86,7 +80,7 @@ function generateAlertsFromData(data, now = new Date()) {
       ]
     );
   }
-  // Turbidity alert
+
   if (data.turbidity < 1 || data.turbidity > 5) {
     db.run(
       `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
@@ -105,7 +99,7 @@ function generateAlertsFromData(data, now = new Date()) {
       ]
     );
   }
-  // pH alert (critical and warning)
+
   if (data.ph < 6.5 || data.ph > 8.5) {
     db.run(
       `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
@@ -141,7 +135,6 @@ function generateAlertsFromData(data, now = new Date()) {
       ]
     );
   }
-  // Do not remove alerts by count; keep all until acknowledged
 }
 
 function classifyLevel(status) {
@@ -153,7 +146,7 @@ function classifyLevel(status) {
 
 router.post("/", (req, res) => {
   const { turbidity, temperature, ph } = req.body;
-  const status = classifyWater(temperature); // classify by temperature
+  const status = classifyWater(temperature);
   latestData = {
     turbidity,
     temperature,
@@ -161,8 +154,7 @@ router.post("/", (req, res) => {
     status,
     timestamp: new Date()
   };
-  // No more time series logging here; handled by timer above
-  // No alert generation here; handled by timer above
+
   console.log("Received:", latestData);
   res.json({
     success: true,
@@ -170,8 +162,6 @@ router.post("/", (req, res) => {
   });
 });
 
-
-// Get the most recent sensor value (even if not yet logged)
 router.get("/latest", (req, res) => {
   if (latestData) {
     res.json({
@@ -179,7 +169,6 @@ router.get("/latest", (req, res) => {
       timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp
     });
   } else {
-    // Fallback to last logged reading if no latestData
     db.get("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(row || null);
@@ -187,15 +176,13 @@ router.get("/latest", (req, res) => {
   }
 });
 
-// Get all readings for the last 24 hours (max 288)
 router.get("/history", (req, res) => {
   db.all("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows.reverse()); // oldest first
+    res.json(rows.reverse());
   });
 });
 
-// Get all alerts (optionally filter by acknowledged)
 router.get("/alerts", (req, res) => {
   db.all("SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });

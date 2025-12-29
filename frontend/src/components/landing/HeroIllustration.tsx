@@ -3,10 +3,8 @@ import React from 'react';
 export const HeroIllustration: React.FC = () => {
   return (
     <div className="relative w-full h-full min-h-[400px] lg:min-h-[500px]">
-      {/* Sky Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-blue-100 to-blue-200 rounded-lg overflow-hidden">
         
-        {/* Village Silhouette */}
         <svg 
           className="absolute bottom-0 w-full h-32 text-green-800 opacity-20" 
           viewBox="0 0 400 128" 
@@ -16,10 +14,7 @@ export const HeroIllustration: React.FC = () => {
           <path d="M0,128 L0,80 L50,60 L80,70 L120,50 L160,65 L200,45 L240,60 L280,40 L320,55 L360,35 L400,50 L400,128 Z"/>
         </svg>
 
-        {/* River Base */}
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-r from-blue-300 via-blue-400 to-blue-300 opacity-70"></div>
-
-        {/* River Waves - Animated */}
         <div className="absolute bottom-0 left-0 right-0 h-20 overflow-hidden">
           <div className="animate-pulse">
             <svg 
@@ -39,17 +34,12 @@ export const HeroIllustration: React.FC = () => {
             </svg>
           </div>
         </div>
-
-        {/* Sensor Station */}
         <div className="absolute bottom-16 right-20 lg:right-32">
           <div className="relative">
-            {/* Sensor Pole */}
             <div className="w-2 h-16 bg-gray-600 mx-auto"></div>
-            {/* Sensor Box */}
             <div className="w-8 h-6 bg-white border-2 border-gray-400 rounded shadow-md -mt-2 relative">
               <div className="w-2 h-2 bg-green-500 rounded-full absolute top-1 left-1 animate-pulse"></div>
             </div>
-            {/* Sensor Connection Waves */}
             <div className="absolute -top-4 left-4">
               <div className="flex space-x-1">
                 <div className="w-1 h-1 bg-blue-500 rounded-full animate-ping"></div>
@@ -59,9 +49,6 @@ export const HeroIllustration: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Characters */}
-        {/* Health Worker */}
         <div className="absolute bottom-12 left-16 lg:left-24">
           <div className="relative">
             <div className="w-8 h-12 bg-white rounded-t-full border-2 border-blue-600 flex items-center justify-center">
@@ -70,8 +57,6 @@ export const HeroIllustration: React.FC = () => {
             <div className="w-2 h-2 bg-yellow-600 rounded-full mx-auto -mt-8"></div>
           </div>
         </div>
-
-        {/* Resident */}
         <div className="absolute bottom-12 left-32 lg:left-48">
           <div className="relative">
             <div className="w-7 h-11 bg-green-100 rounded-t-full border-2 border-green-600 flex items-center justify-center">
@@ -80,8 +65,6 @@ export const HeroIllustration: React.FC = () => {
             <div className="w-2 h-2 bg-yellow-800 rounded-full mx-auto -mt-8"></div>
           </div>
         </div>
-
-        {/* Child */}
         <div className="absolute bottom-12 left-44 lg:left-60">
           <div className="relative">
             <div className="w-5 h-8 bg-yellow-100 rounded-t-full border-2 border-yellow-600 flex items-center justify-center">
@@ -91,15 +74,12 @@ export const HeroIllustration: React.FC = () => {
           </div>
         </div>
 
-        {/* Schistosome Callout - Educational element */}
         <div className="absolute top-8 right-8 lg:right-16 bg-white rounded-full p-2 shadow-lg border-2 border-orange-300">
           <div className="w-6 h-6 relative">
             <div className="w-4 h-1 bg-orange-500 rounded-full absolute top-2 left-1 transform rotate-12"></div>
             <div className="w-3 h-0.5 bg-orange-600 rounded-full absolute top-3 left-1.5 transform -rotate-12"></div>
           </div>
         </div>
-
-        {/* Foreground Foliage */}
         <div className="absolute bottom-0 left-0 w-20 h-12">
           <svg className="w-full h-full text-green-600 opacity-60" viewBox="0 0 80 48" fill="currentColor" aria-hidden="true">
             <circle cx="10" cy="40" r="8"/>
@@ -109,8 +89,6 @@ export const HeroIllustration: React.FC = () => {
             <circle cx="70" cy="40" r="6"/>
           </svg>
         </div>
-
-        {/* Right side foliage */}
         <div className="absolute bottom-0 right-0 w-16 h-10">
           <svg className="w-full h-full text-green-600 opacity-60" viewBox="0 0 64 40" fill="currentColor" aria-hidden="true">
             <circle cx="50" cy="32" r="6"/>
@@ -119,8 +97,6 @@ export const HeroIllustration: React.FC = () => {
           </svg>
         </div>
       </div>
-
-      {/* Alert Overlay */}
       <div className="absolute top-4 left-4 lg:top-6 lg:left-6 bg-white rounded-lg shadow-lg border-l-4 border-red-500 p-3 max-w-xs animate-pulse">
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-red-500 rounded-full"></div>

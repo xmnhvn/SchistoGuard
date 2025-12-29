@@ -1,9 +1,7 @@
 import React from 'react';
 
-// Design tokens for the landing page
 export const tokens = {
   colors: {
-    // Primary brand colors
     primary: {
       teal: '#007E88',
       green: '#28A745',
@@ -11,14 +9,12 @@ export const tokens = {
       navy: '#0F2135'
     },
     
-    // Status colors
     status: {
       safe: '#28A745',
       warning: '#FFC107',
       critical: '#FF6B6B'
     },
     
-    // Neutral colors
     neutral: {
       white: '#FFFFFF',
       gray50: '#F8F9FA',
@@ -36,37 +32,37 @@ export const tokens = {
   
   typography: {
     display: {
-      fontSize: '3.5rem', // 56px
+      fontSize: '3.5rem',
       fontWeight: '700',
       lineHeight: '1.1',
       letterSpacing: '-0.02em'
     },
     h1: {
-      fontSize: '2.5rem', // 40px
+      fontSize: '2.5rem',
       fontWeight: '700',
       lineHeight: '1.2',
       letterSpacing: '-0.01em'
     },
     h2: {
-      fontSize: '2rem', // 32px
+      fontSize: '2rem',
       fontWeight: '600',
       lineHeight: '1.25',
       letterSpacing: '-0.01em'
     },
     h3: {
-      fontSize: '1.5rem', // 24px
+      fontSize: '1.5rem',
       fontWeight: '600',
       lineHeight: '1.33',
       letterSpacing: '0'
     },
     body: {
-      fontSize: '1rem', // 16px
+      fontSize: '1rem',
       fontWeight: '400',
       lineHeight: '1.5',
       letterSpacing: '0'
     },
     small: {
-      fontSize: '0.875rem', // 14px
+      fontSize: '0.875rem',
       fontWeight: '400',
       lineHeight: '1.43',
       letterSpacing: '0'
@@ -74,14 +70,14 @@ export const tokens = {
   },
   
   spacing: {
-    xs: '0.25rem',    // 4px
-    sm: '0.5rem',     // 8px
-    md: '1rem',       // 16px
-    lg: '1.5rem',     // 24px
-    xl: '2rem',       // 32px
-    '2xl': '3rem',    // 48px
-    '3xl': '4rem',    // 64px
-    '4xl': '6rem'     // 96px
+    xs: '0.25rem',
+    sm: '0.5rem',
+    md: '1rem',
+    lg: '1.5rem',
+    xl: '2rem',
+    '2xl': '3rem',
+    '3xl': '4rem',
+    '4xl': '6rem'
   },
   
   shadows: {
@@ -93,19 +89,16 @@ export const tokens = {
   }
 };
 
-// CSS variables mapping component
 export const TokensDisplay: React.FC = () => {
   return (
     <div className="space-y-8">
       <div>
         <h2 className="mb-4">Design Tokens</h2>
-        
-        {/* Colors */}
+
         <div className="mb-6">
           <h3 className="mb-3">Colors</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             
-            {/* Primary Colors */}
             <div>
               <h4 className="mb-2">Primary</h4>
               <div className="space-y-2">
@@ -124,7 +117,6 @@ export const TokensDisplay: React.FC = () => {
               </div>
             </div>
             
-            {/* Status Colors */}
             <div>
               <h4 className="mb-2">Status</h4>
               <div className="space-y-2">
@@ -145,7 +137,6 @@ export const TokensDisplay: React.FC = () => {
           </div>
         </div>
         
-        {/* Typography */}
         <div className="mb-6">
           <h3 className="mb-3">Typography</h3>
           <div className="space-y-4">
@@ -164,8 +155,7 @@ export const TokensDisplay: React.FC = () => {
             ))}
           </div>
         </div>
-        
-        {/* Spacing */}
+
         <div className="mb-6">
           <h3 className="mb-3">Spacing</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -182,7 +172,6 @@ export const TokensDisplay: React.FC = () => {
           </div>
         </div>
         
-        {/* Shadows */}
         <div>
           <h3 className="mb-3">Shadows</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -203,7 +192,6 @@ export const TokensDisplay: React.FC = () => {
   );
 };
 
-// CSS Variables for easy integration
 export const cssVariables = `
 :root {
   /* Colors */

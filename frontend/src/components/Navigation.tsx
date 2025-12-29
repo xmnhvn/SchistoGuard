@@ -191,13 +191,11 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
   return (
     <header className="border-b bg-white px-4 py-4 flex items-center justify-between">
       <div className="flex items-center gap-6 px-4 py-1.5 min-h-[48px]">
-        {/* SidebarTrigger removed: sidebar always open */}
         <div className="flex flex-col justify-center h-full">
           <h2 className="font-semibold text-schistoguard-navy leading-tight">{pageInfo.title}</h2>
           <p className="text-sm text-muted-foreground leading-tight">{pageInfo.subtitle}</p>
         </div>
       </div>
-      {/* System Status Indicator (pill style) */}
       <div className="flex items-center gap-2">
         <span className={`flex items-center px-4 py-1.5 rounded-full ${statusBg} ${statusText} text-sm font-medium`}>
           <span className={`w-2 h-2 rounded-full ${dotColor} inline-block mr-2`}></span>

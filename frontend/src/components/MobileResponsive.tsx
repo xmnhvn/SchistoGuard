@@ -14,13 +14,11 @@ import {
   X
 } from "lucide-react";
 
-// Mobile-first responsive components demonstrating the UI kit at different breakpoints
 export function MobileNavigation() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
           variant="outline"
@@ -32,12 +30,10 @@ export function MobileNavigation() {
         </Button>
       </div>
 
-      {/* Mobile overlay */}
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsOpen(false)} />
       )}
 
-      {/* Mobile navigation panel */}
       <div className={`lg:hidden fixed left-0 top-0 h-full w-80 bg-white shadow-xl z-50 transform transition-transform duration-300 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
@@ -86,8 +82,6 @@ export function ResponsiveDashboard() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-
-  // Fetch real sensor readings and alerts from backend
   const [readings, setReadings] = useState<any[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -129,12 +123,10 @@ export function ResponsiveDashboard() {
     return (
       <div className="min-h-screen bg-schistoguard-light-bg">
         <MobileNavigation />
-        {/* Mobile header */}
         <div className="pt-16 pb-4 px-4 bg-white border-b">
           <h1 className="text-xl font-semibold text-schistoguard-navy">SchistoGuard</h1>
           <p className="text-sm text-muted-foreground">Water Quality Monitoring</p>
         </div>
-        {/* Mobile tabs */}
         <div className="px-4 py-4">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -143,7 +135,6 @@ export function ResponsiveDashboard() {
               <TabsTrigger value="alerts">Alerts</TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="space-y-4 mt-4">
-              {/* Mobile summary cards */}
               <div className="grid grid-cols-2 gap-3">
                 <Card>
                   <CardContent className="p-3 text-center">
@@ -158,12 +149,10 @@ export function ResponsiveDashboard() {
                   </CardContent>
                 </Card>
               </div>
-              {/* Mobile status indicators */}
               <Card>
                 <CardContent className="p-4">
                   <h3 className="font-medium mb-3">System Status</h3>
                   <div className="space-y-2">
-                    {/* Example: count by risk level if available */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Safe Sites</span>
                       <Badge className="bg-status-safe text-white">{readings.filter(r => r.turbidity <= 5).length}</Badge>
@@ -204,7 +193,6 @@ export function ResponsiveDashboard() {
     );
   }
 
-  // Desktop view fallback
   return (
     <div className="min-h-screen bg-schistoguard-light-bg p-6">
       <div className="max-w-7xl mx-auto">
@@ -242,7 +230,6 @@ export function ResponsiveDashboard() {
   );
 }
 
-// Breakpoint indicator for development
 export function BreakpointIndicator() {
   return (
     <div className="fixed bottom-4 right-4 z-50 bg-black text-white px-2 py-1 rounded text-xs font-mono">

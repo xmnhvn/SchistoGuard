@@ -28,7 +28,6 @@ interface SensorCardProps {
 
 
 const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offline }) => {
-  // Only use real sensor readings
   const turbidity = readings.turbidity;
   const ph = readings.ph;
   const temperature = readings.temperature;
@@ -66,14 +65,11 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
 
   return (
     <div className="flex gap-4 justify-center w-full">
-      {/* Temperature Card (real data) */}
       <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
         <div className="text-md font-bold text-schistoguard-navy mb-4 pb-2 text-center">Temperature</div>
         <Thermometer className="h-10 w-10 text-red-500 mb-4" />
-        {/* Helper to get risk label (always use 'safe' for lowest risk) */}
         {(() => {
           const temp = temperature;
-          // WHO schistosomiasis risk label and color
           let riskLabel = getRiskLabel('safe');
           let riskColor = "text-green-600";
           if (temp >= 22 && temp <= 28) {
@@ -96,12 +92,10 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
           );
         })()}
       </div>
-      {/* Turbidity Card */}
       <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
         <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">Turbidity</div>
         <Waves className="h-10 w-10 text-blue-500 mb-4" />
         {(() => {
-          // WHO-based risk for turbidity
           let turbidityRiskLabel = getRiskLabel('safe');
           let turbidityRiskColor = "text-green-600";
           if (turbidity > 15) {
@@ -121,12 +115,10 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
           );
         })()}
       </div>
-      {/* pH Level Card */}
       <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px]">
         <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">pH Level</div>
         <Droplet className="h-10 w-10 text-cyan-500 mb-4" style={{ color: '#78c2cfff' }} />
         {(() => {
-          // WHO-based risk for pH: Safe 6.5-8.5, Warning 6.5-7.0 or 8.0-8.5, Critical <6.5 or >8.5
           let phRiskLabel = "Safe";
           let phRiskColor = "text-green-600";
           if (ph < 6.5 || ph > 8.5) {

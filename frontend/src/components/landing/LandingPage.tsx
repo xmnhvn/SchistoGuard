@@ -44,7 +44,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
   ];
 
-  // Three headline variants
   const headlines = [
     "Protect your community from schistosomiasis with real-time water monitoring",
     "Early detection saves lives — Monitor water quality in your barangay",
@@ -53,7 +52,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b border-green-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
@@ -78,13 +76,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </header>
 
-      {/* Hero Section */}
       <main className="flex-1 flex items-center">
-        {/* Desktop Hero - Split Layout */}
         <section className="hidden lg:block w-full py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-8 items-center">
-              {/* Content Block */}
               <div className="space-y-6 max-w-xl lg:pl-8">
                 <h2 className="text-3xl lg:text-4xl font-bold text-schistoguard-navy leading-tight">
                   {headlines[1]}. {headlines[0]}
@@ -95,7 +90,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   sites to help prevent schistosomiasis.
                 </p>
 
-                {/* Trust Row */}
                 <div className="flex flex-wrap gap-2">
                   <TrustBadge
                     icon={
@@ -116,8 +110,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     label="Public health focus"
                   />
                 </div>
-
-                {/* CTA Group */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <CTAButton
                     variant="primary"
@@ -141,18 +133,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {/* Hero Illustration */}
               <div className="relative">
                 <HeroIllustration />
               </div>
             </div>
           </div>
         </section>
-
-        {/* Mobile/Tablet Hero - Stacked Layout */}
         <section className="lg:hidden w-full py-6">
           <div className="max-w-4xl mx-auto px-4 sm:px-6">
-            {/* Content Above Fold */}
             <div className="text-center space-y-4 mb-6">
               <h2 className="text-2xl md:text-3xl font-bold text-schistoguard-navy leading-tight">
                 {headlines[1]}
@@ -162,8 +150,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Free, real-time monitoring of barangay water
                 sites to help prevent schistosomiasis.
               </p>
-
-              {/* Trust Row */}
               <div className="flex flex-wrap justify-center gap-2">
                 <TrustBadge
                   icon={
@@ -185,7 +171,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 />
               </div>
 
-              {/* CTA Group */}
               <div className="flex flex-col gap-2 max-w-sm mx-auto">
                 <CTAButton
                   variant="primary"
@@ -209,7 +194,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Hero Illustration */}
             <div className="max-w-md mx-auto">
               <HeroIllustration />
             </div>
@@ -217,7 +201,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -239,7 +222,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </footer>
 
-      {/* Alerts Modal */}
       <AlertsQuickviewModal
         isOpen={showAlertsModal}
         onClose={() => setShowAlertsModal(false)}

@@ -14,7 +14,6 @@ import {
 } from 'chart.js';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -88,7 +87,6 @@ const chartOptions = {
 export function ChartPanel() {
   return (
     <div className="space-y-6">
-      {/* Bar Chart */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-schistoguard-navy mb-4">Location Activity</h2>
         <div className="h-[300px]">
@@ -96,7 +94,6 @@ export function ChartPanel() {
         </div>
       </div>
 
-      {/* Line Chart and Doughnut Chart */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-schistoguard-navy mb-4">Trends Over Time</h2>

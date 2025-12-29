@@ -38,7 +38,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         .catch(() => {});
     };
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 10000); // refresh every 10s
+    const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
   }, []);
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,11 +80,9 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
     return matchesSearch && matchesStatus && matchesLevel && matchesBarangay;
   });
 
-  // Count all alerts for summary cards
   const unacknowledgedCount = alerts.filter(alert => !alert.isAcknowledged).length;
   const criticalCount = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged).length;
 
-  // Compute average response time for acknowledged alerts
   function getAverageResponseTime(alerts: any[]): string {
     const acknowledged = alerts.filter(a => a.isAcknowledged && a.timestamp && a.acknowledgedAt);
     if (acknowledged.length === 0) return "-";
@@ -104,7 +102,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-          {/* Column 1: Title and Subtitle (stacked) */}
+          
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2">
               <Button
@@ -120,9 +118,9 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
             </div>
             <div className="text-muted-foreground text-sm pl-10 md:pl-12">Monitor and manage water quality alerts across all sites</div>
           </div>
-          {/* Column 2: Empty for spacing */}
+          
           <div></div>
-          {/* Column 3: Filters and Export (stacked, right-aligned) */}
+          
           <div className="flex flex-row items-center gap-3 w-full md:w-auto">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-full sm:w-[140px] border border-gray-300 rounded-lg bg-gray-50">
@@ -158,7 +156,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         </div>
       </div>
 
-      {/* Summary Cards */}
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -188,7 +186,6 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
             <AlertTriangle className="h-7 w-7 text-red-500" />
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-red-600 text-center">{criticalCount}</div>
             <p className="text-xs text-muted-foreground text-center">High priority</p>
           </CardContent>
         </Card>
@@ -205,17 +202,17 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         </Card>
       </div>
 
-      {/* Filters and Controls */}
+      
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="font-bold">Alert List</CardTitle>
-            {/* Bulk acknowledge button removed as requested */}
+            
           </div>
         </CardHeader>
         
         <CardContent>
-          {/* Alert List - fixed height, scrollable, styled like SitesDirectory */}
+          
           <div className="rounded-md border overflow-x-auto h-80 overflow-y-auto scrollbar-hide space-y-4">
             {filteredAlerts.length > 0 ? (
               filteredAlerts.map((alert) => (

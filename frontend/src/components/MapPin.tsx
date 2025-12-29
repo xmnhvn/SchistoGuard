@@ -40,18 +40,15 @@ export function MapPin({ riskLevel, size = "md", siteName, onClick }: MapPinProp
       className={`relative cursor-pointer ${onClick ? 'hover:scale-110 transition-transform' : ''}`}
       onClick={onClick}
       title={siteName}
-    >
-      {/* Pin shadow/base */}
+      >
+
       <div className={`absolute inset-0 ${getPinBg(riskLevel)} opacity-20 rounded-full blur-sm`}></div>
-      
-      {/* Pin icon */}
       <div className={`relative flex items-center justify-center rounded-full ${getPinBg(riskLevel)} p-1`}>
         <MapPinIcon 
           className={`${getPinSize(size)} text-white fill-current`}
         />
       </div>
-      
-      {/* Pulse animation for critical alerts */}
+
       {riskLevel === "critical" && (
         <div className={`absolute inset-0 ${getPinBg(riskLevel)} rounded-full animate-ping opacity-75`}></div>
       )}
@@ -59,38 +56,32 @@ export function MapPin({ riskLevel, size = "md", siteName, onClick }: MapPinProp
   );
 }
 
-// Alternative pin design for different use cases
 export function MapPinDetailed({ riskLevel, size = "md", siteName, value, onClick }: MapPinProps & { value?: string }) {
   return (
     <div 
       className={`relative cursor-pointer ${onClick ? 'hover:scale-105 transition-transform' : ''}`}
       onClick={onClick}
     >
-      {/* Pin container */}
       <div className={`flex flex-col items-center gap-1`}>
-        {/* Value label */}
         {value && (
           <div className={`px-2 py-1 rounded text-xs font-medium text-white ${getPinBg(riskLevel)}`}>
             {value}
           </div>
         )}
-        
-        {/* Pin */}
+
         <div className={`relative flex items-center justify-center rounded-full ${getPinBg(riskLevel)} p-1.5`}>
           <MapPinIcon 
             className={`${getPinSize(size)} text-white fill-current`}
           />
         </div>
-        
-        {/* Site name */}
+
         {siteName && (
           <div className="text-xs font-medium text-center max-w-20 truncate bg-white px-1 py-0.5 rounded shadow-sm">
             {siteName}
           </div>
         )}
       </div>
-      
-      {/* Pulse for critical */}
+
       {riskLevel === "critical" && (
         <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 w-6 h-6 ${getPinBg(riskLevel)} rounded-full animate-ping opacity-75`}></div>
       )}

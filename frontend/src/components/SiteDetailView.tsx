@@ -10,9 +10,7 @@ import { ArrowLeft, Download, Settings, Bell, Calendar, Info } from "lucide-reac
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-
 import { useEffect } from "react";
-// TODO: Fetch real time series, history, and alerts from backend
 
 
 export interface SiteDetailViewProps {
@@ -22,8 +20,6 @@ export interface SiteDetailViewProps {
   currentRisk?: "safe" | "warning" | "critical";
   onBack?: () => void;
 }
-
-// Alerts will be fetched from backend in the future
 
 export function SiteDetailView({ 
   siteId,
@@ -38,7 +34,6 @@ export function SiteDetailView({
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch 5-min interval readings from backend
     fetch("http://localhost:3001/api/sensors/history")
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch time series data");
@@ -69,7 +64,6 @@ export function SiteDetailView({
   }
 
   const [infoOpen, setInfoOpen] = useState(false);
-  // Prepare chart data for recharts
   const chartData = history.map(r => ({
     time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     turbidity: r.turbidity,
@@ -79,10 +73,8 @@ export function SiteDetailView({
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          {/* Removed Back to Dashboard button */}
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-schistoguard-navy">{siteName}</h1>
@@ -113,7 +105,6 @@ export function SiteDetailView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* New Real-Time Monitoring Graph based on time series table */}
         <div className="min-w-0 lg:col-span-2">
           <Card className="w-full">
             <CardHeader>
@@ -193,7 +184,6 @@ export function SiteDetailView({
           </Card>
         </div>
 
-        {/* Right Sidebar: Subscription Panel and Site Info stacked in 3rd column */}
         <div className="space-y-6 w-full max-w-full lg:col-span-1 h-full flex flex-col">
           <SubscriptionPanel 
             siteName={siteName}

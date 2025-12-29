@@ -1,7 +1,5 @@
 import React from 'react';
 import { AlertTriangle, CheckCircle, Info, X, MapPin, Droplets, Activity } from 'lucide-react';
-
-// Button Components
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
@@ -43,8 +41,6 @@ export const CTAButton: React.FC<ButtonProps> = ({
     </button>
   );
 };
-
-// Badge Component
 interface BadgeProps {
   children: React.ReactNode;
   variant: 'info' | 'warning' | 'critical' | 'safe';
@@ -80,8 +76,6 @@ export const StatusBadge: React.FC<BadgeProps> = ({ children, variant, size = 'm
     </span>
   );
 };
-
-// Trust Badge Component
 interface TrustBadgeProps {
   icon: React.ReactNode;
   label: string;
@@ -95,8 +89,6 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({ icon, label }) => {
     </div>
   );
 };
-
-// Alert Overlay Component
 interface AlertOverlayProps {
   level: 'warning' | 'critical';
   title: string;
@@ -153,8 +145,6 @@ export const AlertOverlay: React.FC<AlertOverlayProps> = ({
     </div>
   );
 };
-
-// Site Spotlight Card Component
 interface SiteSpotProps {
   siteName: string;
   barangay: string;
@@ -194,8 +184,7 @@ export const SiteSpotCard: React.FC<SiteSpotProps> = ({
           {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)}
         </StatusBadge>
       </div>
-      
-      {/* Mini readings grid */}
+
       <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
         <div className="flex items-center space-x-1">
           <Droplets className="w-3 h-3 text-blue-500" />
@@ -208,8 +197,7 @@ export const SiteSpotCard: React.FC<SiteSpotProps> = ({
         <div className="text-gray-600">pH: {readings.ph}</div>
         <div className="text-gray-600">UV: {readings.uv}</div>
       </div>
-      
-      {/* Tiny sparkline placeholder */}
+
       <div className="h-6 bg-gray-100 rounded mb-3 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200 to-transparent transform -skew-x-12 animate-pulse"></div>
       </div>
@@ -226,8 +214,6 @@ export const SiteSpotCard: React.FC<SiteSpotProps> = ({
     </div>
   );
 };
-
-// Alerts Quickview Modal
 interface AlertsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -283,7 +269,6 @@ export const AlertsQuickviewModal: React.FC<AlertsModalProps> = ({
   );
 };
 
-// Icon Components
 export const SchistoIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 2C13.1 2 14 2.9 14 4V6C15.1 6 16 6.9 16 8V10C17.1 10 18 10.9 18 12C18 13.1 17.1 14 16 14V16C16 17.1 15.1 18 14 18V20C14 21.1 13.1 22 12 22C10.9 22 10 21.1 10 20V18C8.9 18 8 17.1 8 16V14C6.9 14 6 13.1 6 12C6 10.9 6.9 10 8 10V8C8 6.9 8.9 6 10 6V4C10 2.9 10.9 2 12 2Z"/>

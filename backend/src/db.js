@@ -1,12 +1,7 @@
-// SQLite database setup for SchistoGuard backend
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const db = new sqlite3.Database(path.resolve(__dirname, '../schistoguard.sqlite'));
-
-// Create tables if not exist
-// readings: id, turbidity, temperature, ph, status, timestamp
-// alerts: id, level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS readings (

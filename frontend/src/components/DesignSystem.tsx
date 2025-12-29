@@ -8,7 +8,6 @@ import { MapPin, MapPinDetailed } from "./MapPin";
 import { SubscriptionPanel } from "./SubscriptionPanel";
 import { Shield, Home, AlertTriangle, Settings, Bell, Download, Search, Mail, Lock } from "lucide-react";
 
-// Example mock sensor data for demonstration (must match SensorCardProps)
 const mockSensorData = {
   readings: {
     turbidity: 18.2,
@@ -23,7 +22,6 @@ const mockSensorData = {
   }
 };
 
-// Example mock alert data for demonstration (must match AlertItemProps)
 const mockAlert = {
   id: "1",
   level: "critical" as "critical" | "warning",
@@ -36,8 +34,6 @@ const mockAlert = {
 };
 
 export function DesignSystem() {
-  // TODO: Remove mockSensorData and use real data from backend or props
-
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
@@ -57,7 +53,6 @@ export function DesignSystem() {
         </p>
       </div>
 
-      {/* Brand Colors */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Brand Colors</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -109,7 +104,6 @@ export function DesignSystem() {
         </div>
       </section>
 
-      {/* Status Colors */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Status Colors</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -143,7 +137,6 @@ export function DesignSystem() {
         </div>
       </section>
 
-      {/* Typography */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Typography</h2>
         <Card>
@@ -163,7 +156,6 @@ export function DesignSystem() {
         </Card>
       </section>
 
-      {/* Button Variants */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Button Components</h2>
         <Card>
@@ -216,7 +208,6 @@ export function DesignSystem() {
         </Card>
       </section>
 
-      {/* Input Components */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Input Components</h2>
         <Card>
@@ -252,7 +243,6 @@ export function DesignSystem() {
         </Card>
       </section>
 
-      {/* Badge Components */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Badge Components</h2>
         <Card>
@@ -279,7 +269,6 @@ export function DesignSystem() {
         </Card>
       </section>
 
-      {/* Icon Set */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Icon Set</h2>
         <Card>
@@ -308,7 +297,6 @@ export function DesignSystem() {
         </Card>
       </section>
 
-      {/* Map Pin Variants */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Map Pin Components</h2>
         <Card>
@@ -361,7 +349,6 @@ export function DesignSystem() {
         </Card>
       </section>
 
-      {/* Complex Components */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Complex Components</h2>
         
@@ -401,7 +388,6 @@ export function DesignSystem() {
         </div>
       </section>
 
-      {/* Responsive Breakpoints */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Responsive Design</h2>
         <Card>
@@ -434,7 +420,6 @@ export function DesignSystem() {
         </Card>
       </section>
 
-      {/* Usage Guidelines */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-schistoguard-navy">Usage Guidelines</h2>
         <Card>

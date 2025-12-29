@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 
-// Fix for default marker icons in Leaflet
 const icon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -28,19 +27,15 @@ export function MapView() {
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map
     const map = L.map(mapRef.current).setView([39.8283, -98.5795], 4);
     mapInstanceRef.current = map;
 
-    // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(map);
 
-    // Add markers with circles
     locations.forEach((location) => {
-      // Add marker
       const marker = L.marker([location.lat, location.lng], { icon }).addTo(map);
       marker.bindPopup(`
         <div style="text-align: center;">
@@ -49,7 +44,6 @@ export function MapView() {
         </div>
       `);
 
-      // Add circle to represent value
       L.circle([location.lat, location.lng], {
         color: '#007E88',
         fillColor: '#007E88',

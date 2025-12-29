@@ -35,27 +35,21 @@ export const ReportsPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('current-month');
   const [selectedType, setSelectedType] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
-
-  // Real data state
   const [reports, setReports] = useState<Report[]>([]);
   const [metrics, setMetrics] = useState<MetricCard[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [alertCounts, setAlertCounts] = useState({ critical: 0, warning: 0, info: 0, total: 0 });
 
-  // Fetch real data from backend
   React.useEffect(() => {
-    // Fetch readings for metrics and analytics
     fetch("http://localhost:3001/api/sensors/history")
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          // Metrics: average turbidity, total readings, etc.
-          const totalSites = 1; // If you have multiple sites, update accordingly
+          const totalSites = 1;
           const alertsGenerated = data.length;
           const avgTurbidity = data.length > 0 ? (data.reduce((sum, r) => sum + (r.turbidity || 0), 0) / data.length).toFixed(2) : "-";
           const avgTemperature = data.length > 0 ? (data.reduce((sum, r) => sum + (r.temperature || 0), 0) / data.length).toFixed(2) : "-";
           const avgPh = data.length > 0 ? (data.reduce((sum, r) => sum + (r.ph || 0), 0) / data.length).toFixed(2) : "-";
-          // Fetch alerts for average critical alerts
           fetch("http://localhost:3001/api/sensors/alerts")
             .then(res => res.json())
             .then(alertsData => {
@@ -82,7 +76,7 @@ export const ReportsPage: React.FC = () => {
           setAnalytics({ avgTurbidity, avgTemperature, avgPh, totalReadings: data.length });
         }
       });
-    // Autogenerate summary reports for demo
+
     setReports([
       {
         id: 'monthly',
@@ -177,12 +171,10 @@ export const ReportsPage: React.FC = () => {
     <div className="bg-schistoguard-light-bg min-h-0 overflow-visible">
       <div className="max-w-7xl mx-auto p-6">
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
-          {/* Header and description (col 1) */}
           <div className="col-span-1">
             <h1 className="text-3xl font-bold text-schistoguard-navy mb-4">Reports & Analytics</h1>
             <p className="text-gray-600 leading-tight mb-1">Water quality monitoring reports and trend analysis</p>
           </div>
-          {/* Filters (cols 2-3, right end) - only show on reports tab */}
           {activeTab === 'reports' && (
             <div className="col-span-1 lg:col-span-2 relative">
               <div className="flex gap-3 absolute right-0 top-0">
@@ -298,10 +290,8 @@ export const ReportsPage: React.FC = () => {
                       </Card>
                     );
                   })}
-                  {/* Add blank card to always show 6 cards */}
                   {metrics.length < 6 && Array.from({ length: 6 - metrics.length }).map((_, i) => (
-                    <Card key={`blank-${i}`} className="h-44 flex flex-col justify-center items-center bg-gray-50 border-dashed border-2 border-gray-200 rounded-xl">
-                      {/* Empty card */}
+                    <Card key={`blank-${i}`} className="h-44 flex flex-col justify-center items-center bg-gray-50 border-dashed border-2 border-gray-200 rounded-xl"> 
                     </Card>
                   ))}
                 </>
@@ -329,7 +319,6 @@ export const ReportsPage: React.FC = () => {
                           <div className="text-sm text-gray-600 mb-2">
                             {report.period} &nbsp;•&nbsp; Generated {new Date(report.generatedDate).toLocaleDateString()}
                           </div>
-                          {/* Removed risk badge */}
                           <div className="text-xs text-gray-500">Total Sites: {report.summary.totalSites} &nbsp;|&nbsp; Alerts: {report.summary.alertsGenerated} &nbsp;|&nbsp; Avg Turbidity: {report.summary.avgTurbidity}</div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -348,11 +337,9 @@ export const ReportsPage: React.FC = () => {
             </Card>
           </TabsContent>
           <TabsContent value="analytics" className="space-y-6">
-            {/* Analytics Dashboard - dashboard style layout */}
             {analytics ? (
               <div className="grid grid-cols-1 gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Water Quality Trends */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> 
                   <div className="bg-white rounded-xl p-6 shadow-sm flex-1">
                     <div className="font-semibold text-lg mb-6">Water Quality Trends</div>
                     <div className="mb-6">
@@ -383,7 +370,6 @@ export const ReportsPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  {/* Alert Distribution */}
                   <div className="bg-white rounded-xl p-6 shadow-sm flex-1">
                     <div className="font-semibold text-lg mb-4">Alert Distribution</div>
                     <hr className="mb-8" />
@@ -409,7 +395,6 @@ export const ReportsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {/* System Performance */}
                 <div className="bg-white rounded-xl p-6 shadow-sm mt-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                   <div className="flex flex-col items-center justify-center h-32">
                     <div className="text-2xl font-bold text-green-600 mb-1">

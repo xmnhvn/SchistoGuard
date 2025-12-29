@@ -7,11 +7,8 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later
       setDeferredPrompt(e);
-      // Update UI to notify the user they can install the PWA
       setShowPrompt(true);
     };
 
@@ -24,15 +21,9 @@ export function PWAInstallPrompt() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-
-    // Show the install prompt
     deferredPrompt.prompt();
-
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`User response to the install prompt: ${outcome}`);
-
-    // Clear the deferredPrompt
     setDeferredPrompt(null);
     setShowPrompt(false);
   };

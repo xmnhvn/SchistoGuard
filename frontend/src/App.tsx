@@ -18,9 +18,6 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-
-  // Type guard for ViewType
   const isViewType = (view: string | null): view is ViewType => {
     return (
       view === 'landing' ||
@@ -37,7 +34,6 @@ export default function App() {
   const handleLogin = () => {
     setIsAuthenticated(true);
     const storedView = localStorage.getItem('currentView');
-    // Only allow dashboard, alerts, reports, sites, map after login
     const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'map'];
     if (storedView && allowedViews.includes(storedView as ViewType)) {
       setCurrentView(storedView as ViewType);
@@ -71,8 +67,6 @@ export default function App() {
     localStorage.setItem('currentView', 'sites');
   };
 
-
-  // On mount, check session and restore view
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -81,10 +75,9 @@ export default function App() {
         const data = await res.json();
         if (data.loggedIn) {
           setIsAuthenticated(true);
-          // Restore last view except landing/login
           const lastView = localStorage.getItem('currentView');
           if (isViewType(lastView) && lastView !== 'landing' && lastView !== 'login') {
-            setCurrentView(lastView); // This line remains unchanged
+            setCurrentView(lastView);
           } else {
             setCurrentView('dashboard');
           }
@@ -102,7 +95,6 @@ export default function App() {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
-  // Landing page view
   if (currentView === 'landing') {
     return (
       <LandingPage
@@ -113,14 +105,11 @@ export default function App() {
     );
   }
 
-  // Login view
   if (currentView === 'login') {
     return <LoginForm onLogin={handleLogin} />;
   }
 
-  // Authenticated views
   if (isAuthenticated) {
-    // Pass currentView directly so 'site-details' matches sidebar logic
     return (
       <NavigationProvider
         currentView={currentView}
