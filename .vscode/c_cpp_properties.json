@@ -4,13 +4,32 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
+<<<<<<< HEAD
                 "C:/Users/xneam/.platformio/packages/framework-arduino-avr/cores/arduino"
+=======
+                "${workspaceFolder}/firmware/SchistoGuard/lib/**",
+                "C:/Users/xneam/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "C:/Users/xneam/.platformio/packages/framework-arduino-avr/variants/standard"
+>>>>>>> 113dfd323ca13720d2a7ccab2c94e7d0892c4c2d
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
+<<<<<<< HEAD
                 "_UNICODE"
             ]
+=======
+                "_UNICODE",
+                "ARDUINO=10805",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO_AVR_UNO"
+            ],
+            "compilerPath": "C:/Users/xneam/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64"
+>>>>>>> 113dfd323ca13720d2a7ccab2c94e7d0892c4c2d
         }
     ],
     "version": 4
