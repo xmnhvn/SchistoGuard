@@ -9,37 +9,38 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-// Turbidity sensor pin
-
 #define TURBIDITY_PIN A0
 #define PH_PIN A1
 
 void setup() {
   Serial.begin(9600);
+  delay(2000); // Wait for Serial to initialize
+  Serial.println("SchistoGuard Starting...");
+  
   sensors.begin();
+  Serial.print("Found ");
+  Serial.print(sensors.getDeviceCount());
+  Serial.println(" temperature sensor(s)");
+  
   lcd.begin(16, 2);
   lcd.backlight();
+  lcd.print("System Ready");
+  
   pinMode(TURBIDITY_PIN, INPUT);
+  Serial.println("Setup Complete!");
 }
 
 void loop() {
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
 
-
-  // Read turbidity sensor value
   int turbidityRaw = analogRead(TURBIDITY_PIN);
   float turbidityVoltage = turbidityRaw * (5.0 / 1023.0);
 
-  // Read pH sensor value
   int phRaw = analogRead(PH_PIN);
-  // Example conversion: pH = 7 + ((2.5 - voltage) / 0.18)
   float phVoltage = phRaw * (5.0 / 1023.0);
-  float phValue = 7 + ((2.5 - phVoltage) / 0.18); // Adjust calibration as needed
+  float phValue = 7 + ((2.5 - phVoltage) / 0.18);
 
-  // LCD format:
-  // Line 1: Te:x.xxC pH:zz.zz
-  // Line 2: Tu:yyNTU
   lcd.setCursor(0, 0);
   lcd.print("T:");
   lcd.print(tempC, 2);
@@ -51,7 +52,6 @@ void loop() {
   lcd.print(turbidityVoltage, 2);
   lcd.print(" NTU   ");
 
-  // Send all values to backend, comma-separated
   Serial.print(tempC, 2);
   Serial.print(",");
   Serial.print(turbidityVoltage, 2);
@@ -60,7 +60,3 @@ void loop() {
 
   delay(2000);
 }
-
-  int myFunction(int x, int y) {
-    return x + y;
-  }
