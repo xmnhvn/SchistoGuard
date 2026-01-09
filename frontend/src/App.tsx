@@ -18,6 +18,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
   const isViewType = (view: string | null): view is ViewType => {
     return (
       view === 'landing' ||
@@ -115,8 +116,9 @@ export default function App() {
         currentView={currentView}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
+        systemStatus={systemStatus}
       >
-        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
+        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} />}
         {currentView === 'alerts' && <AlertsPage onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsPage />}
         {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}

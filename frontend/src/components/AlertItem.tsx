@@ -97,7 +97,6 @@ export function AlertItem({
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>{timestamp ? new Date(timestamp).toLocaleString() : '-'}</p>
               </div>
-              
               {isExpanded && (
                 <div className="mt-3 p-3 bg-muted/50 rounded-md text-sm">
                   <h4 className="font-medium mb-2">Alert Details</h4>
