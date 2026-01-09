@@ -14,32 +14,22 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void setup() {
   Serial.begin(9600);
-  delay(2000); // Wait for Serial to initialize
-  Serial.println("SchistoGuard Starting...");
-  
   sensors.begin();
-  Serial.print("Found ");
-  Serial.print(sensors.getDeviceCount());
-  Serial.println(" temperature sensor(s)");
-  
   lcd.begin(16, 2);
   lcd.backlight();
-  lcd.print("System Ready");
-  
   pinMode(TURBIDITY_PIN, INPUT);
-  Serial.println("Setup Complete!");
 }
 
 void loop() {
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
-
   int turbidityRaw = analogRead(TURBIDITY_PIN);
   float turbidityVoltage = turbidityRaw * (5.0 / 1023.0);
 
   int phRaw = analogRead(PH_PIN);
   float phVoltage = phRaw * (5.0 / 1023.0);
   float phValue = 7 + ((2.5 - phVoltage) / 0.18);
+
 
   lcd.setCursor(0, 0);
   lcd.print("T:");
