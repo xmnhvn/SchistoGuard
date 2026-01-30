@@ -156,6 +156,15 @@ router.post("/", (req, res) => {
   };
 
   console.log("Received:", latestData);
+  // Immediately push current alerts to Arduino for SMS
+  try {
+    const serialBackend = require("../../serial-to-backend.js");
+    if (serialBackend && typeof serialBackend.sendAlertsToArduino === 'function') {
+      serialBackend.sendAlertsToArduino();
+    }
+  } catch (e) {
+    console.error("Failed to trigger alert push to Arduino:", e.message);
+  }
   res.json({
     success: true,
     status
