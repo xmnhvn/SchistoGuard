@@ -27,7 +27,7 @@ import {
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import { UserProfileDetails } from "./UserProfileDetails";
 import React, { useState } from "react";
 import { User } from "lucide-react";
@@ -126,34 +126,34 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
       </SidebarContent>
       
       <div className="mt-auto p-4 border-t">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center justify-start gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors">
-              <Avatar className="w-6 h-6">
-                <AvatarFallback className="text-xs">JD</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col items-start text-xs">
-                <span>Juan Dela Cruz</span>
-                <span className="text-muted-foreground">LGU Officer</span>
-              </div>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => setShowProfile(true)}>
-              <User className="w-4 h-4 mr-2" />
-              User Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600" onClick={onLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-          <Popover open={showProfile} onOpenChange={setShowProfile}>
-            <PopoverContent align="end" className="z-50">
-              <UserProfileDetails />
-            </PopoverContent>
-          </Popover>
-        </DropdownMenu>
+        <Dialog open={showProfile} onOpenChange={setShowProfile}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center justify-start gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors">
+                <Avatar className="w-6 h-6">
+                  <AvatarFallback className="text-xs">JD</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-start text-xs">
+                  <span>Juan Dela Cruz</span>
+                  <span className="text-muted-foreground">LGU Officer</span>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setShowProfile(true)}>
+                <User className="w-4 h-4 mr-2" />
+                User Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600" onClick={onLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DialogContent>
+            <UserProfileDetails />
+          </DialogContent>
+        </Dialog>
       </div>
     </Sidebar>
   );

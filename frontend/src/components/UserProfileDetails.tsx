@@ -4,29 +4,36 @@ import { Badge } from "./ui/badge";
 
 export const UserProfileDetails: React.FC = () => {
   return (
-    <div className="p-6 min-w-[300px] max-w-xs">
-      <div className="flex flex-col items-center gap-2 mb-4">
-        <Avatar className="w-16 h-16 mb-2">
-          <AvatarFallback className="text-2xl">JD</AvatarFallback>
+    <div
+      className="relative flex flex-col items-center justify-center w-full max-w-md mx-auto p-8"
+      style={{
+        background: "var(--background)",
+        color: "var(--foreground)",
+        borderRadius: "var(--radius)",
+      }}
+    >
+      <div className="relative mb-6 flex flex-col items-center">
+        <Avatar className="w-20 h-20 ring-4" style={{ boxShadow: '0 0 0 4px var(--schistoguard-teal), 0 1px 4px rgba(0,0,0,0.04)' }}>
+          <AvatarFallback className="text-3xl font-semibold" style={{ color: 'var(--schistoguard-navy)' }}>JD</AvatarFallback>
         </Avatar>
-        <div className="text-center">
-          <div className="text-lg font-semibold text-schistoguard-navy">Juan Dela Cruz</div>
-          <div className="text-sm text-muted-foreground mb-1">LGU Officer</div>
-          <Badge variant="outline">Active</Badge>
-        </div>
       </div>
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Email:</span>
-          <span className="font-medium">juan.delacruz@email.com</span>
+      <div className="text-center mb-4">
+        <div className="text-xl font-bold" style={{ color: "var(--schistoguard-navy)" }}>Juan Dela Cruz</div>
+        <div className="text-base text-muted-foreground mb-1">LGU Officer</div>
+        <Badge className="px-3 py- rounded-full mb-2 text-xs font-medium" style={{ background: 'var(--schistoguard-teal)', color: 'var(--primary-foreground)' }}>Active</Badge>
+      </div>
+      <div className="w-full max-w-xs mx-auto space-y-3">
+        <div className="flex items-center justify-between text-sm px-2">
+          <span className="text-muted-foreground">Email</span>
+          <span className="font-medium" style={{ color: "var(--schistoguard-navy)" }}>juan.delacruz@email.com</span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Role:</span>
-          <span className="font-medium">LGU Officer</span>
+        <div className="flex items-center justify-between text-sm px-2">
+          <span className="text-muted-foreground">Role</span>
+          <span className="font-medium" style={{ color: "var(--schistoguard-navy)" }}>LGU Officer</span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Status:</span>
-          <span className="font-medium text-green-600">Active</span>
+        <div className="flex items-center justify-between text-sm px-2">
+          <span className="text-muted-foreground">Status</span>
+          <span className="font-medium" style={{ color: 'var(--status-safe)' }}>Active</span>
         </div>
       </div>
     </div>
