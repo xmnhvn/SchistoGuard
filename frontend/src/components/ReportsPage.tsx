@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Download, Calendar, Filter, TrendingUp, TrendingDown, AlertTriangle, Users, MapPin, Activity, Droplets, Thermometer } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from './ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -39,91 +40,16 @@ export const ReportsPage: React.FC = () => {
   const [metrics, setMetrics] = useState<MetricCard[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [alertCounts, setAlertCounts] = useState({ critical: 0, warning: 0, info: 0, total: 0 });
+  const [showCreateReport, setShowCreateReport] = useState(false);
+  const [reportType, setReportType] = useState('monthly');
 
   React.useEffect(() => {
     fetch("http://localhost:3001/api/sensors/history")
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          const totalSites = 1;
-          const alertsGenerated = data.length;
-          const avgTurbidity = data.length > 0 ? (data.reduce((sum, r) => sum + (r.turbidity || 0), 0) / data.length).toFixed(2) : "-";
-          const avgTemperature = data.length > 0 ? (data.reduce((sum, r) => sum + (r.temperature || 0), 0) / data.length).toFixed(2) : "-";
-          const avgPh = data.length > 0 ? (data.reduce((sum, r) => sum + (r.ph || 0), 0) / data.length).toFixed(2) : "-";
-          fetch("http://localhost:3001/api/sensors/alerts")
-            .then(res => res.json())
-            .then(alertsData => {
-              let avgCritical = 0;
-              let avgWarning = 0;
-              let critical = 0, warning = 0, info = 0;
-              if (Array.isArray(alertsData) && alertsData.length > 0) {
-                critical = alertsData.filter(a => a.level === "critical").length;
-                warning = alertsData.filter(a => a.level === "warning").length;
-                info = alertsData.filter(a => a.level === "info").length;
-                avgCritical = parseFloat((critical / alertsData.length * 100).toFixed(1)); // percent
-                avgWarning = parseFloat((warning / alertsData.length * 100).toFixed(1)); // percent
-              }
-              setAlertCounts({ critical, warning, info, total: alertsData.length });
-              setMetrics([
-                { title: "Avg Turbidity", value: avgTurbidity, change: 0, trend: "stable", icon: <Droplets className="w-6 h-6 text-blue-500" /> },
-                { title: "Avg Temperature", value: avgTemperature, change: 0, trend: "stable", icon: <Thermometer className="w-6 h-6 text-red-500" /> },
-                { title: "Avg pH", value: avgPh, change: 0, trend: "stable", icon: <Activity className="w-6 h-6 text-green-500" /> },
-                { title: "Average Warning Alerts", value: avgWarning + "%", change: 0, trend: avgWarning > 0 ? "up" : "stable", icon: <AlertTriangle className="w-6 h-6 text-yellow-500" /> },
-                { title: "Average Critical Alerts", value: avgCritical + "%", change: 0, trend: avgCritical > 0 ? "up" : "stable", icon: <AlertTriangle className="w-6 h-6 text-red-500" /> },
-                { title: "Number Registered Counts", value: "1,234", change: 5, trend: "up", icon: <Users className="w-6 h-6 text-schistoguard-navy" /> },
-              ]);
-            });
-          setAnalytics({ avgTurbidity, avgTemperature, avgPh, totalReadings: data.length });
-        }
+        // Remove dummy report, leave reports empty
+        setReports([]);
       });
-
-    setReports([
-      {
-        id: 'monthly',
-        title: 'Monthly Report',
-        type: 'monthly',
-        period: 'December 2025',
-        generatedDate: new Date().toISOString(),
-        status: 'published',
-        summary: {
-          totalSites: 12,
-          alertsGenerated: 8,
-          avgTurbidity: 2.1,
-          riskLevel: 'moderate'
-        },
-        downloadUrl: '/reports/monthly-dec-2025.pdf'
-      },
-      {
-        id: 'quarterly',
-        title: 'Quarterly Report',
-        type: 'quarterly',
-        period: 'Q4 2025',
-        generatedDate: new Date().toISOString(),
-        status: 'published',
-        summary: {
-          totalSites: 12,
-          alertsGenerated: 22,
-          avgTurbidity: 2.3,
-          riskLevel: 'moderate'
-        },
-        downloadUrl: '/reports/quarterly-q4-2025.pdf'
-      },
-      {
-        id: 'annual',
-        title: 'Annual Report',
-        type: 'annual',
-        period: '2025',
-        generatedDate: new Date().toISOString(),
-        status: 'published',
-        summary: {
-          totalSites: 12,
-          alertsGenerated: 80,
-          avgTurbidity: 2.4,
-          riskLevel: 'low'
-        },
-        downloadUrl: '/reports/annual-2025.pdf'
-      }
-    ]);
   }, []);
 
   const filteredReports = reports.filter(report => {
@@ -301,16 +227,66 @@ export const ReportsPage: React.FC = () => {
 
           <TabsContent value="reports" className="space-y-6">
             <Card className="flex flex-col">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center text-lg font-medium">
                   <FileText className="w-5 h-5 mr-2" />
                   Reports
                 </CardTitle>
+                <Button
+                  className="ml-auto flex items-center gap-2 bg-schistoguard-teal text-white hover:bg-schistoguard-teal/90"
+                  size="sm"
+                  onClick={() => setShowCreateReport(true)}
+                >
+                  <FileText className="w-4 h-4" />
+                  Create Report
+                </Button>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
+              <CardContent className="flex-1 flex flex-col h-80">
+                <Dialog open={showCreateReport} onOpenChange={setShowCreateReport}>
+                  <DialogContent className="max-w-md w-1/2">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl text-center font-bold mb-1">Create New Report</DialogTitle>
+                      <p className="text-sm text-center text-muted-foreground mb-2">Select the type of report you want to generate.</p>
+                    </DialogHeader>
+                    <form className="space-y-6">
+                      <fieldset>
+                        <legend className="block mb-6 font-medium">Report Type</legend>
+                        <div className="flex gap-4">
+                          <button
+                            type="button"
+                            className={`flex items-center gap-2 px-6 py-1 rounded-full border cursor-pointer transition-colors font-medium ${reportType === 'weekly' ? 'bg-schistoguard-teal text-white border-schistoguard-teal' : 'bg-gray-50 border-gray-200 hover:border-schistoguard-teal'}`}
+                            onClick={() => setReportType('weekly')}
+                          >
+                            Weekly
+                          </button>
+                          <button
+                            type="button"
+                            className={`flex items-center gap-2 px-6 py-1 rounded-full border cursor-pointer transition-colors font-medium ${reportType === 'monthly' ? 'bg-schistoguard-teal text-white border-schistoguard-teal' : 'bg-gray-50 border-gray-200 hover:border-schistoguard-teal'}`}
+                            onClick={() => setReportType('monthly')}
+                          >
+                            Monthly
+                          </button>
+                          <button
+                            type="button"
+                            className={`flex items-center gap-2 px-6 py-1 rounded-full border cursor-pointer transition-colors font-medium ${reportType === 'annual' ? 'bg-schistoguard-teal text-white border-schistoguard-teal' : 'bg-gray-50 border-gray-200 hover:border-schistoguard-teal'}`}
+                            onClick={() => setReportType('annual')}
+                          >
+                            Annual
+                          </button>
+                        </div>
+                      </fieldset>
+                      <div className="flex justify-center gap-3 pt-6">
+                        <DialogClose asChild>
+                          <button type="button" className="px-8 py-2 rounded border bg-white-100 hover:bg-gray-300">Cancel</button>
+                        </DialogClose>
+                        <button type="submit" className="px-8 py-2 rounded bg-schistoguard-teal text-white hover:bg-schistoguard-teal/90 font-semibold">Create</button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
                 <div className="flex-1 overflow-y-auto space-y-3">
                   {reports.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">No reports available.</div>
+                    <div className="text-center text-gray-500 py-8 flex items-center justify-center h-60">No reports available.</div>
                   ) : (
                     reports.map((report) => (
                       <div key={report.id} className="flex items-center justify-between p-6 border rounded-lg bg-white">
@@ -335,93 +311,6 @@ export const ReportsPage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-          <TabsContent value="analytics" className="space-y-6">
-            {analytics ? (
-              <div className="grid grid-cols-1 gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> 
-                  <div className="bg-white rounded-xl p-6 shadow-sm flex-1">
-                    <div className="font-semibold text-lg mb-6">Water Quality Trends</div>
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-sm">Average Turbidity</span>
-                        <span className="text-blue-700 font-bold">{analytics.avgTurbidity} NTU</span>
-                      </div>
-                      <div className="w-full h-3 bg-blue-100 rounded-full mb-4">
-                        <div className="h-3 bg-teal-700 rounded-full" style={{ width: `${Math.min(Number(analytics.avgTurbidity) * 10, 100)}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-sm">Average Temperature</span>
-                        <span className="text-red-700 font-bold">{analytics.avgTemperature}°C</span>
-                      </div>
-                      <div className="w-full h-3 bg-red-100 rounded-full mb-4">
-                        <div className="h-3 bg-red-500 rounded-full" style={{ width: `${Math.min(Number(analytics.avgTemperature) * 2, 100)}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="mb-2">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-sm">Average pH Level</span>
-                        <span className="text-green-700 font-bold">{analytics.avgPh}</span>
-                      </div>
-                      <div className="w-full h-3 bg-green-100 rounded-full mb-2">
-                        <div className="h-3 bg-green-500 rounded-full" style={{ width: `${Math.min(Number(analytics.avgPh) * 12, 100)}%` }}></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl p-6 shadow-sm flex-1">
-                    <div className="font-semibold text-lg mb-4">Alert Distribution</div>
-                    <hr className="mb-8" />
-                    <div className="flex flex-col gap-5">
-                      <div className="flex justify-between items-center mb-6">
-                        <span>Critical Alerts</span>
-                        <span className="font-bold text-red-600">
-                          {alertCounts.critical} ({alertCounts.total > 0 ? ((alertCounts.critical / alertCounts.total) * 100).toFixed(1) : 0}%)
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mb-6">
-                        <span>Warning Alerts</span>
-                        <span className="font-bold text-yellow-600">
-                          {alertCounts.warning} ({alertCounts.total > 0 ? ((alertCounts.warning / alertCounts.total) * 100).toFixed(1) : 0}%)
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mb-6">
-                        <span>Info Alerts</span>
-                        <span className="font-bold text-blue-600">
-                          {alertCounts.info} ({alertCounts.total > 0 ? ((alertCounts.info / alertCounts.total) * 100).toFixed(1) : 0}%)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl p-6 shadow-sm mt-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                  <div className="flex flex-col items-center justify-center h-32">
-                    <div className="text-2xl font-bold text-green-600 mb-1">
-                      {analytics && analytics.sensorUptime !== undefined ? `${analytics.sensorUptime}%` : '--'}
-                    </div>
-                    <div className="text-base font-medium text-schistoguard-navy">Sensor Uptime</div>
-                    <div className="text-xs text-gray-400 mt-1">Last 30 days</div>
-                  </div>
-                  <div className="flex flex-col items-center justify-center h-32">
-                    <div className="text-2xl font-bold text-blue-600 mb-1">
-                      {analytics && analytics.avgResponseTime !== undefined ? `${analytics.avgResponseTime} min` : '--'}
-                    </div>
-                    <div className="text-base font-medium text-schistoguard-navy">Avg Response Time</div>
-                    <div className="text-sm text-gray-400 mt-1">Alert to notification</div>
-                  </div>
-                  <div className="flex flex-col items-center justify-center h-32">
-                    <div className="text-2xl font-bold text-purple-600 mb-1">
-                      {analytics && analytics.activeSubscribers !== undefined ? analytics.activeSubscribers : '--'}
-                    </div>
-                    <div className="text-base font-medium text-schistoguard-navy">Active Subscribers</div>
-                    <div className="text-sm text-gray-400 mt-1">Receiving alerts</div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="col-span-full text-center text-gray-400 py-12">No analytics data available.</div>
-            )}
           </TabsContent>
         </Tabs>
       </div>
