@@ -50,7 +50,7 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-schistoguard-teal to-schistoguard-navy flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md min-h-[540px] flex flex-col justify-center">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
@@ -179,7 +179,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-schistoguard-teal to-schistoguard-navy flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
@@ -234,29 +234,12 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="+63 912 345 6789"
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                  className="pl-10"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Select value={formData.role} onValueChange={(value: string) => setFormData(prev => ({ ...prev, role: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="resident">Resident</SelectItem>
                   <SelectItem value="bhw">Barangay Health Worker</SelectItem>
                   <SelectItem value="lgu">LGU Officer</SelectItem>
                 </SelectContent>

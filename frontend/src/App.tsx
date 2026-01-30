@@ -7,7 +7,7 @@ import { ReportsPage } from './components/ReportsPage';
 import { SitesDirectory } from './components/SitesDirectory';
 import { SiteDetailView } from './components/SiteDetailView';
 import { LandingPage } from './components/landing/LandingPage';
-import { LoginForm } from './components/LoginForm';
+import { LoginForm, SignupForm } from './components/LoginForm';
 
 type ViewType = 'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports';
 
@@ -19,6 +19,7 @@ export default function App() {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
+  const [showSignup, setShowSignup] = useState(false);
   const isViewType = (view: string | null): view is ViewType => {
     return (
       view === 'landing' ||
@@ -107,7 +108,10 @@ export default function App() {
   }
 
   if (currentView === 'login') {
-    return <LoginForm onLogin={handleLogin} />;
+    if (showSignup) {
+      return <SignupForm onShowLogin={() => setShowSignup(false)} />;
+    }
+    return <LoginForm onLogin={handleLogin} onShowSignup={() => setShowSignup(true)} />;
   }
 
   if (isAuthenticated) {
