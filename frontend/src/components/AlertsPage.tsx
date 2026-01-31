@@ -24,6 +24,21 @@ import { useNavigate } from "react-router-dom";
 
 
 export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void }) {
+      // Replace this with your actual user context or authentication logic
+      const userName = "Juan Dela Cruz (LGU)";
+    function formatDateTime(dt: string) {
+      if (!dt) return '-';
+      const d = new Date(dt);
+      if (isNaN(d.getTime())) return dt;
+      return d.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
   const [alerts, setAlerts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -61,7 +76,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
       alert.id === alertId ? { 
         ...alert, 
         isAcknowledged: true,
-        acknowledgedBy: "Current User (LGU)"
+        acknowledgedBy: userName
       } : alert
     ));
   };
@@ -219,101 +234,104 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
                 <div key={alert.id} className="flex items-start gap-3">
                   <div className="flex-1">
                     <Dialog>
-                      <DialogTrigger asChild>
-                        <div onClick={() => setSelectedAlert(alert)}>
-                          <AlertItem
-                            {...alert}
-                            onAcknowledge={handleAcknowledgeAlert}
-                          />
-                        </div>
-                      </DialogTrigger>
+                      <AlertItem
+                        {...alert}
+                        onAcknowledge={handleAcknowledgeAlert}
+                        onExpand={() => { setSelectedAlert(alert); }}
+                        DetailsButtonComponent={({ onClick }) => (
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
+                              className="py-0.5 px-2 text-xs h-6 min-h-0"
+                            >
+                              Details
+                            </Button>
+                          </DialogTrigger>
+                        )}
+                      />
                       <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                          <DialogTitle>Alert Details</DialogTitle>
+                          <DialogTitle className="text-center font-bold mt-6 mb-6">Alert Details</DialogTitle>
                         </DialogHeader>
                         {selectedAlert && (
                           <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                               <div>
-                                <h4 className="font-medium mb-2">Alert Information</h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Alert ID:</span>
-                                    <span className="font-mono">{selectedAlert.id}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Level:</span>
-                                    <Badge 
-                                      variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
-                                      className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
-                                    >
-                                      {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Parameter:</span>
-                                    <span>{selectedAlert.parameter}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Value:</span>
-                                    <span className="font-medium">{selectedAlert.value}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Duration:</span>
-                                    <span>{selectedAlert.duration}</span>
-                                  </div>
-                                </div>
+                                <h4 className="font-semibold text-md mb-4 text-schistoguard-navy">Alert Information</h4>
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Alert ID:</td>
+                                      <td className="font-mono font-semibold text-base">{selectedAlert.id}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Level:</td>
+                                      <td>
+                                        <Badge 
+                                          variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
+                                          className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
+                                        >
+                                          {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
+                                        </Badge>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Parameter:</td>
+                                      <td className="font-semibold">{selectedAlert.parameter}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Value:</td>
+                                      <td className="font-semibold text-md">{selectedAlert.value} <span className="font-normal text-xs">NTU</span></td>
+                                    </tr>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Duration:</td>
+                                      <td>{selectedAlert.duration || '-'}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
                               </div>
-                              
                               <div>
-                                <h4 className="font-medium mb-2">Site Information</h4>
-                                <div className="space-y-2 text-sm">
-                                <div className="flex flex-col lg:flex-row gap-4">
-                                  <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                                    <Input
-                                      placeholder="Search alerts, sites, or parameters..."
-                                      value={searchTerm}
-                                      onChange={(e) => setSearchTerm(e.target.value)}
-                                      className="pl-10"
-                                    />
-                                  </div>
-                                </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Site:</span>
-                                    <span>{selectedAlert.siteName}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Barangay:</span>
-                                    <span>{selectedAlert.barangay}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Timestamp:</span>
-                                    <span>{selectedAlert.timestamp}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Status:</span>
-                                    <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"}>
-                                      {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
-                                    </Badge>
-                                  </div>
-                                  {selectedAlert.acknowledgedBy && (
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Acknowledged by:</span>
-                                      <span className="text-right">{selectedAlert.acknowledgedBy}</span>
-                                    </div>
-                                  )}
-                                </div>
+                                <h4 className="font-semibold text-md mb-4 text-schistoguard-navy">Site Information</h4>
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Site:</td>
+                                      <td className="font-semibold">{selectedAlert.siteName}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Barangay:</td>
+                                      <td>{selectedAlert.barangay}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Timestamp:</td>
+                                      <td className="whitespace-nowrap">{formatDateTime(selectedAlert.timestamp)}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Status:</td>
+                                      <td>
+                                        <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
+                                          {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
+                                        </Badge>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
-                            
                             <div className="border-t pt-4">
-                              <h4 className="font-medium mb-2">Alert Message</h4>
-                              <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-md">
+                              <h4 className="font-medium mb-4">Alert Message</h4>
+                              <p className="text-sm mb-8 text-muted-foreground bg-muted/50 rounded-md">
                                 {selectedAlert.message}
                               </p>
+                              {selectedAlert.acknowledgedBy && (
+                                <div className="pt-2 flex flex-col items-center">
+                                  <span className="text-xs text-muted-foreground">Acknowledged by</span>
+                                  <span className="font-medium text-sm text-center">{selectedAlert.acknowledgedBy}</span>
+                                </div>
+                              )}
                             </div>
-                            
                             <div className="flex gap-2 pt-2">
                               {!selectedAlert.isAcknowledged && (
                                 <Button 
@@ -324,14 +342,6 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
                                   Acknowledge Alert
                                 </Button>
                               )}
-                              <Button variant="outline">
-                                <MapPinIcon className="w-4 h-4 mr-2" />
-                                View on Map
-                              </Button>
-                              <Button variant="outline">
-                                <Calendar className="w-4 h-4 mr-2" />
-                                View Site History
-                              </Button>
                             </div>
                           </div>
                         )}

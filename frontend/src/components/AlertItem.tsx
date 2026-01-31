@@ -2,7 +2,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 
 interface AlertItemProps {
   id: string;
@@ -15,6 +15,7 @@ interface AlertItemProps {
   isAcknowledged: boolean;
   onAcknowledge?: (id: string) => void;
   onExpand?: (id: string) => void;
+  DetailsButtonComponent?: React.FC<{ onClick?: (e: React.MouseEvent) => void }>;
 }
 
 function getAlertIcon(level: string, isAcknowledged: boolean) {
@@ -39,17 +40,11 @@ export function AlertItem({
   timestamp, 
   isAcknowledged,
   onAcknowledge,
-  onExpand 
+  onExpand,
+  DetailsButtonComponent
 }: AlertItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const handleAcknowledge = () => {
     onAcknowledge?.(id);
-  };
-
-  const handleExpand = () => {
-    setIsExpanded(!isExpanded);
-    onExpand?.(id);
   };
 
   return (
@@ -83,32 +78,15 @@ export function AlertItem({
                       Acknowledge
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExpand}
-                    className="py-0.5 px-2 text-xs h-6 min-h-0"
-                  >
-                    {isExpanded ? "Less" : "Details"}
-                  </Button>
+                  {DetailsButtonComponent && (
+                    <DetailsButtonComponent />
+                  )}
                 </div>
               </div>
               <p className="font-medium">{message}</p>
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>{timestamp ? new Date(timestamp).toLocaleString() : '-'}</p>
               </div>
-              {isExpanded && (
-                <div className="mt-3 p-3 bg-muted/50 rounded-md text-sm">
-                  <h4 className="font-medium mb-2">Alert Details</h4>
-                  <div className="space-y-1 text-muted-foreground">
-                    <p>Parameter: {parameter}</p>
-                    <p>Current Value: {value}</p>
-                    <p>Threshold Exceeded: {level === "critical" ? ">15 NTU" : "6-15 NTU"}</p>
-                    <p>Duration: 15 minutes</p>
-                    <p>Previous Alerts: 2 in last 24h</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
