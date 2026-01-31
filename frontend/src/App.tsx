@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { NavigationProvider } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
@@ -8,6 +7,7 @@ import { SitesDirectory } from './components/SitesDirectory';
 import { SiteDetailView } from './components/SiteDetailView';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm, SignupForm } from './components/LoginForm';
+import { MapView } from './components/MapView';
 
 type ViewType = 'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports';
 
@@ -131,10 +131,7 @@ export default function App() {
         )}
         {currentView === 'map' && (
           <div className="p-6">
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <h2 className="text-2xl font-bold text-schistoguard-navy mb-2">Map View</h2>
-              <p className="text-gray-600">Interactive map coming soon</p>
-            </div>
+            <MapView />
           </div>
         )}
       </NavigationProvider>

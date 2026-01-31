@@ -9,6 +9,8 @@ db.serialize(() => {
     turbidity REAL,
     temperature REAL,
     ph REAL,
+    lat REAL,
+    lng REAL,
     status TEXT,
     timestamp TEXT
   )`);

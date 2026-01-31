@@ -15,7 +15,31 @@ parser.on('data', async (line) => {
     return;
   }
   const parts = trimmed.split(',');
-  if (parts.length === 3) {
+  // If GPS data is included (temp, turbidity, ph, lat, lng)
+  if (parts.length === 5) {
+    const temp = parseFloat(parts[0]);
+    const turbidity = parseFloat(parts[1]);
+    const ph = parseFloat(parts[2]);
+    const lat = parseFloat(parts[3]);
+    const lng = parseFloat(parts[4]);
+    if (!isNaN(temp) && !isNaN(turbidity) && !isNaN(ph) && !isNaN(lat) && !isNaN(lng)) {
+      try {
+        await axios.post('http://localhost:3001/api/sensors', {
+          temperature: temp,
+          turbidity: turbidity,
+          ph: ph,
+          lat: lat,
+          lng: lng
+        });
+        console.log('Posted temperature:', temp, 'turbidity:', turbidity, 'ph:', ph, 'lat:', lat, 'lng:', lng);
+      } catch (err) {
+        console.error('Failed to post:', err.message);
+      }
+    } else {
+      console.log('Invalid numeric data:', line);
+    }
+  } else if (parts.length === 3) {
+    // Fallback: old format (no GPS)
     const temp = parseFloat(parts[0]);
     const turbidity = parseFloat(parts[1]);
     const ph = parseFloat(parts[2]);

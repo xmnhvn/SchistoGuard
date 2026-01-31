@@ -4,11 +4,16 @@
 #include <DallasTemperature.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-
+#include <TinyGPSPlus.h>
 
 #define SIM800_TX 7
 #define SIM800_RX 8
 SoftwareSerial sim800l(SIM800_TX, SIM800_RX);
+
+#define GPS_RX 10
+#define GPS_TX 11
+SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
+TinyGPSPlus gps;
 
 String smsRecipient = "+639053167929";
 #define ONE_WIRE_BUS 2
@@ -22,6 +27,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 void setup() {
   Serial.begin(9600);
   sim800l.begin(9600);
+  gpsSerial.begin(9600);
   delay(1000);
   sim800l.println("AT");
   delay(1000);
@@ -43,6 +49,11 @@ void setup() {
 }
 
 void loop() {
+  // Read GPS data
+  while (gpsSerial.available() > 0) {
+    gps.encode(gpsSerial.read());
+  }
+
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
   int turbidityRaw = analogRead(TURBIDITY_PIN);
@@ -63,6 +74,20 @@ void loop() {
   lcd.print("Tu:");
   lcd.print(turbidityVoltage, 2);
   lcd.print(" NTU   ");
+
+  // Always send sensor data with GPS (or NaN if no fix)
+  if (gps.location.isValid()) {
+      Serial.print(tempC, 2); Serial.print(",");
+      Serial.print(turbidityVoltage, 2); Serial.print(",");
+      Serial.print(phValue, 2); Serial.print(",");
+      Serial.print(gps.location.lat(), 6); Serial.print(",");
+      Serial.println(gps.location.lng(), 6);
+  } else {
+      Serial.print(tempC, 2); Serial.print(",");
+      Serial.print(turbidityVoltage, 2); Serial.print(",");
+      Serial.print(phValue, 2); Serial.print(",");
+      Serial.println("NaN,NaN");
+  }
 
   if (Serial.available()) {
     String alerts = "";
@@ -128,5 +153,4 @@ String formatAlerts(String alerts) {
     start = end + 1;
   }
   return sms;
-}
 }

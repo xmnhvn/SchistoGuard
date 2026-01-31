@@ -145,12 +145,14 @@ function classifyLevel(status) {
 
 
 router.post("/", (req, res) => {
-  const { turbidity, temperature, ph } = req.body;
+  const { turbidity, temperature, ph, lat, lng } = req.body;
   const status = classifyWater(temperature);
   latestData = {
     turbidity,
     temperature,
     ph,
+    lat,
+    lng,
     status,
     timestamp: new Date()
   };
