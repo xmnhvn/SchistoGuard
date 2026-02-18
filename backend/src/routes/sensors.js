@@ -145,7 +145,7 @@ function classifyLevel(status) {
 
 
 router.post("/", (req, res) => {
-  const { turbidity, temperature, ph, lat, lng } = req.body;
+  const { turbidity, temperature, ph, lat, lng, device_ip } = req.body;
   const status = classifyWater(temperature);
   latestData = {
     turbidity,
@@ -153,11 +153,13 @@ router.post("/", (req, res) => {
     ph,
     lat,
     lng,
+    device_ip,
     status,
     timestamp: new Date()
   };
 
   console.log("Received:", latestData);
+  console.log(`✓ ESP32 connected - IP: ${device_ip}`);
   // Immediately push current alerts to Arduino for SMS
   try {
     const serialBackend = require("../../serial-to-backend.js");

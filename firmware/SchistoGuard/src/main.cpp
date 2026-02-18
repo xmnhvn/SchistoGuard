@@ -1,156 +1,180 @@
-#include <SoftwareSerial.h>
-#include <Arduino.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <TinyGPSPlus.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoOTA.h>
 
-#define SIM800_TX 7
-#define SIM800_RX 8
-SoftwareSerial sim800l(SIM800_TX, SIM800_RX);
-
-#define GPS_RX 10
-#define GPS_TX 11
-SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
-TinyGPSPlus gps;
-
-String smsRecipient = "+639053167929";
 #define ONE_WIRE_BUS 2
+#define I2C_SDA 21
+#define I2C_SCL 22
+
+// WiFi credentials
+const char* ssid = "M I K A T A 6 9";
+const char* password = "xFbwzT65";
+const char* otaPassword = "SG2026";
+
+// Backend server
+const char* serverUrl = "http://192.168.100.11:3001/api/sensors";
+
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
+
+// Set the LCD address to 0x27 for a 16 chars and 2 line display
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-#define TURBIDITY_PIN A0
-#define PH_PIN A1
+unsigned long lastSend = 0;
+const unsigned long sendInterval = 1000;  // Send every 1 second
+
+// Function declaration
+void sendDataToBackend(float temperature);
 
 void setup() {
-  Serial.begin(9600);
-  sim800l.begin(9600);
-  gpsSerial.begin(9600);
-  delay(1000);
-  sim800l.println("AT");
-  delay(1000);
-  printSIM800LResponse();
-  sim800l.println("AT+CMGF=1");
-  delay(1000);
-  printSIM800LResponse();
-  void printSIM800LResponse() {
-    while (sim800l.available()) {
-      Serial.write(sim800l.read());
-    }
-  }
+  Serial.begin(115200);
   sensors.begin();
+
+  Wire.begin(I2C_SDA, I2C_SCL);
   lcd.begin(16, 2);
   lcd.backlight();
-  pinMode(TURBIDITY_PIN, INPUT);
+  lcd.setCursor(0, 0);
+  lcd.print("Connecting WiFi");
+  delay(500);
+  lcd.clear();
 
-  Serial.println("SMS_SENT:TEST");
+  // Connect to WiFi
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected!");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+    
+    lcd.setCursor(0, 0);
+    lcd.print("WiFi: OK");
+    lcd.setCursor(0, 1);
+    lcd.print(WiFi.localIP().toString().c_str());
+    delay(2000);
+  } else {
+    Serial.println("\nWiFi failed!");
+    lcd.setCursor(0, 0);
+    lcd.print("WiFi: FAILED");
+    delay(2000);
+  }
+
+  // Setup OTA
+  ArduinoOTA.setPassword(otaPassword);
+  
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else
+      type = "filesystem";
+    Serial.println("OTA Start updating " + type);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("OTA Updating...");
+  });
+  
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nOTA End");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("OTA Complete!");
+    delay(2000);
+  });
+  
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("OTA Error!");
+    delay(2000);
+  });
+  
+  ArduinoOTA.begin();
+  Serial.println("OTA ready");
+  
+  lcd.clear();
 }
 
 void loop() {
-  // Read GPS data
-  while (gpsSerial.available() > 0) {
-    gps.encode(gpsSerial.read());
-  }
+  // Handle OTA updates
+  ArduinoOTA.handle();
 
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
-  int turbidityRaw = analogRead(TURBIDITY_PIN);
-  float turbidityVoltage = turbidityRaw * (5.0 / 1023.0);
-
-  int phRaw = analogRead(PH_PIN);
-  float phVoltage = phRaw * (5.0 / 1023.0);
-  float phValue = 7 + ((2.5 - phVoltage) / 0.18);
-
 
   lcd.setCursor(0, 0);
-  lcd.print("T:");
+  lcd.print("Temp: ");
   lcd.print(tempC, 2);
-  lcd.print("C pH:");
-  lcd.print(phValue, 2);
+  lcd.print(" C   ");
 
   lcd.setCursor(0, 1);
-  lcd.print("Tu:");
-  lcd.print(turbidityVoltage, 2);
-  lcd.print(" NTU   ");
+  lcd.print("                ");
 
-  // Always send sensor data with GPS (or NaN if no fix)
-  if (gps.location.isValid()) {
-      Serial.print(tempC, 2); Serial.print(",");
-      Serial.print(turbidityVoltage, 2); Serial.print(",");
-      Serial.print(phValue, 2); Serial.print(",");
-      Serial.print(gps.location.lat(), 6); Serial.print(",");
-      Serial.println(gps.location.lng(), 6);
-  } else {
-      Serial.print(tempC, 2); Serial.print(",");
-      Serial.print(turbidityVoltage, 2); Serial.print(",");
-      Serial.print(phValue, 2); Serial.print(",");
-      Serial.println("NaN,NaN");
-  }
+  Serial.print("Temperature: ");
+  Serial.println(tempC);
 
-  if (Serial.available()) {
-    String alerts = "";
-    while (Serial.available()) {
-      String line = Serial.readStringUntil('\n');
-      line.trim();
-      if (line.length() > 0) {
-        if (alerts.length() > 0) alerts += "\n";
-        alerts += line;
-      }
-      delay(10);
+  // Send data to backend every sendInterval
+  if (millis() - lastSend >= sendInterval) {
+    if (WiFi.status() == WL_CONNECTED) {
+      sendDataToBackend(tempC);
     }
-    if (alerts.length() > 0) {
-      Serial.print("[DEBUG] Received alert stream for SMS:\n");
-      Serial.println(alerts);
-      String formattedSMS = formatAlerts(alerts);
-      sendSMS(formattedSMS);
-    }
+    lastSend = millis();
   }
 
   delay(2000);
 }
 
-void sendSMS(String message) {
-  sim800l.println("AT+CMGS=\"" + smsRecipient + "\"");
-  delay(1000);
-  sim800l.print(message);
-  delay(500);
-  sim800l.write(26);
-  delay(3000);
-  printSIM800LResponse();
-  Serial.print("SMS_SENT:");
-  Serial.print(smsRecipient);
-  Serial.print(":");
-  Serial.println(message);
-}
+void sendDataToBackend(float temperature) {
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/json");
 
-String formatAlerts(String alerts) {
-  String sms = "ALERTS:\n";
-  int start = 0;
-  while (start < alerts.length()) {
-    int end = alerts.indexOf('\n', start);
-    if (end == -1) end = alerts.length();
-    String line = alerts.substring(start, end);
-    if (line.startsWith("Turbidity:")) {
-      float turb = line.substring(10).toFloat();
-      if (turb < 5) sms += "Turbidity is too low (" + String(turb, 2) + " NTU)\n";
-      else if (turb > 15) sms += "Turbidity is too high (" + String(turb, 2) + " NTU)\n";
-      else sms += "Turbidity is normal (" + String(turb, 2) + " NTU)\n";
-    } else if (line.startsWith("pH:")) {
-      float ph = line.substring(3).toFloat();
-      if (ph < 6.5) sms += "pH is too low (" + String(ph, 2) + ")\n";
-      else if (ph > 8.5) sms += "pH is too high (" + String(ph, 2) + ")\n";
-      else sms += "pH is normal (" + String(ph, 2) + ")\n";
-    } else if (line.startsWith("Temperature:")) {
-      float temp = line.substring(12).toFloat();
-      if (temp < 20) sms += "Temperature is too low (" + String(temp, 2) + "C)\n";
-      else if (temp > 32) sms += "Temperature is too high (" + String(temp, 2) + "C)\n";
-      else sms += "Temperature is normal (" + String(temp, 2) + "C)\n";
-    } else {
-      sms += line + "\n";
-    }
-    start = end + 1;
+  // Create JSON payload
+  String payload = "{";
+  payload += "\"temperature\":" + String(temperature, 2) + ",";
+  payload += "\"turbidity\":0,";
+  payload += "\"ph\":0,";
+  payload += "\"lat\":0,";
+  payload += "\"lng\":0,";
+  payload += "\"device_ip\":\"" + WiFi.localIP().toString() + "\"";
+  payload += "}";
+
+  Serial.print("Sending to backend: ");
+  Serial.println(payload);
+
+  int httpResponseCode = http.POST(payload);
+
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.print("Response code: ");
+    Serial.println(httpResponseCode);
+    Serial.println("Response: " + response);
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
   }
-  return sms;
+
+  http.end();
 }

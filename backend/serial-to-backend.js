@@ -2,73 +2,16 @@
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const axios = require('axios');
-const port = new SerialPort({ path: 'COM6', baudRate: 9600 });
-const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
 
-parser.on('data', async (line) => {
-  // Log every line received from serial
-  console.log('[SERIAL]', line);
-
-  const trimmed = line.trim();
-  if (trimmed.startsWith('SMS_SENT:')) {
-    console.log('SMS sent:', trimmed.substring(9));
-    return;
-  }
-  const parts = trimmed.split(',');
-  // If GPS data is included (temp, turbidity, ph, lat, lng)
-  if (parts.length === 5) {
-    const temp = parseFloat(parts[0]);
-    const turbidity = parseFloat(parts[1]);
-    const ph = parseFloat(parts[2]);
-    const lat = parseFloat(parts[3]);
-    const lng = parseFloat(parts[4]);
-    if (!isNaN(temp) && !isNaN(turbidity) && !isNaN(ph) && !isNaN(lat) && !isNaN(lng)) {
-      try {
-        await axios.post('http://localhost:3001/api/sensors', {
-          temperature: temp,
-          turbidity: turbidity,
-          ph: ph,
-          lat: lat,
-          lng: lng
-        });
-        console.log('Posted temperature:', temp, 'turbidity:', turbidity, 'ph:', ph, 'lat:', lat, 'lng:', lng);
-      } catch (err) {
-        console.error('Failed to post:', err.message);
-      }
-    } else {
-      console.log('Invalid numeric data:', line);
-    }
-  } else if (parts.length === 3) {
-    // Fallback: old format (no GPS)
-    const temp = parseFloat(parts[0]);
-    const turbidity = parseFloat(parts[1]);
-    const ph = parseFloat(parts[2]);
-    if (!isNaN(temp) && !isNaN(turbidity) && !isNaN(ph)) {
-      try {
-        await axios.post('http://localhost:3001/api/sensors', {
-          temperature: temp,
-          turbidity: turbidity,
-          ph: ph
-        });
-        console.log('Posted temperature:', temp, 'turbidity:', turbidity, 'ph:', ph);
-      } catch (err) {
-        console.error('Failed to post:', err.message);
-      }
-    } else {
-      console.log('Invalid numeric data:', line);
-    }
-  } else {
-    console.log('Unexpected serial data format:', line);
-  }
-});
-
-port.on('error', (err) => {
-  console.error('Serial port error:', err.message);
-});
+let port = null;  // Initialize port variable
 
 // Function to send current alerts to Arduino
 async function sendAlertsToArduino() {
   try {
+    if (!port || !port.isOpen) {
+      // Port not ready, skip this cycle
+      return;
+    }
     const res = await axios.get('http://localhost:3001/api/sensors/alerts');
     const alerts = res.data.filter(a => !a.isAcknowledged);
     if (alerts.length === 0) return;
@@ -89,3 +32,39 @@ async function sendAlertsToArduino() {
 
 // Example: send alerts every 10 seconds (customize as needed)
 setInterval(sendAlertsToArduino, 10000);
+
+// Initialize SerialPort connection to Arduino (for SMS alerts)
+async function initSerialPort() {
+  try {
+    const ports = await SerialPort.list();
+    console.log('Available serial ports:', ports);
+    
+    // Try to find Arduino on common ports
+    const arduinoPort = ports.find(p => p.path.includes('COM') || p.path.includes('ttyUSB') || p.path.includes('ttyACM'));
+    
+    if (!arduinoPort) {
+      console.warn('⚠ No Arduino serial port found. SMS alerts will be disabled.');
+      console.warn('  Available ports:', ports.map(p => p.path).join(', '));
+      return;
+    }
+    
+    port = new SerialPort({ path: arduinoPort.path, baudRate: 9600 });
+    const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
+    
+    port.on('open', () => {
+      console.log(`✓ Arduino serial port opened on ${arduinoPort.path}`);
+    });
+    
+    parser.on('data', (data) => {
+      console.log('Received from Arduino:', data);
+    });
+    
+    port.on('error', (err) => {
+      console.error('Serial port error:', err.message);
+    });
+  } catch (err) {
+    console.error('Failed to initialize serial port:', err.message);
+  }
+}
+
+initSerialPort();
