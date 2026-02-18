@@ -1,156 +1,131 @@
-#include <SoftwareSerial.h>
 #include <Arduino.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <TinyGPSPlus.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
-#define SIM800_TX 7
-#define SIM800_RX 8
-SoftwareSerial sim800l(SIM800_TX, SIM800_RX);
+// Pins (ESP32 GPIO numbers)
+const int LCD_SDA = 33; // D33
+const int LCD_SCL = 26; // D26
+const int ONE_WIRE_BUS = 4; // D4 (temperature)
+const int TURBIDITY_PIN = 35; // D35 (ADC)
+const int PH_PIN = 34; // D34 (ADC)
 
-#define GPS_RX 10
-#define GPS_TX 11
-SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
-TinyGPSPlus gps;
-
-String smsRecipient = "+639053167929";
-#define ONE_WIRE_BUS 2
+// I2C LCD at 0x27
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
-LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-#define TURBIDITY_PIN A0
-#define PH_PIN A1
+// ADC reference for ESP32 (approx)
+const float ADC_MAX = 4095.0; // 12-bit ADC default
+const float VREF = 3.3; // ESP32 Vcc
+
+// WHO / DOH recommended thresholds (used as alerts)
+// pH: WHO/DOH drinking water guideline: 6.5 - 8.5
+const float PH_MIN = 6.5;
+const float PH_MAX = 8.5;
+// Turbidity: WHO recommends turbidity < 5 NTU for treated water; 15 NTU considered high
+const float TURBIDITY_OK = 5.0;   // NTU
+const float TURBIDITY_HIGH = 15.0; // NTU
+// Temperature: use operational range relevant for schistosomiasis environmental risk monitoring
+// (no strict WHO numeric for schisto; use 20-32°C as practical thresholds for snail activity monitoring)
+const float TEMP_MIN = 20.0;
+const float TEMP_MAX = 32.0;
+
+// Turbidity calibration placeholder: convert measured voltage to NTU
+// IMPORTANT: calibrate this constant for your sensor. Default 1.0 assumes sensor outputs NTU directly (unlikely).
+const float TURBIDITY_CAL = 1.0; // NTU per volt (placeholder)
 
 void setup() {
-  Serial.begin(9600);
-  sim800l.begin(9600);
-  gpsSerial.begin(9600);
-  delay(1000);
-  sim800l.println("AT");
-  delay(1000);
-  printSIM800LResponse();
-  sim800l.println("AT+CMGF=1");
-  delay(1000);
-  printSIM800LResponse();
-  void printSIM800LResponse() {
-    while (sim800l.available()) {
-      Serial.write(sim800l.read());
-    }
-  }
-  sensors.begin();
-  lcd.begin(16, 2);
-  lcd.backlight();
-  pinMode(TURBIDITY_PIN, INPUT);
+  Serial.begin(115200);
+  // Initialize I2C on specified pins for ESP32
+  Wire.begin(LCD_SDA, LCD_SCL);
 
-  Serial.println("SMS_SENT:TEST");
+  lcd.init();
+  lcd.backlight();
+
+  // Display startup screen
+  lcd.setCursor(0, 0);
+  lcd.print("- SchistoGuard -");
+  lcd.setCursor(0, 1);
+  lcd.print("   Starting...");
+  delay(3000); // Show startup message for 3 seconds
+
+  sensors.begin();
+
+  // ADC pins are input-only by default on ESP32, pinMode not required for analog read
+  delay(100);
+
+  Serial.println("ESP32 sensor firmware started");
+  
+  // Clear LCD and prepare for sensor display
+  lcd.clear();
 }
 
 void loop() {
-  // Read GPS data
-  while (gpsSerial.available() > 0) {
-    gps.encode(gpsSerial.read());
-  }
-
+  // Read temperature (DS18B20)
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
-  int turbidityRaw = analogRead(TURBIDITY_PIN);
-  float turbidityVoltage = turbidityRaw * (5.0 / 1023.0);
+  bool tempValid = (tempC != DEVICE_DISCONNECTED_C);
 
+  // Read turbidity
+  int turbRaw = analogRead(TURBIDITY_PIN);
+  float turbVoltage = turbRaw * (VREF / ADC_MAX);
+  // Convert voltage to NTU using calibration constant (user must calibrate)
+  float turbidityNTU = turbVoltage * TURBIDITY_CAL;
+
+  // Read pH
   int phRaw = analogRead(PH_PIN);
-  float phVoltage = phRaw * (5.0 / 1023.0);
-  float phValue = 7 + ((2.5 - phVoltage) / 0.18);
+  float phVoltage = phRaw * (VREF / ADC_MAX);
+  // Simple conversion used previously; adjust if your pH sensor uses different scaling
+  float phValue = 7.0 + ((2.5 - phVoltage) / 0.18);
 
+  // Determine alert states based on thresholds
+  bool alertTemp = tempValid && (tempC < TEMP_MIN || tempC > TEMP_MAX);
+  bool alertPH = (phValue < PH_MIN || phValue > PH_MAX);
+  bool alertTurbidity = (turbidityNTU > TURBIDITY_HIGH) || (turbidityNTU > TURBIDITY_OK && turbidityNTU <= TURBIDITY_HIGH);
+  // Note: above logic flags turbidity > OK as warning and > HIGH as critical
 
+  // Update LCD — show sensors and simple ALERT indicator
+  lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("T:");
-  lcd.print(tempC, 2);
-  lcd.print("C pH:");
-  lcd.print(phValue, 2);
+  if (tempValid) {
+    lcd.print("T:"); lcd.print(tempC, 1); lcd.print("C ");
+  } else {
+    lcd.print("T:N/A ");
+  }
+  lcd.print("pH:"); lcd.print(phValue, 2);
 
   lcd.setCursor(0, 1);
-  lcd.print("Tu:");
-  lcd.print(turbidityVoltage, 2);
-  lcd.print(" NTU   ");
-
-  // Always send sensor data with GPS (or NaN if no fix)
-  if (gps.location.isValid()) {
-      Serial.print(tempC, 2); Serial.print(",");
-      Serial.print(turbidityVoltage, 2); Serial.print(",");
-      Serial.print(phValue, 2); Serial.print(",");
-      Serial.print(gps.location.lat(), 6); Serial.print(",");
-      Serial.println(gps.location.lng(), 6);
-  } else {
-      Serial.print(tempC, 2); Serial.print(",");
-      Serial.print(turbidityVoltage, 2); Serial.print(",");
-      Serial.print(phValue, 2); Serial.print(",");
-      Serial.println("NaN,NaN");
-  }
-
-  if (Serial.available()) {
-    String alerts = "";
-    while (Serial.available()) {
-      String line = Serial.readStringUntil('\n');
-      line.trim();
-      if (line.length() > 0) {
-        if (alerts.length() > 0) alerts += "\n";
-        alerts += line;
-      }
-      delay(10);
+  lcd.print("Tu:"); lcd.print(turbidityNTU, 1); lcd.print("NTU ");
+  if (alertTemp || alertPH || turbidityNTU > TURBIDITY_OK) {
+    // Show ALERT tag if any condition outside OK range
+    lcd.print("ALRT");
+    if (alertTemp) {
+      lcd.print(" T");
     }
-    if (alerts.length() > 0) {
-      Serial.print("[DEBUG] Received alert stream for SMS:\n");
-      Serial.println(alerts);
-      String formattedSMS = formatAlerts(alerts);
-      sendSMS(formattedSMS);
+    if (alertPH) {
+      lcd.print(" pH");
+    }
+    if (turbidityNTU > TURBIDITY_OK) {
+      lcd.print(" Tu");
     }
   }
 
+  // Print to Serial with details and tags
+  Serial.print("TEMP,");
+  if (tempValid) Serial.print(tempC, 2); else Serial.print("NaN");
+  Serial.print(",PH,"); Serial.print(phValue, 2);
+  Serial.print(",TURB_NTU,"); Serial.print(turbidityNTU, 2);
+
+  // Print human-readable alerts
+  if (alertTemp) Serial.print(",ALERT_TEMP");
+  if (alertPH) Serial.print(",ALERT_PH");
+  if (turbidityNTU > TURBIDITY_HIGH) Serial.print(",ALERT_TURBIDITY_HIGH");
+  else if (turbidityNTU > TURBIDITY_OK) Serial.print(",ALERT_TURBIDITY_ELEVATED");
+
+  Serial.println();
+
+  // Delay between readings
   delay(2000);
-}
-
-void sendSMS(String message) {
-  sim800l.println("AT+CMGS=\"" + smsRecipient + "\"");
-  delay(1000);
-  sim800l.print(message);
-  delay(500);
-  sim800l.write(26);
-  delay(3000);
-  printSIM800LResponse();
-  Serial.print("SMS_SENT:");
-  Serial.print(smsRecipient);
-  Serial.print(":");
-  Serial.println(message);
-}
-
-String formatAlerts(String alerts) {
-  String sms = "ALERTS:\n";
-  int start = 0;
-  while (start < alerts.length()) {
-    int end = alerts.indexOf('\n', start);
-    if (end == -1) end = alerts.length();
-    String line = alerts.substring(start, end);
-    if (line.startsWith("Turbidity:")) {
-      float turb = line.substring(10).toFloat();
-      if (turb < 5) sms += "Turbidity is too low (" + String(turb, 2) + " NTU)\n";
-      else if (turb > 15) sms += "Turbidity is too high (" + String(turb, 2) + " NTU)\n";
-      else sms += "Turbidity is normal (" + String(turb, 2) + " NTU)\n";
-    } else if (line.startsWith("pH:")) {
-      float ph = line.substring(3).toFloat();
-      if (ph < 6.5) sms += "pH is too low (" + String(ph, 2) + ")\n";
-      else if (ph > 8.5) sms += "pH is too high (" + String(ph, 2) + ")\n";
-      else sms += "pH is normal (" + String(ph, 2) + ")\n";
-    } else if (line.startsWith("Temperature:")) {
-      float temp = line.substring(12).toFloat();
-      if (temp < 20) sms += "Temperature is too low (" + String(temp, 2) + "C)\n";
-      else if (temp > 32) sms += "Temperature is too high (" + String(temp, 2) + "C)\n";
-      else sms += "Temperature is normal (" + String(temp, 2) + "C)\n";
-    } else {
-      sms += line + "\n";
-    }
-    start = end + 1;
-  }
-  return sms;
 }

@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "${workspaceFolder}/SchistoGuard/include",
+                "${workspaceFolder}/SchistoGuard/lib",
+                "${workspaceFolder}/SchistoGuard/src",
+                "${env:PLATFORMIO_CORE_DIR}/packages/framework-arduinoespressif32/cores/esp32",
+                "${env:PLATFORMIO_CORE_DIR}/packages/framework-arduinoespressif32/variants/esp32",
+                "${env:PLATFORMIO_CORE_DIR}/packages/framework-arduinoespressif32/libraries/**"
+            ],
+            "defines": [
+                "ARDUINO=10819",
+                "ESP32"
+            ],
+            "intelliSenseMode": "gcc-arm"
+        }
+    ],
+    "version": 4
+}
