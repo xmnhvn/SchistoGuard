@@ -4,6 +4,19 @@ const path = require('path');
 const db = new sqlite3.Database(path.resolve(__dirname, '../schistoguard.sqlite'));
 
 db.serialize(() => {
+  // Users table for authentication (BHW and LGU only)
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    firstName TEXT NOT NULL,
+    lastName TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('bhw', 'lgu')),
+    organization TEXT NOT NULL,
+    createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS readings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     turbidity REAL,

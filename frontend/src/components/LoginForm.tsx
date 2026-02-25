@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Shield, Mail, Lock, User, Phone, MapPin } from "lucide-react";
+import { Shield, Mail, Lock, User, Phone } from "lucide-react";
 import { useState } from "react";
 
 interface LoginFormProps {
@@ -27,8 +27,7 @@ interface SignupData {
   firstName: string;
   lastName: string;
   phoneNumber: string;
-  barangay?: string;
-  organization?: string;
+  organization: string;
 }
 
 interface OnboardingModalProps {
@@ -40,12 +39,39 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "resident"
+    role: "bhw"
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin?.(formData);
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:3001/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || "Login failed");
+        return;
+      }
+
+      // Call parent callback on success
+      onLogin?.(formData);
+    } catch (err) {
+      setError("Network error. Please try again.");
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -110,19 +136,27 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
               </Select>
             </div>
             
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            
             <div className="flex gap-2">
               <Button
                 type="button"
                 className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
                 onClick={() => window.location.replace('/')}
+                disabled={loading}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 className="flex-1 bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+                disabled={loading}
               >
-                Sign In
+                {loading ? "Signing In..." : "Sign In"}
               </Button>
             </div>
             
@@ -160,21 +194,62 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "resident",
+    role: "bhw",
     firstName: "",
     lastName: "",
     phoneNumber: "",
-    barangay: "",
     organization: ""
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
       return;
     }
-    onSignup?.(formData);
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:3001/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          role: formData.role,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          organization: formData.organization
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || "Signup failed");
+        return;
+      }
+
+      // Call parent callback on success
+      onSignup?.(formData);
+    } catch (err) {
+      setError("Network error. Please try again.");
+      console.error("Signup error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -246,37 +321,16 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
               </Select>
             </div>
             
-            {formData.role === "resident" && (
-              <div className="space-y-2">
-                <Label htmlFor="barangay">Barangay</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Select onValueChange={(value: string) => setFormData(prev => ({ ...prev, barangay: value }))}>
-                    <SelectTrigger className="pl-10">
-                      <SelectValue placeholder="Select your barangay" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="san-miguel">Barangay San Miguel</SelectItem>
-                      <SelectItem value="malinao">Barangay Malinao</SelectItem>
-                      <SelectItem value="riverside">Barangay Riverside</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-            
-            {(formData.role === "bhw" || formData.role === "lgu") && (
-              <div className="space-y-2">
-                <Label htmlFor="organization">Organization</Label>
-                <Input
-                  id="organization"
-                  placeholder="Department of Health - Leyte"
-                  value={formData.organization}
-                  onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-                  required
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="organization">Organization</Label>
+              <Input
+                id="organization"
+                placeholder="Department of Health - Leyte"
+                value={formData.organization}
+                onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
+                required
+              />
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -310,11 +364,18 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
               </div>
             </div>
             
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            
             <Button 
               type="submit" 
               className="w-full bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+              disabled={loading}
             >
-              Create Account
+              {loading ? "Creating Account..." : "Create Account"}
             </Button>
             
             <div className="text-center">

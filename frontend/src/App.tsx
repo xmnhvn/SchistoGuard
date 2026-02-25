@@ -21,6 +21,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
   const [showSignup, setShowSignup] = useState(false);
+  const [user, setUser] = useState<{ id: number; email: string; firstName: string; lastName: string; role: string } | null>(null);
   const isViewType = (view: string | null): view is ViewType => {
     return (
       view === 'landing' ||
@@ -46,8 +47,17 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch("http://localhost:3001/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
     setIsAuthenticated(false);
+    setUser(null);
     setCurrentView('landing');
     localStorage.setItem('currentView', 'landing');
   };
@@ -75,10 +85,13 @@ export default function App() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/session", { credentials: "include" });
+        const res = await fetch("http://localhost:3001/api/auth/session", { 
+          credentials: "include" 
+        });
         const data = await res.json();
         if (data.loggedIn) {
           setIsAuthenticated(true);
+          setUser(data.user);
           const lastView = localStorage.getItem('currentView');
           if (isViewType(lastView) && lastView !== 'landing' && lastView !== 'login') {
             setCurrentView(lastView);
@@ -123,6 +136,7 @@ export default function App() {
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         systemStatus={systemStatus}
+        user={user}
       >
         {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} />}
         {currentView === 'alerts' && <AlertsPage onNavigate={handleNavigate} />}

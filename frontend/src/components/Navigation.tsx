@@ -36,6 +36,7 @@ import { User } from "lucide-react";
 interface NavigationProps {
   currentView?: string;
   onNavigate?: (view: string) => void;
+  user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
 }
 
 const getNavigationItems = (currentView?: string, onNavigate?: (view: string) => void) => [
@@ -93,10 +94,17 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
   },
 ];
 
-export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProps & { onLogout?: () => void }) {
+export function AppSidebar({ currentView, onNavigate, onLogout, user }: NavigationProps & { onLogout?: () => void }) {
   const navigationItems = getNavigationItems(currentView, onNavigate);
   const [showProfile, setShowProfile] = useState(false);
-  // Sidebar always open, not collapsible
+  
+  // Generate initials from user name
+  const initials = user 
+    ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
+    : 'JD';
+  
+  // Format role display
+  const roleDisplay = user?.role === 'bhw' ? 'Barangay Health Worker' : 'LGU Officer';
   return (
     <Sidebar collapsible="none">
       <SidebarHeader className="border-b bg-white">
@@ -139,11 +147,11 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
             <DropdownMenuTrigger asChild>
               <button className="w-full flex items-center justify-start gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors">
                 <Avatar className="w-6 h-6">
-                  <AvatarFallback className="text-xs">JD</AvatarFallback>
+                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start text-xs">
-                  <span>Juan Dela Cruz</span>
-                  <span className="text-muted-foreground">LGU Officer</span>
+                  <span>{user ? `${user.firstName} ${user.lastName}` : 'User'}</span>
+                  <span className="text-muted-foreground">{roleDisplay}</span>
                 </div>
               </button>
             </DropdownMenuTrigger>
@@ -159,7 +167,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
             </DropdownMenuContent>
           </DropdownMenu>
           <DialogContent>
-            <UserProfileDetails />
+            <UserProfileDetails user={user} />
           </DialogContent>
         </Dialog>
       </div>
@@ -220,13 +228,15 @@ export function NavigationProvider({
   currentView, 
   onNavigate, 
   onLogout, 
-  systemStatus = "operational"
+  systemStatus = "operational",
+  user
 }: { 
   children: React.ReactNode;
   currentView?: string;
   onNavigate?: (view: string) => void;
   onLogout?: () => void;
   systemStatus?: "operational" | "down";
+  user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
 }) {
   return (
     <SidebarProvider defaultOpen={true}>
@@ -235,6 +245,7 @@ export function NavigationProvider({
           currentView={currentView}
           onNavigate={onNavigate}
           onLogout={onLogout}
+          user={user}
         />
         <main className="flex-1 flex flex-col overflow-hidden">
           <NavigationHeader 

@@ -20,6 +20,10 @@ app.use(session({
   cookie: { secure: false, httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 }
 }));
 
+// Auth routes (must come before sensors routes)
+app.use("/api/auth", require("./routes/auth"));
+
+// Sensors routes
 app.use("/api/sensors", require("./routes/sensors"));
 
 const PORT = 3001;
