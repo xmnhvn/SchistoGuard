@@ -57,6 +57,7 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
         });
     };
     fetchLatest();
+    // Poll every 1 second for real-time sensor card display
     const interval = setInterval(fetchLatest, 1000);
     return () => clearInterval(interval);
   }, []);

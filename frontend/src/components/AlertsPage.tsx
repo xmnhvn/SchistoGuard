@@ -53,6 +53,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         .catch(() => {});
     };
     fetchAlerts();
+    // Check for new alerts every 10 seconds
     const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
   }, []);
