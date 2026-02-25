@@ -1,4 +1,5 @@
 {
-    "C_Cpp.default.compilerPath": "C:/Users/xneam/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.default.configurationProvider": "platformio.platformio-ide",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/firmware/SchistoGuard/compile_commands.json",
+    "C_Cpp.errorSquiggles": "enabled"
 }

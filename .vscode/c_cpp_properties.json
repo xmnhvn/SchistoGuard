@@ -1,23 +1,26 @@
 {
     "configurations": [
         {
-            "name": "Win32",
-"includePath": [
-    "${workspaceFolder}/**",
-    "${workspaceFolder}/firmware/SchistoGuard/lib/**",
-    "C:/Users/xneam/.platformio/packages/framework-arduino-avr/cores/arduino",
-    "C:/Users/xneam/.platformio/packages/framework-arduino-avr/variants/standard"
-],
-"defines": [
-    "_DEBUG",
-    "UNICODE",
-    "_UNICODE",
-    "ARDUINO=10805",
-    "F_CPU=16000000L",
-    "ARDUINO_ARCH_AVR",
-    "ARDUINO_AVR_UNO"
-],
-            "compilerPath": "C:/Users/xneam/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "name": "PlatformIO",
+            "configurationProvider": "platformio.platformio-ide",
+            "compileCommands": "${workspaceFolder}/firmware/SchistoGuard/compile_commands.json",
+            "includePath": [
+                "${workspaceFolder}/firmware/SchistoGuard/include",
+                "${workspaceFolder}/firmware/SchistoGuard/src",
+                "${workspaceFolder}/firmware/SchistoGuard/lib/**",
+                "${workspaceFolder}/firmware/SchistoGuard/.pio/libdeps/**",
+                "C:/Users/User/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.7/cores/esp32",
+                "C:/Users/User/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.7/libraries/Wire/src",
+                "C:/Users/User/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.7/variants/doitESP32devkitV1",
+                "C:/Users/User/AppData/Local/Arduino15/packages/esp32/tools/esp32-libs/3.3.7/include/**",
+                "C:/Users/User/Documents/Arduino/libraries/**"
+            ],
+            "defines": [
+                "ARDUINO=10819",
+                "ARDUINO_ARCH_ESP32",
+                "ESP32"
+            ],
+            "compilerPath": "C:/Users/User/AppData/Local/Arduino15/packages/esp32/tools/esp-x32/2511/bin/xtensa-esp32-elf-g++.exe",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-gcc-x64"

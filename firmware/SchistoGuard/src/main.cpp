@@ -1,125 +1,11 @@
-<<<<<<< HEAD
-=======
 #include <Arduino.h>
->>>>>>> 0529e0419531226c14f6c99344cc150c251e4849
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-<<<<<<< HEAD
 #include <WiFi.h>
-#include <HTTPClient.h>
 #include <ArduinoOTA.h>
-
-#define ONE_WIRE_BUS 2
-#define I2C_SDA 21
-#define I2C_SCL 22
-
-// WiFi credentials
-const char* ssid = "M I K A T A 6 9";
-const char* password = "xFbwzT65";
-const char* otaPassword = "SG2026";
-
-// Backend server
-const char* serverUrl = "http://192.168.100.11:3001/api/sensors";
-
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-
-// Set the LCD address to 0x27 for a 16 chars and 2 line display
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-unsigned long lastSend = 0;
-const unsigned long sendInterval = 1000;  // Send every 1 second
-
-// Function declaration
-void sendDataToBackend(float temperature);
-
-void setup() {
-  Serial.begin(115200);
-  sensors.begin();
-
-  Wire.begin(I2C_SDA, I2C_SCL);
-  lcd.begin(16, 2);
-  lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("Connecting WiFi");
-  delay(500);
-  lcd.clear();
-
-  // Connect to WiFi
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi connected!");
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
-    
-    lcd.setCursor(0, 0);
-    lcd.print("WiFi: OK");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP().toString().c_str());
-    delay(2000);
-  } else {
-    Serial.println("\nWiFi failed!");
-    lcd.setCursor(0, 0);
-    lcd.print("WiFi: FAILED");
-    delay(2000);
-  }
-
-  // Setup OTA
-  ArduinoOTA.setPassword(otaPassword);
-  
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
-    else
-      type = "filesystem";
-    Serial.println("OTA Start updating " + type);
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("OTA Updating...");
-  });
-  
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nOTA End");
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("OTA Complete!");
-    delay(2000);
-  });
-  
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("OTA Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("OTA Error!");
-    delay(2000);
-  });
-  
-  ArduinoOTA.begin();
-  Serial.println("OTA ready");
-  
-=======
+#include <math.h>
 
 // Pins (ESP32 GPIO numbers)
 const int LCD_SDA = 33; // D33
@@ -153,6 +39,82 @@ const float TEMP_MAX = 32.0;
 // IMPORTANT: calibrate this constant for your sensor. Default 1.0 assumes sensor outputs NTU directly (unlikely).
 const float TURBIDITY_CAL = 1.0; // NTU per volt (placeholder)
 
+// Heuristic thresholds to detect floating ADC when turbidity sensor is unplugged
+const int TURB_SAMPLES = 12;
+const float TURB_FLOAT_STDDEV = 120.0; // ADC counts
+const int PH_SAMPLES = 12;
+const float PH_FLOAT_STDDEV = 120.0; // ADC counts
+
+// Wi-Fi settings for OTA (replace with your network credentials)
+const char* WIFI_SSID = "M I K A T A 6 9";
+const char* WIFI_PASSWORD = "xFbwzT65";
+const char* OTA_HOSTNAME = "schistoguard-esp32";
+const char* OTA_PASSWORD = "";
+
+bool otaReady = false;
+bool otaInProgress = false;
+unsigned long lastWifiRetryMs = 0;
+const unsigned long WIFI_RETRY_INTERVAL_MS = 10000;
+
+int readAnalogAverage(int pin, int samples, float &stddev) {
+  long sum = 0;
+  long sumSq = 0;
+  for (int i = 0; i < samples; i++) {
+    int value = analogRead(pin);
+    sum += value;
+    sumSq += (long)value * (long)value;
+    delay(2);
+  }
+
+  float mean = (float)sum / samples;
+  float variance = ((float)sumSq / samples) - (mean * mean);
+  if (variance < 0) variance = 0;
+  stddev = sqrtf(variance);
+  return (int)(mean + 0.5f);
+}
+
+void connectWiFiAndSetupOTA() {
+  otaReady = false;
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  WiFi.setHostname(OTA_HOSTNAME);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && (millis() - start) < 15000) {
+    delay(250);
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    ArduinoOTA.setHostname(OTA_HOSTNAME);
+    if (strlen(OTA_PASSWORD) > 0) {
+      ArduinoOTA.setPassword(OTA_PASSWORD);
+    }
+
+    ArduinoOTA.onStart([]() {
+      otaInProgress = true;
+      Serial.println("OTA start");
+    });
+    ArduinoOTA.onEnd([]() {
+      otaInProgress = false;
+      Serial.println("OTA end");
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+      otaInProgress = false;
+      Serial.printf("OTA error [%u]\n", error);
+    });
+
+    ArduinoOTA.begin();
+    otaReady = true;
+    Serial.print("WiFi connected. IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("OTA hostname: ");
+    Serial.println(OTA_HOSTNAME);
+  } else {
+    Serial.println("WiFi connect failed. OTA disabled.");
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   // Initialize I2C on specified pins for ESP32
@@ -169,6 +131,7 @@ void setup() {
   delay(3000); // Show startup message for 3 seconds
 
   sensors.begin();
+  connectWiFiAndSetupOTA();
 
   // ADC pins are input-only by default on ESP32, pinMode not required for analog read
   delay(100);
@@ -176,136 +139,101 @@ void setup() {
   Serial.println("ESP32 sensor firmware started");
   
   // Clear LCD and prepare for sensor display
->>>>>>> 0529e0419531226c14f6c99344cc150c251e4849
   lcd.clear();
 }
 
 void loop() {
-<<<<<<< HEAD
-  // Handle OTA updates
-  ArduinoOTA.handle();
+  if (!otaReady && (millis() - lastWifiRetryMs >= WIFI_RETRY_INTERVAL_MS)) {
+    lastWifiRetryMs = millis();
+    connectWiFiAndSetupOTA();
+  }
 
-  sensors.requestTemperatures();
-  float tempC = sensors.getTempCByIndex(0);
-=======
+  if (otaReady && WiFi.status() == WL_CONNECTED) {
+    ArduinoOTA.handle();
+  } else if (otaReady && WiFi.status() != WL_CONNECTED) {
+    otaReady = false;
+    otaInProgress = false;
+    Serial.println("WiFi lost. OTA paused.");
+  }
+
+  if (otaInProgress) {
+    ArduinoOTA.handle();
+    delay(1);
+    return;
+  }
+
   // Read temperature (DS18B20)
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
   bool tempValid = (tempC != DEVICE_DISCONNECTED_C);
 
   // Read turbidity
-  int turbRaw = analogRead(TURBIDITY_PIN);
+  float turbStdDev = 0.0;
+  int turbRaw = readAnalogAverage(TURBIDITY_PIN, TURB_SAMPLES, turbStdDev);
   float turbVoltage = turbRaw * (VREF / ADC_MAX);
   // Convert voltage to NTU using calibration constant (user must calibrate)
   float turbidityNTU = turbVoltage * TURBIDITY_CAL;
+  bool turbSensorConnected = (turbStdDev <= TURB_FLOAT_STDDEV);
 
   // Read pH
-  int phRaw = analogRead(PH_PIN);
+  float phStdDev = 0.0;
+  int phRaw = readAnalogAverage(PH_PIN, PH_SAMPLES, phStdDev);
   float phVoltage = phRaw * (VREF / ADC_MAX);
   // Simple conversion used previously; adjust if your pH sensor uses different scaling
   float phValue = 7.0 + ((2.5 - phVoltage) / 0.18);
+  bool phSensorConnected = (phStdDev <= PH_FLOAT_STDDEV);
 
   // Determine alert states based on thresholds
   bool alertTemp = tempValid && (tempC < TEMP_MIN || tempC > TEMP_MAX);
-  bool alertPH = (phValue < PH_MIN || phValue > PH_MAX);
-  bool alertTurbidity = (turbidityNTU > TURBIDITY_HIGH) || (turbidityNTU > TURBIDITY_OK && turbidityNTU <= TURBIDITY_HIGH);
-  // Note: above logic flags turbidity > OK as warning and > HIGH as critical
->>>>>>> 0529e0419531226c14f6c99344cc150c251e4849
+  bool alertPH = phSensorConnected && (phValue < PH_MIN || phValue > PH_MAX);
+  bool alertTurbidity = turbSensorConnected && ((turbidityNTU > TURBIDITY_HIGH) || (turbidityNTU > TURBIDITY_OK && turbidityNTU <= TURBIDITY_HIGH));
 
-  // Update LCD — show sensors and simple ALERT indicator
+  // Update LCD — show sensor values only
   lcd.clear();
   lcd.setCursor(0, 0);
-<<<<<<< HEAD
-  lcd.print("Temp: ");
-  lcd.print(tempC, 2);
-  lcd.print(" C   ");
-
-  lcd.setCursor(0, 1);
-  lcd.print("                ");
-
-  Serial.print("Temperature: ");
-  Serial.println(tempC);
-
-  // Send data to backend every sendInterval
-  if (millis() - lastSend >= sendInterval) {
-    if (WiFi.status() == WL_CONNECTED) {
-      sendDataToBackend(tempC);
-=======
   if (tempValid) {
     lcd.print("T:"); lcd.print(tempC, 1); lcd.print("C ");
   } else {
     lcd.print("T:N/A ");
   }
-  lcd.print("pH:"); lcd.print(phValue, 2);
+  lcd.print("pH:");
+  if (phSensorConnected) {
+    lcd.print(phValue, 2);
+  } else {
+    lcd.print("N/A");
+  }
 
   lcd.setCursor(0, 1);
-  lcd.print("Tu:"); lcd.print(turbidityNTU, 1); lcd.print("NTU ");
-  if (alertTemp || alertPH || turbidityNTU > TURBIDITY_OK) {
-    // Show ALERT tag if any condition outside OK range
-    lcd.print("ALRT");
-    if (alertTemp) {
-      lcd.print(" T");
-    }
-    if (alertPH) {
-      lcd.print(" pH");
-    }
-    if (turbidityNTU > TURBIDITY_OK) {
-      lcd.print(" Tu");
->>>>>>> 0529e0419531226c14f6c99344cc150c251e4849
-    }
-    lastSend = millis();
+  lcd.print("Tu:");
+  if (turbSensorConnected) {
+    lcd.print(turbidityNTU, 1); lcd.print("NTU");
+  } else {
+    lcd.print("N/A");
   }
 
   // Print to Serial with details and tags
   Serial.print("TEMP,");
   if (tempValid) Serial.print(tempC, 2); else Serial.print("NaN");
-  Serial.print(",PH,"); Serial.print(phValue, 2);
-  Serial.print(",TURB_NTU,"); Serial.print(turbidityNTU, 2);
+  Serial.print(",PH,");
+  if (phSensorConnected) Serial.print(phValue, 2); else Serial.print("NaN");
+  Serial.print(",TURB_NTU,");
+  if (turbSensorConnected) Serial.print(turbidityNTU, 2); else Serial.print("NaN");
+  if (!phSensorConnected) Serial.print(",PH_SENSOR_DISCONNECTED");
+  if (!turbSensorConnected) Serial.print(",TURB_SENSOR_DISCONNECTED");
 
   // Print human-readable alerts
   if (alertTemp) Serial.print(",ALERT_TEMP");
   if (alertPH) Serial.print(",ALERT_PH");
-  if (turbidityNTU > TURBIDITY_HIGH) Serial.print(",ALERT_TURBIDITY_HIGH");
-  else if (turbidityNTU > TURBIDITY_OK) Serial.print(",ALERT_TURBIDITY_ELEVATED");
+  if (alertTurbidity && turbidityNTU > TURBIDITY_HIGH) Serial.print(",ALERT_TURBIDITY_HIGH");
+  else if (alertTurbidity && turbidityNTU > TURBIDITY_OK) Serial.print(",ALERT_TURBIDITY_ELEVATED");
 
   Serial.println();
 
   // Delay between readings
-  delay(2000);
-<<<<<<< HEAD
-}
-
-void sendDataToBackend(float temperature) {
-  HTTPClient http;
-  http.begin(serverUrl);
-  http.addHeader("Content-Type", "application/json");
-
-  // Create JSON payload
-  String payload = "{";
-  payload += "\"temperature\":" + String(temperature, 2) + ",";
-  payload += "\"turbidity\":0,";
-  payload += "\"ph\":0,";
-  payload += "\"lat\":0,";
-  payload += "\"lng\":0,";
-  payload += "\"device_ip\":\"" + WiFi.localIP().toString() + "\"";
-  payload += "}";
-
-  Serial.print("Sending to backend: ");
-  Serial.println(payload);
-
-  int httpResponseCode = http.POST(payload);
-
-  if (httpResponseCode > 0) {
-    String response = http.getString();
-    Serial.print("Response code: ");
-    Serial.println(httpResponseCode);
-    Serial.println("Response: " + response);
-  } else {
-    Serial.print("Error code: ");
-    Serial.println(httpResponseCode);
+  for (int i = 0; i < 20; i++) {
+    if (otaReady && WiFi.status() == WL_CONNECTED) {
+      ArduinoOTA.handle();
+    }
+    delay(100);
   }
-
-  http.end();
-=======
->>>>>>> 0529e0419531226c14f6c99344cc150c251e4849
 }
