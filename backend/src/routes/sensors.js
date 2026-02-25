@@ -140,13 +140,19 @@ setInterval(() => {
 function generateAlertsFromData(data, now = new Date()) {
   let alertMessages = [];
 
-  // Temperature alert (based on schistosomiasis risk)
-  const status = classifyWater(data.temperature);
+  // Overall water quality risk classification (all three parameters)
+  const status = classifyWater(data.temperature, data.ph, data.turbidity);
   const level = classifyLevel(status);
   if (level !== "safe") {
+    // Build parameter summary for alert
+    const params = [];
+    if (data.temperature != null && data.temperature >= 25 && data.temperature <= 30) params.push("Temperature");
+    if (data.ph != null && data.ph >= 6.5 && data.ph <= 8.0) params.push("pH");
+    if (data.turbidity != null && data.turbidity < 5) params.push("Turbidity");
+    
     const msg = level === "critical"
-      ? "Temperature is in high schistosomiasis risk range (25-30°C)"
-      : "Temperature is in possible schistosomiasis risk range";
+      ? `Water conditions support schistosomiasis transmission. Risk detected in: ${params.length > 0 ? params.join(', ') : 'water quality'}`
+      : `Possible schistosomiasis risk. Monitor water quality closely. Contributing parameters: ${params.length > 0 ? params.join(', ') : 'water conditions'}`;
     
     db.run(
       `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
@@ -264,25 +270,35 @@ function classifyLevel(status) {
 function checkAndAlertImmediate(data) {
   let alertMessages = [];
 
-  // Temperature
-  const status = classifyWater(data.temperature);
+  // Overall water quality risk classification (all three parameters)
+  const status = classifyWater(data.temperature, data.ph, data.turbidity);
   const level = classifyLevel(status);
-  if (level !== "safe") {
-    alertMessages.push(`Temp: ${data.temperature.toFixed(1)} Degree Celsius (${level === "critical" ? "High" : "Possible"} Risk)`);
+  
+  // Add individual parameter alerts with details
+  if (data.temperature != null) {
+    if (data.temperature >= 25 && data.temperature <= 30) {
+      alertMessages.push(`🌡️ Temperature: ${data.temperature.toFixed(1)}°C (HIGH RISK - Optimal for snails)`);
+    } else if ((data.temperature >= 20 && data.temperature < 25) || (data.temperature > 30 && data.temperature <= 32)) {
+      alertMessages.push(`🌡️ Temperature: ${data.temperature.toFixed(1)}°C (Possible Risk)`);
+    }
   }
 
   // Turbidity
-  if (data.turbidity != null && data.turbidity < 5) {
-    alertMessages.push(`Turbidity: ${data.turbidity.toFixed(1)} NTU (Clear Water - High Risk)`);
-  } else if (data.turbidity != null && data.turbidity >= 5 && data.turbidity <= 15) {
-    alertMessages.push(`Turbidity: ${data.turbidity.toFixed(1)} NTU (Moderate - Possible Risk)`);
+  if (data.turbidity != null) {
+    if (data.turbidity < 5) {
+      alertMessages.push(`💧 Turbidity: ${data.turbidity.toFixed(1)} NTU (HIGH RISK - Clear/Stagnant Water)`);
+    } else if (data.turbidity >= 5 && data.turbidity <= 15) {
+      alertMessages.push(`💧 Turbidity: ${data.turbidity.toFixed(1)} NTU (Possible Risk)`);
+    }
   }
 
   // pH
-  if (data.ph != null && data.ph >= 6.5 && data.ph <= 8.0) {
-    alertMessages.push(`pH: ${data.ph.toFixed(1)} (High Risk)`);
-  } else if (data.ph != null && ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5))) {
-    alertMessages.push(`pH: ${data.ph.toFixed(1)} (Possible Risk)`);
+  if (data.ph != null) {
+    if (data.ph >= 6.5 && data.ph <= 8.0) {
+      alertMessages.push(`⚗️ pH: ${data.ph.toFixed(1)} (HIGH RISK - Optimal for snails)`);
+    } else if ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5)) {
+      alertMessages.push(`⚗️ pH: ${data.ph.toFixed(1)} (Possible Risk)`);
+    }
   }
 
   // Send SMS for ANY alerts (critical or warning)
@@ -317,7 +333,7 @@ function checkAndAlertImmediate(data) {
 
 router.post("/", (req, res) => {
   const { turbidity, temperature, ph, device_ip } = req.body;
-  const status = classifyWater(temperature);
+  const status = classifyWater(temperature, ph, turbidity);
   latestData = {
     turbidity,
     temperature,
