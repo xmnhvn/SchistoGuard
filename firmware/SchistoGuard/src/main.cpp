@@ -5,6 +5,8 @@
 #include <DallasTemperature.h>
 #include <WiFi.h>
 #include <ArduinoOTA.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
 #include <math.h>
 
 // Pins (ESP32 GPIO numbers)
@@ -13,6 +15,8 @@ const int LCD_SCL = 26; // D26
 const int ONE_WIRE_BUS = 4; // D4 (temperature)
 const int TURBIDITY_PIN = 35; // D35 (ADC)
 const int PH_PIN = 34; // D34 (ADC)
+const int GSM_TX = 22; // D22 (to SIM800L RX)
+const int GSM_RX = 23; // D23 (from SIM800L TX)
 
 // I2C LCD at 0x27
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -23,17 +27,22 @@ DallasTemperature sensors(&oneWire);
 const float ADC_MAX = 4095.0; // 12-bit ADC default
 const float VREF = 3.3; // ESP32 Vcc
 
-// WHO / DOH recommended thresholds (used as alerts)
-// pH: WHO/DOH drinking water guideline: 6.5 - 8.5
-const float PH_MIN = 6.5;
-const float PH_MAX = 8.5;
-// Turbidity: WHO recommends turbidity < 5 NTU for treated water; 15 NTU considered high
-const float TURBIDITY_OK = 5.0;   // NTU
-const float TURBIDITY_HIGH = 15.0; // NTU
-// Temperature: use operational range relevant for schistosomiasis environmental risk monitoring
-// (no strict WHO numeric for schisto; use 20-32°C as practical thresholds for snail activity monitoring)
-const float TEMP_MIN = 20.0;
-const float TEMP_MAX = 32.0;
+// WHO/DOH Schistosomiasis Risk Thresholds
+// Temperature: Optimal range for schistosome-transmitting snail activity and cercariae survival
+const float TEMP_HIGH_RISK_MIN = 25.0;  // °C - High risk zone start
+const float TEMP_HIGH_RISK_MAX = 30.0;  // °C - High risk zone end
+const float TEMP_MOD_RISK_MIN = 20.0;   // °C - Moderate risk zone start
+const float TEMP_MOD_RISK_MAX = 32.0;   // °C - Moderate risk zone end
+
+// pH: Optimal range for schistosome-transmitting snails (slightly alkaline)
+const float PH_HIGH_RISK_MIN = 7.0;     // Optimal snail habitat start
+const float PH_HIGH_RISK_MAX = 8.5;     // Optimal snail habitat end
+const float PH_MOD_RISK_MIN = 6.5;      // Moderate snail survival
+const float PH_MOD_RISK_MAX = 9.0;      // Moderate snail survival
+
+// Turbidity: Lower turbidity indicates slow/stagnant water (higher schisto risk)
+const float TURBIDITY_CLEAR = 5.0;      // NTU - Clear water (potential schisto habitat)
+const float TURBIDITY_MODERATE = 15.0;  // NTU - Moderate clarity
 
 // Turbidity calibration placeholder: convert measured voltage to NTU
 // IMPORTANT: calibrate this constant for your sensor. Default 1.0 assumes sensor outputs NTU directly (unlikely).
@@ -45,9 +54,19 @@ const float TURB_FLOAT_STDDEV = 300.0; // ADC counts
 const int PH_SAMPLES = 12;
 const float PH_FLOAT_STDDEV = 300.0; // ADC counts
 
-// Wi-Fi settings for OTA (replace with your network credentials)
-const char* WIFI_SSID = "M I K A T A 6 9";
-const char* WIFI_PASSWORD = "xFbwzT65";
+// Wi-Fi settings for OTA - Multiple networks with fallback
+struct WiFiCredentials {
+  const char* ssid;
+  const char* password;
+};
+
+const WiFiCredentials WIFI_NETWORKS[] = {
+  {"M I K A T A 6 9", "xFbwzT65"},
+  {"beachamel", "samepassword"}
+};
+const int NUM_WIFI_NETWORKS = sizeof(WIFI_NETWORKS) / sizeof(WIFI_NETWORKS[0]);
+int currentWiFiIndex = -1;
+
 const char* OTA_HOSTNAME = "schistoguard-esp32";
 const char* OTA_PASSWORD = "";
 
@@ -55,6 +74,24 @@ bool otaReady = false;
 bool otaInProgress = false;
 unsigned long lastWifiRetryMs = 0;
 const unsigned long WIFI_RETRY_INTERVAL_MS = 10000;
+
+// Web server on port 80
+WebServer server(80);
+
+// SIM800L GSM module on Serial2
+HardwareSerial gsmSerial(2); // Use UART2
+const char* SMS_PHONE_NUMBER = "+639053167929";
+bool gsmReady = false;
+unsigned long lastSMSTime = 0;
+const unsigned long SMS_COOLDOWN_MS = 300000; // 5 minutes between SMS
+
+// Latest sensor readings (global for HTTP API)
+float latestTempC = 0.0;
+bool latestTempValid = false;
+float latestPH = 0.0;
+bool latestPHConnected = false;
+float latestTurbidity = 0.0;
+bool latestTurbConnected = false;
 
 int readAnalogAverage(int pin, int samples, float &stddev) {
   long sum = 0;
@@ -73,19 +110,100 @@ int readAnalogAverage(int pin, int samples, float &stddev) {
   return (int)(mean + 0.5f);
 }
 
+void initGSM() {
+  gsmSerial.begin(9600, SERIAL_8N1, GSM_RX, GSM_TX);
+  Serial.println("Initializing SIM800L...");
+  delay(3000); // Wait for GSM module to initialize
+  
+  // Test AT command
+  gsmSerial.println("AT");
+  delay(1000);
+  if (gsmSerial.available()) {
+    String response = gsmSerial.readString();
+    if (response.indexOf("OK") >= 0) {
+      Serial.println("SIM800L ready");
+      // Set SMS text mode
+      gsmSerial.println("AT+CMGF=1");
+      delay(1000);
+      gsmReady = true;
+    } else {
+      Serial.println("SIM800L not responding");
+    }
+  } else {
+    Serial.println("SIM800L timeout");
+  }
+}
+
+void sendSMS(String message) {
+  if (!gsmReady) {
+    Serial.println("GSM not ready, cannot send SMS");
+    return;
+  }
+  
+  // Check cooldown (avoid SMS spam)
+  if (millis() - lastSMSTime < SMS_COOLDOWN_MS) {
+    Serial.println("SMS cooldown active, skipping");
+    return;
+  }
+  
+  Serial.print("Sending SMS: ");
+  Serial.println(message);
+  
+  // Set phone number
+  gsmSerial.print("AT+CMGS=\"");
+  gsmSerial.print(SMS_PHONE_NUMBER);
+  gsmSerial.println("\"");
+  delay(1000);
+  
+  // Send message
+  gsmSerial.print(message);
+  delay(100);
+  gsmSerial.write(26); // Ctrl+Z to send
+  delay(5000);
+  
+  // Read response
+  if (gsmSerial.available()) {
+    String response = gsmSerial.readString();
+    if (response.indexOf("OK") >= 0) {
+      Serial.println("SMS sent successfully");
+      lastSMSTime = millis();
+    } else {
+      Serial.println("SMS failed");
+    }
+  }
+}
+
 void connectWiFiAndSetupOTA() {
   otaReady = false;
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   WiFi.setHostname(OTA_HOSTNAME);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && (millis() - start) < 15000) {
-    delay(250);
+  
+  // Try each WiFi network until one connects
+  bool connected = false;
+  for (int i = 0; i < NUM_WIFI_NETWORKS && !connected; i++) {
+    Serial.print("Trying WiFi: ");
+    Serial.println(WIFI_NETWORKS[i].ssid);
+    
+    WiFi.begin(WIFI_NETWORKS[i].ssid, WIFI_NETWORKS[i].password);
+    
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - start) < 10000) {
+      delay(250);
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      connected = true;
+      currentWiFiIndex = i;
+      Serial.print("Connected to: ");
+      Serial.println(WIFI_NETWORKS[i].ssid);
+      break;
+    } else {
+      Serial.println("Failed to connect");
+    }
   }
 
-  if (WiFi.status() == WL_CONNECTED) {
+  if (connected) {
     ArduinoOTA.setHostname(OTA_HOSTNAME);
     if (strlen(OTA_PASSWORD) > 0) {
       ArduinoOTA.setPassword(OTA_PASSWORD);
@@ -105,11 +223,50 @@ void connectWiFiAndSetupOTA() {
     });
 
     ArduinoOTA.begin();
+    
+    // Setup mDNS responder for hostname-based access
+    if (MDNS.begin(OTA_HOSTNAME)) {
+      Serial.print("mDNS responder started: ");
+      Serial.print(OTA_HOSTNAME);
+      Serial.println(".local");
+      MDNS.addService("http", "tcp", 80);  // Advertise HTTP service
+    } else {
+      Serial.println("Error setting up mDNS responder");
+    }
+    
+    // Setup HTTP server endpoints
+    server.on("/api/sensors", HTTP_GET, []() {
+      String json = "{";
+      json += "\"temperature\":" + String(latestTempValid ? latestTempC : -999, 2) + ",";
+      json += "\"tempValid\":" + String(latestTempValid ? "true" : "false") + ",";
+      json += "\"pH\":" + String(latestPHConnected ? latestPH : -999, 2) + ",";
+      json += "\"phConnected\":" + String(latestPHConnected ? "true" : "false") + ",";
+      json += "\"turbidity\":" + String(latestTurbConnected ? latestTurbidity : -999, 2) + ",";
+      json += "\"turbConnected\":" + String(latestTurbConnected ? "true" : "false");
+      json += "}";
+      server.send(200, "application/json", json);
+    });
+    
+    // SMS sending endpoint (called by backend)
+    server.on("/api/sms", HTTP_POST, []() {
+      if (!server.hasArg("message")) {
+        server.send(400, "application/json", "{\"error\":\"Missing message parameter\"}");
+        return;
+      }
+      
+      String message = server.arg("message");
+      sendSMS(message);
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"SMS sent\"}");
+    });
+    
+    server.begin();
+    
     otaReady = true;
     Serial.print("WiFi connected. IP: ");
     Serial.println(WiFi.localIP());
     Serial.print("OTA hostname: ");
     Serial.println(OTA_HOSTNAME);
+    Serial.println("HTTP server started on port 80");
   } else {
     Serial.println("WiFi connect failed. OTA disabled.");
   }
@@ -132,6 +289,7 @@ void setup() {
 
   sensors.begin();
   connectWiFiAndSetupOTA();
+  initGSM(); // Initialize SIM800L GSM module
 
   // Display WiFi status on LCD
   lcd.clear();
@@ -164,6 +322,7 @@ void loop() {
 
   if (otaReady && WiFi.status() == WL_CONNECTED) {
     ArduinoOTA.handle();
+    server.handleClient();
   } else if (otaReady && WiFi.status() != WL_CONNECTED) {
     otaReady = false;
     otaInProgress = false;
@@ -180,6 +339,8 @@ void loop() {
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
   bool tempValid = (tempC != DEVICE_DISCONNECTED_C);
+  latestTempC = tempC;
+  latestTempValid = tempValid;
 
   // Read turbidity
   float turbStdDev = 0.0;
@@ -196,6 +357,10 @@ void loop() {
   // Simple conversion used previously; adjust if your pH sensor uses different scaling
   float phValue = 7.0 + ((2.5 - phVoltage) / 0.18);
   bool phSensorConnected = (phStdDev <= PH_FLOAT_STDDEV);
+  latestPH = phValue;
+  latestPHConnected = phSensorConnected;
+  latestTurbidity = turbidityNTU;
+  latestTurbConnected = turbSensorConnected;
   
   // Debug: print pH stddev
   Serial.print("DEBUG pH_StdDev=");
@@ -204,10 +369,10 @@ void loop() {
   Serial.print(turbStdDev, 1);
   Serial.print(" ");
 
-  // Determine alert states based on thresholds
-  bool alertTemp = tempValid && (tempC < TEMP_MIN || tempC > TEMP_MAX);
-  bool alertPH = phSensorConnected && (phValue < PH_MIN || phValue > PH_MAX);
-  bool alertTurbidity = turbSensorConnected && ((turbidityNTU > TURBIDITY_HIGH) || (turbidityNTU > TURBIDITY_OK && turbidityNTU <= TURBIDITY_HIGH));
+  // Determine schistosomiasis risk based on thresholds
+  bool alertTemp = tempValid && (tempC >= TEMP_HIGH_RISK_MIN && tempC <= TEMP_HIGH_RISK_MAX);
+  bool alertPH = phSensorConnected && (phValue >= PH_HIGH_RISK_MIN && phValue <= PH_HIGH_RISK_MAX);
+  bool alertTurbidity = turbSensorConnected && (turbidityNTU < TURBIDITY_CLEAR); // Clear water = higher schisto risk
 
   // Update LCD — show sensor values only
   lcd.clear();
@@ -242,18 +407,18 @@ void loop() {
   if (!phSensorConnected) Serial.print(",PH_SENSOR_DISCONNECTED");
   if (!turbSensorConnected) Serial.print(",TURB_SENSOR_DISCONNECTED");
 
-  // Print human-readable alerts
-  if (alertTemp) Serial.print(",ALERT_TEMP");
-  if (alertPH) Serial.print(",ALERT_PH");
-  if (alertTurbidity && turbidityNTU > TURBIDITY_HIGH) Serial.print(",ALERT_TURBIDITY_HIGH");
-  else if (alertTurbidity && turbidityNTU > TURBIDITY_OK) Serial.print(",ALERT_TURBIDITY_ELEVATED");
+  // Print human-readable schistosomiasis risk alerts
+  if (alertTemp) Serial.print(",ALERT_TEMP_HIGH_RISK");
+  if (alertPH) Serial.print(",ALERT_PH_HIGH_RISK");
+  if (alertTurbidity) Serial.print(",ALERT_CLEAR_WATER");
 
   Serial.println();
 
-  // Delay between readings
-  for (int i = 0; i < 20; i++) {
+  // Delay between readings (1 second total)
+  for (int i = 0; i < 10; i++) {
     if (otaReady && WiFi.status() == WL_CONNECTED) {
       ArduinoOTA.handle();
+      server.handleClient();
     }
     delay(100);
   }

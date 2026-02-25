@@ -57,7 +57,7 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
         });
     };
     fetchLatest();
-    const interval = setInterval(fetchLatest, 5000);
+    const interval = setInterval(fetchLatest, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -219,16 +219,16 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
                 const turbidity = latestReading.turbidity;
                 const ph = latestReading.ph;
                 let tempRisk: 'critical' | 'warning' | 'safe' = 'safe';
-                if (temp >= 22 && temp <= 28) tempRisk = 'critical';
-                else if ((temp >= 20 && temp < 22) || (temp > 28 && temp <= 32)) tempRisk = 'warning';
+                if (temp >= 25 && temp <= 30) tempRisk = 'critical';
+                else if ((temp >= 20 && temp < 25) || (temp > 30 && temp <= 32)) tempRisk = 'warning';
 
                 let turbidityRisk: 'critical' | 'warning' | 'safe' = 'safe';
-                if (turbidity > 15) turbidityRisk = 'critical';
-                else if (turbidity > 5) turbidityRisk = 'warning';
+                if (turbidity < 5) turbidityRisk = 'critical'; // Clear water = higher schisto risk
+                else if (turbidity >= 5 && turbidity <= 15) turbidityRisk = 'warning';
 
                 let phRisk: 'critical' | 'warning' | 'safe' = 'safe';
-                if (ph < 6.5 || ph > 8.5) phRisk = 'critical';
-                else if ((ph >= 6.5 && ph < 7) || (ph > 8 && ph <= 8.5)) phRisk = 'warning';
+                if (ph >= 7.0 && ph <= 8.5) phRisk = 'critical'; // Optimal for snails
+                else if ((ph >= 6.5 && ph < 7.0) || (ph > 8.5 && ph <= 9.0)) phRisk = 'warning';
 
                 let overallRisk: 'critical' | 'warning' | 'safe' = 'safe';
                 if ([tempRisk, turbidityRisk, phRisk].includes('critical')) overallRisk = 'critical';

@@ -16,12 +16,36 @@ const fetchReadings = async () => {
     const data = await res.json();
     return Array.isArray(data)
       ? data
-          .map((r, idx) => ({
-            ...r,
-            id: r.timestamp || idx,
-            riskLevel: r.turbidity > 15 ? 'critical' : r.turbidity > 5 ? 'warning' : 'safe',
-            ph: r.ph ?? 7.2
-          }))
+          .map((r, idx) => {
+            // Calculate risk for each parameter (schistosomiasis thresholds)
+            const temp = r.temperature ?? 0;
+            const turbidity = r.turbidity ?? 0;
+            const ph = r.ph ?? 7.2;
+            
+            let tempRisk: 'critical' | 'warning' | 'safe' = 'safe';
+            if (temp >= 25 && temp <= 30) tempRisk = 'critical';
+            else if ((temp >= 20 && temp < 25) || (temp > 30 && temp <= 32)) tempRisk = 'warning';
+            
+            let turbidityRisk: 'critical' | 'warning' | 'safe' = 'safe';
+            if (turbidity < 5) turbidityRisk = 'critical';
+            else if (turbidity >= 5 && turbidity <= 15) turbidityRisk = 'warning';
+            
+            let phRisk: 'critical' | 'warning' | 'safe' = 'safe';
+            if (ph >= 7.0 && ph <= 8.5) phRisk = 'critical';
+            else if ((ph >= 6.5 && ph < 7.0) || (ph > 8.5 && ph <= 9.0)) phRisk = 'warning';
+            
+            // Overall risk: critical if any is critical, warning if any is warning, else safe
+            let overallRisk: 'critical' | 'warning' | 'safe' = 'safe';
+            if ([tempRisk, turbidityRisk, phRisk].includes('critical')) overallRisk = 'critical';
+            else if ([tempRisk, turbidityRisk, phRisk].includes('warning')) overallRisk = 'warning';
+            
+            return {
+              ...r,
+              id: r.timestamp || idx,
+              riskLevel: overallRisk,
+              ph: ph
+            };
+          })
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       : [];
   } catch {

@@ -72,10 +72,10 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
           const temp = temperature;
           let riskLabel = getRiskLabel('safe');
           let riskColor = "text-green-600";
-          if (temp >= 22 && temp <= 28) {
+          if (temp >= 25 && temp <= 30) {
             riskLabel = "High Schistosomiasis Risk";
             riskColor = "text-red-600";
-          } else if ((temp >= 20 && temp < 22) || (temp > 28 && temp <= 32)) {
+          } else if ((temp >= 20 && temp < 25) || (temp > 30 && temp <= 32)) {
             riskLabel = "Possible Schistosomiasis Risk";
             riskColor = "text-yellow-500";
           }
@@ -98,11 +98,11 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
         {(() => {
           let turbidityRiskLabel = getRiskLabel('safe');
           let turbidityRiskColor = "text-green-600";
-          if (turbidity > 15) {
-            turbidityRiskLabel = "High Schistosomiasis Risk";
+          if (turbidity < 5) {
+            turbidityRiskLabel = "Clear Water - Higher Schisto Risk";
             turbidityRiskColor = "text-red-600";
-          } else if (turbidity > 5) {
-            turbidityRiskLabel = "Possible Schistosomiasis Risk";
+          } else if (turbidity >= 5 && turbidity <= 15) {
+            turbidityRiskLabel = "Moderate Clarity";
             turbidityRiskColor = "text-yellow-500";
           }
           return (
@@ -121,10 +121,10 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
         {(() => {
           let phRiskLabel = "Safe";
           let phRiskColor = "text-green-600";
-          if (ph < 6.5 || ph > 8.5) {
+          if (ph >= 7.0 && ph <= 8.5) {
             phRiskLabel = "High Schistosomiasis Risk";
             phRiskColor = "text-red-600";
-          } else if ((ph >= 6.5 && ph < 7) || (ph > 8 && ph <= 8.5)) {
+          } else if ((ph >= 6.5 && ph < 7.0) || (ph > 8.5 && ph <= 9.0)) {
             phRiskLabel = "Possible Schistosomiasis Risk";
             phRiskColor = "text-yellow-500";
           }
