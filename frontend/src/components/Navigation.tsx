@@ -22,7 +22,8 @@ import {
   FileText,
   MapPin,
   CheckCircle,
-  Info
+  Info,
+  Settings
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -68,6 +69,13 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
         view: "site-details",
         isActive: currentView === "site-details",
         onClick: () => onNavigate?.("site-details")
+      },
+      {
+        title: "Recipients",
+        icon: Settings,
+        view: "settings",
+        isActive: currentView === "settings",
+        onClick: () => onNavigate?.("settings")
       },
     ],
   },
@@ -172,6 +180,7 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
       case 'alerts': return { title: 'Alerts', subtitle: 'Water Quality Notifications' };
       case 'reports': return { title: 'Reports & Analytics', subtitle: 'Water Quality Insights' };
       case 'site-details': return { title: 'Site Details', subtitle: 'Detailed Site Information' };
+      case 'settings': return { title: 'Recipients', subtitle: 'Manage Recipients' };
       default: return { title: 'Dashboard', subtitle: 'Water Quality Monitoring Overview' };
     }
   };

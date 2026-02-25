@@ -3,7 +3,6 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { SubscriptionPanel } from "./SubscriptionPanel";
 import { AlertItem } from "./AlertItem";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { ArrowLeft, Download, Settings, Bell, Calendar, Info } from "lucide-react";
@@ -185,10 +184,6 @@ export function SiteDetailView({
         </div>
 
         <div className="space-y-6 w-full max-w-full lg:col-span-1 h-full flex flex-col">
-          <SubscriptionPanel 
-            siteName={siteName}
-            onSave={(settings: any) => console.log('Subscription settings saved:', settings)}
-          />
           <Card style={{ flex: 1, height: '100%' }}>
             <CardHeader>
               <CardTitle>Site Information</CardTitle>

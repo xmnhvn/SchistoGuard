@@ -1,6 +1,7 @@
 
 const router = require("express").Router();
 const classifyWater = require("../utils/classifyWater");
+const { validatePhoneNumber, formatPhoneNumber } = require("../utils/validatePhone");
 const db = require("../db");
 const axios = require("axios");
 
@@ -310,23 +311,31 @@ function checkAndAlertImmediate(data) {
     const timestamp = `${dateStr}, ${timeStr}`;
     const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
     
-    // Get resident phone numbers for this site
+    // Get resident phone numbers for this site - prioritize BHWs and LGUs
     const siteName = data.siteName || "Mang Jose's Fishpond";
-    db.all("SELECT DISTINCT phone FROM residents WHERE siteName = ?", [siteName], (err, rows) => {
-      if (err) {
-        console.error("❌ Error fetching residents:", err.message);
-        return;
+    db.all(
+      "SELECT phone, role FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
+      [siteName],
+      (err, rows) => {
+        if (err) {
+          console.error("❌ Error fetching residents:", err.message);
+          return;
+        }
+        
+        if (!rows || rows.length === 0) {
+          console.log(`⚠️ No residents found for site: "${siteName}"`);
+          return;
+        }
+        
+        // Send to all residents (BHWs + LGUs + residents)
+        const phoneNumbers = rows.map(r => r.phone).filter(p => p);
+        const roles = [...new Set(rows.map(r => r.role))];
+        
+        console.log(`✓ Found ${rows.length} alert recipients for site: "${siteName}"`);
+        console.log(`   Roles: ${roles.join(', ').toUpperCase()}`);
+        sendSMSViaESP32(smsMessage, alertMessages, phoneNumbers);
       }
-      
-      if (!rows || rows.length === 0) {
-        console.log(`⚠️ No residents found for site: "${siteName}"`);
-        return;
-      }
-      
-      console.log(`✓ Found ${rows.length} residents for site: "${siteName}"`);
-      const phoneNumbers = rows.map(r => r.phone).filter(p => p);
-      sendSMSViaESP32(smsMessage, alertMessages, phoneNumbers);
-    });
+    );
   }
 }
 
@@ -391,14 +400,25 @@ router.post("/upload-csv", (req, res) => {
     return res.status(400).json({ error: "siteName and csv are required" });
   }
 
-  // Parse CSV - expects format: name,phone (one per line)
+  // Parse CSV - expects format: name,phone
+  // Note: CSV uploads always create residents. LGU and BHW roles must be set manually in UI.
   const lines = csv.trim().split('\n');
   const residents = [];
 
   for (const line of lines) {
-    const [name, phone] = line.split(',').map(s => s.trim());
+    const parts = line.split(',').map(s => s.trim());
+    const [name, phone] = parts;
+    
     if (name && phone) {
-      residents.push({ name, phone });
+      // Validate phone number
+      if (!validatePhoneNumber(phone)) {
+        continue; // Skip invalid phone numbers
+      }
+      // Format phone number
+      const formattedPhone = formatPhoneNumber(phone);
+      
+      // CSV uploads always create residents; LGU/BHW must be set manually
+      residents.push({ name, phone: formattedPhone, role: 'resident' });
     }
   }
 
@@ -406,45 +426,254 @@ router.post("/upload-csv", (req, res) => {
     return res.status(400).json({ error: "No valid residents found in CSV" });
   }
 
-  // Delete existing residents for this site
-  db.run("DELETE FROM residents WHERE siteName = ?", [siteName], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
+  // Insert or update residents (prevent duplicates)
+  let inserted = 0;
+  let updated = 0;
+  let failed = 0;
 
-    // Insert new residents
-    let inserted = 0;
-    let failed = 0;
+  residents.forEach(({ name, phone, role }) => {
+    // Check if resident with same siteName and phone exists
+    db.get(
+      "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
+      [siteName, phone],
+      (err, existingResident) => {
+        if (err) {
+          failed++;
+        } else if (existingResident) {
+          // Update existing resident
+          db.run(
+            "UPDATE residents SET name = ?, role = ? WHERE id = ?",
+            [name, role, existingResident.id],
+            (err) => {
+              if (err) failed++;
+              else updated++;
+              
+              // Respond after all operations complete
+              if (inserted + updated + failed === residents.length) {
+                res.json({
+                  success: true,
+                  inserted,
+                  updated,
+                  failed,
+                  message: `${inserted} new residents added, ${updated} updated`
+                });
+              }
+            }
+          );
+        } else {
+          // Insert new resident
+          db.run(
+            "INSERT INTO residents (siteName, name, phone, role) VALUES (?, ?, ?, ?)",
+            [siteName, name, phone, role],
+            (err) => {
+              if (err) {
+                failed++;
+              } else {
+                inserted++;
+              }
 
-    residents.forEach(({ name, phone }) => {
-      db.run(
-        "INSERT INTO residents (siteName, name, phone) VALUES (?, ?, ?)",
-        [siteName, name, phone],
-        (err) => {
-          if (err) {
-            failed++;
-          } else {
-            inserted++;
-          }
-
-          // Respond after all inserts complete
-          if (inserted + failed === residents.length) {
-            res.json({
-              success: true,
-              inserted,
-              failed,
-              message: `Uploaded ${inserted} residents for site: ${siteName}`
-            });
-          }
+              // Respond after all operations complete
+              if (inserted + updated + failed === residents.length) {
+                res.json({
+                  success: true,
+                  inserted,
+                  updated,
+                  failed,
+                  message: `${inserted} new residents added, ${updated} updated`
+                });
+              }
+            }
+          );
         }
-      );
-    });
+      }
+    );
   });
 });
 
 // Get residents for a site
 router.get("/residents/:siteName", (req, res) => {
   const { siteName } = req.params;
-  db.all("SELECT id, name, phone FROM residents WHERE siteName = ?", [siteName], (err, rows) => {
+  db.all(
+    "SELECT id, siteName, name, phone, role, verified, createdAt FROM residents WHERE siteName = ? ORDER BY role, name",
+    [siteName],
+    (err, rows) => {
+      if (err) {
+        console.error("Error fetching residents:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      res.json(rows || []);
+    }
+  );
+});
+
+// ===== RESIDENT CRUD ENDPOINTS =====
+
+// POST - Add a new resident (prevent duplicates)
+router.post("/residents", (req, res) => {
+  const { siteName, name, phone, role = "resident" } = req.body;
+  
+  if (!siteName || !name || !phone) {
+    return res.status(400).json({ error: "siteName, name, and phone are required" });
+  }
+  
+  // Validate phone number
+  if (!validatePhoneNumber(phone)) {
+    return res.status(400).json({ error: "Invalid Philippine phone number format" });
+  }
+  
+  const formattedPhone = formatPhoneNumber(phone);
+  const validRoles = ["resident", "bhw", "lgu"];
+  const finalRole = validRoles.includes(role) ? role : "resident";
+  
+  // Check if resident with same siteName and phone already exists
+  db.get(
+    "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
+    [siteName, formattedPhone],
+    (err, existingResident) => {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      if (existingResident) {
+        // Update existing resident
+        db.run(
+          "UPDATE residents SET name = ?, role = ? WHERE id = ?",
+          [name, finalRole, existingResident.id],
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({
+              id: existingResident.id,
+              siteName,
+              name,
+              phone: formattedPhone,
+              role: finalRole,
+              verified: 0,
+              message: "Resident updated (duplicate prevented)"
+            });
+          }
+        );
+      } else {
+        // Create new resident
+        db.run(
+          "INSERT INTO residents (siteName, name, phone, role, verified) VALUES (?, ?, ?, ?, ?)",
+          [siteName, name, formattedPhone, finalRole, 0],
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({
+              id: this.lastID,
+              siteName,
+              name,
+              phone: formattedPhone,
+              role: finalRole,
+              verified: 0,
+              message: "Resident added"
+            });
+          }
+        );
+      }
+    }
+  );
+});
+
+// PUT - Update a resident
+router.put("/residents/:id", (req, res) => {
+  const { id } = req.params;
+  const { name, phone, role, verified } = req.body;
+  
+  if (!name && !phone && role === undefined && verified === undefined) {
+    return res.status(400).json({ error: "At least one field to update is required" });
+  }
+  
+  // Get current resident
+  db.get("SELECT * FROM residents WHERE id = ?", [id], (err, resident) => {
     if (err) return res.status(500).json({ error: err.message });
+    if (!resident) return res.status(404).json({ error: "Resident not found" });
+    
+    const newName = name || resident.name;
+    const newPhone = phone ? formatPhoneNumber(phone) : resident.phone;
+    const validRoles = ["resident", "bhw", "lgu"];
+    const newRole = role ? (validRoles.includes(role) ? role : resident.role) : resident.role;
+    const newVerified = verified !== undefined ? verified : resident.verified;
+    
+    // Validate phone if updated
+    if (phone && !validatePhoneNumber(phone)) {
+      return res.status(400).json({ error: "Invalid Philippine phone number format" });
+    }
+    
+    db.run(
+      "UPDATE residents SET name = ?, phone = ?, role = ?, verified = ? WHERE id = ?",
+      [newName, newPhone, newRole, newVerified, id],
+      function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({
+          id,
+          name: newName,
+          phone: newPhone,
+          role: newRole,
+          verified: newVerified,
+          message: "Resident updated successfully"
+        });
+      }
+    );
+  });
+});
+
+// DELETE - Delete a resident
+router.delete("/residents/:id", (req, res) => {
+  const { id } = req.params;
+  
+  db.run("DELETE FROM residents WHERE id = ?", [id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: "Resident not found" });
+    res.json({ success: true, message: "Resident deleted successfully" });
+  });
+});
+
+// GET - Get residents by role
+router.get("/residents-by-role/:role", (req, res) => {
+  const { role } = req.params;
+  const validRoles = ["resident", "bhw", "lgu"];
+  
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });
+  }
+  
+  db.all("SELECT id, siteName, name, phone, role, verified FROM residents WHERE role = ?", [role], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
+  });
+});
+
+// GET - Get all residents across all sites with role filter
+router.get("/residents", (req, res) => {
+  const { siteName, role } = req.query;
+  
+  console.log("GET /residents - siteName:", siteName, "role:", role);
+  
+  let query = "SELECT id, siteName, name, phone, role, verified, createdAt FROM residents WHERE 1=1";
+  const params = [];
+  
+  if (siteName) {
+    query += " AND siteName = ?";
+    params.push(siteName);
+  }
+  
+  if (role) {
+    const validRoles = ["resident", "bhw", "lgu"];
+    if (!validRoles.includes(role)) {
+      console.log("Invalid role:", role);
+      return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });
+    }
+    query += " AND role = ?";
+    params.push(role);
+  }
+  
+  query += " ORDER BY siteName, role, name";
+  
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    console.log("Residents found:", rows ? rows.length : 0);
     res.json(rows || []);
   });
 });

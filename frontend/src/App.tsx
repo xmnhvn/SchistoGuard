@@ -5,14 +5,15 @@ import { AlertsPage } from './components/AlertsPage';
 import { ReportsPage } from './components/ReportsPage';
 import { SitesDirectory } from './components/SitesDirectory';
 import { SiteDetailView } from './components/SiteDetailView';
+import { SettingsPage } from './components/SettingsPage';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm, SignupForm } from './components/LoginForm';
 import { MapView } from './components/MapView';
 
-type ViewType = 'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports';
+type ViewType = 'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports'>(
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings'>(
     () => localStorage.getItem('currentView') as any || 'landing'
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,14 +30,15 @@ export default function App() {
       view === 'sites' ||
       view === 'site-details' ||
       view === 'alerts' ||
-      view === 'reports'
+      view === 'reports' ||
+      view === 'settings'
     );
   };
 
   const handleLogin = () => {
     setIsAuthenticated(true);
     const storedView = localStorage.getItem('currentView');
-    const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'map'];
+    const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'map', 'settings'];
     if (storedView && allowedViews.includes(storedView as ViewType)) {
       setCurrentView(storedView as ViewType);
     } else {
@@ -133,6 +135,9 @@ export default function App() {
           <div className="p-6">
             <MapView />
           </div>
+        )}
+        {currentView === 'settings' && (
+          <SettingsPage siteName={selectedSiteId || "Mang Jose's Fish Pond"} />
         )}
       </NavigationProvider>
     );
