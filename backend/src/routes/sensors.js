@@ -165,7 +165,7 @@ function generateAlertsFromData(data, now = new Date()) {
       ]
     );
     
-    alertMessages.push(`Temp: ${data.temperature.toFixed(1)}°C (${level === "critical" ? "High" : "Possible"} Risk)`);
+    alertMessages.push(`Temp: ${data.temperature.toFixed(1)} Degree Celsius (${level === "critical" ? "High" : "Possible"} Risk)`);
   }
 
   // Turbidity alert (clear water = higher schisto risk)
@@ -248,7 +248,8 @@ function generateAlertsFromData(data, now = new Date()) {
 
   // Send SMS for ANY alerts (critical or warning)
   if (alertMessages.length > 0) {
-    const smsMessage = `SchistoGuard ALERT!\n\n${alertMessages.join('\n')}\n\nAction Required!`;
+    const timestamp = new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const smsMessage = `SchistoGuard ALERT!\n[Recorded: ${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
     sendSMSViaESP32(smsMessage);
   }
 }
@@ -267,7 +268,7 @@ function checkAndAlertImmediate(data) {
   const status = classifyWater(data.temperature);
   const level = classifyLevel(status);
   if (level !== "safe") {
-    alertMessages.push(`Temp: ${data.temperature.toFixed(1)}°C (${level === "critical" ? "High" : "Possible"} Risk)`);
+    alertMessages.push(`Temp: ${data.temperature.toFixed(1)} Degree Celsius (${level === "critical" ? "High" : "Possible"} Risk)`);
   }
 
   // Turbidity
@@ -287,7 +288,11 @@ function checkAndAlertImmediate(data) {
   // Send SMS for ANY alerts (critical or warning)
   if (alertMessages.length > 0) {
     console.log('🔍 Alert detected, looking for residents for site:', data.siteName || "Mang Jose's Fishpond");
-    const smsMessage = `SchistoGuard ALERT!\n\n${alertMessages.join('\n')}\n\nAction Required!`;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const timestamp = `${dateStr}, ${timeStr}`;
+    const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
     
     // Get resident phone numbers for this site
     const siteName = data.siteName || "Mang Jose's Fishpond";

@@ -502,16 +502,16 @@ void loop() {
   float turbStdDev = 0.0;
   int turbRaw = readAnalogAverage(TURBIDITY_PIN, TURB_SAMPLES, turbStdDev);
   float turbVoltage = turbRaw * (VREF / ADC_MAX);
-  // Convert voltage to NTU using calibration constant (user must calibrate)
-  float turbidityNTU = turbVoltage * TURBIDITY_CAL;
+  // Analog Turbidity Module at 3.3V: linear mapping 0-3.3V to 0-14 NTU
+  float turbidityNTU = turbVoltage / 0.236;
   bool turbSensorConnected = (turbStdDev <= TURB_FLOAT_STDDEV);
 
   // Read pH
   float phStdDev = 0.0;
   int phRaw = readAnalogAverage(PH_PIN, PH_SAMPLES, phStdDev);
   float phVoltage = phRaw * (VREF / ADC_MAX);
-  // Simple conversion used previously; adjust if your pH sensor uses different scaling
-  float phValue = 7.0 + ((2.5 - phVoltage) / 0.18);
+  // PH4502C at 3.3V supply: linear mapping 0-3.3V to 0-14 pH
+  float phValue = phVoltage * (14.0 / VREF);
   bool phSensorConnected = (phStdDev <= PH_FLOAT_STDDEV);
   latestPH = phValue;
   latestPHConnected = phSensorConnected;
