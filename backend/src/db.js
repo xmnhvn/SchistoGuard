@@ -28,6 +28,13 @@ db.serialize(() => {
     duration TEXT,
     acknowledgedBy TEXT
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS residents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    siteName TEXT,
+    name TEXT,
+    phone TEXT
+  )`);
 });
 
 module.exports = db;

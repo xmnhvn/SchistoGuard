@@ -10,7 +10,7 @@ const ESP32_IP_FALLBACK = '192.168.100.168';
 let lastSMSTime = 0;
 const SMS_COOLDOWN_MS = 300000; // 5 minutes between successful SMS
 
-async function sendSMSViaESP32(message, alertMessages = []) {
+async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
   const now = Date.now();
   
   // Prevent SMS spam - cooldown after any attempt (success or fail)
@@ -18,35 +18,61 @@ async function sendSMSViaESP32(message, alertMessages = []) {
     return; // Silent cooldown
   }
 
+  // If no phone numbers provided, skip
+  if (!phoneNumbers || phoneNumbers.length === 0) {
+    return;
+  }
+
   try {
-    // Try hostname first
-    let url = `http://${ESP32_HOSTNAME}/api/sms`;
-    try {
-      await axios.post(url, { message }, { timeout: 5000 });
-      // Show logs only on success
-      const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-      console.log(`⚠️ ALERT DETECTED [${timestamp}]:`, alertMessages.join(' | '));
-      console.log('📱 Attempting to send SMS alert...');
-      console.log(`   Message: ${message.substring(0, 50)}...`);
-      console.log('✓ SMS sent via ESP32 (hostname)');
-      lastSMSTime = now; // Start 5-minute cooldown
-      return;
-    } catch (err) {
-      // Fallback to IP
-      if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
-        url = `http://${ESP32_IP_FALLBACK}/api/sms`;
-        await axios.post(url, { message }, { timeout: 5000 });
-        // Show logs only on success
-        const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-        console.log(`⚠️ ALERT DETECTED [${timestamp}]:`, alertMessages.join(' | '));
-        console.log('📱 Attempting to send SMS alert...');
-        console.log(`   Message: ${message.substring(0, 50)}...`);
-        console.log('✓ SMS sent via ESP32 (IP fallback)');
-        lastSMSTime = now; // Start 5-minute cooldown
-      } else {
-        throw err;
+    let sent = 0;
+    let failed = 0;
+
+    // Send to all phone numbers in PARALLEL
+    const smsPromises = phoneNumbers.map(async (phone) => {
+      try {
+        // Try hostname first
+        let url = `http://${ESP32_HOSTNAME}/api/sms`;
+        const payload = { message, phone };
+        
+        try {
+          await axios.post(url, payload, { 
+            timeout: 5000,
+            headers: { 'Content-Type': 'application/json' }
+          });
+          sent++;
+        } catch (err) {
+          // Fallback to IP
+          if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
+            url = `http://${ESP32_IP_FALLBACK}/api/sms`;
+            await axios.post(url, payload, { 
+              timeout: 5000,
+              headers: { 'Content-Type': 'application/json' }
+            });
+            sent++;
+          } else {
+            throw err;
+          }
+        }
+      } catch (error) {
+        failed++;
       }
+    });
+
+    // Wait for all SMS to complete simultaneously
+    await Promise.all(smsPromises);
+
+    // Show logs after all numbers attempted
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+    console.log(`⚠️ ALERT DETECTED [${timestamp}]:`, alertMessages.join(' | '));
+    console.log('📱 Attempting to send SMS alert...');
+    console.log(`   Message: ${message.substring(0, 50)}...`);
+    console.log(`✓ SMS sent to ${sent}/${phoneNumbers.length} recipients (SIMULTANEOUS)`);
+    
+    if (failed > 0) {
+      console.error(`✗ Failed to send to ${failed} recipients`);
     }
+
+    lastSMSTime = now; // Start 5-minute cooldown
   } catch (error) {
     // Show failure logs once
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -132,7 +158,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.temperature + "°C",
         now.toISOString(),
         0,
-        data.siteName || "Site 1",
+        data.siteName || "Mang Jose's Fishpond",
         data.barangay || "Unknown",
         "-",
         null
@@ -154,7 +180,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.turbidity + " NTU",
         now.toISOString(),
         0,
-        data.siteName || "Site 1",
+        data.siteName || "Mang Jose's Fishpond",
         data.barangay || "Unknown",
         "-",
         null
@@ -172,7 +198,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.turbidity + " NTU",
         now.toISOString(),
         0,
-        data.siteName || "Site 1",
+        data.siteName || "Mang Jose's Fishpond",
         data.barangay || "Unknown",
         "-",
         null
@@ -193,7 +219,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.ph,
         now.toISOString(),
         0,
-        data.siteName || "Site 1",
+        data.siteName || "Mang Jose's Fishpond",
         data.barangay || "Unknown",
         "-",
         null
@@ -211,7 +237,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.ph,
         now.toISOString(),
         0,
-        data.siteName || "Site 1",
+        data.siteName || "Mang Jose's Fishpond",
         data.barangay || "Unknown",
         "-",
         null
@@ -222,7 +248,7 @@ function generateAlertsFromData(data, now = new Date()) {
 
   // Send SMS for ANY alerts (critical or warning)
   if (alertMessages.length > 0) {
-    const smsMessage = `SchistoGuard ALERT!\n${alertMessages.join('\n')}\nAction Required!`;
+    const smsMessage = `SchistoGuard ALERT!\n\n${alertMessages.join('\n')}\n\nAction Required!`;
     sendSMSViaESP32(smsMessage);
   }
 }
@@ -258,10 +284,28 @@ function checkAndAlertImmediate(data) {
     alertMessages.push(`pH: ${data.ph.toFixed(1)} (Possible Risk)`);
   }
 
-  // Log and send SMS if there are alerts
+  // Send SMS for ANY alerts (critical or warning)
   if (alertMessages.length > 0) {
-    const smsMessage = `SchistoGuard ALERT!\n${alertMessages.join('\n')}\nAction Required!`;
-    sendSMSViaESP32(smsMessage, alertMessages);
+    console.log('🔍 Alert detected, looking for residents for site:', data.siteName || "Mang Jose's Fishpond");
+    const smsMessage = `SchistoGuard ALERT!\n\n${alertMessages.join('\n')}\n\nAction Required!`;
+    
+    // Get resident phone numbers for this site
+    const siteName = data.siteName || "Mang Jose's Fishpond";
+    db.all("SELECT DISTINCT phone FROM residents WHERE siteName = ?", [siteName], (err, rows) => {
+      if (err) {
+        console.error("❌ Error fetching residents:", err.message);
+        return;
+      }
+      
+      if (!rows || rows.length === 0) {
+        console.log(`⚠️ No residents found for site: "${siteName}"`);
+        return;
+      }
+      
+      console.log(`✓ Found ${rows.length} residents for site: "${siteName}"`);
+      const phoneNumbers = rows.map(r => r.phone).filter(p => p);
+      sendSMSViaESP32(smsMessage, alertMessages, phoneNumbers);
+    });
   }
 }
 
@@ -315,6 +359,72 @@ router.get("/alerts", (req, res) => {
   db.all("SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
+  });
+});
+
+// CSV upload endpoint for residents
+router.post("/upload-csv", (req, res) => {
+  const { siteName, csv } = req.body;
+  
+  if (!siteName || !csv) {
+    return res.status(400).json({ error: "siteName and csv are required" });
+  }
+
+  // Parse CSV - expects format: name,phone (one per line)
+  const lines = csv.trim().split('\n');
+  const residents = [];
+
+  for (const line of lines) {
+    const [name, phone] = line.split(',').map(s => s.trim());
+    if (name && phone) {
+      residents.push({ name, phone });
+    }
+  }
+
+  if (residents.length === 0) {
+    return res.status(400).json({ error: "No valid residents found in CSV" });
+  }
+
+  // Delete existing residents for this site
+  db.run("DELETE FROM residents WHERE siteName = ?", [siteName], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    // Insert new residents
+    let inserted = 0;
+    let failed = 0;
+
+    residents.forEach(({ name, phone }) => {
+      db.run(
+        "INSERT INTO residents (siteName, name, phone) VALUES (?, ?, ?)",
+        [siteName, name, phone],
+        (err) => {
+          if (err) {
+            failed++;
+          } else {
+            inserted++;
+          }
+
+          // Respond after all inserts complete
+          if (inserted + failed === residents.length) {
+            res.json({
+              success: true,
+              inserted,
+              failed,
+              message: `Uploaded ${inserted} residents for site: ${siteName}`
+            });
+          }
+        }
+      );
+    });
+  });
+});
+
+// Get residents for a site
+router.get("/residents/:siteName", (req, res) => {
+  const { siteName } = req.params;
+  db.all("SELECT id, name, phone FROM residents WHERE siteName = ?", [siteName], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
   });
 });
 

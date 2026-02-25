@@ -15,8 +15,8 @@ const int LCD_SCL = 26; // D26
 const int ONE_WIRE_BUS = 4; // D4 (temperature)
 const int TURBIDITY_PIN = 35; // D35 (ADC)
 const int PH_PIN = 34; // D34 (ADC)
-const int GSM_TX = 22; // D22 (to SIM800L RX)
-const int GSM_RX = 23; // D23 (from SIM800L TX)
+const int GSM_TX = 23; // D23 (to SIM800L RX) - SWAPPED
+const int GSM_RX = 22; // D22 (from SIM800L TX) - SWAPPED
 
 // I2C LCD at 0x27
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -78,14 +78,11 @@ const unsigned long WIFI_RETRY_INTERVAL_MS = 10000;
 // Web server on port 80
 WebServer server(80);
 
-// SIM800L GSM module on Serial2
-HardwareSerial gsmSerial(2); // Use UART2
-const char* SMS_PHONE_NUMBER = "+639053167929";
+HardwareSerial gsmSerial(2);
 bool gsmReady = false;
 unsigned long lastSMSTime = 0;
-const unsigned long SMS_COOLDOWN_MS = 300000; // 5 minutes between SMS
+const unsigned long SMS_COOLDOWN_MS = 300000;
 
-// Latest sensor readings (global for HTTP API)
 float latestTempC = 0.0;
 bool latestTempValid = false;
 float latestPH = 0.0;
@@ -111,65 +108,180 @@ int readAnalogAverage(int pin, int samples, float &stddev) {
 }
 
 void initGSM() {
-  gsmSerial.begin(9600, SERIAL_8N1, GSM_RX, GSM_TX);
-  Serial.println("Initializing SIM800L...");
-  delay(3000); // Wait for GSM module to initialize
+  Serial.println("\n=== INITIALIZING GSM/SIM800L ===");
+  Serial.print("GSM_TX pin: "); Serial.println(GSM_TX);
+  Serial.print("GSM_RX pin: "); Serial.println(GSM_RX);
   
-  // Test AT command
-  gsmSerial.println("AT");
-  delay(1000);
-  if (gsmSerial.available()) {
-    String response = gsmSerial.readString();
-    if (response.indexOf("OK") >= 0) {
-      Serial.println("SIM800L ready");
-      // Set SMS text mode
-      gsmSerial.println("AT+CMGF=1");
-      delay(1000);
-      gsmReady = true;
-    } else {
-      Serial.println("SIM800L not responding");
+  gsmSerial.begin(9600, SERIAL_8N1, GSM_RX, GSM_TX);
+  Serial.println("✓ GSM serial port opened at 9600 baud");
+  delay(2000);
+  
+  // Flush buffers
+  while (gsmSerial.available()) gsmSerial.read();
+  delay(500);
+  
+  // Test AT command - try multiple times
+  for (int attempt = 1; attempt <= 5; attempt++) {
+    Serial.print("Attempt ");
+    Serial.print(attempt);
+    Serial.println(": Sending AT");
+    
+    // Clear send buffer
+    gsmSerial.flush();
+    delay(200);
+    
+    // Send AT command
+    gsmSerial.write("AT\r\n", 4);
+    delay(100);
+    gsmSerial.flush();
+    
+    // Wait for response
+    delay(1000);
+    
+    char response[128] = {0};
+    unsigned long timeout = millis() + 3000;
+    int bytesRead = 0;
+    while (millis() < timeout && bytesRead < 120) {
+      if (gsmSerial.available()) {
+        char c = gsmSerial.read();
+        response[bytesRead++] = c;
+        Serial.write(c);
+        timeout = millis() + 100; // Reset timeout if data received
+      }
     }
-  } else {
-    Serial.println("SIM800L timeout");
+    response[bytesRead] = '\0'; // Null terminate
+    
+    Serial.print("\nResponse length: ");
+    Serial.print(bytesRead);
+    Serial.print(" bytes: ");
+    Serial.println(response);
+    
+    if (strstr(response, "OK") != nullptr) {
+      Serial.println("✅ SIM800L responded to AT");
+      gsmReady = true;
+      
+      delay(500);
+      gsmSerial.flush();
+      delay(200);
+      
+      // Set SMS text mode
+      Serial.println("Setting SMS text mode (AT+CMGF=1)...");
+      gsmSerial.write("AT+CMGF=1\r\n", 11);
+      delay(100);
+      gsmSerial.flush();
+      delay(1000);
+      
+      Serial.println("=== GSM INITIALIZATION COMPLETE ===\n");
+      return;
+    }
   }
+  
+  Serial.println("\n❌ SIM800L NOT RESPONDING after 5 attempts");
+  Serial.println("DIAGNOSTIC CHECKLIST:");
+  Serial.println("  1. Is SIM800L powered? (check power LED)");
+  Serial.println("  2. Is power 3.7-4.2V with 2A capability?");
+  Serial.println("  3. Are D22/D23 pins connected correctly?");
+  Serial.println("  4. Try swapping D22 and D23 TX/RX pins");
+  Serial.println("  5. Check cable connections (loose wires?)");
+  Serial.println("=== GSM INITIALIZATION FAILED ===\n");
+  gsmReady = false;
 }
 
-void sendSMS(String message) {
+// Decode JSON escape sequences in-place (using char buffer, no String objects)
+void decodeJSONString(char* buffer, size_t maxLen) {
+  char decoded[512] = {0};
+  size_t srcIdx = 0;
+  size_t dstIdx = 0;
+  
+  while (buffer[srcIdx] != '\0' && dstIdx < maxLen - 1) {
+    if (buffer[srcIdx] == '\\' && buffer[srcIdx + 1] != '\0') {
+      char nextChar = buffer[srcIdx + 1];
+      if (nextChar == 'n') {
+        decoded[dstIdx++] = '\n';
+        srcIdx += 2;
+      } else if (nextChar == 'r') {
+        decoded[dstIdx++] = '\r';
+        srcIdx += 2;
+      } else if (nextChar == 't') {
+        decoded[dstIdx++] = '\t';
+        srcIdx += 2;
+      } else if (nextChar == '"') {
+        decoded[dstIdx++] = '"';
+        srcIdx += 2;
+      } else if (nextChar == '\\') {
+        decoded[dstIdx++] = '\\';
+        srcIdx += 2;
+      } else {
+        decoded[dstIdx++] = buffer[srcIdx++];
+      }
+    } else {
+      decoded[dstIdx++] = buffer[srcIdx++];
+    }
+  }
+  decoded[dstIdx] = '\0';
+  
+  // Copy back to original buffer
+  strncpy(buffer, decoded, maxLen - 1);
+  buffer[maxLen - 1] = '\0';
+}
+
+void sendSMS(String message, const char* phoneNumber) {
   if (!gsmReady) {
-    Serial.println("GSM not ready, cannot send SMS");
+    Serial.println("❌ GSM not ready, cannot send SMS");
     return;
   }
   
-  // Check cooldown (avoid SMS spam)
-  if (millis() - lastSMSTime < SMS_COOLDOWN_MS) {
-    Serial.println("SMS cooldown active, skipping");
+  if (phoneNumber == nullptr || strlen(phoneNumber) == 0) {
+    Serial.println("❌ No phone number provided, skipping SMS");
     return;
   }
   
-  Serial.print("Sending SMS: ");
-  Serial.println(message);
+  // Decode JSON escape sequences in-place using char buffer
+  char msgBuffer[512] = {0};
+  message.toCharArray(msgBuffer, sizeof(msgBuffer));
+  decodeJSONString(msgBuffer, sizeof(msgBuffer));
+  
+  Serial.print("📱 Sending SMS to ");
+  Serial.print(phoneNumber);
+  Serial.print(": ");
+  Serial.println(msgBuffer);
+  
+  // Clear serial buffer
+  while (gsmSerial.available()) {
+    gsmSerial.read();
+  }
   
   // Set phone number
   gsmSerial.print("AT+CMGS=\"");
-  gsmSerial.print(SMS_PHONE_NUMBER);
+  gsmSerial.print(phoneNumber);
   gsmSerial.println("\"");
-  delay(1000);
+  delay(1500);
   
-  // Send message
-  gsmSerial.print(message);
-  delay(100);
+  // Send message (use decoded buffer)
+  gsmSerial.print(msgBuffer);
+  delay(200);
   gsmSerial.write(26); // Ctrl+Z to send
   delay(5000);
   
-  // Read response
-  if (gsmSerial.available()) {
-    String response = gsmSerial.readString();
-    if (response.indexOf("OK") >= 0) {
-      Serial.println("SMS sent successfully");
-      lastSMSTime = millis();
-    } else {
-      Serial.println("SMS failed");
-    }
+  // Read response - use char buffer instead of String to avoid stack overflow
+  char response[256] = {0};
+  unsigned long timeout = millis() + 10000; // 10 second timeout
+  int bytesRead = 0;
+  while (gsmSerial.available() && millis() < timeout && bytesRead < 250) {
+    response[bytesRead++] = (char)gsmSerial.read();
+    delay(10);
+  }
+  response[bytesRead] = '\0'; // Null terminate
+  
+  Serial.print("   Response: ");
+  Serial.println(response);
+  
+  if (strstr(response, "OK") != nullptr || strstr(response, "+CMGS") != nullptr) {
+    Serial.print("✅ SMS sent to ");
+    Serial.println(phoneNumber);
+  } else {
+    Serial.print("❌ SMS failed to ");
+    Serial.println(phoneNumber);
   }
 }
 
@@ -247,16 +359,60 @@ void connectWiFiAndSetupOTA() {
       server.send(200, "application/json", json);
     });
     
-    // SMS sending endpoint (called by backend)
+    // SMS sending endpoint (called by backend with JSON body)
+    // Expected JSON: {"message":"...", "phone":"+639053167929"}
     server.on("/api/sms", HTTP_POST, []() {
-      if (!server.hasArg("message")) {
-        server.send(400, "application/json", "{\"error\":\"Missing message parameter\"}");
+      Serial.println("🔔 /api/sms endpoint called");
+      
+      // Get raw request body
+      String body = "";
+      if (server.hasArg("plain")) {
+        body = server.arg("plain");
+      }
+      
+      Serial.print("   Body: ");
+      Serial.println(body);
+      
+      if (body.length() == 0) {
+        Serial.println("   ❌ Empty body");
+        server.send(400, "application/json", "{\"error\":\"Empty body\"}");
         return;
       }
       
-      String message = server.arg("message");
-      sendSMS(message);
-      server.send(200, "application/json", "{\"success\":true,\"message\":\"SMS sent\"}");
+      // Parse message
+      String message = "";
+      int msgStart = body.indexOf("\"message\":\"") + 11;
+      int msgEnd = body.indexOf("\"", msgStart);
+      if (msgStart > 10 && msgEnd > msgStart) {
+        message = body.substring(msgStart, msgEnd);
+      }
+      
+      Serial.print("   Message: ");
+      Serial.println(message);
+      
+      // Try to parse single phone number first (format: "phone":"...")
+      String phoneStr = "";
+      int phoneStart = body.indexOf("\"phone\":\"") + 9;
+      int phoneEnd = body.indexOf("\"", phoneStart);
+      if (phoneStart > 8 && phoneEnd > phoneStart) {
+        phoneStr = body.substring(phoneStart, phoneEnd);
+      }
+      
+      Serial.print("   Phone: ");
+      Serial.println(phoneStr);
+      
+      // If single phone number found, send to it
+      if (phoneStr.length() > 0 && message.length() > 0) {
+        Serial.println("   Sending SMS...");
+        char phoneBuffer[20];
+        phoneStr.toCharArray(phoneBuffer, sizeof(phoneBuffer));
+        sendSMS(message, phoneBuffer);
+        server.send(200, "application/json", "{\"success\":true}");
+        return;
+      }
+      
+      Serial.println("   ❌ Invalid message or phone");
+      server.send(400, "application/json", "{\"error\":\"Invalid message or phone\"}");
     });
     
     server.begin();
