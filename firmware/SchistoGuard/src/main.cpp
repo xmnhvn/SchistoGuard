@@ -41,9 +41,9 @@ const float TURBIDITY_CAL = 1.0; // NTU per volt (placeholder)
 
 // Heuristic thresholds to detect floating ADC when turbidity sensor is unplugged
 const int TURB_SAMPLES = 12;
-const float TURB_FLOAT_STDDEV = 120.0; // ADC counts
+const float TURB_FLOAT_STDDEV = 300.0; // ADC counts
 const int PH_SAMPLES = 12;
-const float PH_FLOAT_STDDEV = 120.0; // ADC counts
+const float PH_FLOAT_STDDEV = 300.0; // ADC counts
 
 // Wi-Fi settings for OTA (replace with your network credentials)
 const char* WIFI_SSID = "M I K A T A 6 9";
@@ -133,6 +133,20 @@ void setup() {
   sensors.begin();
   connectWiFiAndSetupOTA();
 
+  // Display WiFi status on LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  if (otaReady) {
+    lcd.print("WiFi Connected");
+    lcd.setCursor(0, 1);
+    lcd.print(WiFi.localIP().toString());
+  } else {
+    lcd.print("WiFi Failed");
+    lcd.setCursor(0, 1);
+    lcd.print("Check Config");
+  }
+  delay(3000); // Show WiFi status for 3 seconds
+
   // ADC pins are input-only by default on ESP32, pinMode not required for analog read
   delay(100);
 
@@ -182,6 +196,13 @@ void loop() {
   // Simple conversion used previously; adjust if your pH sensor uses different scaling
   float phValue = 7.0 + ((2.5 - phVoltage) / 0.18);
   bool phSensorConnected = (phStdDev <= PH_FLOAT_STDDEV);
+  
+  // Debug: print pH stddev
+  Serial.print("DEBUG pH_StdDev=");
+  Serial.print(phStdDev, 1);
+  Serial.print(" Turb_StdDev=");
+  Serial.print(turbStdDev, 1);
+  Serial.print(" ");
 
   // Determine alert states based on thresholds
   bool alertTemp = tempValid && (tempC < TEMP_MIN || tempC > TEMP_MAX);
