@@ -207,14 +207,14 @@ function generateAlertsFromData(data, now = new Date()) {
     alertMessages.push(`Turbidity: ${data.turbidity.toFixed(1)} NTU (Moderate - Possible Risk)`);
   }
 
-  // pH alert (optimal for snails: 7.0-8.5)
-  if (data.ph != null && data.ph >= 7.0 && data.ph <= 8.5) {
+  // pH alert (optimal for snails: 6.5-8.0 per WHO/DOH)
+  if (data.ph != null && data.ph >= 6.5 && data.ph <= 8.0) {
     db.run(
       `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         "critical",
-        "pH level optimal for schistosome-transmitting snails (7.0-8.5)",
+        "pH level optimal for schistosome-transmitting snails (6.5-8.0)",
         "pH",
         data.ph,
         now.toISOString(),
@@ -226,7 +226,7 @@ function generateAlertsFromData(data, now = new Date()) {
       ]
     );
     alertMessages.push(`pH: ${data.ph.toFixed(1)} (High Risk)`);
-  } else if (data.ph != null && ((data.ph >= 6.5 && data.ph < 7.0) || (data.ph > 8.5 && data.ph <= 9.0))) {
+  } else if (data.ph != null && ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5))) {
     db.run(
       `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -279,9 +279,9 @@ function checkAndAlertImmediate(data) {
   }
 
   // pH
-  if (data.ph != null && data.ph >= 7.0 && data.ph <= 8.5) {
+  if (data.ph != null && data.ph >= 6.5 && data.ph <= 8.0) {
     alertMessages.push(`pH: ${data.ph.toFixed(1)} (High Risk)`);
-  } else if (data.ph != null && ((data.ph >= 6.5 && data.ph < 7.0) || (data.ph > 8.5 && data.ph <= 9.0))) {
+  } else if (data.ph != null && ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5))) {
     alertMessages.push(`pH: ${data.ph.toFixed(1)} (Possible Risk)`);
   }
 

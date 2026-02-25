@@ -35,10 +35,11 @@ const float TEMP_MOD_RISK_MIN = 20.0;   // °C - Moderate risk zone start
 const float TEMP_MOD_RISK_MAX = 32.0;   // °C - Moderate risk zone end
 
 // pH: Optimal range for schistosome-transmitting snails (slightly alkaline)
-const float PH_HIGH_RISK_MIN = 7.0;     // Optimal snail habitat start
-const float PH_HIGH_RISK_MAX = 8.5;     // Optimal snail habitat end
-const float PH_MOD_RISK_MIN = 6.5;      // Moderate snail survival
-const float PH_MOD_RISK_MAX = 9.0;      // Moderate snail survival
+// WHO/DOH standard: 6.5-8.0 = high risk, 6.0-6.5 or 8.0-8.5 = moderate, <6.0 or >8.5 = safe
+const float PH_HIGH_RISK_MIN = 6.5;     // Optimal snail habitat start
+const float PH_HIGH_RISK_MAX = 8.0;     // Optimal snail habitat end
+const float PH_MOD_RISK_MIN = 6.0;      // Moderate snail survival
+const float PH_MOD_RISK_MAX = 8.5;      // Moderate snail survival
 
 // Turbidity: Lower turbidity indicates slow/stagnant water (higher schisto risk)
 const float TURBIDITY_CLEAR = 5.0;      // NTU - Clear water (potential schisto habitat)
