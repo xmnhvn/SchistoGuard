@@ -63,9 +63,11 @@ struct WiFiCredentials {
 
 const WiFiCredentials WIFI_NETWORKS[] = {
   {"M I K A T A 6 9", "xFbwzT65"},
+  {"Wifi", "xneamnhvn"},
   {"beachamel", "samepassword"}
 };
 const int NUM_WIFI_NETWORKS = sizeof(WIFI_NETWORKS) / sizeof(WIFI_NETWORKS[0]);
+const int PREFERRED_WIFI_INDEX = 0; // force secondary Wi-Fi first for testing
 int currentWiFiIndex = -1;
 
 const char* OTA_HOSTNAME = "schistoguard-esp32";
@@ -292,9 +294,11 @@ void connectWiFiAndSetupOTA() {
   WiFi.setSleep(false);
   WiFi.setHostname(OTA_HOSTNAME);
   
-  // Try each WiFi network until one connects
+  // Try preferred WiFi first, then fallback across all configured networks
   bool connected = false;
-  for (int i = 0; i < NUM_WIFI_NETWORKS && !connected; i++) {
+  for (int attempt = 0; attempt < NUM_WIFI_NETWORKS && !connected; attempt++) {
+    int i = (PREFERRED_WIFI_INDEX + attempt) % NUM_WIFI_NETWORKS;
+
     Serial.print("Trying WiFi: ");
     Serial.println(WIFI_NETWORKS[i].ssid);
     
