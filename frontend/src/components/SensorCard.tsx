@@ -41,27 +41,38 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
   if (offline) {
     return (
       <div className="flex gap-4 justify-center w-full">
-        <div className="flex-1 bg-gray-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px] opacity-60">
+        <div className="flex-1 flex flex-col items-center justify-center py-8 mx-1 min-w-[200px]" style={{ background: '#ffffff', borderRadius: '24px', border: '1px solid #e8e8e8', boxShadow: '0 2px 16px rgba(0,0,0,0.07)', fontFamily: "'Inter', sans-serif" }}>
           <div className="text-md font-bold text-schistoguard-navy mb-4 pb-2 text-center">Temperature</div>
-          <Thermometer className="h-10 w-10 text-gray-400 mb-4" />
-          <div className="text-3xl font-bold mt-6 mb-1 text-center text-gray-400">--<span className="text-2xl font-bold align-top">°C</span></div>
-          <div className="text-sm font-semibold text-center text-gray-400">Offline</div>
+          <Thermometer className="h-10 w-10 text-gray-300 mb-4" />
+          <div className="text-3xl font-bold mt-2 mb-1 text-center text-gray-300">--<span className="text-2xl font-bold align-top">°C</span></div>
+          <div className="text-sm font-medium text-center text-gray-300">Offline</div>
         </div>
-        <div className="flex-1 bg-gray-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px] opacity-60">
+        <div className="flex-1 flex flex-col items-center justify-center py-8 mx-1 min-w-[200px]" style={{ background: '#ffffff', borderRadius: '24px', border: '1px solid #e8e8e8', boxShadow: '0 2px 16px rgba(0,0,0,0.07)', fontFamily: "'Inter', sans-serif" }}>
           <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">Turbidity</div>
-          <Waves className="h-10 w-10 text-gray-400 mb-4" />
-          <div className="text-3xl font-bold mt-6 mb-1 text-center text-gray-400">-- <span className="text-2xl font-bold align-top">NTU</span></div>
-          <div className="text-sm font-semibold text-center text-gray-400">Offline</div>
+          <Waves className="h-10 w-10 text-gray-300 mb-4" />
+          <div className="text-3xl font-bold mt-2 mb-1 text-center text-gray-300">-- <span className="text-2xl font-bold align-top">NTU</span></div>
+          <div className="text-sm font-medium text-center text-gray-300">Offline</div>
         </div>
-        <div className="flex-1 bg-gray-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center py-8 mx-1 min-w-[250px] opacity-60">
+        <div className="flex-1 flex flex-col items-center justify-center py-8 mx-1 min-w-[200px]" style={{ background: '#ffffff', borderRadius: '24px', border: '1px solid #e8e8e8', boxShadow: '0 2px 16px rgba(0,0,0,0.07)', fontFamily: "'Inter', sans-serif" }}>
           <div className="text-md font-bold text-schistoguard-navy mb-4 text-center">pH Level</div>
-          <Droplet className="h-10 w-10 text-gray-400 mb-4" style={{ color: '#b0b0b0' }} />
-          <div className="text-3xl font-bold mt-6 mb-1 text-center text-gray-400">--</div>
-          <div className="text-sm font-semibold text-center text-gray-400">Offline</div>
+          <Droplet className="h-10 w-10 text-gray-300 mb-4" />
+          <div className="text-3xl font-bold mt-2 mb-1 text-center text-gray-300">--</div>
+          <div className="text-sm font-medium text-center text-gray-300">Offline</div>
         </div>
       </div>
     );
   }
+
+  const cardStyle: React.CSSProperties = {
+    background: '#ffffff',
+    borderRadius: '24px',
+    border: '1px solid #e8e8e8',
+    boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
+    fontFamily: "'Inter', sans-serif",
+    minHeight: '220px',
+  };
+
+  const titleStyle = { fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '0.95rem', letterSpacing: '0.02em' };
 
   return (
     <div className="flex gap-4 justify-center w-full">
