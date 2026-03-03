@@ -1,7 +1,7 @@
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarGroup, 
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
@@ -11,11 +11,11 @@ import {
   SidebarProvider,
   SidebarTrigger
 } from "./ui/sidebar";
-import { 
-  Home, 
-  Map, 
-  AlertTriangle, 
-  BarChart3, 
+import {
+  Home,
+  Map,
+  AlertTriangle,
+  BarChart3,
   Bell,
   LogOut,
   Shield,
@@ -41,24 +41,24 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
   {
     title: "Monitoring",
     items: [
-      { 
-        title: "Dashboard", 
-        icon: Home, 
-        view: "dashboard", 
+      {
+        title: "Dashboard",
+        icon: Home,
+        view: "dashboard",
         isActive: currentView === "dashboard",
         onClick: () => onNavigate?.("dashboard")
       },
-      { 
-        title: "Map View", 
-        icon: Map, 
-        view: "map", 
+      {
+        title: "Map View",
+        icon: Map,
+        view: "map",
         isActive: currentView === "map",
         onClick: () => onNavigate?.("map")
       },
-      { 
-        title: "Sites Directory", 
-        icon: MapPin, 
-        view: "sites", 
+      {
+        title: "Sites Directory",
+        icon: MapPin,
+        view: "sites",
         isActive: currentView === "sites",
         onClick: () => onNavigate?.("sites")
       },
@@ -74,10 +74,10 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
   {
     title: "Reports",
     items: [
-      { 
-        title: "Reports", 
-        icon: FileText, 
-        view: "reports", 
+      {
+        title: "Reports",
+        icon: FileText,
+        view: "reports",
         isActive: currentView === "reports",
         onClick: () => onNavigate?.("reports")
       },
@@ -99,7 +99,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
           </h1>
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent>
         {navigationItems.map((group) => (
           <SidebarGroup key={group.title}>
@@ -108,7 +108,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
+                    <SidebarMenuButton
                       isActive={item.isActive}
                       className="data-[active=true]:bg-schistoguard-teal data-[active=true]:text-white cursor-pointer gap-3 px-4 py-6 text-md font-normal"
                       onClick={item.onClick}
@@ -124,7 +124,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
           </SidebarGroup>
         ))}
       </SidebarContent>
-      
+
       <div className="mt-auto p-4 border-t">
         <Dialog open={showProfile} onOpenChange={setShowProfile}>
           <DropdownMenu>
@@ -159,7 +159,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout }: NavigationProp
   );
 }
 
-export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus = "operational" }: { 
+export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus = "operational" }: {
   currentView?: string;
   onNavigateToAlerts?: () => void;
   systemStatus?: "operational" | "down";
@@ -206,13 +206,13 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
   );
 }
 
-export function NavigationProvider({ 
-  children, 
-  currentView, 
-  onNavigate, 
-  onLogout, 
+export function NavigationProvider({
+  children,
+  currentView,
+  onNavigate,
+  onLogout,
   systemStatus = "operational"
-}: { 
+}: {
   children: React.ReactNode;
   currentView?: string;
   onNavigate?: (view: string) => void;
@@ -222,13 +222,13 @@ export function NavigationProvider({
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-schistoguard-light-bg">
-        <AppSidebar 
+        <AppSidebar
           currentView={currentView}
           onNavigate={onNavigate}
           onLogout={onLogout}
         />
         <main className="flex-1 flex flex-col overflow-hidden">
-          <NavigationHeader 
+          <NavigationHeader
             currentView={currentView}
             onNavigateToAlerts={() => onNavigate?.('alerts')}
             systemStatus={systemStatus}

@@ -4,30 +4,30 @@ export const HeroIllustration: React.FC = () => {
   return (
     <div className="relative w-full h-full min-h-[400px] lg:min-h-[500px]">
       <div className="absolute inset-0 bg-gradient-to-b from-blue-100 to-blue-200 rounded-lg overflow-hidden">
-        
-        <svg 
-          className="absolute bottom-0 w-full h-32 text-green-800 opacity-20" 
-          viewBox="0 0 400 128" 
+
+        <svg
+          className="absolute bottom-0 w-full h-32 text-green-800 opacity-20"
+          viewBox="0 0 400 128"
           fill="currentColor"
           aria-hidden="true"
         >
-          <path d="M0,128 L0,80 L50,60 L80,70 L120,50 L160,65 L200,45 L240,60 L280,40 L320,55 L360,35 L400,50 L400,128 Z"/>
+          <path d="M0,128 L0,80 L50,60 L80,70 L120,50 L160,65 L200,45 L240,60 L280,40 L320,55 L360,35 L400,50 L400,128 Z" />
         </svg>
 
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-r from-blue-300 via-blue-400 to-blue-300 opacity-70"></div>
         <div className="absolute bottom-0 left-0 right-0 h-20 overflow-hidden">
           <div className="animate-pulse">
-            <svg 
-              className="absolute bottom-0 w-full h-8 text-blue-500 opacity-50" 
-              viewBox="0 0 400 32" 
+            <svg
+              className="absolute bottom-0 w-full h-8 text-blue-500 opacity-50"
+              viewBox="0 0 400 32"
               fill="currentColor"
               aria-hidden="true"
             >
               <path d="M0,16 Q50,8 100,16 T200,16 T300,16 T400,16 L400,32 L0,32 Z">
-                <animate 
-                  attributeName="d" 
-                  values="M0,16 Q50,8 100,16 T200,16 T300,16 T400,16 L400,32 L0,32 Z;M0,16 Q50,24 100,16 T200,16 T300,16 T400,16 L400,32 L0,32 Z;M0,16 Q50,8 100,16 T200,16 T300,16 T400,16 L400,32 L0,32 Z" 
-                  dur="3s" 
+                <animate
+                  attributeName="d"
+                  values="M0,16 Q50,8 100,16 T200,16 T300,16 T400,16 L400,32 L0,32 Z;M0,16 Q50,24 100,16 T200,16 T300,16 T400,16 L400,32 L0,32 Z;M0,16 Q50,8 100,16 T200,16 T300,16 T400,16 L400,32 L0,32 Z"
+                  dur="3s"
                   repeatCount="indefinite"
                 />
               </path>
@@ -43,8 +43,8 @@ export const HeroIllustration: React.FC = () => {
             <div className="absolute -top-4 left-4">
               <div className="flex space-x-1">
                 <div className="w-1 h-1 bg-blue-500 rounded-full animate-ping"></div>
-                <div className="w-1 h-1 bg-blue-500 rounded-full animate-ping" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-1 h-1 bg-blue-500 rounded-full animate-ping" style={{animationDelay: '0.4s'}}></div>
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-ping" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-ping" style={{ animationDelay: '0.4s' }}></div>
               </div>
             </div>
           </div>
@@ -82,18 +82,18 @@ export const HeroIllustration: React.FC = () => {
         </div>
         <div className="absolute bottom-0 left-0 w-20 h-12">
           <svg className="w-full h-full text-green-600 opacity-60" viewBox="0 0 80 48" fill="currentColor" aria-hidden="true">
-            <circle cx="10" cy="40" r="8"/>
-            <circle cx="25" cy="35" r="6"/>
-            <circle cx="40" cy="38" r="7"/>
-            <circle cx="55" cy="42" r="5"/>
-            <circle cx="70" cy="40" r="6"/>
+            <circle cx="10" cy="40" r="8" />
+            <circle cx="25" cy="35" r="6" />
+            <circle cx="40" cy="38" r="7" />
+            <circle cx="55" cy="42" r="5" />
+            <circle cx="70" cy="40" r="6" />
           </svg>
         </div>
         <div className="absolute bottom-0 right-0 w-16 h-10">
           <svg className="w-full h-full text-green-600 opacity-60" viewBox="0 0 64 40" fill="currentColor" aria-hidden="true">
-            <circle cx="50" cy="32" r="6"/>
-            <circle cx="35" cy="30" r="5"/>
-            <circle cx="20" cy="35" r="4"/>
+            <circle cx="50" cy="32" r="6" />
+            <circle cx="35" cy="30" r="5" />
+            <circle cx="20" cy="35" r="4" />
           </svg>
         </div>
       </div>
