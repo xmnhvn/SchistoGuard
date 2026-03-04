@@ -96,10 +96,7 @@ export default function App() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:3001/api/auth/session", { 
-          credentials: "include" 
-        });
-        const data = await res.json();
+        const data = await apiGet("/api/auth/session");
         if (data.loggedIn) {
           setIsAuthenticated(true);
           setUser(data.user);
