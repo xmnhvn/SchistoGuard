@@ -102,6 +102,54 @@ if (DB_TYPE === 'postgres') {
   
   initPostgresTables();
   
+  // Wrap PostgreSQL client to provide SQLite-compatible callback interface
+  const wrappedDb = {
+    // Get single row - mimics db.get() from SQLite
+    get: function(query, params, callback) {
+      if (!callback) {
+        callback = params;
+        params = [];
+      }
+      
+      db.query(query, params, (err, result) => {
+        if (err) return callback(err);
+        callback(null, result.rows[0]); // Return first row or undefined
+      });
+    },
+    
+    // Get all rows - mimics db.all() from SQLite
+    all: function(query, params, callback) {
+      if (!callback) {
+        callback = params;
+        params = [];
+      }
+      
+      db.query(query, params, (err, result) => {
+        if (err) return callback(err);
+        callback(null, result.rows); // Return all rows
+      });
+    },
+    
+    // Run query (insert/update/delete) - mimics db.run() from SQLite
+    run: function(query, params, callback) {
+      if (!callback) {
+        callback = params;
+        params = [];
+      }
+      
+      db.query(query, params, (err, result) => {
+        if (err) return callback(err);
+        callback(null, { lastID: result.rows[0]?.id, changes: result.rowCount });
+      });
+    },
+    
+    // Direct query access for custom queries
+    query: db.query.bind(db)
+  };
+  
+  // Use the wrapped version as db
+  db = wrappedDb;
+  
 } else {
   // Development: SQLite locally
   if (!sqlite3) {
@@ -197,4 +245,5 @@ if (DB_TYPE === 'postgres') {
   console.log('✓ Using SQLite database locally');
 }
 
+// Export the database with a unified interface
 module.exports = db;
