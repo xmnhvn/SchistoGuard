@@ -1,6 +1,15 @@
 require('dotenv').config();
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+
+// Try to load sqlite3, but don't fail if it's not installed (Railway uses only PostgreSQL)
+let sqlite3 = null;
+try {
+  sqlite3 = require('sqlite3').verbose();
+} catch (err) {
+  if (process.env.DB_TYPE !== 'postgres') {
+    console.warn('Warning: sqlite3 module not found. SQLite will not work. Use PostgreSQL instead.');
+  }
+}
 
 // Determine which database to use
 const DB_TYPE = process.env.DB_TYPE || 'sqlite';
@@ -96,6 +105,10 @@ if (DB_TYPE === 'postgres') {
   
 } else {
   // Development: SQLite locally
+  if (!sqlite3) {
+    throw new Error('sqlite3 module is required for SQLite mode. Install it with: npm install sqlite3 (only needed for local development)');
+  }
+  
   db = new sqlite3.Database(path.resolve(__dirname, '../schistoguard.sqlite'));
   
   db.serialize(() => {

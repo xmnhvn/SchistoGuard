@@ -3,7 +3,14 @@ require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
-const SQLiteStore = require("connect-sqlite3")(session);
+
+// Try to load SQLite session store, fallback to memory store for Railway
+let SQLiteStore = null;
+try {
+  SQLiteStore = require("connect-sqlite3")(session);
+} catch (err) {
+  console.log('sqlite3 not available, using memory-based session store (Railway production)');
+}
 
 const app = express();
 
@@ -24,7 +31,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.sqlite', dir: './' }),
+  store: SQLiteStore ? new SQLiteStore({ db: 'sessions.sqlite', dir: './' }) : undefined,
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
