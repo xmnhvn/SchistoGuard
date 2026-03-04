@@ -6,13 +6,12 @@ let sqlite3 = null;
 try {
   sqlite3 = require('sqlite3').verbose();
 } catch (err) {
-  if (process.env.DB_TYPE !== 'postgres') {
-    console.warn('Warning: sqlite3 module not found. SQLite will not work. Use PostgreSQL instead.');
-  }
+  console.log('Note: sqlite3 not available - will use PostgreSQL (Railway production mode)');
 }
 
 // Determine which database to use
-const DB_TYPE = process.env.DB_TYPE || 'sqlite';
+// Smart default: if sqlite3 is not available, default to postgres (Railway)
+const DB_TYPE = process.env.DB_TYPE || (sqlite3 ? 'sqlite' : 'postgres');
 let db = null;
 
 if (DB_TYPE === 'postgres') {
@@ -106,7 +105,7 @@ if (DB_TYPE === 'postgres') {
 } else {
   // Development: SQLite locally
   if (!sqlite3) {
-    throw new Error('sqlite3 module is required for SQLite mode. Install it with: npm install sqlite3 (only needed for local development)');
+    throw new Error('DB_TYPE is explicitly set to "sqlite" but sqlite3 module is not installed. For local development, run: npm install sqlite3');
   }
   
   db = new sqlite3.Database(path.resolve(__dirname, '../schistoguard.sqlite'));
