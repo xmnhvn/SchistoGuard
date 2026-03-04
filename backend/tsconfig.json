@@ -7,5 +7,5 @@
     "module": "commonjs",
     "outDir": "dist"
   },
-  "include": ["src/**/*", "serial-to-backend.js"]
+  "include": ["src/**/*"]
 }
