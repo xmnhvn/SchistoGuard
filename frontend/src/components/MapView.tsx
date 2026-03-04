@@ -13,12 +13,18 @@ const icon = L.icon({
   shadowSize: [41, 41]
 });
 
-
+const SAMPLE_LOCATIONS = [
+  { lat: 10.3157, lng: 123.8854, name: 'Cebu City - Sample Site 1', status: 'Active' },
+  { lat: 10.2968, lng: 123.9098, name: 'Mactan Island - Sample Site 2', status: 'Active' },
+  { lat: 10.3228, lng: 123.8765, name: 'Downtown Cebu - Sample Site 3', status: 'Inactive' },
+  { lat: 10.3256, lng: 123.9050, name: 'Northern Area - Sample Site 4', status: 'Active' },
+];
 
 export function MapView() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const sampleMarkersRef = useRef<L.Marker[]>([]);
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
 
   // Fetch latest GPS data from backend
@@ -40,15 +46,39 @@ export function MapView() {
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
-    const map = L.map(mapRef.current).setView([10.3157, 123.8854], 6); // Default to Visayas
+    const map = L.map(mapRef.current).setView([10.3157, 123.8854], 11);
     mapInstanceRef.current = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(map);
+
+    // Add sample markers
+    SAMPLE_LOCATIONS.forEach((location) => {
+      const sampleIcon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      });
+      const marker = L.marker([location.lat, location.lng], { icon: sampleIcon }).addTo(map);
+      marker.bindPopup(
+        `<div style="text-align: center;">
+          <strong style="color: #0F2135;">${location.name}</strong><br/>
+          <span style="color: #007E88;">Status: ${location.status}</span><br/>
+          <span style="font-size: 0.85em; color: #666;">Lat: ${location.lat.toFixed(6)}<br/>Lng: ${location.lng.toFixed(6)}</span>
+        </div>`
+      );
+      sampleMarkersRef.current.push(marker);
+    });
+
     return () => {
       map.remove();
       mapInstanceRef.current = null;
+      sampleMarkersRef.current = [];
     };
   }, []);
 
@@ -71,8 +101,8 @@ export function MapView() {
   }, [gps]);
 
   return (
-    <div>
-      <div ref={mapRef} className="w-full h-[500px]" />
+    <div style={{ width: '100%', height: '100%', minHeight: '500px' }}>
+      <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 }
