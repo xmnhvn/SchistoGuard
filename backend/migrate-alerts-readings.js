@@ -52,7 +52,7 @@ async function run() {
 
     const sqliteReadings = await sqliteAll(
       sqliteDb,
-      'SELECT id, turbidity, temperature, ph, lat, lng, status, timestamp FROM readings ORDER BY id ASC'
+      'SELECT id, turbidity, temperature, ph, status, timestamp FROM readings ORDER BY id ASC'
     );
     const sqliteAlerts = await sqliteAll(
       sqliteDb,
@@ -64,16 +64,14 @@ async function run() {
     let insertedReadings = 0;
     for (const row of sqliteReadings) {
       const result = await pg.query(
-        `INSERT INTO readings (id, turbidity, temperature, ph, lat, lng, status, "timestamp")
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        `INSERT INTO readings (id, turbidity, temperature, ph, status, "timestamp")
+         VALUES ($1,$2,$3,$4,$5,$6)
          ON CONFLICT (id) DO NOTHING`,
         [
           row.id,
           row.turbidity,
           row.temperature,
           row.ph,
-          row.lat,
-          row.lng,
           row.status,
           row.timestamp
         ]
@@ -136,6 +134,7 @@ async function run() {
       await pg.query('ROLLBACK');
     } catch (_) {}
     console.error('Migration failed:', error.message);
+    console.error('Full error:', error);
     process.exitCode = 1;
   } finally {
     sqliteDb.close();
