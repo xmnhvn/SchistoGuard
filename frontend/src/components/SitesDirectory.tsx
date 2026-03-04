@@ -61,7 +61,7 @@ interface SitesDirectoryProps {
 export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState<string>('all');
-  const [filterTimeRange, setFilterTimeRange] = useState<string>('24h');
+  const [filterTimeRange, setFilterTimeRange] = useState<string>('all');
   const [readings, setReadings] = useState<any[]>([]);
 
   useEffect(() => {
@@ -180,6 +180,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="6h">Last 6 Hours</SelectItem>
                   <SelectItem value="12h">Last 12 Hours</SelectItem>
                   <SelectItem value="24h">Last 24 Hours</SelectItem>

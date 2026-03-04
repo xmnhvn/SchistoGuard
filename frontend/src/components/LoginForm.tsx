@@ -9,7 +9,7 @@ import { Shield, Mail, Lock, User, Phone } from "lucide-react";
 import { useState } from "react";
 
 interface LoginFormProps {
-  onLogin?: (credentials: { email: string; password: string; role: string }) => void;
+  onLogin?: (user: { id: number; email: string; firstName: string; lastName: string; role: string }) => void;
   onShowSignup?: () => void;
   onForgotPassword?: () => void;
 }
@@ -64,8 +64,10 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
         return;
       }
 
-      // Call parent callback on success
-      onLogin?.(formData);
+      // Call parent callback on success with authenticated user info
+      if (data?.user) {
+        onLogin?.(data.user);
+      }
     } catch (err) {
       setError("Network error. Please try again.");
       console.error("Login error:", err);

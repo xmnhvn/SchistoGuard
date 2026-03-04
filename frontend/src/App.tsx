@@ -36,8 +36,22 @@ export default function App() {
     );
   };
 
-  const handleLogin = () => {
+  const handleLogin = (loggedInUser?: { id: number; email: string; firstName: string; lastName: string; role: string }) => {
     setIsAuthenticated(true);
+
+    if (loggedInUser) {
+      setUser(loggedInUser);
+    } else {
+      fetch("http://localhost:3001/api/auth/session", { credentials: "include" })
+        .then(res => res.json())
+        .then(data => {
+          if (data?.loggedIn && data?.user) {
+            setUser(data.user);
+          }
+        })
+        .catch(() => {});
+    }
+
     const storedView = localStorage.getItem('currentView');
     const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'map', 'settings'];
     if (storedView && allowedViews.includes(storedView as ViewType)) {
