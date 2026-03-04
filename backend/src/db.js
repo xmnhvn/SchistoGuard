@@ -59,8 +59,6 @@ if (DB_TYPE === 'postgres') {
           turbidity REAL,
           temperature REAL,
           ph REAL,
-          lat REAL,
-          lng REAL,
           status TEXT,
           "timestamp" TEXT
         )
@@ -195,8 +193,6 @@ if (DB_TYPE === 'postgres') {
       turbidity REAL,
       temperature REAL,
       ph REAL,
-      lat REAL,
-      lng REAL,
       status TEXT,
       timestamp TEXT
     )`);
