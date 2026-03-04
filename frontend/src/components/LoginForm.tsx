@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Shield, Mail, Lock, User, Phone } from "lucide-react";
 import { useState } from "react";
+import { apiPost } from "../utils/api";
 
 interface LoginFormProps {
   onLogin?: (user: { id: number; email: string; firstName: string; lastName: string; role: string }) => void;
@@ -50,26 +51,14 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3001/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Login failed");
-        return;
-      }
-
+      const data = await apiPost("/api/auth/login", formData);
+      
       // Call parent callback on success with authenticated user info
       if (data?.user) {
         onLogin?.(data.user);
       }
-    } catch (err) {
-      setError("Network error. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Login failed");
       console.error("Login error:", err);
     } finally {
       setLoading(false);
@@ -222,32 +211,20 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3001/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
-          role: formData.role,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          organization: formData.organization
-        })
+      await apiPost("/api/auth/signup", {
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: formData.role,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        organization: formData.organization
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Signup failed");
-        return;
-      }
 
       // Call parent callback on success
       onSignup?.(formData);
-    } catch (err) {
-      setError("Network error. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Signup failed");
       console.error("Signup error:", err);
     } finally {
       setLoading(false);

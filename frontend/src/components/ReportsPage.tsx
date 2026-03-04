@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
+import { apiGet } from '../utils/api';
 
 interface Report {
   id: string;
@@ -30,8 +31,7 @@ export const ReportsPage: React.FC = () => {
   const [reportType, setReportType] = useState('monthly');
 
   React.useEffect(() => {
-    fetch("http://localhost:3001/api/sensors/history")
-      .then(res => res.json())
+    apiGet("/api/sensors/history")
       .then(data => {
         // Remove dummy report, leave reports empty
         setReports([]);

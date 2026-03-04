@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiGet } from "../utils/api";
 
 
 
@@ -43,8 +44,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
 
   useEffect(() => {
     const fetchAlerts = () => {
-      fetch("http://localhost:3001/api/sensors/alerts")
-        .then((res) => res.json())
+      apiGet("/api/sensors/alerts")
         .then((data) => {
           if (Array.isArray(data)) {
             setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));

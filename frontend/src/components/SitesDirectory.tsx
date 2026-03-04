@@ -8,12 +8,11 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { useEffect } from 'react';
+import { apiGet } from '../utils/api';
 
 const fetchReadings = async () => {
   try {
-    const res = await fetch('http://localhost:3001/api/sensors/history');
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await apiGet('/api/sensors/history');
     return Array.isArray(data)
       ? data
           .map((r, idx) => {

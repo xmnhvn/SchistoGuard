@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { useEffect } from "react";
+import { apiGet } from "../utils/api";
 
 
 export interface SiteDetailViewProps {
@@ -33,11 +34,7 @@ export function SiteDetailView({
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("http://localhost:3001/api/sensors/history")
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch time series data");
-        return res.json();
-      })
+    apiGet("/api/sensors/history")
       .then(data => {
         console.log("Site Details time series data:", data);
         setHistory(Array.isArray(data) ? data : []);

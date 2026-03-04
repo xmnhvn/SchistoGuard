@@ -1,90 +1,188 @@
+require('dotenv').config();
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const db = new sqlite3.Database(path.resolve(__dirname, '../schistoguard.sqlite'));
+// Determine which database to use
+const DB_TYPE = process.env.DB_TYPE || 'sqlite';
+let db = null;
 
-db.serialize(() => {
-  // Users table for authentication (BHW and LGU only)
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    firstName TEXT NOT NULL,
-    lastName TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('bhw', 'lgu')),
-    organization TEXT NOT NULL,
-    createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS readings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    turbidity REAL,
-    temperature REAL,
-    ph REAL,
-    lat REAL,
-    lng REAL,
-    status TEXT,
-    timestamp TEXT
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS alerts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    level TEXT,
-    message TEXT,
-    parameter TEXT,
-    value TEXT,
-    timestamp TEXT,
-    isAcknowledged INTEGER,
-    siteName TEXT,
-    barangay TEXT,
-    duration TEXT,
-    acknowledgedBy TEXT
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS residents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    siteName TEXT,
-    name TEXT,
-    phone TEXT,
-    role TEXT DEFAULT 'resident',
-    verified INTEGER DEFAULT 0,
-    createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // Migration: Add missing columns to residents table if they don't exist
-  db.all("PRAGMA table_info(residents)", (err, columns) => {
-    if (err) {
-      console.error("Error checking residents table:", err);
-      return;
-    }
-
-    const columnNames = columns.map(col => col.name);
-    
-    // Add role column if missing
-    if (!columnNames.includes('role')) {
-      db.run("ALTER TABLE residents ADD COLUMN role TEXT DEFAULT 'resident'", (err) => {
-        if (err) console.error("Error adding role column:", err);
-        else console.log("✓ Added role column to residents table");
-      });
-    }
-
-    // Add verified column if missing
-    if (!columnNames.includes('verified')) {
-      db.run("ALTER TABLE residents ADD COLUMN verified INTEGER DEFAULT 0", (err) => {
-        if (err) console.error("Error adding verified column:", err);
-        else console.log("✓ Added verified column to residents table");
-      });
-    }
-
-    // Add createdAt column if missing
-    if (!columnNames.includes('createdAt')) {
-      db.run("ALTER TABLE residents ADD COLUMN createdAt TEXT", (err) => {
-        if (err) console.error("Error adding createdAt column:", err);
-        else console.log("✓ Added createdAt column to residents table");
-      });
-    }
+if (DB_TYPE === 'postgres') {
+  // Production: Postgres on Railway
+  const { Client } = require('pg');
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is required for Postgres mode');
+  }
+  
+  db = new Client({
+    connectionString: connectionString,
+    ssl: { rejectUnauthorized: false } // Railway uses SSL
   });
-});
+  
+  db.connect((err) => {
+    if (err) {
+      console.error('Database connection error:', err);
+      process.exit(1);
+    }
+    console.log('✓ Connected to PostgreSQL on Railway');
+  });
+  
+  // Initialize Postgres tables
+  const initPostgresTables = async () => {
+    try {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          "firstName" TEXT NOT NULL,
+          "lastName" TEXT NOT NULL,
+          role TEXT NOT NULL CHECK(role IN ('bhw', 'lgu')),
+          organization TEXT NOT NULL,
+          "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS readings (
+          id SERIAL PRIMARY KEY,
+          turbidity REAL,
+          temperature REAL,
+          ph REAL,
+          lat REAL,
+          lng REAL,
+          status TEXT,
+          "timestamp" TEXT
+        )
+      `);
+      
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS alerts (
+          id SERIAL PRIMARY KEY,
+          level TEXT,
+          message TEXT,
+          parameter TEXT,
+          value TEXT,
+          "timestamp" TEXT,
+          "isAcknowledged" INTEGER,
+          "siteName" TEXT,
+          barangay TEXT,
+          duration TEXT,
+          "acknowledgedBy" TEXT
+        )
+      `);
+      
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS residents (
+          id SERIAL PRIMARY KEY,
+          "siteName" TEXT,
+          name TEXT,
+          phone TEXT,
+          role TEXT DEFAULT 'resident',
+          verified INTEGER DEFAULT 0,
+          "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      console.log('✓ PostgreSQL tables initialized');
+    } catch (err) {
+      console.error('Error initializing tables:', err);
+    }
+  };
+  
+  initPostgresTables();
+  
+} else {
+  // Development: SQLite locally
+  db = new sqlite3.Database(path.resolve(__dirname, '../schistoguard.sqlite'));
+  
+  db.serialize(() => {
+    // Users table for authentication (BHW and LGU only)
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      firstName TEXT NOT NULL,
+      lastName TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('bhw', 'lgu')),
+      organization TEXT NOT NULL,
+      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS readings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      turbidity REAL,
+      temperature REAL,
+      ph REAL,
+      lat REAL,
+      lng REAL,
+      status TEXT,
+      timestamp TEXT
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      level TEXT,
+      message TEXT,
+      parameter TEXT,
+      value TEXT,
+      timestamp TEXT,
+      isAcknowledged INTEGER,
+      siteName TEXT,
+      barangay TEXT,
+      duration TEXT,
+      acknowledgedBy TEXT
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS residents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      siteName TEXT,
+      name TEXT,
+      phone TEXT,
+      role TEXT DEFAULT 'resident',
+      verified INTEGER DEFAULT 0,
+      createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Migration: Add missing columns to residents table if they don't exist
+    db.all("PRAGMA table_info(residents)", (err, columns) => {
+      if (err) {
+        console.error("Error checking residents table:", err);
+        return;
+      }
+
+      const columnNames = columns.map(col => col.name);
+      
+      // Add role column if missing
+      if (!columnNames.includes('role')) {
+        db.run("ALTER TABLE residents ADD COLUMN role TEXT DEFAULT 'resident'", (err) => {
+          if (err) console.error("Error adding role column:", err);
+          else console.log("✓ Added role column to residents table");
+        });
+      }
+
+      // Add verified column if missing
+      if (!columnNames.includes('verified')) {
+        db.run("ALTER TABLE residents ADD COLUMN verified INTEGER DEFAULT 0", (err) => {
+          if (err) console.error("Error adding verified column:", err);
+          else console.log("✓ Added verified column to residents table");
+        });
+      }
+
+      // Add createdAt column if missing
+      if (!columnNames.includes('createdAt')) {
+        db.run("ALTER TABLE residents ADD COLUMN createdAt TEXT", (err) => {
+          if (err) console.error("Error adding createdAt column:", err);
+          else console.log("✓ Added createdAt column to residents table");
+        });
+      }
+    });
+  });
+  
+  console.log('✓ Using SQLite database locally');
+}
 
 module.exports = db;

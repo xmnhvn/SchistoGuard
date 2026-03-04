@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
+import { apiGet, apiPost, apiPut, apiDelete } from "../utils/api";
 
 interface Resident {
   id: number;
@@ -88,21 +89,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     setLoading(true);
     setError(""); // Clear previous errors
     try {
-      let url = "http://localhost:3001/api/sensors/residents";
+      let endpoint = "/api/sensors/residents";
       if (siteName && siteName !== "All Sites") {
-        url += `?siteName=${encodeURIComponent(siteName)}`;
+        endpoint += `?siteName=${encodeURIComponent(siteName)}`;
       }
       
-      console.log("Fetching residents from:", url);
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const error = await response.text();
-        console.error("Fetch failed with status:", response.status, "Error:", error);
-        throw new Error(`Failed to fetch residents: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      console.log("Fetching residents from:", endpoint);
+      const data = await apiGet(endpoint);
       console.log("Residents data:", data);
       setResidents(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -122,17 +115,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     }
 
     try {
-      const response = await fetch("http://localhost:3001/api/sensors/residents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          siteName: siteName === "All Sites" ? "Default" : siteName,
-          ...formData,
-        }),
+      await apiPost("/api/sensors/residents", {
+        siteName: siteName === "All Sites" ? "Default" : siteName,
+        ...formData,
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to add resident");
 
       setError("");
       setIsAddDialogOpen(false);
@@ -151,17 +137,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     }
 
     try {
-      const response = await fetch(
-        `http://localhost:3001/api/sensors/residents/${selectedResident.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        }
+      await apiPut(
+        `/api/sensors/residents/${selectedResident.id}`,
+        formData
       );
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to update resident");
 
       setError("");
       setIsEditDialogOpen(false);
@@ -177,12 +156,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     if (!selectedResident) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3001/api/sensors/residents/${selectedResident.id}`,
-        { method: "DELETE" }
+      await apiDelete(
+        `/api/sensors/residents/${selectedResident.id}`
       );
-
-      if (!response.ok) throw new Error("Failed to delete resident");
 
       setError("");
       setIsDeleteDialogOpen(false);
@@ -260,18 +236,12 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
       
       const cleanCsv = dataLines.join('\n');
       
-      const response = await fetch('http://localhost:3001/api/sensors/upload-csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      try {
+        const data = await apiPost('/api/sensors/upload-csv', {
           siteName: siteName === "All Sites" ? "Default" : siteName,
           csv: cleanCsv
-        })
-      });
-
-      const data = await response.json();
+        });
       
-      if (response.ok) {
         setUploadResult({
           success: true,
           inserted: data.inserted || 0,
@@ -279,13 +249,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           failed: data.failed || 0
         });
         fetchResidents();
-      } else {
+      } catch (err: any) {
         setUploadResult({
           success: false,
           inserted: 0,
           updated: 0,
           failed: 0,
-          error: data.error || "Upload failed"
+          error: err.message || "Upload failed"
         });
       }
       setUploadResultOpen(true);

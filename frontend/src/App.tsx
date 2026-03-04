@@ -8,6 +8,7 @@ import { SiteDetailView } from './components/SiteDetailView';
 import { SettingsPage } from './components/SettingsPage';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm, SignupForm } from './components/LoginForm';
+import { apiGet, apiPost } from './utils/api';
 import { MapView } from './components/MapView';
 
 type ViewType = 'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings';
@@ -42,8 +43,7 @@ export default function App() {
     if (loggedInUser) {
       setUser(loggedInUser);
     } else {
-      fetch("http://localhost:3001/api/auth/session", { credentials: "include" })
-        .then(res => res.json())
+      apiGet("/api/auth/session")
         .then(data => {
           if (data?.loggedIn && data?.user) {
             setUser(data.user);
@@ -63,10 +63,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:3001/api/auth/logout", {
-        method: "POST",
-        credentials: "include"
-      });
+      await apiPost("/api/auth/logout", {});
     } catch (err) {
       console.error("Logout error:", err);
     }

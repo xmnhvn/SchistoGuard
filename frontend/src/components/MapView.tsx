@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+// @ts-ignore - leaflet types not fully available
 import L from 'leaflet';
+import { apiGet } from '../utils/api';
 
 const icon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -23,8 +25,7 @@ export function MapView() {
   useEffect(() => {
     async function fetchGps() {
       try {
-        const res = await fetch("http://localhost:3001/api/sensors/latest");
-        const data = await res.json();
+        const data = await apiGet("/api/sensors/latest");
         if (data && typeof data.lat === 'number' && typeof data.lng === 'number') {
           setGps({ lat: data.lat, lng: data.lng });
         }

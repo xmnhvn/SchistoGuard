@@ -13,6 +13,7 @@ import {
   Bell
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { apiGet, apiPut } from "../utils/api";
 
 type Alert = {
   id: string;
@@ -40,16 +41,12 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
 
   useEffect(() => {
     const fetchLatest = () => {
-      fetch("http://localhost:3001/api/sensors/latest")
-        .then((res) => {
-          if (!res.ok) throw new Error("Backend down");
-          setBackendOk(true);
-          return res.json();
-        })
+      apiGet("/api/sensors/latest")
         .then((data) => {
           setLatestReading(data);
           setDataOk(!!data && Object.keys(data).length > 0);
           if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+          setBackendOk(true);
         })
         .catch(() => {
           setBackendOk(false);
@@ -64,14 +61,10 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
 
   useEffect(() => {
     const fetchReadings = () => {
-      fetch("http://localhost:3001/api/sensors/history?interval=5min&range=24h")
-        .then((res) => {
-          if (!res.ok) throw new Error("Backend down");
-          setBackendOk(true);
-          return res.json();
-        })
+      apiGet("/api/sensors/history?interval=5min&range=24h")
         .then((data) => {
           if (Array.isArray(data)) setReadings(data);
+          setBackendOk(true);
         })
         .catch(() => {
           setBackendOk(false);
@@ -94,8 +87,7 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
 
   useEffect(() => {
     const fetchAlerts = () => {
-      fetch("http://localhost:3001/api/sensors/alerts")
-        .then((res) => res.json())
+      apiGet("/api/sensors/alerts")
         .then((data) => {
           if (Array.isArray(data)) {
             setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));
@@ -128,12 +120,7 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
       alert.id === alertId ? { ...alert, isAcknowledged: true } : alert
     ));
 
-    fetch(`http://localhost:3001/api/sensors/alerts/${alertId}/acknowledge`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ acknowledgedBy: "Current User (LGU)" })
-    })
-      .then(res => res.json())
+    apiPut(`/api/sensors/alerts/${alertId}/acknowledge`, { acknowledgedBy: "Current User (LGU)" })
       .then(data => {
         if (data.success && data.alert) {
           setAlerts(prev => prev.map(alert =>

@@ -5,6 +5,7 @@ import { Badge } from "./ui/badge";
 import SensorCard from "./SensorCard";
 import { AlertItem } from "./AlertItem";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { apiGet } from "../utils/api";
 import { 
   Bell, 
   MapPin as MapPinIcon, 
@@ -89,8 +90,7 @@ export function ResponsiveDashboard() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/sensors/history");
-        const data = await res.json();
+        const data = await apiGet("/api/sensors/history");
         setReadings(data);
         if (data && data.length > 0) setLatestReading(data[data.length - 1]);
       } catch {
@@ -105,8 +105,7 @@ export function ResponsiveDashboard() {
 
   useEffect(() => {
     const fetchAlerts = () => {
-      fetch("http://localhost:3001/api/alerts")
-        .then((res) => res.json())
+      apiGet("/api/alerts")
         .then((data) => {
           if (Array.isArray(data)) {
             setAlerts(data);
