@@ -104,6 +104,12 @@ if (DB_TYPE === 'postgres') {
   
   // Wrap PostgreSQL client to provide SQLite-compatible callback interface
   const wrappedDb = {
+    // Convert SQLite ? placeholders to PostgreSQL $1, $2, etc.
+    _convertQuery: function(query) {
+      let paramIndex = 1;
+      return query.replace(/\?/g, () => `$${paramIndex++}`);
+    },
+    
     // Get single row - mimics db.get() from SQLite
     get: function(query, params, callback) {
       if (!callback) {
@@ -111,7 +117,8 @@ if (DB_TYPE === 'postgres') {
         params = [];
       }
       
-      db.query(query, params, (err, result) => {
+      const convertedQuery = this._convertQuery(query);
+      db.query(convertedQuery, params, (err, result) => {
         if (err) return callback(err);
         callback(null, result.rows[0]); // Return first row or undefined
       });
@@ -124,7 +131,8 @@ if (DB_TYPE === 'postgres') {
         params = [];
       }
       
-      db.query(query, params, (err, result) => {
+      const convertedQuery = this._convertQuery(query);
+      db.query(convertedQuery, params, (err, result) => {
         if (err) return callback(err);
         callback(null, result.rows); // Return all rows
       });
@@ -137,7 +145,8 @@ if (DB_TYPE === 'postgres') {
         params = [];
       }
       
-      db.query(query, params, (err, result) => {
+      const convertedQuery = this._convertQuery(query);
+      db.query(convertedQuery, params, (err, result) => {
         if (err) return callback(err);
         callback(null, { lastID: result.rows[0]?.id, changes: result.rowCount });
       });
