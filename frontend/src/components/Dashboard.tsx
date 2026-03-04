@@ -44,11 +44,13 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
       apiGet("/api/sensors/latest")
         .then((data) => {
           setLatestReading(data);
-          setDataOk(!!data && Object.keys(data).length > 0);
-          if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+          // Backend is operational if API call succeeds, even if no data yet
           setBackendOk(true);
+          setDataOk(true); // Having no data is normal for fresh systems
+          if (data && data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
         })
         .catch(() => {
+          // Only set backend down on actual API failures
           setBackendOk(false);
           setDataOk(false);
         });
