@@ -104,10 +104,19 @@ if (DB_TYPE === 'postgres') {
   
   // Wrap PostgreSQL client to provide SQLite-compatible callback interface
   const wrappedDb = {
-    // Convert SQLite ? placeholders to PostgreSQL $1, $2, etc.
+    // Convert SQLite ? placeholders to PostgreSQL $1, $2, etc. and quote camelCase columns
     _convertQuery: function(query) {
       let paramIndex = 1;
-      return query.replace(/\?/g, () => `$${paramIndex++}`);
+      
+      // First, replace ? with $1, $2, etc.
+      let converted = query.replace(/\?/g, () => `$${paramIndex++}`);
+      
+      // Quote camelCase column names in INSERT/UPDATE statements
+      // Pattern: word boundaries followed by lowercase (for camelCase words)
+      // This matches things like firstName, lastName, createdAt, etc.
+      converted = converted.replace(/\b([a-z]+[A-Z][a-zA-Z]*)\b/g, '"$1"');
+      
+      return converted;
     },
     
     // Get single row - mimics db.get() from SQLite
