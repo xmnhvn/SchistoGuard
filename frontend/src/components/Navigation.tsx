@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import { UserProfileDetails } from "./UserProfileDetails";
 import React, { useState } from "react";
 import { User } from "lucide-react";
+import { apiCall } from "../utils/api";
 
 interface NavigationProps {
   currentView?: string;
@@ -97,6 +98,18 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
 export function AppSidebar({ currentView, onNavigate, onLogout, user }: NavigationProps & { onLogout?: () => void }) {
   const navigationItems = getNavigationItems(currentView, onNavigate);
   const [showProfile, setShowProfile] = useState(false);
+  
+  const handleDeleteUser = async () => {
+    try {
+      await apiCall(`/api/auth/users/${user?.id}`, { method: 'DELETE' });
+      setShowProfile(false);
+      // Call logout to redirect to login page
+      onLogout?.();
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      alert('Failed to delete account. Please try again.');
+    }
+  };
   
   // Generate initials from user name
   const initials = user 
@@ -167,7 +180,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user }: Navigati
             </DropdownMenuContent>
           </DropdownMenu>
           <DialogContent>
-            <UserProfileDetails user={user} />
+            <UserProfileDetails user={user} onDelete={handleDeleteUser} />
           </DialogContent>
         </Dialog>
       </div>
