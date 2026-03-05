@@ -288,26 +288,27 @@ router.get("/me", isAuthenticated, (req, res) => {
 router.get("/users", isAuthenticated, (req, res) => {
   console.log("GET /users endpoint hit by user:", req.session.userId);
   
-  // First, try a simple count to verify table exists and has data
-  db.get("SELECT COUNT(*) as count FROM users", [], (countErr, countResult) => {
-    if (countErr) {
-      console.error("Error counting users:", countErr);
-    } else {
-      console.log("Total users in database:", countResult);
+  // Simple test - get all rows without complex conversion
+  db.query('SELECT * FROM "users" LIMIT 10', [], (err, result) => {
+    if (err) {
+      console.error("Direct query error:", err);
+      return res.status(500).json({ success: false, message: "Query error: " + err.message });
     }
+    console.log("Direct query result:", result.rows);
+    console.log("Number of rows:", result.rows?.length || 0);
     
-    // Now fetch all users
+    // Try the wrapped db.all() method
     db.all(
       "SELECT id, email, firstName, lastName, role, organization, createdAt FROM users ORDER BY createdAt DESC",
       [],
       (err, users) => {
         if (err) {
-          console.error("Error fetching users:", err);
+          console.error("Error fetching users via db.all():", err);
           return res.status(500).json({ success: false, message: err.message });
         }
-        console.log("Fetched users from DB:", users);
-        console.log("Number of users:", users?.length || 0);
-        res.json({ success: true, users });
+        console.log("db.all() result:", users);
+        console.log("Number of users via db.all():", users?.length || 0);
+        res.json({ success: true, users: users || [] });
       }
     );
   });
