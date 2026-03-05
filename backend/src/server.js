@@ -25,8 +25,6 @@ const corsOptions = {
   origin: [
     FRONTEND_URL, 
     'http://localhost:3000', 
-    'http://localhost:3001', 
-    'http://localhost:5173',
     'https://schisto-guard.vercel.app'
   ],
   credentials: true,
