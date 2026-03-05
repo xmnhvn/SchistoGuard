@@ -22,7 +22,13 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // CORS configuration for cloud
 const corsOptions = {
-  origin: [FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
+  origin: [
+    FRONTEND_URL, 
+    'http://localhost:3000', 
+    'http://localhost:3001', 
+    'http://localhost:5173',
+    'https://schisto-guard.vercel.app'
+  ],
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -39,7 +45,7 @@ app.use(session({
     secure: NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, 
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    sameSite: NODE_ENV === 'production' ? 'Strict' : 'Lax'
+    sameSite: NODE_ENV === 'production' ? 'None' : 'Lax' // 'None' allows cross-site cookies in production
   }
 }));
 
