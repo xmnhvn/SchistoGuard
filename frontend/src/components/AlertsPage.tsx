@@ -15,11 +15,9 @@ import {
   Clock,
   Calendar,
   MapPin as MapPinIcon,
-  Bell,
-  ChevronLeft
+  Bell
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { apiGet } from "../utils/api";
 
 
@@ -120,19 +118,8 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
           
           <div className="flex flex-col items-start gap-1">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mr-1 p-1"
-                aria-label="Back"
-                onClick={() => onNavigate && onNavigate('dashboard')}
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </Button>
-              <h1 className="text-2xl font-semibold text-schistoguard-navy">Alert Management</h1>
-            </div>
-            <div className="text-muted-foreground text-sm pl-10 md:pl-12">Monitor and manage water quality alerts across all sites</div>
+            <h1 className="text-2xl font-semibold text-schistoguard-navy">Alert Management</h1>
+            <div className="text-muted-foreground text-sm">Monitor and manage water quality alerts across all sites</div>
           </div>
           
           <div></div>

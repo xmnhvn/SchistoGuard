@@ -51,6 +51,13 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
         onClick: () => onNavigate?.("dashboard")
       },
       {
+        title: "Alerts",
+        icon: Bell,
+        view: "alerts",
+        isActive: currentView === "alerts",
+        onClick: () => onNavigate?.("alerts")
+      },
+      {
         title: "Sites Directory",
         icon: MapPin,
         view: "sites",
