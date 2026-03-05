@@ -80,13 +80,6 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
         onClick: () => onNavigate?.("recipients")
       },
       {
-        title: "Admin Settings",
-        icon: Settings,
-        view: "admin-settings",
-        isActive: currentView === "admin-settings",
-        onClick: () => onNavigate?.("admin-settings")
-      },
-      {
         title: "Reports",
         icon: FileText,
         view: "reports",
@@ -174,6 +167,10 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user }: Navigati
               <DropdownMenuItem onClick={() => setShowProfile(true)}>
                 <User className="w-4 h-4 mr-2" />
                 User Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate?.('admin-settings')}>
+                <Settings className="w-4 h-4 mr-2" />
+                Admin Settings
               </DropdownMenuItem>
               <DropdownMenuItem className="text-red-600" onClick={onLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
