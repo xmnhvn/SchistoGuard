@@ -32,10 +32,12 @@ export function AdminSettingsPage() {
   const [success, setSuccess] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState("");
 
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
+      setUsersError("");
       const result = await apiGet("/api/auth/users");
       console.log("Fetched users result:", result);
       if (result?.users) {
@@ -43,9 +45,11 @@ export function AdminSettingsPage() {
         setUsers(result.users);
       } else {
         console.log("No users in result");
+        setUsersError(result?.message || "No users found");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch users:", err);
+      setUsersError(err?.message || "Failed to fetch users - make sure you are logged in");
     } finally {
       setLoadingUsers(false);
     }
@@ -219,6 +223,11 @@ export function AdminSettingsPage() {
               </p>
             </CardHeader>
             <CardContent>
+              {usersError && (
+                <div className="p-3 mb-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                  {usersError}
+                </div>
+              )}
               {loadingUsers ? (
                 <p className="text-center text-gray-500 py-8">Loading users...</p>
               ) : users.length === 0 ? (
