@@ -115,10 +115,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     variant="primary"
                     size="md"
                     onClick={onLearnMore}
-                    ariaLabel="Learn about schistosomiasis prevention"
+                    ariaLabel="View information about schistosomiasis prevention"
                     className="group"
                   >
-                    Learn about schistosomiasis
+                    View information
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </CTAButton>
                   <CTAButton
@@ -176,10 +176,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   variant="primary"
                   size="md"
                   onClick={onLearnMore}
-                  ariaLabel="Learn about schistosomiasis"
+                  ariaLabel="View information about schistosomiasis"
                   className="w-full group"
                 >
-                  Learn about schistosomiasis
+                  View information
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </CTAButton>
                 <CTAButton

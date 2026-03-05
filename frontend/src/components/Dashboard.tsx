@@ -24,7 +24,7 @@ type Alert = {
   [key: string]: any;
 };
 
-export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view: string) => void, setSystemStatus?: (status: "operational" | "down") => void }) {
+export function Dashboard({ onNavigate, setSystemStatus, viewMode = 'full' }: { onNavigate?: (view: string) => void, setSystemStatus?: (status: "operational" | "down") => void, viewMode?: 'full' | 'sensors-only' }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
@@ -143,6 +143,28 @@ export function Dashboard({ onNavigate, setSystemStatus }: { onNavigate?: (view:
   const avgTurbidity = readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.turbidity || 0), 0) / readings.length).toFixed(1) : "-";
   const avgTemperature = readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.temperature || 0), 0) / readings.length).toFixed(1) : "-";
   const avgPh = readings.length > 0 ? (readings.reduce((sum, r) => sum + (r.ph || 0), 0) / readings.length).toFixed(1) : "-";
+
+  if (viewMode === 'sensors-only') {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="animate-fade-up">
+          <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">Water Quality Information</h1>
+          <p className="text-gray-600 mb-6">Real-time sensor data for monitoring barangay water quality</p>
+        </div>
+        <div className="mb-6 mt-2 animate-fade-up animate-delay-200 max-w-2xl">
+          <SensorCard readings={latestReading && backendOk && dataOk ? {
+            turbidity: latestReading.turbidity,
+            temperature: latestReading.temperature,
+            ph: latestReading.ph
+          } : {
+            turbidity: null,
+            temperature: null,
+            ph: null
+          }} offline={!backendOk || !dataOk} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

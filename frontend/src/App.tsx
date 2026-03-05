@@ -11,10 +11,10 @@ import { LoginForm, SignupForm } from './components/LoginForm';
 import { apiGet, apiPost } from './utils/api';
 import { MapView } from './components/MapView';
 
-type ViewType = 'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings';
+type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings'>(
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings'>(
     () => localStorage.getItem('currentView') as any || 'landing'
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,6 +28,7 @@ export default function App() {
       view === 'landing' ||
       view === 'login' ||
       view === 'dashboard' ||
+      view === 'sensor-info' ||
       view === 'map' ||
       view === 'sites' ||
       view === 'site-details' ||
@@ -124,9 +125,25 @@ export default function App() {
     return (
       <LandingPage
         onViewMap={() => setCurrentView('login')}
-        onLearnMore={() => console.log('Learn more clicked')}
+        onLearnMore={() => setCurrentView('sensor-info')}
         onEnterApp={() => setCurrentView('login')}
       />
+    );
+  }
+
+  if (currentView === 'sensor-info') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <button
+            onClick={() => setCurrentView('landing')}
+            className="mb-6 px-4 py-2 text-sm font-medium text-schistoguard-navy hover:text-schistoguard-navy/80"
+          >
+            ← Back to Home
+          </button>
+          <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
+        </div>
+      </div>
     );
   }
 
