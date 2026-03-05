@@ -6,21 +6,21 @@ import { ReportsPage } from './components/ReportsPage';
 import { SitesDirectory } from './components/SitesDirectory';
 import { SiteDetailView } from './components/SiteDetailView';
 import { SettingsPage } from './components/SettingsPage';
+import { AdminSettingsPage } from './components/AdminSettingsPage';
 import { LandingPage } from './components/landing/LandingPage';
-import { LoginForm, SignupForm } from './components/LoginForm';
+import { LoginForm } from './components/LoginForm';
 import { apiGet, apiPost } from './utils/api';
 
-type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings';
+type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings'>(
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings'>(
     () => localStorage.getItem('currentView') as any || 'landing'
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
-  const [showSignup, setShowSignup] = useState(false);
   const [user, setUser] = useState<{ id: number; email: string; firstName: string; lastName: string; role: string } | null>(null);
   const isViewType = (view: string | null): view is ViewType => {
     return (
@@ -32,7 +32,8 @@ export default function App() {
       view === 'site-details' ||
       view === 'alerts' ||
       view === 'reports' ||
-      view === 'settings'
+      view === 'recipients' ||
+      view === 'admin-settings'
     );
   };
 
@@ -52,7 +53,7 @@ export default function App() {
     }
 
     const storedView = localStorage.getItem('currentView');
-    const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'settings'];
+    const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'recipients', 'admin-settings'];
     if (storedView && allowedViews.includes(storedView as ViewType)) {
       setCurrentView(storedView as ViewType);
     } else {
@@ -146,10 +147,7 @@ export default function App() {
   }
 
   if (currentView === 'login') {
-    if (showSignup) {
-      return <SignupForm onShowLogin={() => setShowSignup(false)} />;
-    }
-    return <LoginForm onLogin={handleLogin} onShowSignup={() => setShowSignup(true)} />;
+    return <LoginForm onLogin={handleLogin} />;
   }
 
   if (isAuthenticated) {
@@ -168,9 +166,10 @@ export default function App() {
         {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
           <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} />
         )}
-        {currentView === 'settings' && (
-          <SettingsPage siteName={selectedSiteId || "Mang Jose's Fish Pond"} />
+        {currentView === 'recipients' && (
+          <SettingsPage siteName={selectedSiteId || "All Sites"} />
         )}
+        {currentView === 'admin-settings' && <AdminSettingsPage />}
       </NavigationProvider>
     );
   }

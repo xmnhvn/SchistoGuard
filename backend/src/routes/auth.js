@@ -131,13 +131,15 @@ router.post("/signup", (req, res) => {
         `INSERT INTO users (email, password, firstName, lastName, role, organization)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [email, hashedPassword, firstName, lastName, role, organization],
-        function (err) {
+        function (err, result) {
           if (err) {
             return res.status(500).json({ success: false, message: err.message });
           }
 
+          const createdUserId = result?.lastID ?? this?.lastID;
+
           // Set session
-          req.session.userId = this.lastID;
+          req.session.userId = createdUserId;
           req.session.email = email;
           req.session.role = role;
           req.session.firstName = firstName;
@@ -147,7 +149,7 @@ router.post("/signup", (req, res) => {
             success: true,
             message: "Account created successfully",
             user: {
-              id: this.lastID,
+              id: createdUserId,
               email,
               firstName,
               lastName,
@@ -159,6 +161,83 @@ router.post("/signup", (req, res) => {
       );
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
+    }
+  });
+});
+
+// Admin create user endpoint (does not change current session)
+router.post("/admin/create-user", isAuthenticated, (req, res) => {
+  const { email, password, confirmPassword, role, firstName, lastName, organization } = req.body;
+
+  if (!["bhw", "lgu"].includes(role)) {
+    return res.status(403).json({
+      success: false,
+      message: "Only Barangay Health Workers and LGU Officers can be created"
+    });
+  }
+
+  if (!email || !password || !firstName || !lastName || !organization) {
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required"
+    });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "Passwords do not match"
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 6 characters"
+    });
+  }
+
+  db.get("SELECT id FROM users WHERE email = ?", [email], async (err, existingUser) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered"
+      });
+    }
+
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      db.run(
+        `INSERT INTO users (email, password, firstName, lastName, role, organization)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [email, hashedPassword, firstName, lastName, role, organization],
+        function (insertErr, result) {
+          if (insertErr) {
+            return res.status(500).json({ success: false, message: insertErr.message });
+          }
+
+          const createdUserId = result?.lastID ?? this?.lastID;
+          return res.json({
+            success: true,
+            message: "User account created successfully",
+            user: {
+              id: createdUserId,
+              email,
+              firstName,
+              lastName,
+              role,
+              organization
+            }
+          });
+        }
+      );
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
     }
   });
 });
@@ -203,6 +282,51 @@ router.get("/me", isAuthenticated, (req, res) => {
       res.json({ success: true, user });
     }
   );
+});
+
+// Get all users (protected)
+router.get("/users", isAuthenticated, (req, res) => {
+  db.all(
+    "SELECT id, email, firstName, lastName, role, organization, created_at FROM users ORDER BY created_at DESC",
+    [],
+    (err, users) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: err.message });
+      }
+      res.json({ success: true, users });
+    }
+  );
+});
+
+// Delete user (protected)
+router.delete("/users/:id", isAuthenticated, (req, res) => {
+  const userId = req.params.id;
+  
+  // Prevent deleting own account
+  if (parseInt(userId) === req.session.userId) {
+    return res.status(400).json({
+      success: false,
+      message: "Cannot delete your own account"
+    });
+  }
+
+  db.run("DELETE FROM users WHERE id = ?", [userId], function (err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "User deleted successfully"
+    });
+  });
 });
 
 module.exports = router;

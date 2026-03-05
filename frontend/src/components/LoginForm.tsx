@@ -11,7 +11,6 @@ import { apiPost } from "../utils/api";
 
 interface LoginFormProps {
   onLogin?: (user: { id: number; email: string; firstName: string; lastName: string; role: string }) => void;
-  onShowSignup?: () => void;
   onForgotPassword?: () => void;
 }
 
@@ -36,7 +35,7 @@ interface OnboardingModalProps {
   onClose: () => void;
 }
 
-export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginFormProps) {
+export function LoginForm({ onLogin, onForgotPassword }: LoginFormProps) {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -160,18 +159,6 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
               >
                 Forgot your password?
               </Button>
-              <div className="text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <Button 
-                  type="button" 
-                  variant="link" 
-                  size="sm" 
-                  onClick={onShowSignup}
-                  className="p-0 h-auto text-schistoguard-teal"
-                >
-                  Sign up here
-                </Button>
-              </div>
             </div>
           </form>
         </CardContent>

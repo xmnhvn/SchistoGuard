@@ -22,7 +22,8 @@ import {
   MapPin,
   CheckCircle,
   Info,
-  Settings
+  Settings,
+  Users
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -73,16 +74,18 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
       },
       {
         title: "Recipients",
-        icon: Settings,
-        view: "settings",
-        isActive: currentView === "settings",
-        onClick: () => onNavigate?.("settings")
+        icon: Users,
+        view: "recipients",
+        isActive: currentView === "recipients",
+        onClick: () => onNavigate?.("recipients")
       },
-    ],
-  },
-  {
-    title: "Reports",
-    items: [
+      {
+        title: "Admin Settings",
+        icon: Settings,
+        view: "admin-settings",
+        isActive: currentView === "admin-settings",
+        onClick: () => onNavigate?.("admin-settings")
+      },
       {
         title: "Reports",
         icon: FileText,
@@ -199,7 +202,8 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
       case 'alerts': return { title: 'Alerts', subtitle: 'Water Quality Notifications' };
       case 'reports': return { title: 'Reports', subtitle: 'Water Quality Insights' };
       case 'site-details': return { title: 'Site Details', subtitle: 'Detailed Site Information' };
-      case 'settings': return { title: 'Recipients', subtitle: 'Manage Recipients' };
+      case 'recipients': return { title: 'Recipients', subtitle: 'Manage alert recipients' };
+      case 'admin-settings': return { title: 'Admin Settings', subtitle: 'Create and manage user accounts' };
       default: return { title: 'Dashboard', subtitle: 'Water Quality Monitoring Overview' };
     }
   };
