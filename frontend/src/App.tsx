@@ -9,12 +9,11 @@ import { SettingsPage } from './components/SettingsPage';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm, SignupForm } from './components/LoginForm';
 import { apiGet, apiPost } from './utils/api';
-import { MapView } from './components/MapView';
 
-type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings';
+type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'map' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings'>(
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'settings'>(
     () => localStorage.getItem('currentView') as any || 'landing'
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,7 +28,6 @@ export default function App() {
       view === 'login' ||
       view === 'dashboard' ||
       view === 'sensor-info' ||
-      view === 'map' ||
       view === 'sites' ||
       view === 'site-details' ||
       view === 'alerts' ||
@@ -54,7 +52,7 @@ export default function App() {
     }
 
     const storedView = localStorage.getItem('currentView');
-    const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'map', 'settings'];
+    const allowedViews: ViewType[] = ['dashboard', 'alerts', 'reports', 'sites', 'settings'];
     if (storedView && allowedViews.includes(storedView as ViewType)) {
       setCurrentView(storedView as ViewType);
     } else {
@@ -169,11 +167,6 @@ export default function App() {
         {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}
         {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
           <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} />
-        )}
-        {currentView === 'map' && (
-          <div className="p-6">
-            <MapView />
-          </div>
         )}
         {currentView === 'settings' && (
           <SettingsPage siteName={selectedSiteId || "Mang Jose's Fish Pond"} />

@@ -13,7 +13,6 @@ import {
 } from "./ui/sidebar";
 import {
   Home,
-  Map,
   AlertTriangle,
   BarChart3,
   Bell,
@@ -50,13 +49,6 @@ const getNavigationItems = (currentView?: string, onNavigate?: (view: string) =>
         view: "dashboard",
         isActive: currentView === "dashboard",
         onClick: () => onNavigate?.("dashboard")
-      },
-      {
-        title: "Map View",
-        icon: Map,
-        view: "map",
-        isActive: currentView === "map",
-        onClick: () => onNavigate?.("map")
       },
       {
         title: "Sites Directory",
@@ -196,7 +188,6 @@ export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus
   const getPageTitle = (view?: string) => {
     switch (view) {
       case 'dashboard': return { title: 'Dashboard', subtitle: 'Water Quality Monitoring Overview' };
-      case 'map': return { title: 'Map View', subtitle: 'Real-time Site Locations' };
       case 'sites': return { title: 'Sites Directory', subtitle: 'Browse All Monitoring Stations' };
       case 'alerts': return { title: 'Alerts', subtitle: 'Water Quality Notifications' };
       case 'reports': return { title: 'Reports', subtitle: 'Water Quality Insights' };
