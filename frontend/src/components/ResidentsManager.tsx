@@ -347,7 +347,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center">
               <div className="text-2xl font-bold text-blue-600">{residents.length}</div>
-              <p className="text-xs text-muted-foreground">All roles combined</p>
+              <p className="text-xs text-muted-foreground">All designations combined</p>
             </CardContent>
           </Card>
           <Card>
@@ -400,13 +400,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Filter by Role</Label>
+            <Label>Filter by Designation</Label>
             <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="all">All Designations</SelectItem>
                 <SelectItem value="resident">Residents</SelectItem>
                 <SelectItem value="bhw">Barangay Health Workers (BHW)</SelectItem>
                 <SelectItem value="lgu">Local Government Units (LGU)</SelectItem>
@@ -504,7 +504,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </p>
             </div>
             <div>
-              <Label htmlFor="role-add">Role</Label>
+              <Label htmlFor="role-add">Designation</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value: any) =>
@@ -564,7 +564,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </p>
             </div>
             <div>
-              <Label htmlFor="role-edit">Role</Label>
+              <Label htmlFor="role-edit">Designation</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value: any) =>

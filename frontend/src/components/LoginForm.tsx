@@ -115,7 +115,7 @@ export function LoginForm({ onLogin, onShowSignup, onForgotPassword }: LoginForm
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Designation</Label>
               <Select value={formData.role} onValueChange={(value: string) => setFormData(prev => ({ ...prev, role: value }))}>
                 <SelectTrigger>
                   <SelectValue />
@@ -288,7 +288,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Designation</Label>
               <Select value={formData.role} onValueChange={(value: string) => setFormData(prev => ({ ...prev, role: value }))}>
                 <SelectTrigger>
                   <SelectValue />

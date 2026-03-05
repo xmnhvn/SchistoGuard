@@ -175,6 +175,12 @@ export function SiteDetailView({
                     pH Level
                   </span>
                 </div>
+                <div className="mt-4 text-left text-xs text-gray-600 max-w-3xl mx-auto space-y-1">
+                  <p className="font-medium text-gray-700">Threshold Classification Guide:</p>
+                  <p><span className="font-medium">Temperature (°C)</span>: Critical 25–30 | Warning 20–24.99 or 30.01–32 | Safe outside these ranges</p>
+                  <p><span className="font-medium">Turbidity (NTU)</span>: Critical &lt; 5 | Warning 5–15 | Safe &gt; 15</p>
+                  <p><span className="font-medium">pH Level</span>: Critical 7.0–8.5 | Warning 6.5–6.99 or 8.51–9.0 | Safe outside these ranges</p>
+                </div>
               </div>
             </CardContent>
           </Card>

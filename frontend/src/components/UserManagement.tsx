@@ -172,7 +172,7 @@ export const UserManagement: React.FC = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">User Management</h1>
-            <p className="text-gray-600">Manage system users, roles, and permissions</p>
+            <p className="text-gray-600">Manage system users, designations, and permissions</p>
           </div>
           <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
             <DialogTrigger asChild>
@@ -198,10 +198,10 @@ export const UserManagement: React.FC = () => {
                   <Input id="email" type="email" className="col-span-3" />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="role" className="text-right">Role</Label>
+                  <Label htmlFor="role" className="text-right">Designation</Label>
                   <Select>
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a role" />
+                      <SelectValue placeholder="Select a designation" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="resident">Community Resident</SelectItem>
@@ -223,7 +223,7 @@ export const UserManagement: React.FC = () => {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">All Users</TabsTrigger>
-            <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
+            <TabsTrigger value="roles">Designations & Permissions</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -279,7 +279,7 @@ export const UserManagement: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>User Distribution by Role</CardTitle>
+                <CardTitle>User Distribution by Designation</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -318,10 +318,10 @@ export const UserManagement: React.FC = () => {
                   <Select value={filterRole} onValueChange={setFilterRole}>
                     <SelectTrigger className="w-48">
                       <Filter className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="All Roles" />
+                      <SelectValue placeholder="All Designations" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="all">All Designations</SelectItem>
                       <SelectItem value="admin">System Admin</SelectItem>
                       <SelectItem value="health_worker">Health Worker</SelectItem>
                       <SelectItem value="lgu_official">LGU Official</SelectItem>
@@ -351,7 +351,7 @@ export const UserManagement: React.FC = () => {
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="text-left p-4 font-medium text-gray-600">User</th>
-                        <th className="text-left p-4 font-medium text-gray-600">Role</th>
+                        <th className="text-left p-4 font-medium text-gray-600">Designation</th>
                         <th className="text-left p-4 font-medium text-gray-600">Status</th>
                         <th className="text-left p-4 font-medium text-gray-600">Location</th>
                         <th className="text-left p-4 font-medium text-gray-600">Last Login</th>

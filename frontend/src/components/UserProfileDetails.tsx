@@ -57,7 +57,7 @@ export const UserProfileDetails: React.FC<UserProfileDetailsProps> = ({ user, on
           <span className="font-medium" style={{ color: "var(--schistoguard-navy)" }}>{user?.email || 'N/A'}</span>
         </div>
         <div className="flex items-center justify-between text-sm px-2">
-          <span className="text-muted-foreground">Role</span>
+          <span className="text-muted-foreground">Designation</span>
           <span className="font-medium" style={{ color: "var(--schistoguard-navy)" }}>{roleDisplay}</span>
         </div>
         <div className="flex items-center justify-between text-sm px-2">
