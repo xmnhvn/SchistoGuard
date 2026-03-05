@@ -14,7 +14,7 @@ interface User {
   lastName: string;
   role: string;
   organization: string;
-  created_at?: string;
+  createdAt?: string;
 }
 
 export function AdminSettingsPage() {
@@ -37,8 +37,12 @@ export function AdminSettingsPage() {
     try {
       setLoadingUsers(true);
       const result = await apiGet("/api/auth/users");
+      console.log("Fetched users result:", result);
       if (result?.users) {
+        console.log("Users array:", result.users);
         setUsers(result.users);
+      } else {
+        console.log("No users in result");
       }
     } catch (err) {
       console.error("Failed to fetch users:", err);

@@ -34,6 +34,16 @@ if (DB_TYPE === 'postgres') {
       process.exit(1);
     }
     console.log('✓ Connected to PostgreSQL on Railway');
+    console.log('Database URL:', connectionString.replace(/:[^:@]+@/, ':****@')); // Hide password
+    
+    // Test query to check users table
+    db.query('SELECT COUNT(*) as count FROM users', (err, result) => {
+      if (err) {
+        console.error('Error querying users table:', err);
+      } else {
+        console.log('Users in database:', result.rows[0]?.count || 0);
+      }
+    });
   });
   
   // Initialize Postgres tables
@@ -109,10 +119,12 @@ if (DB_TYPE === 'postgres') {
       // First, replace ? with $1, $2, etc.
       let converted = query.replace(/\?/g, () => `$${paramIndex++}`);
       
-      // Quote camelCase column names in INSERT/UPDATE statements
-      // Pattern: word boundaries followed by lowercase (for camelCase words)
-      // This matches things like firstName, lastName, createdAt, etc.
+      // Quote camelCase column names (firstName, lastName, createdAt, etc.)
+      // Match pattern: lowercase letter(s) followed by uppercase letter
       converted = converted.replace(/\b([a-z]+[A-Z][a-zA-Z]*)\b/g, '"$1"');
+      
+      console.log('Query conversion - Original:', query);
+      console.log('Query conversion - Converted:', converted);
       
       return converted;
     },

@@ -286,16 +286,31 @@ router.get("/me", isAuthenticated, (req, res) => {
 
 // Get all users (protected)
 router.get("/users", isAuthenticated, (req, res) => {
-  db.all(
-    "SELECT id, email, firstName, lastName, role, organization, created_at FROM users ORDER BY created_at DESC",
-    [],
-    (err, users) => {
-      if (err) {
-        return res.status(500).json({ success: false, message: err.message });
-      }
-      res.json({ success: true, users });
+  console.log("GET /users endpoint hit by user:", req.session.userId);
+  
+  // First, try a simple count to verify table exists and has data
+  db.get("SELECT COUNT(*) as count FROM users", [], (countErr, countResult) => {
+    if (countErr) {
+      console.error("Error counting users:", countErr);
+    } else {
+      console.log("Total users in database:", countResult);
     }
-  );
+    
+    // Now fetch all users
+    db.all(
+      "SELECT id, email, firstName, lastName, role, organization, createdAt FROM users ORDER BY createdAt DESC",
+      [],
+      (err, users) => {
+        if (err) {
+          console.error("Error fetching users:", err);
+          return res.status(500).json({ success: false, message: err.message });
+        }
+        console.log("Fetched users from DB:", users);
+        console.log("Number of users:", users?.length || 0);
+        res.json({ success: true, users });
+      }
+    );
+  });
 });
 
 // Delete user (protected)
