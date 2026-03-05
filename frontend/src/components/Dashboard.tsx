@@ -28,6 +28,7 @@ export function Dashboard({ onNavigate, setSystemStatus, viewMode = 'full' }: { 
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
+  const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [siteData, setSiteData] = useState<any>({
     siteName: "Mang Jose's Fish Pond",
     barangay: "San Miguel",
@@ -37,7 +38,7 @@ export function Dashboard({ onNavigate, setSystemStatus, viewMode = 'full' }: { 
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
   const waterQualityRef = useRef<HTMLDivElement>(null);
-  const alertsStreamRef = useRef<HTMLDivElement>(null);
+  const alertsDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchLatest = () => {
@@ -103,19 +104,18 @@ export function Dashboard({ onNavigate, setSystemStatus, viewMode = 'full' }: { 
   }, []);
 
   useEffect(() => {
-    const setHeight = () => {
-      if (waterQualityRef.current && alertsStreamRef.current) {
-        const height = waterQualityRef.current.offsetHeight;
-        alertsStreamRef.current.style.height = height + "px";
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        alertsDropdownRef.current &&
+        !alertsDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowAlertsDropdown(false);
       }
     };
-    setHeight();
-    if (waterQualityRef.current) {
-      const resizeObserver = new window.ResizeObserver(setHeight);
-      resizeObserver.observe(waterQualityRef.current);
-      return () => resizeObserver.disconnect();
-    }
-  }, [alerts]);
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert =>
@@ -168,20 +168,73 @@ export function Dashboard({ onNavigate, setSystemStatus, viewMode = 'full' }: { 
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap animate-fade-up">
+      <div className="flex items-center justify-between gap-4 flex-wrap animate-fade-up" style={{ position: 'relative', zIndex: 9998 }}>
         <div>
           <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">Mang Jose's Fish Pond</h1>
           <p className="text-gray-600 mb-2">100 square meters • San Miguel, Tacloban City</p>
           <p className="text-sm text-gray-500">Last update: {siteData.timestamp ? new Date(siteData.timestamp).toLocaleString() : '-'}</p>
         </div>
-        <Button
-          size="sm"
-          className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 h-10 flex items-center self-start"
-          onClick={() => onNavigate?.("alerts")}
-        >
-          <Bell className="w-4 h-4 mr-2" />
-          Alerts
-        </Button>
+        <div className="flex gap-2 items-center">
+          <Button
+            size="sm"
+            className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 h-10 flex items-center"
+            onClick={() => onNavigate?.("alerts")}
+          >
+            <Bell className="w-4 h-4 mr-2" />
+            Alerts
+          </Button>
+          <div ref={alertsDropdownRef} className="relative">
+            <Button
+              size="sm"
+              className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 h-10 flex items-center relative"
+              onClick={() => setShowAlertsDropdown((prev) => !prev)}
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              Stream
+              {unacknowledgedAlerts > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {unacknowledgedAlerts > 9 ? '9+' : unacknowledgedAlerts}
+                </span>
+              )}
+            </Button>
+            {showAlertsDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-96 bg-white border rounded-md shadow-xl" style={{ zIndex: 9999 }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <span className="font-bold text-schistoguard-navy text-sm">Alerts Stream</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${unacknowledgedAlerts > 0 ? 'bg-schistoguard-teal text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {unacknowledgedAlerts} unread
+                  </span>
+                </div>
+                <div className="max-h-[28rem] overflow-y-auto">
+                  {alerts.filter(a => !a.isAcknowledged).length > 0 ? (
+                    alerts.filter(a => !a.isAcknowledged).map((alert) => {
+                      const level: "critical" | "warning" = alert.level === "critical" ? "critical" : "warning";
+                      return (
+                        <div key={alert.id} className="px-4 py-3 border-b last:border-b-0">
+                          <AlertItem
+                            {...alert}
+                            level={level}
+                            onAcknowledge={handleAcknowledgeAlert}
+                            siteName={siteData.siteName}
+                            value={alert.value}
+                            timestamp={alert.timestamp}
+                            message={alert.message ?? ""}
+                          />
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 text-gray-400">
+                      <Bell className="w-6 h-6 text-gray-300 mb-2" />
+                      <p className="text-sm text-gray-500">No alerts</p>
+                      <p className="text-xs text-gray-400 mt-1">All clear!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4 items-stretch animate-fade-up animate-delay-100" style={{ minHeight: 320 }}>
@@ -261,43 +314,6 @@ export function Dashboard({ onNavigate, setSystemStatus, viewMode = 'full' }: { 
               </div>
             );
           })()}
-        </div>
-
-        <div ref={alertsStreamRef} className="w-full lg:w-[380px] flex-shrink-0 flex flex-col scrollbar-hide mt-2 animate-fade-up animate-delay-400" style={{ maxWidth: 380 }}>
-          <div className="flex flex-col overflow-hidden" style={{ height: 545, background: '#ffffff', borderRadius: '24px', border: '1px solid #e8e8e8', boxShadow: '0 2px 16px rgba(0,0,0,0.07)', fontFamily: "'Inter', sans-serif" }}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/60">
-              <span className="font-bold text-schistoguard-navy text-sm">Alerts Stream</span>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${unacknowledgedAlerts > 0 ? 'bg-schistoguard-teal text-white' : 'bg-white/70 text-gray-500'
-                }`}>{unacknowledgedAlerts} unread</span>
-            </div>
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scrollbar-hide">
-              {alerts.filter(a => !a.isAcknowledged).length > 0 ? (
-                alerts.filter(a => !a.isAcknowledged).map((alert) => {
-                  const level: "critical" | "warning" = alert.level === "critical" ? "critical" : "warning";
-                  return (
-                    <AlertItem
-                      key={alert.id}
-                      {...alert}
-                      level={level}
-                      onAcknowledge={handleAcknowledgeAlert}
-                      siteName={siteData.siteName}
-                      value={alert.value}
-                      timestamp={alert.timestamp}
-                      message={alert.message ?? ""}
-                    />
-                  );
-                })
-              ) : (
-                <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                  <Bell className="w-8 h-8 text-gray-300 mb-3" />
-                  <p className="text-sm text-gray-500">No alerts</p>
-                  <p className="text-xs text-gray-400 mt-1">All clear!</p>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
