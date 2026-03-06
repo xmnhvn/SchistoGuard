@@ -39,8 +39,8 @@ export function Dashboard({
   useEffect(() => {
     const check = () => {
       const w = window.innerWidth;
-      setIsMobile(w < 768);
-      setIsTablet(w >= 768 && w < 1400); // tablets, iPads, Nest Hub, Nest Hub Max, iPad Pro
+      setIsMobile(w < 600);
+      setIsTablet(w >= 600 && w < 1024);
     };
     check();
     window.addEventListener("resize", check);
@@ -232,14 +232,14 @@ export function Dashboard({
     if (!showAlertsDropdown || !alertsDropdownPosition) return null;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const NAV_H = 64;
+    const NAV_H = 76;
     const SIDEBAR_W = 64;   // AppSidebar is always 64 px wide
     const CARD_PAD = 14;    // mobile card horizontal padding
     const BOTTOM_GAP = 16;
     const panelTop = NAV_H + 8;
     // On mobile: left-align with cards (sidebar + card padding), span the same content width
     // On wider screens: right-aligned, capped at 500 px
-    const isMobilePanel = vw < 768;
+    const isMobilePanel = vw < 600;
     const panelLeft = isMobilePanel
       ? SIDEBAR_W + CARD_PAD
       : vw - Math.min(500, vw - 80) - 16;
@@ -357,7 +357,7 @@ export function Dashboard({
   if (viewMode === "full" && isMobile) {
     return (
       /* Outer: full viewport height, map fills background, content scrolls on top */
-      <div style={{ position: "relative", height: "calc(100vh - 64px)", overflow: "hidden" }}>
+      <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
 
         {/* ── MAP BACKGROUND — fixed behind everything ── */}
         <div style={{
@@ -868,7 +868,7 @@ export function Dashboard({
 
   // ─── Full dashboard ──────────────────────────────────────────────────────
   return (
-    <div style={{ position: "relative", height: "calc(100vh - 64px)", overflow: "hidden" }}>
+    <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
 
       {/* ── GRADIENT OVERLAY — upper-left to lower-right, seamless fade across full screen ── */}
       <div
@@ -889,11 +889,11 @@ export function Dashboard({
           left: 0,
           bottom: 0,
           width: "44%",
-          minWidth: 460,
+          minWidth: 0,
           background: "transparent",
           display: "flex",
           flexDirection: "column",
-          padding: "50px 50px 50px 50px",
+          padding: "clamp(20px, 4vw, 50px)",
           overflowY: "auto",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
@@ -903,7 +903,7 @@ export function Dashboard({
         {/* Site header */}
         <div style={{ marginBottom: 24 }}>
           <h1 style={{
-            fontSize: 38,
+            fontSize: "clamp(20px, 3vw, 38px)",
             fontWeight: 700,
             color: "#fff",
             margin: 0,
@@ -914,7 +914,7 @@ export function Dashboard({
           </h1>
           <p style={{
             color: "rgba(255,255,255,0.9)",
-            fontSize: 16,
+            fontSize: "clamp(12px, 1.3vw, 16px)",
             margin: "6px 0 0 0",
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 400,
@@ -924,7 +924,7 @@ export function Dashboard({
         </div>
 
         {/* ── 3 Sensor mini-cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 200px)", gap: 30, marginBottom: 30 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16, marginBottom: 30 }}>
           {/* Temperature */}
           <SensorMiniCard
             label="Temperature"
