@@ -1,37 +1,21 @@
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger
-} from "./ui/sidebar";
-import {
   Home,
-  AlertTriangle,
-  BarChart3,
   Bell,
-  LogOut,
-  Shield,
-  FileText,
   MapPin,
-  CheckCircle,
   Info,
+  FileText,
+  LogOut,
   Settings,
-  Users
+  Users,
+  AlignJustify,
+  User
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent } from "./ui/dialog";
 import { UserProfileDetails } from "./UserProfileDetails";
 import React, { useState } from "react";
-import { User } from "lucide-react";
 import { apiCall } from "../utils/api";
 
 interface NavigationProps {
@@ -40,127 +24,215 @@ interface NavigationProps {
   user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
 }
 
-const getNavigationItems = (currentView?: string, onNavigate?: (view: string) => void) => [
-  {
-    title: "Monitoring",
-    items: [
-      {
-        title: "Dashboard",
-        icon: Home,
-        view: "dashboard",
-        isActive: currentView === "dashboard",
-        onClick: () => onNavigate?.("dashboard")
-      },
-      {
-        title: "Alerts",
-        icon: Bell,
-        view: "alerts",
-        isActive: currentView === "alerts",
-        onClick: () => onNavigate?.("alerts")
-      },
-      {
-        title: "Sites Directory",
-        icon: MapPin,
-        view: "sites",
-        isActive: currentView === "sites",
-        onClick: () => onNavigate?.("sites")
-      },
-      {
-        title: "Site Details",
-        icon: Info,
-        view: "site-details",
-        isActive: currentView === "site-details",
-        onClick: () => onNavigate?.("site-details")
-      },
-      {
-        title: "Recipients",
-        icon: Users,
-        view: "recipients",
-        isActive: currentView === "recipients",
-        onClick: () => onNavigate?.("recipients")
-      },
-      {
-        title: "Reports",
-        icon: FileText,
-        view: "reports",
-        isActive: currentView === "reports",
-        onClick: () => onNavigate?.("reports")
-      },
-    ],
-  },
+const navItems = [
+  { title: "Dashboard", iconSrc: "/icons/icon-nav-home.svg", view: "dashboard" },
+  { title: "Alerts", iconSrc: "/icons/icon-nav-alerts.svg", view: "alerts" },
+  { title: "Sites", iconSrc: "/icons/icon-nav-sites.svg", view: "sites" },
+  { title: "Site Details", iconSrc: "/icons/icon-nav-sitedetails.svg", view: "site-details" },
+  { title: "Recipients", iconSrc: "/icons/icon-nav-recipients.svg", view: "recipients" },
+  { title: "Reports", iconSrc: "/icons/icon-nav-reports.svg", view: "reports" },
 ];
 
 export function AppSidebar({ currentView, onNavigate, onLogout, user }: NavigationProps & { onLogout?: () => void }) {
-  const navigationItems = getNavigationItems(currentView, onNavigate);
+  return (
+    <aside
+      style={{
+        width: 64,
+        minHeight: "100vh",
+        background: "#fff",
+        borderRight: "1px solid #e8e8e8",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        paddingTop: 16,
+        paddingBottom: 16,
+        gap: 4,
+        zIndex: 50,
+      }}
+    >
+      {/* Hamburger icon at top */}
+      <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+          style={{
+            width: 24,
+            height: 24,
+            background: "linear-gradient(to bottom, #357D86, #036366)",
+            WebkitMaskImage: "url('/icons/icon-nav-menu.svg')",
+            maskImage: "url('/icons/icon-nav-menu.svg')",
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+          }}
+        />
+      </div>
+
+      {/* Nav icons */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1 }}>
+        {navItems.map((item) => {
+          const isActive = currentView === item.view;
+          return (
+            <button
+              key={item.view}
+              title={item.title}
+              onClick={() => onNavigate?.(item.view)}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              {/* CSS mask-image renders SVG in chosen color/gradient */}
+              <div
+                style={{
+                  width: 20,
+                  height: 20,
+                  background: isActive
+                    ? "linear-gradient(to bottom, #357D86, #036366)"
+                    : "#ABABAB",
+                  WebkitMaskImage: `url('${item.iconSrc}')`,
+                  maskImage: `url('${item.iconSrc}')`,
+                  WebkitMaskSize: "contain",
+                  maskSize: "contain",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskRepeat: "no-repeat",
+                  WebkitMaskPosition: "center",
+                  maskPosition: "center",
+                  transition: "background 0.2s",
+                }}
+              />
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
+
+export function NavigationHeader({
+  currentView,
+  onNavigateToAlerts,
+  systemStatus = "operational",
+  user,
+  onLogout,
+  onNavigate,
+}: {
+  currentView?: string;
+  onNavigateToAlerts?: () => void;
+  systemStatus?: "operational" | "down";
+  user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
+  onLogout?: () => void;
+  onNavigate?: (view: string) => void;
+}) {
   const [showProfile, setShowProfile] = useState(false);
-  
-  const handleDeleteUser = async () => {
-    try {
-      await apiCall(`/api/auth/users/${user?.id}`, { method: 'DELETE' });
-      setShowProfile(false);
-      // Call logout to redirect to login page
-      onLogout?.();
-    } catch (error) {
-      console.error('Failed to delete user:', error);
-      alert('Failed to delete account. Please try again.');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  const getPageTitle = (view?: string) => {
+    switch (view) {
+      case "dashboard": return { title: "Dashboard", subtitle: "Water Quality Monitoring Overview" };
+      case "sites": return { title: "Sites Directory", subtitle: "Browse All Monitoring Stations" };
+      case "alerts": return { title: "Alerts", subtitle: "Water Quality Notifications" };
+      case "reports": return { title: "Reports", subtitle: "Water Quality Insights" };
+      case "site-details": return { title: "Site Details", subtitle: "Detailed Site Information" };
+      case "recipients": return { title: "Recipients", subtitle: "Manage alert recipients" };
+      case "admin-settings": return { title: "Admin Settings", subtitle: "Create and manage user accounts" };
+      default: return { title: "Dashboard", subtitle: "Water Quality Monitoring Overview" };
     }
   };
-  
-  // Generate initials from user name
-  const initials = user 
+
+  const pageInfo = getPageTitle(currentView);
+  const initials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
-    : 'JD';
-  
-  // Format role display
-  const roleDisplay = user?.role === 'bhw' ? 'Barangay Health Worker' : 'LGU Officer';
+    : "U";
+
+  const handleDeleteUser = async () => {
+    try {
+      await apiCall(`/api/auth/users/${user?.id}`, { method: "DELETE" });
+      setShowProfile(false);
+      onLogout?.();
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      alert("Failed to delete account. Please try again.");
+    }
+  };
+
   return (
-    <Sidebar collapsible="none">
-      <SidebarHeader className="border-b bg-white">
-        <div className="flex items-center gap-3 px-4 py-4 ">
-          <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-8 h-8 object-contain" />
-          <h1 className="text-xl" style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
-            SchistoGuard
-          </h1>
+    <header
+      style={{
+        background: "#fff",
+        borderBottom: "1px solid #e8e8e8",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0 24px",
+        height: 64,
+        position: "sticky",
+        top: 0,
+        zIndex: 40,
+      }}
+    >
+      {/* Left: page title only (hamburger is in sidebar) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: 15, lineHeight: 1.2 }}>{pageInfo.title}</span>
+          <span style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.2 }}>{pageInfo.subtitle}</span>
         </div>
-      </SidebarHeader>
+      </div>
 
-      <SidebarContent>
-        {navigationItems.map((group) => (
-          <SidebarGroup key={group.title}>
-            <SidebarGroupLabel className="text-base font-medium mb-2 mt-2">{group.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      isActive={item.isActive}
-                      className="data-[active=true]:bg-schistoguard-teal data-[active=true]:text-white cursor-pointer gap-3 px-4 py-6 text-md font-normal"
-                      onClick={item.onClick}
-                      data-active={item.isActive ? 'true' : undefined}
-                    >
-                      <item.icon className="w-7 h-7" />
-                      <span className="text-md font-normal">{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
+      {/* Center: logo + brand */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+        <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 28, height: 28, objectFit: "contain" }} />
+        <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 18, color: "#357D86" }}>
+          SchistoGuard
+        </span>
+      </div>
 
-      <div className="mt-auto p-4 border-t">
+      {/* Right: bell + avatar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("openAlertsDropdown"))}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img src="/icons/icon-nav-alertstream.svg" alt="Alerts" style={{ width: 22, height: 22, objectFit: "contain" }} />
+        </button>
+
         <Dialog open={showProfile} onOpenChange={setShowProfile}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center justify-start gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors">
-                <Avatar className="w-6 h-6">
-                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col items-start text-xs">
-                  <span>{user ? `${user.firstName} ${user.lastName}` : 'User'}</span>
-                  <span className="text-muted-foreground">{roleDisplay}</span>
-                </div>
+              <button
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#357D86",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                {initials}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -168,7 +240,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user }: Navigati
                 <User className="w-4 h-4 mr-2" />
                 User Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate?.('admin-settings')}>
+              <DropdownMenuItem onClick={() => onNavigate?.("admin-settings")}>
                 <Settings className="w-4 h-4 mr-2" />
                 Admin Settings
               </DropdownMenuItem>
@@ -183,66 +255,18 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user }: Navigati
           </DialogContent>
         </Dialog>
       </div>
-    </Sidebar>
-  );
-}
-
-export function NavigationHeader({ currentView, onNavigateToAlerts, systemStatus = "operational" }: {
-  currentView?: string;
-  onNavigateToAlerts?: () => void;
-  systemStatus?: "operational" | "down";
-}) {
-  const getPageTitle = (view?: string) => {
-    switch (view) {
-      case 'dashboard': return { title: 'Dashboard', subtitle: 'Water Quality Monitoring Overview' };
-      case 'sites': return { title: 'Sites Directory', subtitle: 'Browse All Monitoring Stations' };
-      case 'alerts': return { title: 'Alerts', subtitle: 'Water Quality Notifications' };
-      case 'reports': return { title: 'Reports', subtitle: 'Water Quality Insights' };
-      case 'site-details': return { title: 'Site Details', subtitle: 'Detailed Site Information' };
-      case 'recipients': return { title: 'Recipients', subtitle: 'Manage alert recipients' };
-      case 'admin-settings': return { title: 'Admin Settings', subtitle: 'Create and manage user accounts' };
-      default: return { title: 'Dashboard', subtitle: 'Water Quality Monitoring Overview' };
-    }
-  };
-
-  const pageInfo = getPageTitle(currentView);
-
-  let statusBg = "bg-green-100";
-  let statusText = "text-green-700";
-  let dotColor = "bg-green-500";
-  let label = "System Operational";
-  if (systemStatus === "down") {
-    statusBg = "bg-red-100";
-    statusText = "text-red-700";
-    dotColor = "bg-red-500";
-    label = "System Down";
-  }
-  return (
-    <header className="border-b bg-white px-4 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-6 px-4 py-1.5 min-h-[48px]">
-        <div className="flex flex-col justify-center h-full">
-          <h2 className="font-semibold text-schistoguard-navy leading-tight">{pageInfo.title}</h2>
-          <p className="text-sm text-muted-foreground leading-tight">{pageInfo.subtitle}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className={`flex items-center px-4 py-1.5 rounded-full ${statusBg} ${statusText} text-sm font-medium`}>
-          <span className={`w-2 h-2 rounded-full ${dotColor} inline-block mr-2`}></span>
-          {label}
-        </span>
-      </div>
     </header>
   );
 }
 
-export function NavigationProvider({ 
-  children, 
-  currentView, 
-  onNavigate, 
-  onLogout, 
+export function NavigationProvider({
+  children,
+  currentView,
+  onNavigate,
+  onLogout,
   systemStatus = "operational",
-  user
-}: { 
+  user,
+}: {
   children: React.ReactNode;
   currentView?: string;
   onNavigate?: (view: string) => void;
@@ -251,25 +275,26 @@ export function NavigationProvider({
   user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
 }) {
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-schistoguard-light-bg">
-        <AppSidebar
+    <div style={{ display: "flex", minHeight: "100vh", width: "100%", background: "#f5f7fa" }}>
+      <AppSidebar
+        currentView={currentView}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+        user={user}
+      />
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <NavigationHeader
           currentView={currentView}
-          onNavigate={onNavigate}
-          onLogout={onLogout}
+          onNavigateToAlerts={() => onNavigate?.("alerts")}
+          systemStatus={systemStatus}
           user={user}
+          onLogout={onLogout}
+          onNavigate={onNavigate}
         />
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <NavigationHeader
-            currentView={currentView}
-            onNavigateToAlerts={() => onNavigate?.('alerts')}
-            systemStatus={systemStatus}
-          />
-          <div className="flex-1 overflow-auto">
-            {children}
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
+        <div style={{ flex: 1, overflow: "auto" }}>
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }
