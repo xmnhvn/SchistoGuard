@@ -55,9 +55,21 @@ export function Dashboard({
   const [dataOk, setDataOk] = useState(true);
   const alertsPanelRef = useRef<HTMLDivElement>(null);
 
+  const calcPanelPos = () => {
+    const w = window.innerWidth;
+    const panelTop = 72;
+    const panelWidth = w < 480 ? w - 32 : Math.min(500, w - 80);
+    const panelLeft = w - panelWidth - 16;
+    return { top: panelTop, left: panelLeft };
+  };
+
   const openAlertsDropdown = () => {
-    setAlertsDropdownPosition({ top: 68, left: window.innerWidth - 400 });
-    setShowAlertsDropdown((prev) => !prev);
+    setAlertsDropdownPosition(calcPanelPos());
+    setShowAlertsDropdown((prev) => {
+      const next = !prev;
+      window.dispatchEvent(new CustomEvent("alertsDropdownStateChanged", { detail: { open: next } }));
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -122,11 +134,26 @@ export function Dashboard({
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (!alertsPanelRef.current?.contains(target)) setShowAlertsDropdown(false);
+      // Exclude the bell button — its own click handler handles the toggle cleanly
+      const isBell = (event.target as Element).closest?.('[data-alerts-bell]');
+      if (isBell) return;
+      if (!alertsPanelRef.current?.contains(target)) {
+        setShowAlertsDropdown(false);
+        window.dispatchEvent(new CustomEvent("alertsDropdownStateChanged", { detail: { open: false } }));
+      }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  // Recalculate panel position on resize so it flows with screen size
+  useEffect(() => {
+    const handleResize = () => {
+      if (showAlertsDropdown) setAlertsDropdownPosition(calcPanelPos());
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [showAlertsDropdown]);
 
   // Listen for the bell icon click from NavigationHeader
   useEffect(() => {
@@ -162,6 +189,13 @@ export function Dashboard({
       (alert.level === "critical" || alert.level === "warning")
   ).length;
 
+  // Broadcast unread count so the bell icon in NavigationHeader can show a red dot
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("alertsUnreadCount", { detail: { count: unacknowledgedAlerts } })
+    );
+  }, [unacknowledgedAlerts]);
+
   // ─── Risk Level computation ──────────────────────────────────────────────
   let overallRisk: "critical" | "warning" | "safe" = "safe";
   if (latestReading) {
@@ -191,6 +225,102 @@ export function Dashboard({
       : overallRisk === "warning"
         ? "#f59e0b"
         : "#22c55e";
+
+  // ─── Alerts portal — rendered in ALL layout branches ─────────────────────
+  const alertsPortal = (() => {
+    if (!showAlertsDropdown || !alertsDropdownPosition) return null;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const NAV_H = 64;
+    const SIDEBAR_W = 64;   // AppSidebar is always 64 px wide
+    const CARD_PAD = 14;    // mobile card horizontal padding
+    const BOTTOM_GAP = 16;
+    const panelTop = NAV_H + 8;
+    // On mobile: left-align with cards (sidebar + card padding), span the same content width
+    // On wider screens: right-aligned, capped at 500 px
+    const isMobilePanel = vw < 768;
+    const panelLeft = isMobilePanel
+      ? SIDEBAR_W + CARD_PAD
+      : vw - Math.min(500, vw - 80) - 16;
+    const panelW = isMobilePanel
+      ? vw - SIDEBAR_W - CARD_PAD * 2
+      : Math.min(500, vw - 80);
+    const bodyMaxH = Math.max(120, vh - panelTop - BOTTOM_GAP - 60);
+    const sm = vw < 480;
+    return createPortal(
+      <div
+        ref={alertsPanelRef}
+        style={{
+          position: "fixed",
+          top: panelTop,
+          left: panelLeft,
+          width: panelW,
+          background: "#fff",
+          borderRadius: 16,
+          boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+          border: "1px solid #e8e8e8",
+          zIndex: 9999,
+          overflow: "hidden",
+          fontFamily: POPPINS,
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: sm ? "12px 14px 10px" : "18px 22px 16px",
+          borderBottom: "1px solid #f0f0f0",
+        }}>
+          <span style={{ fontWeight: 700, fontSize: sm ? 14 : 16, color: "#1a3a4a", fontFamily: POPPINS }}>
+            Alerts Stream
+          </span>
+          <span style={{
+            padding: sm ? "3px 10px" : "4px 14px",
+            borderRadius: 999,
+            fontSize: sm ? 11 : 12,
+            fontWeight: 600,
+            background: unacknowledgedAlerts > 0 ? "#357D86" : "#f3f4f6",
+            color: unacknowledgedAlerts > 0 ? "#fff" : "#6b7280",
+          }}>
+            {unacknowledgedAlerts} unread
+          </span>
+        </div>
+        {/* Body — height capped so panel never leaves the viewport */}
+        <div style={{ maxHeight: bodyMaxH, overflowY: "auto", scrollbarWidth: "none" } as React.CSSProperties}>
+          {alerts.filter((a) => !a.isAcknowledged).length > 0 ? (
+            alerts.filter((a) => !a.isAcknowledged).map((alert) => {
+              const level: "critical" | "warning" = alert.level === "critical" ? "critical" : "warning";
+              return (
+                <div key={alert.id} style={{ padding: sm ? "10px 14px" : "14px 22px", borderBottom: "1px solid #f5f5f5" }}>
+                  <AlertItem
+                    {...alert} level={level}
+                    onAcknowledge={handleAcknowledgeAlert}
+                    siteName={siteData.siteName}
+                    value={alert.value} timestamp={alert.timestamp}
+                    message={alert.message ?? ""}
+                  />
+                </div>
+              );
+            })
+          ) : (
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              justifyContent: "center",
+              padding: sm ? "28px 14px" : "48px 24px",
+            }}>
+              <Bell size={sm ? 24 : 32} style={{ color: "#d1d5db", marginBottom: sm ? 8 : 12 }} />
+              <p style={{ fontSize: sm ? 13 : 15, color: "#6b7280", margin: 0, fontWeight: 500, fontFamily: POPPINS }}>
+                No alerts
+              </p>
+              <p style={{ fontSize: sm ? 11 : 13, color: "#9ca3af", margin: "5px 0 0", fontFamily: POPPINS }}>
+                All clear!
+              </p>
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body
+    );
+  })();
 
   // ─── sensors-only mode (unchanged) ──────────────────────────────────────
   if (viewMode === "sensors-only") {
@@ -475,6 +605,7 @@ export function Dashboard({
           </div>
         </div>
 
+        {alertsPortal}
         <style>{`
           @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
@@ -716,6 +847,7 @@ export function Dashboard({
           </div>
         </div>
 
+        {alertsPortal}
         <style>{`
           @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
@@ -1078,62 +1210,8 @@ export function Dashboard({
         Map placeholder — Google Maps API
       </div>
 
-      {/* ── Alerts dropdown portal ── */}
-      {showAlertsDropdown &&
-        alertsDropdownPosition &&
-        createPortal(
-          <div
-            ref={alertsPanelRef}
-            className="fixed w-96 bg-white border rounded-md shadow-xl"
-            style={{
-              zIndex: 9999,
-              top: `${alertsDropdownPosition.top}px`,
-              left: `${alertsDropdownPosition.left}px`,
-            }}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b">
-              <span className="font-bold text-schistoguard-navy text-sm">Alerts Stream</span>
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-semibold ${unacknowledgedAlerts > 0
-                  ? "bg-schistoguard-teal text-white"
-                  : "bg-gray-100 text-gray-500"
-                  }`}
-              >
-                {unacknowledgedAlerts} unread
-              </span>
-            </div>
-            <div className="max-h-[28rem] overflow-y-auto">
-              {alerts.filter((a) => !a.isAcknowledged).length > 0 ? (
-                alerts
-                  .filter((a) => !a.isAcknowledged)
-                  .map((alert) => {
-                    const level: "critical" | "warning" =
-                      alert.level === "critical" ? "critical" : "warning";
-                    return (
-                      <div key={alert.id} className="px-4 py-3 border-b last:border-b-0">
-                        <AlertItem
-                          {...alert}
-                          level={level}
-                          onAcknowledge={handleAcknowledgeAlert}
-                          siteName={siteData.siteName}
-                          value={alert.value}
-                          timestamp={alert.timestamp}
-                          message={alert.message ?? ""}
-                        />
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-gray-400">
-                  <Bell className="w-6 h-6 text-gray-300 mb-2" />
-                  <p className="text-sm text-gray-500">No alerts</p>
-                  <p className="text-xs text-gray-400 mt-1">All clear!</p>
-                </div>
-              )}
-            </div>
-          </div>,
-          document.body
-        )}
+      {/* Alerts portal — shared across all layouts */}
+      {alertsPortal}
 
       <style>{`
         @keyframes pulse {

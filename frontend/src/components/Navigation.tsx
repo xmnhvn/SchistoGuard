@@ -134,6 +134,26 @@ export function NavigationHeader({
   onNavigate?: (view: string) => void;
 }) {
   const [showProfile, setShowProfile] = useState(false);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setIsAlertsOpen(detail?.open ?? false);
+    };
+    window.addEventListener("alertsDropdownStateChanged", handler);
+    return () => window.removeEventListener("alertsDropdownStateChanged", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setUnreadCount(detail?.count ?? 0);
+    };
+    window.addEventListener("alertsUnreadCount", handler);
+    return () => window.removeEventListener("alertsUnreadCount", handler);
+  }, []);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const getPageTitle = (view?: string) => {
@@ -219,6 +239,7 @@ export function NavigationHeader({
       {/* Right: bell + avatar */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
+          data-alerts-bell="true"
           onClick={() => window.dispatchEvent(new CustomEvent("openAlertsDropdown"))}
           style={{
             background: "none",
@@ -230,7 +251,37 @@ export function NavigationHeader({
             justifyContent: "center",
           }}
         >
-          <img src="/icons/icon-nav-alertstream.svg" alt="Alerts" style={{ width: 22, height: 22, objectFit: "contain" }} />
+          <div style={{ position: "relative", width: 22, height: 22 }}>
+            <div
+              title="Alerts"
+              style={{
+                width: 22, height: 22,
+                background: isAlertsOpen
+                  ? "linear-gradient(to bottom, #357D86, #036366)"
+                  : "#9ca3af",
+                WebkitMaskImage: "url('/icons/icon-nav-alertstream.svg')",
+                maskImage: "url('/icons/icon-nav-alertstream.svg')",
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                transition: "background 0.2s",
+              }}
+            />
+            {unreadCount > 0 && (
+              <span style={{
+                position: "absolute",
+                top: 0, right: 0,
+                width: 8, height: 8,
+                borderRadius: "50%",
+                background: "#ef4444",
+                border: "1.5px solid #fff",
+                display: "block",
+              }} />
+            )}
+          </div>
         </button>
 
         <Dialog open={showProfile} onOpenChange={setShowProfile}>
