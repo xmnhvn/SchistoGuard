@@ -427,6 +427,7 @@ export function Dashboard({
               background: "rgba(255,255,255,0.92)", borderRadius: 999,
               padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
               boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
+              border: "2px solid #22c55e",
             }}>
               <span style={{
                 width: 8, height: 8, borderRadius: "50%",
@@ -692,6 +693,7 @@ export function Dashboard({
               background: "rgba(255,255,255,0.92)", borderRadius: 999,
               padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#15803d",
               boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
+              border: "2px solid #22c55e",
             }}>
               <span style={{
                 width: 9, height: 9, borderRadius: "50%",
@@ -1106,6 +1108,7 @@ export function Dashboard({
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           backdropFilter: "blur(4px)",
           zIndex: 3,
+          border: "2px solid #22c55e",
         }}
       >
         <span
