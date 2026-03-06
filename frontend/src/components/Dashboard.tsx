@@ -40,7 +40,7 @@ export function Dashboard({
     const check = () => {
       const w = window.innerWidth;
       setIsMobile(w < 600);
-      setIsTablet(w >= 600 && w < 1024);
+      setIsTablet(w >= 600 && w < 1100); // tablets, iPads, Nest Hub, iPad Pro
     };
     check();
     window.addEventListener("resize", check);
@@ -354,47 +354,15 @@ export function Dashboard({
   }
 
   // ─── Mobile layout ───────────────────────────────────────────────────────
-  if (viewMode === "full" && isMobile) {
+  if (viewMode === "full" && (isMobile || isTablet)) {
+    const isTab = isTablet;
     return (
       /* Outer: full viewport height, map fills background, content scrolls on top */
       <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
 
-        {/* ── MAP BACKGROUND — fixed behind everything ── */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(135deg, #e8f4f6 0%, #c8e6ea 40%, #d4ecd0 100%)",
-          zIndex: 0,
-        }}>
-          {/* Grid lines */}
-          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.20 }}
-            xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="mgrid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#357D86" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#mgrid)" />
-          </svg>
-          {/* Teal gradient — strong top-left, fades to transparent bottom-right */}
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(to bottom right, rgba(53,125,134,0.82) 0%, rgba(53,125,134,0.35) 35%, rgba(152,244,255,0) 65%)",
-            pointerEvents: "none",
-          }} />
-          {/* Map pin — upper-right quadrant, always visible above cards */}
-          <div style={{
-            position: "absolute", top: "22%", left: "68%",
-            transform: "translate(-50%, -50%)",
-          }}>
-            <div style={{ position: "relative", width: 80, height: 80 }}>
-              <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
-                background: "rgba(53,125,134,0.13)", animation: "pulse 2s infinite" }} />
-              <div style={{ position: "absolute", inset: 13, borderRadius: "50%",
-                background: "rgba(53,125,134,0.22)" }} />
-              <div style={{ position: "absolute", inset: 26, borderRadius: "50%",
-                background: "#357D86" }} />
-            </div>
-          </div>
+        {/* ── MAP BACKGROUND — real MapLibre map ── */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+          <DashboardMap />
         </div>
 
         {/* ── SCROLLABLE CONTENT LAYER ── */}
@@ -409,15 +377,15 @@ export function Dashboard({
         } as React.CSSProperties}>
 
           {/* ── HERO SECTION: site info ── transparent so map shows through */}
-          <div style={{ padding: "22px 18px 0 18px", flexShrink: 0 }}>
+          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0 }}>
             {/* Site name */}
-            <h1 style={{ fontSize: 24, fontWeight: 700, color: "#fff", margin: 0,
+            <h1 style={{ fontSize: isTab ? 32 : 24, fontWeight: 700, color: "#fff", margin: 0,
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)" }}>
               {siteData.siteName}
             </h1>
             {/* Address */}
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", margin: "5px 0 10px",
+            <p style={{ fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", margin: "5px 0 10px",
               fontFamily: POPPINS }}>
               {siteData.area} • {siteData.barangay}, {siteData.municipality}
             </p>
@@ -427,7 +395,6 @@ export function Dashboard({
               background: "rgba(255,255,255,0.92)", borderRadius: 999,
               padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
               boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
-              border: "2px solid #22c55e",
             }}>
               <span style={{
                 width: 8, height: 8, borderRadius: "50%",
@@ -441,19 +408,19 @@ export function Dashboard({
           </div>
 
           {/* spacer — gives map pin circle breathing room above cards */}
-          <div style={{ height: 160, flexShrink: 0 }} />
+          <div style={{ height: isTab ? 220 : 160, flexShrink: 0 }} />
 
           {/* ── CARDS — float directly on the map, no solid section bg ── */}
-          <div style={{ padding: "0 14px 32px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ padding: isTab ? "0 20px 36px" : "0 14px 32px", display: "flex", flexDirection: "column", gap: isTab ? 18 : 16 }}>
 
-            {/* 2×2 sensor grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            {/* 3-col on tablet, 2x2 on mobile */}
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 18 : 16 }}>
               {/* Temperature */}
               <div style={{
                 background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                padding: isTab ? "20px 20px 18px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                 position: "relative", display: "flex", flexDirection: "column",
-                minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                minHeight: isTab ? 190 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
               }}>
                 <span style={{
                   position: "absolute", top: 14, right: 14,
@@ -464,13 +431,13 @@ export function Dashboard({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
                 } as React.CSSProperties} />
                 <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Temperature</p>
+                  style={{ width: isTab ? 42 : 36, height: isTab ? 42 : 36, objectFit: "contain", marginBottom: 8 }} />
+                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: isTab ? 15 : 13, color: "#77ABB2" }}>Temperature</p>
                 <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                  <span style={{ fontWeight: 700, fontSize: isTab ? 30 : 26, color: "#6b7280" }}>
                     {latestReading ? latestReading.temperature : "—"}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: isTab ? 16 : 14, color: "#6b7280" }}> °C</span>}
                 </p>
                 {latestReading && (
                   <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
@@ -482,9 +449,9 @@ export function Dashboard({
               {/* Turbidity */}
               <div style={{
                 background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                padding: isTab ? "20px 20px 18px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                 position: "relative", display: "flex", flexDirection: "column",
-                minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                minHeight: isTab ? 190 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
               }}>
                 <span style={{
                   position: "absolute", top: 14, right: 14,
@@ -495,13 +462,13 @@ export function Dashboard({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
                 } as React.CSSProperties} />
                 <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Turbidity</p>
+                  style={{ width: isTab ? 42 : 36, height: isTab ? 42 : 36, objectFit: "contain", marginBottom: 8 }} />
+                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: isTab ? 15 : 13, color: "#77ABB2" }}>Turbidity</p>
                 <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                  <span style={{ fontWeight: 700, fontSize: isTab ? 30 : 26, color: "#6b7280" }}>
                     {latestReading ? latestReading.turbidity : "—"}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: isTab ? 16 : 14, color: "#6b7280" }}> NTU</span>}
                 </p>
                 {latestReading && (
                   <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
@@ -513,9 +480,9 @@ export function Dashboard({
               {/* pH */}
               <div style={{
                 background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                padding: isTab ? "20px 20px 18px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                 position: "relative", display: "flex", flexDirection: "column",
-                minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                minHeight: isTab ? 190 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
               }}>
                 <span style={{
                   position: "absolute", top: 14, right: 14,
@@ -526,10 +493,10 @@ export function Dashboard({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
                 } as React.CSSProperties} />
                 <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>pH Level</p>
+                  style={{ width: isTab ? 42 : 36, height: isTab ? 42 : 36, objectFit: "contain", marginBottom: 8 }} />
+                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: isTab ? 15 : 13, color: "#77ABB2" }}>pH Level</p>
                 <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                  <span style={{ fontWeight: 700, fontSize: isTab ? 30 : 26, color: "#6b7280" }}>
                     {latestReading ? latestReading.ph : "—"}
                   </span>
                 </p>
@@ -540,7 +507,8 @@ export function Dashboard({
                 )}
               </div>
 
-              {/* Total Parameter Readings */}
+              {/* Total Parameter Readings — hidden on tablet (moved to bottom row) */}
+              {!isTab && (
               <div style={{
                 background: "rgba(255,255,255,0.96)", borderRadius: 20,
                 padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
@@ -563,9 +531,51 @@ export function Dashboard({
                     style={{ width: 34, height: 34, objectFit: "contain" }} />
                 </div>
               </div>
+              )}
             </div>
 
-            {/* Risk Level + Active Alerts */}
+            {/* Tablet bottom row: Total Readings + Risk/Alerts side by side */}
+            {isTab && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+                {/* Total Parameter Readings */}
+                <div style={{ background: "rgba(255,255,255,0.96)", borderRadius: 22, padding: "22px 22px 20px",
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.11)", display: "flex",
+                  flexDirection: "column", justifyContent: "space-between", fontFamily: POPPINS }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: "#337C85", lineHeight: 1.3 }}>Total Parameter Readings</p>
+                    <p style={{ margin: "6px 0 0", color: "#9ca3af", fontSize: 12, lineHeight: 1.4 }}>Total readings (5 min interval, last 24 hours)</p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14 }}>
+                    <span style={{ fontSize: 52, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>{readings.length}</span>
+                    <img src="/icons/icon-readings.svg" alt="readings" style={{ width: 46, height: 46, objectFit: "contain" }} />
+                  </div>
+                </div>
+                {/* Risk Level + Active Alerts */}
+                <div style={{ background: "rgba(255,255,255,0.96)", borderRadius: 22, padding: "22px 20px",
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.11)", display: "flex", alignItems: "stretch", gap: 14 }}>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 18, color: "#337C85", fontFamily: POPPINS }}>Risk Level</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                      <img src="/icons/icon-risk.svg" alt="risk" style={{ width: 36, height: 36, objectFit: "contain" }} />
+                      <span style={{ background: "#3d3d3d", color: "#fff", borderRadius: 999,
+                        padding: "6px 18px", fontWeight: 700, fontSize: 14, fontFamily: POPPINS, textTransform: "capitalize" as const }}>
+                        {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12, color: "#9ca3af", fontFamily: POPPINS }}>Based on temperature, turbidity, and pH</p>
+                  </div>
+                  <div style={{ flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
+                    borderRadius: 18, padding: "18px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#fff", textAlign: "center", fontFamily: POPPINS }}>Active Alerts</p>
+                    <p style={{ margin: 0, fontSize: 52, fontWeight: 700, color: "#fff", lineHeight: 1, fontFamily: POPPINS }}>{unacknowledgedAlerts}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Risk Level + Active Alerts — mobile only (tablet has it in the 2-col row above) */}
+            {!isTab && (
             <div style={{
               background: "rgba(255,255,255,0.96)", borderRadius: 24,
               padding: "20px 18px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
@@ -604,6 +614,7 @@ export function Dashboard({
                   lineHeight: 1, fontFamily: POPPINS }}>{unacknowledgedAlerts}</p>
               </div>
             </div>
+            )}
           </div>
         </div>
 
@@ -623,248 +634,6 @@ export function Dashboard({
     );
   }
 
-  // ─── Tablet layout (768–1023 px) — full-screen floating map ─────────────
-  if (viewMode === "full" && isTablet) {
-    return (
-      <div style={{ position: "relative", height: "calc(100vh - 64px)", overflow: "hidden" }}>
-
-        {/* MAP BACKGROUND */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(135deg, #e8f4f6 0%, #c8e6ea 40%, #d4ecd0 100%)",
-          zIndex: 0,
-        }}>
-          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.20 }}
-            xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="tgrid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#357D86" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#tgrid)" />
-          </svg>
-          {/* Teal gradient overlay — strong top-left, fades to transparent */}
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(to bottom right, rgba(53,125,134,0.82) 0%, rgba(53,125,134,0.30) 30%, rgba(152,244,255,0) 60%)",
-            pointerEvents: "none",
-          }} />
-          {/* Map pin — right side, upper area */}
-          <div style={{
-            position: "absolute", top: "32%", left: "72%",
-            transform: "translate(-50%, -50%)",
-          }}>
-            <div style={{ position: "relative", width: 100, height: 100 }}>
-              <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
-                background: "rgba(53,125,134,0.13)", animation: "pulse 2s infinite" }} />
-              <div style={{ position: "absolute", inset: 16, borderRadius: "50%",
-                background: "rgba(53,125,134,0.22)" }} />
-              <div style={{ position: "absolute", inset: 32, borderRadius: "50%",
-                background: "#357D86" }} />
-            </div>
-          </div>
-        </div>
-
-        {/* SCROLLABLE CONTENT LAYER */}
-        <div style={{
-          position: "absolute", inset: 0,
-          overflowY: "auto",
-          zIndex: 2,
-          display: "flex",
-          flexDirection: "column",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        } as React.CSSProperties}>
-
-          {/* Hero */}
-          <div style={{ padding: "28px 28px 0 28px", flexShrink: 0 }}>
-            <h1 style={{ fontSize: 30, fontWeight: 700, color: "#fff", margin: 0,
-              fontFamily: POPPINS, lineHeight: 1.2,
-              textShadow: "0 1px 6px rgba(0,0,0,0.18)" }}>
-              {siteData.siteName}
-            </h1>
-            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.9)", margin: "6px 0 12px",
-              fontFamily: POPPINS }}>
-              {siteData.area} • {siteData.barangay}, {siteData.municipality}
-            </p>
-            {/* System Operational badge */}
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 7,
-              background: "rgba(255,255,255,0.92)", borderRadius: 999,
-              padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#15803d",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
-              border: "2px solid #22c55e",
-            }}>
-              <span style={{
-                width: 9, height: 9, borderRadius: "50%",
-                background: (backendOk && dataOk) ? "#22c55e" : "#9ca3af",
-                display: "inline-block",
-                animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
-                "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
-              } as React.CSSProperties} />
-              {(backendOk && dataOk) ? "System Operational" : "System Down"}
-            </div>
-          </div>
-
-          {/* Spacer — lets map pin breathe above cards */}
-          <div style={{ height: 180, flexShrink: 0 }} />
-
-          {/* CARDS — float on the map */}
-          <div style={{ padding: "0 20px 40px", display: "flex", flexDirection: "column", gap: 18 }}>
-
-            {/* 2×2 sensor grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-
-              {/* Temperature */}
-              <div style={{
-                background: "rgba(255,255,255,0.97)", borderRadius: 22,
-                padding: "20px 20px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-                position: "relative", display: "flex", flexDirection: "column",
-                minHeight: 180, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <span style={{
-                  position: "absolute", top: 16, right: 16, width: 10, height: 10, borderRadius: "50%",
-                  background: latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af",
-                  display: "inline-block",
-                  animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
-                } as React.CSSProperties} />
-                <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 10 }} />
-                <p style={{ margin: "0 0 5px", fontWeight: 500, fontSize: 14, color: "#77ABB2" }}>Temperature</p>
-                <p style={{ margin: "0 0 5px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 28, color: "#6b7280" }}>{latestReading ? latestReading.temperature : "—"}</span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
-                </p>
-                {latestReading && <p style={{ margin: 0, fontSize: 12, color: "#8E8B8B", lineHeight: 1.3 }}>{getSensorStatus("temperature", latestReading.temperature).label}</p>}
-              </div>
-
-              {/* Turbidity */}
-              <div style={{
-                background: "rgba(255,255,255,0.97)", borderRadius: 22,
-                padding: "20px 20px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-                position: "relative", display: "flex", flexDirection: "column",
-                minHeight: 180, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <span style={{
-                  position: "absolute", top: 16, right: 16, width: 10, height: 10, borderRadius: "50%",
-                  background: latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af",
-                  display: "inline-block",
-                  animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
-                } as React.CSSProperties} />
-                <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 10 }} />
-                <p style={{ margin: "0 0 5px", fontWeight: 500, fontSize: 14, color: "#77ABB2" }}>Turbidity</p>
-                <p style={{ margin: "0 0 5px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 28, color: "#6b7280" }}>{latestReading ? latestReading.turbidity : "—"}</span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
-                </p>
-                {latestReading && <p style={{ margin: 0, fontSize: 12, color: "#8E8B8B", lineHeight: 1.3 }}>{getSensorStatus("turbidity", latestReading.turbidity).label}</p>}
-              </div>
-
-              {/* pH */}
-              <div style={{
-                background: "rgba(255,255,255,0.97)", borderRadius: 22,
-                padding: "20px 20px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-                position: "relative", display: "flex", flexDirection: "column",
-                minHeight: 180, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <span style={{
-                  position: "absolute", top: 16, right: 16, width: 10, height: 10, borderRadius: "50%",
-                  background: latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af",
-                  display: "inline-block",
-                  animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
-                } as React.CSSProperties} />
-                <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 10 }} />
-                <p style={{ margin: "0 0 5px", fontWeight: 500, fontSize: 14, color: "#77ABB2" }}>pH Level</p>
-                <p style={{ margin: "0 0 5px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 28, color: "#6b7280" }}>{latestReading ? latestReading.ph : "—"}</span>
-                </p>
-                {latestReading && <p style={{ margin: 0, fontSize: 12, color: "#8E8B8B", lineHeight: 1.3 }}>{getSensorStatus("ph", latestReading.ph).label}</p>}
-              </div>
-
-              {/* Total Parameter Readings */}
-              <div style={{
-                background: "rgba(255,255,255,0.97)", borderRadius: 22,
-                padding: "20px 20px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-                display: "flex", flexDirection: "column", justifyContent: "space-between",
-                minHeight: 180, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 16, color: "#337C85", lineHeight: 1.3 }}>
-                    Total Parameter Readings
-                  </p>
-                  <p style={{ margin: "6px 0 0", color: "#9ca3af", fontSize: 12, lineHeight: 1.4 }}>
-                    Total readings (5 min interval, last 24 hours)
-                  </p>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
-                    {readings.length}
-                  </span>
-                  <img src="/icons/icon-readings.svg" alt="readings"
-                    style={{ width: 38, height: 38, objectFit: "contain" }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Risk Level + Active Alerts */}
-            <div style={{
-              background: "rgba(255,255,255,0.97)", borderRadius: 24,
-              padding: "22px 22px 18px", boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-              display: "flex", alignItems: "stretch", gap: 16,
-            }}>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 22,
-                  color: "#337C85", fontFamily: POPPINS }}>Risk Level</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
-                  <img src="/icons/icon-risk.svg" alt="risk"
-                    style={{ width: 36, height: 36, objectFit: "contain" }} />
-                  <span style={{
-                    background: "#3d3d3d", color: "#fff", borderRadius: 999,
-                    padding: "6px 20px", fontWeight: 700, fontSize: 14,
-                    fontFamily: POPPINS, textTransform: "capitalize" as const,
-                  }}>
-                    {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
-                  </span>
-                </div>
-                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af", fontFamily: POPPINS }}>
-                  Based on temperature, turbidity, and pH
-                </p>
-              </div>
-              <div style={{
-                flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
-                borderRadius: 18, padding: "20px 14px",
-                display: "flex", flexDirection: "column", alignItems: "center",
-                justifyContent: "center", gap: 8,
-              }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#fff",
-                  textAlign: "center", fontFamily: POPPINS }}>Active Alerts</p>
-                <p style={{ margin: 0, fontSize: 52, fontWeight: 700, color: "#fff",
-                  lineHeight: 1, fontFamily: POPPINS }}>{unacknowledgedAlerts}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {alertsPortal}
-        <style>{`
-          @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.15); opacity: 0.7; }
-          }
-          @keyframes dotPulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
-            60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
-          }
-          *::-webkit-scrollbar { display: none; }
-        `}</style>
-      </div>
-    );
-  }
 
   // ─── Full dashboard ──────────────────────────────────────────────────────
   return (
@@ -893,7 +662,7 @@ export function Dashboard({
           background: "transparent",
           display: "flex",
           flexDirection: "column",
-          padding: "clamp(20px, 4vw, 50px)",
+          padding: "50px 50px 50px 50px",
           overflowY: "auto",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
@@ -903,7 +672,7 @@ export function Dashboard({
         {/* Site header */}
         <div style={{ marginBottom: 24 }}>
           <h1 style={{
-            fontSize: "clamp(20px, 3vw, 38px)",
+            fontSize: 38,
             fontWeight: 700,
             color: "#fff",
             margin: 0,
@@ -914,7 +683,7 @@ export function Dashboard({
           </h1>
           <p style={{
             color: "rgba(255,255,255,0.9)",
-            fontSize: "clamp(12px, 1.3vw, 16px)",
+            fontSize: 16,
             margin: "6px 0 0 0",
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 400,
@@ -1071,23 +840,17 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* ── MAP LAYER — full background, interactive ── */}
+      {/* ── MAP LAYER — real MapLibre map ── */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(135deg, #e8f4f6 0%, #c8e6ea 40%, #d4ecd0 100%)",
           overflow: "hidden",
           zIndex: 0,
           pointerEvents: "auto",
-          touchAction: "pan-x pan-y",
         }}
       >
-        {/* Leaflet Map */}
-        <DashboardMap sites={[
-          { id: 'site-1', name: siteData.siteName || "Mang Jose's Fish Pond", lat: 11.2447, lng: 125.0041 }
-        ]} />
-
+        <DashboardMap />
       </div>
 
       {/* System Operational badge — top right, above gradient */}
@@ -1108,7 +871,6 @@ export function Dashboard({
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           backdropFilter: "blur(4px)",
           zIndex: 3,
-          border: "2px solid #22c55e",
         }}
       >
         <span
@@ -1126,23 +888,6 @@ export function Dashboard({
         {(backendOk && dataOk) ? "System Operational" : "System Down"}
       </div>
 
-      {/* Map attribution placeholder — above gradient */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 12,
-          right: 12,
-          fontSize: 11,
-          color: "#9ca3af",
-          background: "rgba(255,255,255,0.7)",
-          borderRadius: 4,
-          padding: "2px 8px",
-          zIndex: 3,
-        }}
-      >
-        Map placeholder — Google Maps API
-      </div>
-
       {/* Alerts portal — shared across all layouts */}
       {alertsPortal}
 
@@ -1155,6 +900,7 @@ export function Dashboard({
           0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
           60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
         }
+        *::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );
