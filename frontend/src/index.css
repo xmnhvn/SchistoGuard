@@ -625,6 +625,19 @@ body::-webkit-scrollbar {
   }
 }
 
+/* ── Map Marker Pulse Animation ──────────────────────── */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(125, 211, 192, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(125, 211, 192, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(125, 211, 192, 0);
+  }
+}
+
 @layer utilities {
   .\@container\/card-header {
     container: card-header / inline-size;
@@ -3659,6 +3672,16 @@ body::-webkit-scrollbar {
     .md\:flex {
       display: flex;
     }
+  }
+
+  /* ── Map Marker Styles ──────────────────────────────── */
+  .pulse-marker {
+    animation: pulse 2s infinite;
+  }
+
+  .pulse-marker:hover {
+    cursor: pointer;
+    filter: brightness(1.1);
   }
 
   @media (width >=48rem) {
