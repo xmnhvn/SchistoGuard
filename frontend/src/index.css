@@ -110,6 +110,7 @@ html,
 body {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  font-family: 'Poppins', sans-serif;
 }
 
 html::-webkit-scrollbar,
