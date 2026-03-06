@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import SensorCard from "./SensorCard";
 import { AlertItem } from "./AlertItem";
+import { DashboardMap } from "./DashboardMap";
 import {
   Bell,
   Asterisk,
@@ -831,87 +832,16 @@ export function Dashboard({
           position: "absolute",
           inset: 0,
           background: "linear-gradient(135deg, #e8f4f6 0%, #c8e6ea 40%, #d4ecd0 100%)",
-          overflow: "auto",
+          overflow: "hidden",
           zIndex: 0,
           pointerEvents: "auto",
           touchAction: "pan-x pan-y",
         }}
       >
-        {/* Placeholder map grid lines */}
-        <svg
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.18 }}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#357D86" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-
-        {/* Map pin marker — centered in the right (map) portion of the screen */}
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "72%",
-            transform: "translate(-50%, -50%)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          {/* Pulse ring */}
-          <div style={{ position: "relative", width: 80, height: 80 }}>
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: "50%",
-                background: "rgba(53,125,134,0.15)",
-                animation: "pulse 2s infinite",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                inset: 12,
-                borderRadius: "50%",
-                background: "rgba(53,125,134,0.25)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                inset: 24,
-                borderRadius: "50%",
-                background: "#357D86",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontSize: 14,
-              }}
-            >
-
-            </div>
-          </div>
-          <span
-            style={{
-              marginTop: 8,
-              background: "rgba(255,255,255,0.85)",
-              borderRadius: 8,
-              padding: "4px 12px",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#357D86",
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            {siteData.siteName}
-          </span>
-        </div>
+        {/* Leaflet Map */}
+        <DashboardMap sites={[
+          { id: 'site-1', name: siteData.siteName || "Mang Jose's Fish Pond", lat: 11.2447, lng: 125.0041 }
+        ]} />
 
       </div>
 
@@ -979,7 +909,6 @@ export function Dashboard({
           0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
           60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
         }
-        *::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );
