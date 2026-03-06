@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Dialog, DialogContent } from "./ui/dialog";
 import { UserProfileDetails } from "./UserProfileDetails";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { apiCall } from "../utils/api";
 
 interface NavigationProps {
@@ -54,7 +54,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user }: Navigati
       <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div
           style={{
-            width: 24,
+            width:17,
             height: 24,
             background: "linear-gradient(to bottom, #357D86, #036366)",
             WebkitMaskImage: "url('/icons/icon-nav-menu.svg')",
@@ -150,6 +150,15 @@ export function NavigationHeader({
   };
 
   const pageInfo = getPageTitle(currentView);
+
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => {
+    const check = () => setIsPhone(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const initials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
     : "U";
@@ -180,21 +189,32 @@ export function NavigationHeader({
         zIndex: 40,
       }}
     >
-      {/* Left: page title only (hamburger is in sidebar) */}
+      {/* Left slot */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: 15, lineHeight: 1.2 }}>{pageInfo.title}</span>
-          <span style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.2 }}>{pageInfo.subtitle}</span>
-        </div>
+        {isPhone ? (
+          /* Phone: logo on left */
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 26, height: 26, objectFit: "contain" }} />
+            <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 17, color: "#357D86" }}>SchistoGuard</span>
+          </div>
+        ) : (
+          /* Tablet / Desktop: page title only */
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: 15, lineHeight: 1.2 }}>{pageInfo.title}</span>
+            <span style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.2 }}>{pageInfo.subtitle}</span>
+          </div>
+        )}
       </div>
 
-      {/* Center: logo + brand */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
-        <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 28, height: 28, objectFit: "contain" }} />
-        <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 18, color: "#357D86" }}>
-          SchistoGuard
-        </span>
-      </div>
+      {/* Center logo — tablet/desktop only, hidden on phone */}
+      {!isPhone && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+          <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 28, height: 28, objectFit: "contain" }} />
+          <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 18, color: "#357D86" }}>
+            SchistoGuard
+          </span>
+        </div>
+      )}
 
       {/* Right: bell + avatar */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
