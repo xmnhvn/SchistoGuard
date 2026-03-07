@@ -113,6 +113,26 @@ if (DB_TYPE === 'postgres') {
         )
       `);
       
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS reports (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          type TEXT NOT NULL,
+          period TEXT NOT NULL,
+          "startDate" TEXT NOT NULL,
+          "endDate" TEXT NOT NULL,
+          "generatedDate" TEXT NOT NULL,
+          "generatedBy" INTEGER,
+          "totalSites" INTEGER,
+          "alertsGenerated" INTEGER,
+          "avgTurbidity" REAL,
+          "avgTemperature" REAL,
+          "avgPh" REAL,
+          "riskLevel" TEXT,
+          "downloadUrl" TEXT
+        )
+      `);
+      
       console.log('✓ PostgreSQL tables initialized');
     } catch (err) {
       console.error('Error initializing tables:', err);
@@ -241,6 +261,24 @@ if (DB_TYPE === 'postgres') {
       role TEXT DEFAULT 'resident',
       verified INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL,
+      period TEXT NOT NULL,
+      startDate TEXT NOT NULL,
+      endDate TEXT NOT NULL,
+      generatedDate TEXT NOT NULL,
+      generatedBy INTEGER,
+      totalSites INTEGER,
+      alertsGenerated INTEGER,
+      avgTurbidity REAL,
+      avgTemperature REAL,
+      avgPh REAL,
+      riskLevel TEXT,
+      downloadUrl TEXT
     )`);
 
     // Migration: Add missing columns to residents table if they don't exist

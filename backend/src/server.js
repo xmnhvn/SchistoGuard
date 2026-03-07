@@ -105,6 +105,9 @@ app.use("/api/auth", require("./routes/auth"));
 // Sensors routes
 app.use("/api/sensors", require("./routes/sensors"));
 
+// Reports routes
+app.use("/api/reports", require("./routes/reports"));
+
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
   console.log(`Environment: ${NODE_ENV}`);
