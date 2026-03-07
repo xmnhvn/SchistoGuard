@@ -15,7 +15,7 @@ import { apiGet } from "../utils/api";
 
 const POPPINS = "'Poppins', sans-serif";
 
-
+let _alertsFirstLoadDone = false;
 
 export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void }) {
       // Replace this with your actual user context or authentication logic
@@ -34,6 +34,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
       });
     }
   const [alerts, setAlerts] = useState<any[]>([]);
+  const animate = !_alertsFirstLoadDone;
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -51,6 +52,9 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         .then((data) => {
           if (Array.isArray(data)) {
             setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));
+            if (!_alertsFirstLoadDone) {
+              setTimeout(() => { _alertsFirstLoadDone = true; }, 50);
+            }
           }
         })
         .catch(() => {});
@@ -136,6 +140,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         alignItems: (isMobile || isTablet) ? "flex-start" : "center",
         gap: 16,
         marginBottom: 24,
+        animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div>
           <h1 style={{
@@ -211,6 +216,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
         gap: 16,
         marginBottom: 24,
+        animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <StatCard icon={<Bell size={22} color="#357D86" />} label="Total Alerts" value={String(alerts.length)} valueColor="#357D86" sub="All alerts (history)" />
         <StatCard icon={<AlertTriangle size={22} color="#eab308" />} label="Unacknowledged" value={String(unacknowledgedCount)} valueColor="#a16207" sub="Require attention" />
@@ -228,6 +234,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
+        animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div style={{
           padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",
@@ -262,8 +269,11 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {filteredAlerts.length > 0 ? (
-              filteredAlerts.map((alert) => (
-                <Dialog key={alert.id}>
+              filteredAlerts.map((alert, index) => (
+                <div key={alert.id} style={{
+                  animation: animate ? `cardDataFadeIn 0.6s ${0.35 + index * 0.07}s cubic-bezier(0.22,1,0.36,1) both` : "none",
+                }}>
+                <Dialog>
                   <AlertItem
                     {...alert}
                     onAcknowledge={handleAcknowledgeAlert}
@@ -390,6 +400,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
                     )}
                   </DialogContent>
                 </Dialog>
+                </div>
               ))
             ) : (
               <div style={{ textAlign: "center", padding: "40px 20px", color: "#8E8B8B" }}>
@@ -404,6 +415,14 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
 
       <style>{`
         *::-webkit-scrollbar { display: none; }
+        @keyframes contentSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes cardDataFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes mobileAlertListIn {
           from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }

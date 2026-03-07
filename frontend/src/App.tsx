@@ -237,7 +237,9 @@ export default function App() {
         <div style={{ display: currentView === 'dashboard' ? 'contents' : 'none' }}>
           <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} />
         </div>
-        {currentView === 'alerts' && <AlertsPage onNavigate={handleNavigate} />}
+        <div style={{ display: currentView === 'alerts' ? 'contents' : 'none' }}>
+          <AlertsPage onNavigate={handleNavigate} />
+        </div>
         {currentView === 'reports' && <ReportsPage />}
         {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}
         {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (

@@ -555,7 +555,7 @@ export function Dashboard({
         } as React.CSSProperties}>
 
           {/* ── HERO SECTION: site info ── transparent so map shows through */}
-          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto", animation: animate ? "contentSlideIn 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto", animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
             {/* Site name */}
             <h1 style={{
               fontSize: isTab ? 32 : 24, fontWeight: 700, color: "#fff", margin: 0,
@@ -612,7 +612,7 @@ export function Dashboard({
           <div style={{ padding: isTab ? "0 28px 28px" : "0 14px 20px", display: "flex", flexDirection: "column", gap: isTab ? 16 : 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: animate ? "contentSlideIn 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
               {/* Temperature — tablet uses the same SensorMiniCard as desktop */}
               {isTab ? (
                 <SensorMiniCard
@@ -644,7 +644,7 @@ export function Dashboard({
                   <img src="/icons/icon-temperature.svg" alt="temp"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
                   <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Temperature</p>
-                  <div style={{ animation: animate ? 'cardDataFadeIn 0.6s ease both' : undefined }}>
+                  <div style={{ animation: animate ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.temperature : "—"}
@@ -691,7 +691,7 @@ export function Dashboard({
                   <img src="/icons/icon-turbidity.svg" alt="turbidity"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
                   <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Turbidity</p>
-                  <div style={{ animation: animate ? 'cardDataFadeIn 0.6s 0.1s ease both' : undefined }}>
+                  <div style={{ animation: animate ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.turbidity : "—"}
@@ -738,7 +738,7 @@ export function Dashboard({
                   <img src="/icons/icon-ph.svg" alt="ph"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
                   <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>pH Level</p>
-                  <div style={{ animation: animate ? 'cardDataFadeIn 0.6s 0.2s ease both' : undefined }}>
+                  <div style={{ animation: animate ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.ph : "—"}
@@ -790,7 +790,7 @@ export function Dashboard({
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   fontFamily: POPPINS,
-                  animation: animate ? "contentSlideIn 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both" : "none",
+                  animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div>
                     <p style={{ margin: 0, fontWeight: 700, fontSize: 20, color: "#337C85", lineHeight: 1.3 }}>
@@ -813,7 +813,7 @@ export function Dashboard({
                   padding: "20px 22px",
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "stretch", gap: 14,
-                  animation: animate ? "contentSlideIn 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+                  animation: animate ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                     <p style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 20, color: "#337C85", fontFamily: POPPINS }}>
@@ -857,7 +857,7 @@ export function Dashboard({
                 background: "rgba(255,255,255,0.96)", borderRadius: 24,
                 padding: "20px 18px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                 display: "flex", alignItems: "stretch", gap: 14,
-                animation: animate ? "contentSlideIn 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+                animation: animate ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
               }}>
                 {/* Risk Level */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
@@ -967,7 +967,7 @@ export function Dashboard({
         } as React.CSSProperties}
       >
         {/* Site header */}
-        <div style={{ marginBottom: 24, animation: animate ? "contentSlideIn 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ marginBottom: 24, animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           <h1 style={{
             fontSize: 38,
             fontWeight: 700,
@@ -990,7 +990,7 @@ export function Dashboard({
         </div>
 
         {/* ── 3 Sensor mini-cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16, marginBottom: 30, animation: animate ? "contentSlideIn 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16, marginBottom: 30, animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           {/* Temperature */}
           <SensorMiniCard
             label="Temperature"
@@ -1037,7 +1037,7 @@ export function Dashboard({
             justifyContent: "space-between",
             marginBottom: 30,
             boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-            animation: animate ? "contentSlideIn 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both" : "none",
+            animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
           }}
         >
           <div>
@@ -1066,7 +1066,7 @@ export function Dashboard({
             display: "flex",
             alignItems: "stretch",
             gap: 16,
-            animation: animate ? "contentSlideIn 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+            animation: animate ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
           }}
         >
           {/* LEFT: Risk Level */}
@@ -1376,7 +1376,7 @@ function SensorMiniCard({
       </p>
 
       {/* Value + Unit + Sub — fade in on first data load */}
-      <div style={{ animation: fadeIn ? 'cardDataFadeIn 0.6s ease both' : undefined }}>
+      <div style={{ animation: fadeIn ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
         <p style={{ margin: `0 0 ${valueGap}px`, lineHeight: 1.2, display: "flex", alignItems: "baseline", gap: 3 }}>
           <span style={{ fontFamily: POPPINS, fontWeight: S.valueWeight, fontSize: valueSize, color: S.valueColor }}>
             {value}
