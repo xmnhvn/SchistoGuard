@@ -1,13 +1,16 @@
 const axios = require('axios');
+require('dotenv').config();
 
 // ESP32 connection settings - mDNS hostname with IP fallback
-const ESP32_HOSTNAME = 'schistoguard-esp32.local';
-const ESP32_IP_FALLBACK = '192.168.100.168';
-const BACKEND_URL = 'http://localhost:3001/api/sensors';
-const SITE_NAME = process.env.SITE_NAME || "Mang Jose's Fishpond"; // Default site name
+const ESP32_HOSTNAME = process.env.ESP32_HOSTNAME || 'schistoguard-esp32.local';
+const ESP32_IP_FALLBACK = process.env.ESP32_IP_FALLBACK || '192.168.100.168';
+
+// Backend URL - supports both cloud and local
+const BACKEND_URL = process.env.ESP32_BACKEND_URL || 'https://schistoguard-production.up.railway.app/api/sensors';
+const SITE_NAME = process.env.SITE_NAME || "Mang Jose's Fishpond";
 
 // Poll interval in milliseconds (2 seconds)
-const POLL_INTERVAL = 2000;
+const POLL_INTERVAL = parseInt(process.env.ESP32_POLL_INTERVAL) || 2000;
 
 let currentESP32URL = `http://${ESP32_HOSTNAME}/api/sensors`;
 let useHostname = true;

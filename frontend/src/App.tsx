@@ -15,9 +15,7 @@ import { apiGet, apiPost, apiPut } from './utils/api';
 type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings'>(
-    () => localStorage.getItem('currentView') as any || 'landing'
-  );
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings'>('landing');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,28 +51,24 @@ export default function App() {
 
     if (loggedInUser) {
       setUser(loggedInUser);
-      // Navigate to last view from backend
+      // Navigate to last view from backend (cloud storage)
       const lastView = loggedInUser.lastView || 'dashboard';
       if (isViewType(lastView) && lastView !== 'landing' && lastView !== 'login') {
         setCurrentView(lastView);
-        localStorage.setItem('currentView', lastView);
       } else {
         setCurrentView('dashboard');
-        localStorage.setItem('currentView', 'dashboard');
       }
     } else {
       apiGet("/api/auth/session")
         .then(data => {
           if (data?.loggedIn && data?.user) {
             setUser(data.user);
-            // Navigate to last view from backend
+            // Navigate to last view from backend (cloud storage)
             const lastView = data.user.lastView || 'dashboard';
             if (isViewType(lastView) && lastView !== 'landing' && lastView !== 'login') {
               setCurrentView(lastView);
-              localStorage.setItem('currentView', lastView);
             } else {
               setCurrentView('dashboard');
-              localStorage.setItem('currentView', 'dashboard');
             }
           }
         })
@@ -91,15 +85,13 @@ export default function App() {
     setIsAuthenticated(false);
     setUser(null);
     setCurrentView('landing');
-    localStorage.setItem('currentView', 'landing');
   };
 
   const handleNavigate = (view: string) => {
     if (isViewType(view)) {
       setCurrentView(view);
-      localStorage.setItem('currentView', view);
       
-      // Save to backend if authenticated
+      // Save to cloud backend if authenticated
       if (isAuthenticated && user) {
         apiPut("/api/auth/lastview", { lastView: view })
           .catch(err => console.error('Failed to save lastView:', err));
@@ -110,9 +102,8 @@ export default function App() {
   const handleViewSiteDetail = (siteId: string) => {
     setSelectedSiteId(siteId);
     setCurrentView('site-details');
-    localStorage.setItem('currentView', 'site-details');
     
-    // Save to backend if authenticated
+    // Save to cloud backend if authenticated
     if (isAuthenticated && user) {
       apiPut("/api/auth/lastview", { lastView: 'site-details' })
         .catch(err => console.error('Failed to save lastView:', err));
@@ -122,9 +113,8 @@ export default function App() {
   const handleBackFromSiteDetail = () => {
     setCurrentView('sites');
     setSelectedSiteId(null);
-    localStorage.setItem('currentView', 'sites');
     
-    // Save to backend if authenticated
+    // Save to cloud backend if authenticated
     if (isAuthenticated && user) {
       apiPut("/api/auth/lastview", { lastView: 'sites' })
         .catch(err => console.error('Failed to save lastView:', err));
@@ -139,32 +129,20 @@ export default function App() {
         if (data.loggedIn) {
           setIsAuthenticated(true);
           setUser(data.user);
-          // Use lastView from backend (cloud state)
+          // Use lastView from cloud backend
           const lastView = data.user?.lastView || 'dashboard';
           if (isViewType(lastView) && lastView !== 'landing' && lastView !== 'login') {
             setCurrentView(lastView);
-            localStorage.setItem('currentView', lastView);
           } else {
             setCurrentView('dashboard');
-            localStorage.setItem('currentView', 'dashboard');
           }
         } else {
-          // Not logged in - only sensor-info is accessible
-          const lastView = localStorage.getItem('currentView');
-          if (lastView === 'sensor-info') {
-            setCurrentView('sensor-info');
-          } else {
-            setCurrentView('landing');
-          }
-        }
-      } catch {
-        // Error - only sensor-info is accessible
-        const lastView = localStorage.getItem('currentView');
-        if (lastView === 'sensor-info') {
-          setCurrentView('sensor-info');
-        } else {
+          // Not logged in - start at landing page
           setCurrentView('landing');
         }
+      } catch {
+        // Error - start at landing page
+        setCurrentView('landing');
       }
       setLoading(false);
     })();
@@ -178,10 +156,7 @@ export default function App() {
     return (
       <LandingPage
         onViewMap={() => setCurrentView('login')}
-        onLearnMore={() => {
-          setCurrentView('sensor-info');
-          localStorage.setItem('currentView', 'sensor-info');
-        }}
+        onLearnMore={() => setCurrentView('sensor-info')}
         onEnterApp={() => setCurrentView('login')}
       />
     );

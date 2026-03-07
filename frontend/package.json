@@ -61,7 +61,11 @@
             "vite-plugin-pwa": "^1.2.0"
       },
       "scripts": {
-            "dev": "vite",
-            "build": "vite build"
+            "dev": "vite --mode cloud",
+            "dev:cloud": "vite --mode cloud",
+            "dev:local": "vite --mode localdev",
+            "build": "vite build",
+            "build:cloud": "vite build --mode cloud",
+            "build:local": "vite build --mode localdev"
       }
 }
