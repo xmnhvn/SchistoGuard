@@ -35,6 +35,7 @@ export function Dashboard({
   const [alertsDropdownPosition, setAlertsDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const check = () => {
@@ -45,6 +46,14 @@ export function Dashboard({
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setSidebarOpen((e as CustomEvent).detail?.open ?? false);
+    };
+    window.addEventListener("sidebarDrawerChanged", handler);
+    return () => window.removeEventListener("sidebarDrawerChanged", handler);
   }, []);
   const [siteData, setSiteData] = useState<any>({
     siteName: "Mang Jose's Fish Pond",
@@ -362,8 +371,17 @@ export function Dashboard({
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-          <DashboardMap />
+          <DashboardMap mobileMode={true} interactive={isTablet} />
         </div>
+
+        {/* ── GRADIENT OVERLAY — matches desktop: upper-left teal fading to transparent ── */}
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(to bottom right, #357D86 0%, rgba(53,125,134,0.6) 10%, rgba(152,244,255,0) 55%)",
+          zIndex: 1,
+          pointerEvents: "none",
+        }} />
 
         {/* ── SCROLLABLE CONTENT LAYER ── */}
         <div style={{
@@ -374,19 +392,24 @@ export function Dashboard({
           flexDirection: "column",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
+          pointerEvents: isTab ? "none" : "auto",
         } as React.CSSProperties}>
 
           {/* ── HERO SECTION: site info ── transparent so map shows through */}
-          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0 }}>
+          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto", maxWidth: isTab ? "55%" : "100%" }}>
             {/* Site name */}
-            <h1 style={{ fontSize: isTab ? 32 : 24, fontWeight: 700, color: "#fff", margin: 0,
+            <h1 style={{
+              fontSize: isTab ? 32 : 24, fontWeight: 700, color: "#fff", margin: 0,
               fontFamily: POPPINS, lineHeight: 1.2,
-              textShadow: "0 1px 6px rgba(0,0,0,0.18)" }}>
+              textShadow: "0 1px 6px rgba(0,0,0,0.18)"
+            }}>
               {siteData.siteName}
             </h1>
             {/* Address */}
-            <p style={{ fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", margin: "5px 0 10px",
-              fontFamily: POPPINS }}>
+            <p style={{
+              fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", margin: "5px 0 10px",
+              fontFamily: POPPINS
+            }}>
               {siteData.area} • {siteData.barangay}, {siteData.municipality}
             </p>
             {/* System Operational badge — left-aligned, under address */}
@@ -407,213 +430,287 @@ export function Dashboard({
             </div>
           </div>
 
-          {/* spacer — gives map pin circle breathing room above cards */}
-          <div style={{ height: isTab ? 220 : 160, flexShrink: 0 }} />
+          {/* flex spacer — grows to fill remaining space so cards anchor to bottom */}
+          <div style={{ flex: 1, minHeight: isTab ? 40 : 80 }} />
 
-          {/* ── CARDS — float directly on the map, no solid section bg ── */}
-          <div style={{ padding: isTab ? "0 20px 36px" : "0 14px 32px", display: "flex", flexDirection: "column", gap: isTab ? 18 : 16 }}>
+          {/* ── CARDS — anchored to bottom, no solid section bg ── */}
+          <div style={{ padding: isTab ? "0 24px 24px" : "0 14px 20px", display: "flex", flexDirection: "column", gap: isTab ? 14 : 16, pointerEvents: "auto", maxWidth: isTab ? "55%" : "100%" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 18 : 16 }}>
-              {/* Temperature */}
-              <div style={{
-                background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                padding: isTab ? "20px 20px 18px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
-                position: "relative", display: "flex", flexDirection: "column",
-                minHeight: isTab ? 190 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <span style={{
-                  position: "absolute", top: 14, right: 14,
-                  width: 9, height: 9, borderRadius: "50%",
-                  background: latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af",
-                  display: "inline-block",
-                  animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
-                } as React.CSSProperties} />
-                <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: isTab ? 42 : 36, height: isTab ? 42 : 36, objectFit: "contain", marginBottom: 8 }} />
-                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: isTab ? 15 : 13, color: "#77ABB2" }}>Temperature</p>
-                <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: isTab ? 30 : 26, color: "#6b7280" }}>
-                    {latestReading ? latestReading.temperature : "—"}
-                  </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: isTab ? 16 : 14, color: "#6b7280" }}> °C</span>}
-                </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
-                    {getSensorStatus("temperature", latestReading.temperature).label}
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 14 : 16 }}>
+              {/* Temperature — tablet uses the same SensorMiniCard as desktop */}
+              {isTab ? (
+                <SensorMiniCard
+                  label="Temperature"
+                  iconSrc="/icons/icon-temperature.svg"
+                  value={latestReading ? `${latestReading.temperature}` : "—"}
+                  unit="°C"
+                  sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
+                  dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
+                  active={!!latestReading}
+                  compact
+                />
+              ) : (
+                <div style={{
+                  background: "rgba(255,255,255,0.96)", borderRadius: 20,
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  position: "relative", display: "flex", flexDirection: "column",
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                }}>
+                  <span style={{
+                    position: "absolute", top: 14, right: 14,
+                    width: 9, height: 9, borderRadius: "50%",
+                    background: latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af",
+                    display: "inline-block",
+                    animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": latestReading ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
+                  } as React.CSSProperties} />
+                  <img src="/icons/icon-temperature.svg" alt="temp"
+                    style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Temperature</p>
+                  <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
+                    <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                      {latestReading ? latestReading.temperature : "—"}
+                    </span>
+                    {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
                   </p>
-                )}
-              </div>
+                  {latestReading && (
+                    <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
+                      {getSensorStatus("temperature", latestReading.temperature).label}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Turbidity */}
-              <div style={{
-                background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                padding: isTab ? "20px 20px 18px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
-                position: "relative", display: "flex", flexDirection: "column",
-                minHeight: isTab ? 190 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <span style={{
-                  position: "absolute", top: 14, right: 14,
-                  width: 9, height: 9, borderRadius: "50%",
-                  background: latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af",
-                  display: "inline-block",
-                  animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
-                } as React.CSSProperties} />
-                <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: isTab ? 42 : 36, height: isTab ? 42 : 36, objectFit: "contain", marginBottom: 8 }} />
-                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: isTab ? 15 : 13, color: "#77ABB2" }}>Turbidity</p>
-                <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: isTab ? 30 : 26, color: "#6b7280" }}>
-                    {latestReading ? latestReading.turbidity : "—"}
-                  </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: isTab ? 16 : 14, color: "#6b7280" }}> NTU</span>}
-                </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
-                    {getSensorStatus("turbidity", latestReading.turbidity).label}
+              {isTab ? (
+                <SensorMiniCard
+                  label="Turbidity"
+                  iconSrc="/icons/icon-turbidity.svg"
+                  value={latestReading ? `${latestReading.turbidity}` : "—"}
+                  unit="NTU"
+                  sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
+                  dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
+                  active={!!latestReading}
+                  compact
+                />
+              ) : (
+                <div style={{
+                  background: "rgba(255,255,255,0.96)", borderRadius: 20,
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  position: "relative", display: "flex", flexDirection: "column",
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                }}>
+                  <span style={{
+                    position: "absolute", top: 14, right: 14,
+                    width: 9, height: 9, borderRadius: "50%",
+                    background: latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af",
+                    display: "inline-block",
+                    animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": latestReading ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
+                  } as React.CSSProperties} />
+                  <img src="/icons/icon-turbidity.svg" alt="turbidity"
+                    style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Turbidity</p>
+                  <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
+                    <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                      {latestReading ? latestReading.turbidity : "—"}
+                    </span>
+                    {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
                   </p>
-                )}
-              </div>
+                  {latestReading && (
+                    <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
+                      {getSensorStatus("turbidity", latestReading.turbidity).label}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* pH */}
-              <div style={{
-                background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                padding: isTab ? "20px 20px 18px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
-                position: "relative", display: "flex", flexDirection: "column",
-                minHeight: isTab ? 190 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <span style={{
-                  position: "absolute", top: 14, right: 14,
-                  width: 9, height: 9, borderRadius: "50%",
-                  background: latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af",
-                  display: "inline-block",
-                  animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
-                } as React.CSSProperties} />
-                <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: isTab ? 42 : 36, height: isTab ? 42 : 36, objectFit: "contain", marginBottom: 8 }} />
-                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: isTab ? 15 : 13, color: "#77ABB2" }}>pH Level</p>
-                <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: isTab ? 30 : 26, color: "#6b7280" }}>
-                    {latestReading ? latestReading.ph : "—"}
-                  </span>
-                </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
-                    {getSensorStatus("ph", latestReading.ph).label}
+              {isTab ? (
+                <SensorMiniCard
+                  label="pH Level"
+                  iconSrc="/icons/icon-ph.svg"
+                  value={latestReading ? `${latestReading.ph}` : "—"}
+                  unit=""
+                  sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
+                  dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
+                  active={!!latestReading}
+                  compact
+                />
+              ) : (
+                <div style={{
+                  background: "rgba(255,255,255,0.96)", borderRadius: 20,
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  position: "relative", display: "flex", flexDirection: "column",
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                }}>
+                  <span style={{
+                    position: "absolute", top: 14, right: 14,
+                    width: 9, height: 9, borderRadius: "50%",
+                    background: latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af",
+                    display: "inline-block",
+                    animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": latestReading ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
+                  } as React.CSSProperties} />
+                  <img src="/icons/icon-ph.svg" alt="ph"
+                    style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>pH Level</p>
+                  <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
+                    <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                      {latestReading ? latestReading.ph : "—"}
+                    </span>
                   </p>
-                )}
-              </div>
+                  {latestReading && (
+                    <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
+                      {getSensorStatus("ph", latestReading.ph).label}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Total Parameter Readings — hidden on tablet (moved to bottom row) */}
               {!isTab && (
-              <div style={{
-                background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
-                display: "flex", flexDirection: "column", justifyContent: "space-between",
-                minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
-              }}>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#337C85", lineHeight: 1.3 }}>
-                    Total Parameter Readings
-                  </p>
-                  <p style={{ margin: "5px 0 0", color: "#9ca3af", fontSize: 10, lineHeight: 1.4 }}>
-                    Total readings (5 min interval, last 24 hours)
-                  </p>
+                <div style={{
+                  background: "rgba(255,255,255,0.96)", borderRadius: 20,
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  display: "flex", flexDirection: "column", justifyContent: "space-between",
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: "#337C85", lineHeight: 1.3 }}>
+                      Total Parameter Readings
+                    </p>
+                    <p style={{ margin: "5px 0 0", color: "#9ca3af", fontSize: 10, lineHeight: 1.4 }}>
+                      Total readings (5 min interval, last 24 hours)
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                    <span style={{ fontSize: 36, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                      {readings.length}
+                    </span>
+                    <img src="/icons/icon-readings.svg" alt="readings"
+                      style={{ width: 34, height: 34, objectFit: "contain" }} />
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                  <span style={{ fontSize: 36, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
-                    {readings.length}
-                  </span>
-                  <img src="/icons/icon-readings.svg" alt="readings"
-                    style={{ width: 34, height: 34, objectFit: "contain" }} />
-                </div>
-              </div>
               )}
             </div>
 
-            {/* Tablet bottom row: Total Readings + Risk/Alerts side by side */}
+            {/* Tablet bottom rows: stacked full-width cards */}
             {isTab && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-                {/* Total Parameter Readings */}
-                <div style={{ background: "rgba(255,255,255,0.96)", borderRadius: 22, padding: "22px 22px 20px",
-                  boxShadow: "0 4px 18px rgba(0,0,0,0.11)", display: "flex",
-                  flexDirection: "column", justifyContent: "space-between", fontFamily: POPPINS }}>
+              <>
+                {/* Total Parameter Readings — full width */}
+                <div style={{
+                  background: "#fff", borderRadius: 20,
+                  padding: "20px 22px",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  fontFamily: POPPINS,
+                }}>
                   <div>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: "#337C85", lineHeight: 1.3 }}>Total Parameter Readings</p>
-                    <p style={{ margin: "6px 0 0", color: "#9ca3af", fontSize: 12, lineHeight: 1.4 }}>Total readings (5 min interval, last 24 hours)</p>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 20, color: "#337C85", lineHeight: 1.3 }}>
+                      Total Parameter Readings
+                    </p>
+                    <p style={{ margin: "4px 0 10px", color: "#9ca3af", fontSize: 12, lineHeight: 1.4 }}>
+                      Total readings (5 min interval, last 24 hours)
+                    </p>
+                    <p style={{ margin: 0, fontSize: 40, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                      {readings.length}
+                    </p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14 }}>
-                    <span style={{ fontSize: 52, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>{readings.length}</span>
-                    <img src="/icons/icon-readings.svg" alt="readings" style={{ width: 46, height: 46, objectFit: "contain" }} />
-                  </div>
+                  <img src="/icons/icon-readings.svg" alt="readings"
+                    style={{ width: 54, height: 54, objectFit: "contain", flexShrink: 0 }} />
                 </div>
-                {/* Risk Level + Active Alerts */}
-                <div style={{ background: "rgba(255,255,255,0.96)", borderRadius: 22, padding: "22px 20px",
-                  boxShadow: "0 4px 18px rgba(0,0,0,0.11)", display: "flex", alignItems: "stretch", gap: 14 }}>
+
+                {/* Risk Level + Active Alerts — full width */}
+                <div style={{
+                  background: "#fff", borderRadius: 24,
+                  padding: "20px 22px",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                  display: "flex", alignItems: "stretch", gap: 14,
+                }}>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 18, color: "#337C85", fontFamily: POPPINS }}>Risk Level</p>
+                    <p style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 20, color: "#337C85", fontFamily: POPPINS }}>
+                      Risk Level
+                    </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                      <img src="/icons/icon-risk.svg" alt="risk" style={{ width: 36, height: 36, objectFit: "contain" }} />
-                      <span style={{ background: "#3d3d3d", color: "#fff", borderRadius: 999,
-                        padding: "6px 18px", fontWeight: 700, fontSize: 14, fontFamily: POPPINS, textTransform: "capitalize" as const }}>
+                      <img src="/icons/icon-risk.svg" alt="risk"
+                        style={{ width: 36, height: 36, objectFit: "contain" }} />
+                      <span style={{
+                        background: "#3d3d3d", color: "#fff", borderRadius: 999,
+                        padding: "5px 18px",
+                        fontWeight: 700, fontSize: 14,
+                        fontFamily: POPPINS, textTransform: "capitalize" as const,
+                      }}>
                         {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: 12, color: "#9ca3af", fontFamily: POPPINS }}>Based on temperature, turbidity, and pH</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#9ca3af", fontFamily: POPPINS }}>
+                      Based on temperature, turbidity, and pH
+                    </p>
                   </div>
-                  <div style={{ flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
-                    borderRadius: 18, padding: "18px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#fff", textAlign: "center", fontFamily: POPPINS }}>Active Alerts</p>
-                    <p style={{ margin: 0, fontSize: 52, fontWeight: 700, color: "#fff", lineHeight: 1, fontFamily: POPPINS }}>{unacknowledgedAlerts}</p>
+                  <div style={{
+                    flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
+                    borderRadius: 18, padding: "20px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#fff", textAlign: "center", fontFamily: POPPINS, letterSpacing: 0.3 }}>
+                      Active Alerts
+                    </p>
+                    <p style={{ margin: 0, fontSize: 48, fontWeight: 700, color: "#fff", lineHeight: 1, fontFamily: POPPINS }}>
+                      {unacknowledgedAlerts}
+                    </p>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* Risk Level + Active Alerts — mobile only (tablet has it in the 2-col row above) */}
             {!isTab && (
-            <div style={{
-              background: "rgba(255,255,255,0.96)", borderRadius: 24,
-              padding: "20px 18px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
-              display: "flex", alignItems: "stretch", gap: 14,
-            }}>
-              {/* Risk Level */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 20,
-                  color: "#337C85", fontFamily: POPPINS }}>Risk Level</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <img src="/icons/icon-risk.svg" alt="risk"
-                    style={{ width: 32, height: 32, objectFit: "contain" }} />
-                  <span style={{
-                    background: "#3d3d3d", color: "#fff", borderRadius: 999,
-                    padding: "5px 16px", fontWeight: 700, fontSize: 13,
-                    fontFamily: POPPINS, textTransform: "capitalize" as const,
-                  }}>
-                    {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
-                  </span>
-                </div>
-                <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontFamily: POPPINS }}>
-                  Based on temperature, turbidity, and pH
-                </p>
-              </div>
-              {/* Active Alerts */}
               <div style={{
-                flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
-                borderRadius: 18, padding: "18px 12px",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
-                display: "flex", flexDirection: "column", alignItems: "center",
-                justifyContent: "center", gap: 8,
+                background: "rgba(255,255,255,0.96)", borderRadius: 24,
+                padding: "20px 18px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                display: "flex", alignItems: "stretch", gap: 14,
               }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#fff",
-                  textAlign: "center", fontFamily: POPPINS }}>Active Alerts</p>
-                <p style={{ margin: 0, fontSize: 48, fontWeight: 700, color: "#fff",
-                  lineHeight: 1, fontFamily: POPPINS }}>{unacknowledgedAlerts}</p>
+                {/* Risk Level */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <p style={{
+                    margin: "0 0 10px", fontWeight: 700, fontSize: 20,
+                    color: "#337C85", fontFamily: POPPINS
+                  }}>Risk Level</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <img src="/icons/icon-risk.svg" alt="risk"
+                      style={{ width: 32, height: 32, objectFit: "contain" }} />
+                    <span style={{
+                      background: "#3d3d3d", color: "#fff", borderRadius: 999,
+                      padding: "5px 16px", fontWeight: 700, fontSize: 13,
+                      fontFamily: POPPINS, textTransform: "capitalize" as const,
+                    }}>
+                      {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontFamily: POPPINS }}>
+                    Based on temperature, turbidity, and pH
+                  </p>
+                </div>
+                {/* Active Alerts */}
+                <div style={{
+                  flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
+                  borderRadius: 18, padding: "18px 12px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                  justifyContent: "center", gap: 8,
+                }}>
+                  <p style={{
+                    margin: 0, fontWeight: 700, fontSize: 14, color: "#fff",
+                    textAlign: "center", fontFamily: POPPINS
+                  }}>Active Alerts</p>
+                  <p style={{
+                    margin: 0, fontSize: 48, fontWeight: 700, color: "#fff",
+                    lineHeight: 1, fontFamily: POPPINS
+                  }}>{unacknowledgedAlerts}</p>
+                </div>
               </div>
-            </div>
             )}
           </div>
         </div>
@@ -961,6 +1058,7 @@ function SensorMiniCard({
   sub,
   dot,
   active,
+  compact,
 }: {
   label: string;
   iconSrc: string;
@@ -969,19 +1067,31 @@ function SensorMiniCard({
   sub: string;
   dot: string;
   active: boolean;
+  compact?: boolean;
 }) {
   const S = SENSOR_CARD_STYLE;
+  const cardHeight = compact ? "auto" : S.height;
+  const cardPad = compact ? "16px 18px 14px" : S.padding;
+  const iconSize = compact ? 36 : S.iconSize;
+  const iconGap = compact ? 8 : S.iconGap;
+  const labelSize = compact ? 14 : S.labelSize;
+  const labelGap = compact ? 5 : S.labelGap;
+  const valueSize = compact ? 26 : S.valueSize;
+  const unitSize = compact ? 16 : S.unitSize;
+  const valueGap = compact ? 4 : S.valueGap;
+  const subSize = compact ? 11 : S.subSize;
+  const dotInset = compact ? 14 : S.dotInset;
   return (
     <div
       style={{
         background: "#fff",
         borderRadius: S.borderRadius,
-        padding: S.padding,
+        padding: cardPad,
         boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
         position: "relative",
         display: "flex",
         flexDirection: "column",
-        height: S.height,
+        height: cardHeight as any,
         boxSizing: "border-box",
         fontFamily: POPPINS,
       }}
@@ -990,8 +1100,8 @@ function SensorMiniCard({
       <span
         style={{
           position: "absolute",
-          top: S.dotInset,
-          right: S.dotInset,
+          top: dotInset,
+          right: dotInset,
           width: S.dotSize,
           height: S.dotSize,
           borderRadius: "50%",
@@ -1007,15 +1117,15 @@ function SensorMiniCard({
       <img
         src={iconSrc}
         alt={label}
-        style={{ width: S.iconSize, height: S.iconSize, objectFit: "contain", marginBottom: S.iconGap }}
+        style={{ width: iconSize, height: iconSize, objectFit: "contain", marginBottom: iconGap }}
       />
 
       {/* Label */}
       <p style={{
-        margin: `0 0 ${S.labelGap}px`,
+        margin: `0 0 ${labelGap}px`,
         fontFamily: POPPINS,
         fontWeight: S.labelWeight,
-        fontSize: S.labelSize,
+        fontSize: labelSize,
         color: S.labelColor,
         lineHeight: 1.2,
       }}>
@@ -1023,12 +1133,12 @@ function SensorMiniCard({
       </p>
 
       {/* Value + Unit */}
-      <p style={{ margin: `0 0 ${S.valueGap}px`, lineHeight: 1.2, display: "flex", alignItems: "baseline", gap: 3 }}>
-        <span style={{ fontFamily: POPPINS, fontWeight: S.valueWeight, fontSize: S.valueSize, color: S.valueColor }}>
+      <p style={{ margin: `0 0 ${valueGap}px`, lineHeight: 1.2, display: "flex", alignItems: "baseline", gap: 3 }}>
+        <span style={{ fontFamily: POPPINS, fontWeight: S.valueWeight, fontSize: valueSize, color: S.valueColor }}>
           {value}
         </span>
         {unit && (
-          <span style={{ fontFamily: POPPINS, fontWeight: S.unitWeight, fontSize: S.unitSize, color: S.unitColor }}>
+          <span style={{ fontFamily: POPPINS, fontWeight: S.unitWeight, fontSize: unitSize, color: S.unitColor }}>
             {" "}{unit}
           </span>
         )}
@@ -1040,7 +1150,7 @@ function SensorMiniCard({
           margin: 0,
           fontFamily: POPPINS,
           fontWeight: S.subWeight,
-          fontSize: S.subSize,
+          fontSize: subSize,
           color: S.subColor,
           lineHeight: 1.3,
         }}>

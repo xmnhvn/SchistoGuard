@@ -194,7 +194,7 @@ export function NavigationHeader({
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 100,
+        zIndex: 10000,
       }}
     >
       {/* Left slot */}
@@ -538,7 +538,13 @@ export function NavigationProvider({
         user={user}
         onLogout={onLogout}
         onNavigate={handleNavigate}
-        onToggleDrawer={() => setDrawerOpen((p) => !p)}
+        onToggleDrawer={() => {
+          setDrawerOpen((p) => {
+            const next = !p;
+            window.dispatchEvent(new CustomEvent("sidebarDrawerChanged", { detail: { open: next } }));
+            return next;
+          });
+        }}
       />
       {/* Mobile overlay drawer */}
       {mobileDrawer}
