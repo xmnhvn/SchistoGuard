@@ -358,7 +358,7 @@ export const ReportsPage: React.FC = () => {
   const activeReport = selectedReport;
 
   return (
-    <div className="relative bg-schistoguard-light-bg h-[calc(100vh-88px)] overflow-hidden">
+    <div className="relative h-full overflow-hidden bg-schistoguard-light-bg">
       <div className="pointer-events-none absolute left-1/2 top-3 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
         {successMessage && (
           <div className="pointer-events-auto flex min-w-[320px] max-w-[680px] items-start justify-between gap-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-800 shadow-lg">
@@ -389,8 +389,8 @@ export const ReportsPage: React.FC = () => {
         )}
       </div>
 
-      <div className="mx-auto flex h-full max-w-[1800px] flex-col p-6">
-        <div className="grid h-full min-h-[520px] flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col p-6">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Reports List Column */}
           <Card className="flex h-full min-h-0 flex-col overflow-hidden">
             <div className="flex-shrink-0 bg-white px-6 py-4">

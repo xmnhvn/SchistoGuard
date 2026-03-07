@@ -155,11 +155,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       <div className="max-w-7xl mx-auto p-6">
 
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
-          <div className="col-span-1">
-            <h1 className="text-3xl font-bold text-schistoguard-navy mb-1">Hourly Data Readings</h1>
-            <p className="text-gray-600 leading-tight mb-1">Mang Jose's Fish Pond - 100 square meters</p>
-            <p className="text-sm text-gray-500 leading-tight mb-1">Water quality data collected every hour</p>
-          </div>
           <div className="col-span-1 lg:col-span-2 flex flex-col lg:flex-row gap-4 lg:justify-end">
             <div className="flex-1 max-w-xs">
               <div className="relative">
