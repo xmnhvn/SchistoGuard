@@ -131,9 +131,9 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
       {/* ── Header + Filters ── */}
       <div style={{
         display: "flex",
-        flexDirection: isMobile ? "column" : "row",
+        flexDirection: (isMobile || isTablet) ? "column" : "row",
         justifyContent: "space-between",
-        alignItems: isMobile ? "flex-start" : "center",
+        alignItems: (isMobile || isTablet) ? "flex-start" : "center",
         gap: 16,
         marginBottom: 24,
       }}>
@@ -281,7 +281,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
                       </DialogTrigger>
                     )}
                   />
-                  <DialogContent className="max-w-2xl" style={{ fontFamily: POPPINS }}>
+                  <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
                     <DialogHeader>
                       <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
                         Alert Details
@@ -481,7 +481,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
                           </DialogTrigger>
                         )}
                       />
-                      <DialogContent className="max-w-2xl" style={{ fontFamily: POPPINS }}>
+                      <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
                         <DialogHeader>
                           <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
                             Alert Details
