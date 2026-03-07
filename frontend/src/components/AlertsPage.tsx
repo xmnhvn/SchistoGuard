@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Bell,
+  X,
 } from "lucide-react";
 import { apiGet } from "../utils/api";
 
@@ -64,6 +65,7 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
   const [filterLevel, setFilterLevel] = useState("all");
   const [filterBarangay, setFilterBarangay] = useState("all");
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
+  const [showMobileAlertList, setShowMobileAlertList] = useState(false);
   const handleExport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredAlerts, null, 2));
     const downloadAnchorNode = document.createElement('a');
@@ -155,12 +157,14 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         <div style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          flexWrap: "wrap",
+          gap: isMobile ? 8 : 10,
+          flexWrap: isMobile ? "nowrap" as const : "wrap",
+          ...(isMobile ? { width: "100%" } : {}),
         }}>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger style={{
-              width: 148, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+              width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
+              minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
               border: "1px solid #e2e5ea", background: "#fff", height: 38,
             }}>
               <SelectValue placeholder="Status" />
@@ -173,7 +177,8 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
           </Select>
           <Select value={filterLevel} onValueChange={setFilterLevel}>
             <SelectTrigger style={{
-              width: 140, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+              width: isMobile ? undefined : 140, flex: isMobile ? 1 : undefined,
+              minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
               border: "1px solid #e2e5ea", background: "#fff", height: 38,
             }}>
               <SelectValue placeholder="All Levels" />
@@ -187,11 +192,12 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
           <button
             onClick={handleExport}
             style={{
-              display: "flex", alignItems: "center", gap: 6,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               padding: "0 16px", height: 38, borderRadius: 12,
               border: "1px solid #e2e5ea",
               background: "#fff", cursor: "pointer", fontSize: 13,
               fontFamily: POPPINS, fontWeight: 500, color: "#374151",
+              ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
             }}
           >
             <Download size={15} /> Export
@@ -226,6 +232,9 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         <div style={{
           padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",
           borderBottom: "1px solid #f0f1f3",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}>
           <h2 style={{
             fontSize: 17, fontWeight: 600, color: "#1a2a3a",
@@ -233,6 +242,17 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
           }}>
             Alert List
           </h2>
+          {isMobile && (
+            <span
+              onClick={() => setShowMobileAlertList(true)}
+              style={{
+                fontSize: 13, fontWeight: 600, color: "#357D86",
+                cursor: "pointer", fontFamily: POPPINS,
+              }}
+            >
+              View All
+            </span>
+          )}
         </div>
         <div style={{
           padding: isMobile ? 12 : 20,
@@ -384,7 +404,163 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
 
       <style>{`
         *::-webkit-scrollbar { display: none; }
+        @keyframes mobileAlertListIn {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
+
+      {/* ── Mobile Alert List Modal ── */}
+      {isMobile && showMobileAlertList && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10001,
+          background: "rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center",
+          padding: "92px 20px 20px",
+        }} onClick={() => setShowMobileAlertList(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxHeight: "calc(100vh - 108px)",
+              background: "#fff",
+              borderRadius: 16,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+              animation: "mobileAlertListIn 0.25s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: "16px 20px",
+              borderBottom: "1px solid #eef0f2",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              flexShrink: 0,
+            }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+                All Alerts
+              </h2>
+              <button
+                onClick={() => setShowMobileAlertList(false)}
+                style={{
+                  width: 30, height: 30, borderRadius: "50%",
+                  border: "none", background: "#f3f4f6",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={16} color="#6b7280" />
+              </button>
+            </div>
+            {/* Modal Scrollable List */}
+            <div style={{
+              flex: 1, minHeight: 0, overflowY: "auto",
+              padding: 20,
+              scrollbarWidth: "none",
+            } as React.CSSProperties}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {filteredAlerts.length > 0 ? (
+                  filteredAlerts.map((alert) => (
+                    <Dialog key={alert.id}>
+                      <AlertItem
+                        {...alert}
+                        onAcknowledge={handleAcknowledgeAlert}
+                        onExpand={() => { setSelectedAlert(alert); }}
+                        DetailsButtonComponent={({ onClick }) => (
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
+                              className="py-0.5 px-2 text-xs h-6 min-h-0"
+                            >
+                              Details
+                            </Button>
+                          </DialogTrigger>
+                        )}
+                      />
+                      <DialogContent className="max-w-2xl" style={{ fontFamily: POPPINS }}>
+                        <DialogHeader>
+                          <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
+                            Alert Details
+                          </DialogTitle>
+                        </DialogHeader>
+                        {selectedAlert && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                            <div>
+                              <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
+                                Alert Information
+                              </h4>
+                              <table style={{ width: "100%", fontSize: 13 }}>
+                                <tbody>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
+                                    <td>
+                                      <Badge
+                                        variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
+                                        className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
+                                      >
+                                        {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
+                                    <td style={{ fontWeight: 600 }}>{selectedAlert.parameter}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
+                                    <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(selectedAlert.timestamp)}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Status:</td>
+                                    <td>
+                                      <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
+                                        {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 16 }}>
+                              <h4 style={{ fontWeight: 500, marginBottom: 12, fontSize: 14 }}>Alert Message</h4>
+                              <p style={{
+                                fontSize: 13, color: "#8E8B8B", background: "#f9fafb",
+                                borderRadius: 10, padding: 14, marginBottom: 20,
+                              }}>
+                                {selectedAlert.message}
+                              </p>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, paddingTop: 8 }}>
+                              {!selectedAlert.isAcknowledged && (
+                                <Button
+                                  onClick={() => handleAcknowledgeAlert(selectedAlert.id)}
+                                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+                                >
+                                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                                  Acknowledge Alert
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  ))
+                ) : (
+                  <div style={{ textAlign: "center", padding: "40px 20px", color: "#8E8B8B" }}>
+                    <AlertTriangle size={48} style={{ margin: "0 auto 16px", display: "block", opacity: 0.4 }} />
+                    <p style={{ margin: 0, fontSize: 15 }}>No alerts found.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
