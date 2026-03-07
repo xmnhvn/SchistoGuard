@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { AlertItem } from "./AlertItem";
 import { DashboardMap } from "./DashboardMap";
+import type { DashboardMapHandle } from "./DashboardMap";
 import {
   Bell,
   Asterisk,
+  LocateFixed,
   type LucideProps,
 } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -30,7 +32,12 @@ export function Dashboard({
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
+  const [mapReady, setMapReady] = useState(false);
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
+  const [alertsClosing, setAlertsClosing] = useState(false);
+  const alertsOpenRef = useRef(false);
+  const alertsClosingRef = useRef(false);
+  const mapRef = useRef<DashboardMapHandle>(null);
   const [alertsDropdownPosition, setAlertsDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -72,13 +79,30 @@ export function Dashboard({
     return { top: panelTop, left: panelLeft };
   };
 
+  const closeAlertsDropdown = () => {
+    if (!alertsOpenRef.current || alertsClosingRef.current) return;
+    alertsClosingRef.current = true;
+    setAlertsClosing(true);
+    window.dispatchEvent(new CustomEvent("alertsDropdownStateChanged", { detail: { open: false } }));
+    setTimeout(() => {
+      setShowAlertsDropdown(false);
+      setAlertsClosing(false);
+      alertsOpenRef.current = false;
+      alertsClosingRef.current = false;
+    }, 200);
+  };
+
   const openAlertsDropdown = () => {
+    if (alertsOpenRef.current) {
+      closeAlertsDropdown();
+      return;
+    }
     setAlertsDropdownPosition(calcPanelPos());
-    setShowAlertsDropdown((prev) => {
-      const next = !prev;
-      window.dispatchEvent(new CustomEvent("alertsDropdownStateChanged", { detail: { open: next } }));
-      return next;
-    });
+    setShowAlertsDropdown(true);
+    setAlertsClosing(false);
+    alertsOpenRef.current = true;
+    alertsClosingRef.current = false;
+    window.dispatchEvent(new CustomEvent("alertsDropdownStateChanged", { detail: { open: true } }));
   };
 
   useEffect(() => {
@@ -147,8 +171,7 @@ export function Dashboard({
       const isBell = (event.target as Element).closest?.('[data-alerts-bell]');
       if (isBell) return;
       if (!alertsPanelRef.current?.contains(target)) {
-        setShowAlertsDropdown(false);
-        window.dispatchEvent(new CustomEvent("alertsDropdownStateChanged", { detail: { open: false } }));
+        closeAlertsDropdown();
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -271,6 +294,9 @@ export function Dashboard({
           zIndex: 9999,
           overflow: "hidden",
           fontFamily: POPPINS,
+          animation: alertsClosing
+            ? "alertsPanelOut 0.2s cubic-bezier(0.4,0,0.2,1) both"
+            : "alertsPanelIn 0.25s cubic-bezier(0.4,0,0.2,1) both",
         }}
       >
         {/* Header */}
@@ -315,6 +341,7 @@ export function Dashboard({
               display: "flex", flexDirection: "column", alignItems: "center",
               justifyContent: "center",
               padding: sm ? "28px 14px" : "48px 24px",
+              animation: "alertItemIn 0.35s 0.1s cubic-bezier(0.4,0,0.2,1) both",
             }}>
               <Bell size={sm ? 24 : 32} style={{ color: "#d1d5db", marginBottom: sm ? 8 : 12 }} />
               <p style={{ fontSize: sm ? 13 : 15, color: "#6b7280", margin: 0, fontWeight: 500, fontFamily: POPPINS }}>
@@ -474,7 +501,7 @@ export function Dashboard({
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-          <DashboardMap mobileMode={true} interactive={isTablet} />
+          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} />
         </div>
 
         {/* ── GRADIENT OVERLAY — matches desktop: upper-left teal fading to transparent ── */}
@@ -499,7 +526,7 @@ export function Dashboard({
         } as React.CSSProperties}>
 
           {/* ── HERO SECTION: site info ── transparent so map shows through */}
-          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto", maxWidth: isTab ? "55%" : "100%" }}>
+          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto" }}>
             {/* Site name */}
             <h1 style={{
               fontSize: isTab ? 32 : 24, fontWeight: 700, color: "#fff", margin: 0,
@@ -516,20 +543,36 @@ export function Dashboard({
               {siteData.area} • {siteData.barangay}, {siteData.municipality}
             </p>
             {/* System Operational badge — left-aligned, under address */}
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(255,255,255,0.92)", borderRadius: 999,
-              padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
-            }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: (backendOk && dataOk) ? "#22c55e" : "#9ca3af",
-                display: "inline-block",
-                animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
-                "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
-              } as React.CSSProperties} />
-              {(backendOk && dataOk) ? "System Operational" : "System Down"}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: "rgba(255,255,255,0.92)", borderRadius: 999,
+                padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
+              }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: (backendOk && dataOk) ? "#22c55e" : "#9ca3af",
+                  display: "inline-block",
+                  animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
+                  "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
+                } as React.CSSProperties} />
+                {(backendOk && dataOk) ? "System Operational" : "System Down"}
+              </div>
+              {isTab && (
+                <button
+                  onClick={() => mapRef.current?.resetView()}
+                  style={{
+                    width: 30, height: 30, borderRadius: "50%",
+                    background: "rgba(255,255,255,0.92)", border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
+                  }}
+                  title="Reset map position"
+                >
+                  <LocateFixed size={15} color="#357D86" strokeWidth={2.5} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -537,10 +580,10 @@ export function Dashboard({
           <div style={{ flex: 1, minHeight: isTab ? 40 : 80 }} />
 
           {/* ── CARDS — anchored to bottom, no solid section bg ── */}
-          <div style={{ padding: isTab ? "0 24px 24px" : "0 14px 20px", display: "flex", flexDirection: "column", gap: isTab ? 14 : 16, pointerEvents: "auto", maxWidth: isTab ? "55%" : "100%" }}>
+          <div style={{ padding: isTab ? "0 28px 28px" : "0 14px 20px", display: "flex", flexDirection: "column", gap: isTab ? 16 : 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 14 : 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16 }}>
               {/* Temperature — tablet uses the same SensorMiniCard as desktop */}
               {isTab ? (
                 <SensorMiniCard
@@ -819,6 +862,16 @@ export function Dashboard({
         </div>
 
         {alertsPortal}
+
+        {/* White overlay — fades out once map tiles load */}
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 9,
+          background: "#fff",
+          opacity: mapReady ? 0 : 1,
+          transition: "opacity 0.6s ease",
+          pointerEvents: mapReady ? "none" : "auto",
+        }} />
+
         <style>{`
           @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
@@ -836,6 +889,10 @@ export function Dashboard({
 
 
   // ─── Full dashboard ──────────────────────────────────────────────────────
+  const vw = window.innerWidth;
+  const isNarrowDesktop = vw < 1400;
+  const panelWidth = isNarrowDesktop ? "58%" : "44%";
+  const panelPadding = isNarrowDesktop ? "40px 32px 40px 32px" : "50px 50px 50px 50px";
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
 
@@ -857,12 +914,12 @@ export function Dashboard({
           top: 0,
           left: 0,
           bottom: 0,
-          width: "44%",
+          width: panelWidth,
           minWidth: 0,
           background: "transparent",
           display: "flex",
           flexDirection: "column",
-          padding: "50px 50px 50px 50px",
+          padding: panelPadding,
           overflowY: "auto",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
@@ -1050,7 +1107,7 @@ export function Dashboard({
           pointerEvents: "auto",
         }}
       >
-        <DashboardMap />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} />
       </div>
 
       {/* System Operational badge — top right, above gradient */}
@@ -1088,8 +1145,42 @@ export function Dashboard({
         {(backendOk && dataOk) ? "System Operational" : "System Down"}
       </div>
 
+      {/* Reset map position button — below System Operational badge */}
+      <button
+        onClick={() => mapRef.current?.resetView()}
+        style={{
+          position: "absolute",
+          top: 54,
+          right: 16,
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.9)",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          backdropFilter: "blur(4px)",
+          zIndex: 3,
+        }}
+        title="Reset map position"
+      >
+        <LocateFixed size={17} color="#357D86" strokeWidth={2.5} />
+      </button>
+
       {/* Alerts portal — shared across all layouts */}
       {alertsPortal}
+
+      {/* White overlay — fades out once map tiles load */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 9,
+        background: "#fff",
+        opacity: mapReady ? 0 : 1,
+        transition: "opacity 0.6s ease",
+        pointerEvents: mapReady ? "none" : "auto",
+      }} />
 
       <style>{`
         @keyframes pulse {

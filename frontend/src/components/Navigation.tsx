@@ -195,8 +195,13 @@ export function NavigationHeader({
   const pageInfo = getPageTitle(currentView);
 
   const [isPhone, setIsPhone] = useState(false);
+  const [isNarrowTablet, setIsNarrowTablet] = useState(false);
   useEffect(() => {
-    const check = () => setIsPhone(window.innerWidth < 600);
+    const check = () => {
+      const w = window.innerWidth;
+      setIsPhone(w < 600);
+      setIsNarrowTablet(w >= 600 && w < 900);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -284,10 +289,12 @@ export function NavigationHeader({
                 WebkitMaskPosition: "center", maskPosition: "center",
               }} />
             </button>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 4 }}>
-              <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: 15, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.title}</span>
-              <span style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.subtitle}</span>
-            </div>
+            {!isNarrowTablet && (
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 4 }}>
+                <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: 15, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.title}</span>
+                <span style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.subtitle}</span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -336,7 +343,6 @@ export function NavigationHeader({
                 maskRepeat: "no-repeat",
                 WebkitMaskPosition: "center",
                 maskPosition: "center",
-                transition: "background 0.2s",
               }}
             />
             {unreadCount > 0 && (

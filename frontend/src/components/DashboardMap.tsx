@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '../styles/mapMarker.css';
@@ -14,12 +14,31 @@ interface DashboardMapProps {
   mobileMode?: boolean;
   /** Override map interactivity. Defaults to !mobileMode when not provided. */
   interactive?: boolean;
+  /** Called once the map tiles have loaded */
+  onMapReady?: () => void;
 }
 
-export function DashboardMap({ sites, mobileMode = false, interactive }: DashboardMapProps) {
+export interface DashboardMapHandle {
+  resetView: () => void;
+}
+
+export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, mobileMode = false, interactive, onMapReady }, ref) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
+  const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
+
+  useImperativeHandle(ref, () => ({
+    resetView: () => {
+      if (map.current) {
+        map.current.flyTo({
+          center: defaultView.current.center,
+          zoom: defaultView.current.zoom,
+          duration: 800,
+        });
+      }
+    },
+  }));
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -53,12 +72,15 @@ export function DashboardMap({ sites, mobileMode = false, interactive }: Dashboa
       ? [center.lng, center.lat - latOffset]
       : [center.lng - 0.060, center.lat];    // desktop: original westward offset
 
+    const mapZoom = mobileMode ? 13 : 12;
+    defaultView.current = { center: mapCenter, zoom: mapZoom };
+
     if (!map.current) {
       map.current = new maplibregl.Map({
         container: mapContainer.current,
         style: 'https://tiles.openfreemap.org/styles/positron',
         center: mapCenter,
-        zoom: mobileMode ? 13 : 12,
+        zoom: mapZoom,
         attributionControl: false,
         interactive: interactive !== undefined ? interactive : !mobileMode,
       });
@@ -96,7 +118,6 @@ export function DashboardMap({ sites, mobileMode = false, interactive }: Dashboa
 
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([site.lng, site.lat])
-          .setPopup(new maplibregl.Popup({ offset: 12 }).setText(site.name))
           .addTo(map.current!);
 
         markers.current.push(marker);
@@ -105,8 +126,12 @@ export function DashboardMap({ sites, mobileMode = false, interactive }: Dashboa
 
     if (map.current.isStyleLoaded()) {
       addMarkers();
+      onMapReady?.();
     } else {
-      map.current.once('load', addMarkers);
+      map.current.once('load', () => {
+        addMarkers();
+        onMapReady?.();
+      });
     }
 
     return () => {
@@ -126,4 +151,4 @@ export function DashboardMap({ sites, mobileMode = false, interactive }: Dashboa
   }, []);
 
   return <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />;
-}
+});
