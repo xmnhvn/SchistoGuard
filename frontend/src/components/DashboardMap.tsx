@@ -20,6 +20,7 @@ interface DashboardMapProps {
 
 export interface DashboardMapHandle {
   resetView: () => void;
+  resize: () => void;
 }
 
 export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, mobileMode = false, interactive, onMapReady }, ref) {
@@ -36,6 +37,11 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
           zoom: defaultView.current.zoom,
           duration: 800,
         });
+      }
+    },
+    resize: () => {
+      if (map.current) {
+        map.current.resize();
       }
     },
   }));

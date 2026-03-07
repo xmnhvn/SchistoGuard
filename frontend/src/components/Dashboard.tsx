@@ -24,15 +24,26 @@ export function Dashboard({
   onNavigate,
   setSystemStatus,
   viewMode = "full",
+  visible = true,
 }: {
   onNavigate?: (view: string) => void;
   setSystemStatus?: (status: "operational" | "down") => void;
   viewMode?: "full" | "sensors-only";
+  visible?: boolean;
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
   const [mapReady, setMapReady] = useState(false);
+
+  // When the Dashboard becomes visible again (after being hidden), resize the map
+  useEffect(() => {
+    if (visible && mapReady) {
+      // Small delay so the container has non-zero dimensions after display switches
+      const t = setTimeout(() => mapRef.current?.resize(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [visible, mapReady]);
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [alertsClosing, setAlertsClosing] = useState(false);
   const alertsOpenRef = useRef(false);
@@ -497,10 +508,10 @@ export function Dashboard({
     const isTab = isTablet;
     return (
       /* Outer: full viewport height, map fills background, content scrolls on top */
-      <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
+      <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.8s ease" }}>
           <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} />
         </div>
 
@@ -526,7 +537,7 @@ export function Dashboard({
         } as React.CSSProperties}>
 
           {/* ── HERO SECTION: site info ── transparent so map shows through */}
-          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto" }}>
+          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto", animation: "contentSlideIn 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both" }}>
             {/* Site name */}
             <h1 style={{
               fontSize: isTab ? 32 : 24, fontWeight: 700, color: "#fff", margin: 0,
@@ -583,7 +594,7 @@ export function Dashboard({
           <div style={{ padding: isTab ? "0 28px 28px" : "0 14px 20px", display: "flex", flexDirection: "column", gap: isTab ? 16 : 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: "contentSlideIn 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both" }}>
               {/* Temperature — tablet uses the same SensorMiniCard as desktop */}
               {isTab ? (
                 <SensorMiniCard
@@ -752,6 +763,7 @@ export function Dashboard({
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   fontFamily: POPPINS,
+                  animation: "contentSlideIn 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both",
                 }}>
                   <div>
                     <p style={{ margin: 0, fontWeight: 700, fontSize: 20, color: "#337C85", lineHeight: 1.3 }}>
@@ -774,6 +786,7 @@ export function Dashboard({
                   padding: "20px 22px",
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "stretch", gap: 14,
+                  animation: "contentSlideIn 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both",
                 }}>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                     <p style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 20, color: "#337C85", fontFamily: POPPINS }}>
@@ -817,6 +830,7 @@ export function Dashboard({
                 background: "rgba(255,255,255,0.96)", borderRadius: 24,
                 padding: "20px 18px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                 display: "flex", alignItems: "stretch", gap: 14,
+                animation: "contentSlideIn 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both",
               }}>
                 {/* Risk Level */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
@@ -863,15 +877,6 @@ export function Dashboard({
 
         {alertsPortal}
 
-        {/* White overlay — fades out once map tiles load */}
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 9,
-          background: "#fff",
-          opacity: mapReady ? 0 : 1,
-          transition: "opacity 0.6s ease",
-          pointerEvents: mapReady ? "none" : "auto",
-        }} />
-
         <style>{`
           @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
@@ -880,6 +885,10 @@ export function Dashboard({
           @keyframes dotPulse {
             0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
             60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
+          }
+          @keyframes contentSlideIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to { opacity: 1; transform: translateY(0); }
           }
           *::-webkit-scrollbar { display: none; }
         `}</style>
@@ -894,7 +903,7 @@ export function Dashboard({
   const panelWidth = isNarrowDesktop ? "58%" : "44%";
   const panelPadding = isNarrowDesktop ? "40px 32px 40px 32px" : "50px 50px 50px 50px";
   return (
-    <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
+    <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
 
       {/* ── GRADIENT OVERLAY — upper-left to lower-right, seamless fade across full screen ── */}
       <div
@@ -927,7 +936,7 @@ export function Dashboard({
         } as React.CSSProperties}
       >
         {/* Site header */}
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 24, animation: "contentSlideIn 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both" }}>
           <h1 style={{
             fontSize: 38,
             fontWeight: 700,
@@ -950,7 +959,7 @@ export function Dashboard({
         </div>
 
         {/* ── 3 Sensor mini-cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16, marginBottom: 30 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16, marginBottom: 30, animation: "contentSlideIn 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both" }}>
           {/* Temperature */}
           <SensorMiniCard
             label="Temperature"
@@ -994,6 +1003,7 @@ export function Dashboard({
             justifyContent: "space-between",
             marginBottom: 30,
             boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            animation: "contentSlideIn 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both",
           }}
         >
           <div>
@@ -1022,6 +1032,7 @@ export function Dashboard({
             display: "flex",
             alignItems: "stretch",
             gap: 16,
+            animation: "contentSlideIn 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both",
           }}
         >
           {/* LEFT: Risk Level */}
@@ -1105,6 +1116,8 @@ export function Dashboard({
           overflow: "hidden",
           zIndex: 0,
           pointerEvents: "auto",
+          opacity: mapReady ? 1 : 0,
+          transition: "opacity 0.8s ease",
         }}
       >
         <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} />
@@ -1173,15 +1186,6 @@ export function Dashboard({
       {/* Alerts portal — shared across all layouts */}
       {alertsPortal}
 
-      {/* White overlay — fades out once map tiles load */}
-      <div style={{
-        position: "absolute", inset: 0, zIndex: 9,
-        background: "#fff",
-        opacity: mapReady ? 0 : 1,
-        transition: "opacity 0.6s ease",
-        pointerEvents: mapReady ? "none" : "auto",
-      }} />
-
       <style>{`
         @keyframes pulse {
           0%, 100% { transform: scale(1); opacity: 1; }
@@ -1190,6 +1194,10 @@ export function Dashboard({
         @keyframes dotPulse {
           0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
           60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
+        }
+        @keyframes contentSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         *::-webkit-scrollbar { display: none; }
       `}</style>

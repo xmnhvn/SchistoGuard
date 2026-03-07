@@ -233,7 +233,10 @@ export default function App() {
         systemStatus={systemStatus}
         user={user}
       >
-        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} />}
+        {/* Dashboard stays mounted (preserves map), hidden via CSS when not active */}
+        <div style={{ display: currentView === 'dashboard' ? 'contents' : 'none' }}>
+          <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} />
+        </div>
         {currentView === 'alerts' && <AlertsPage onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsPage />}
         {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}

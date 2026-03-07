@@ -1,24 +1,18 @@
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Badge } from "./ui/badge";
+import React, { useState, useEffect } from "react";
 import { AlertItem } from "./AlertItem";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  CheckCircle2, 
+import {
+  Download,
+  CheckCircle2,
   AlertTriangle,
-  Clock,
-  Calendar,
-  MapPin as MapPinIcon,
-  Bell
+  Bell,
 } from "lucide-react";
-import { useState, useEffect } from "react";
 import { apiGet } from "../utils/api";
+
+const POPPINS = "'Poppins', sans-serif";
 
 
 
@@ -39,6 +33,16 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
       });
     }
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
   useEffect(() => {
     const fetchAlerts = () => {
@@ -110,244 +114,293 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
     return avgMin < 1 ? "<1m" : `${avgMin}m`;
   }
   const avgResponseTime = getAverageResponseTime(alerts);
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
 
   return (
-    <div className="p-6 space-y-6">
+    <div style={{
+      fontFamily: POPPINS,
+      height: "100%",
+      overflowY: "auto",
+      background: "#f5f7f9",
+      padding: pad,
+    }}>
+      {/* ── Header + Filters ── */}
+      <div style={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        justifyContent: "space-between",
+        alignItems: isMobile ? "flex-start" : "center",
+        gap: 16,
+        marginBottom: 24,
+      }}>
+        <div>
+          <h1 style={{
+            fontSize: isMobile ? 22 : 26,
+            fontWeight: 600,
+            color: "#1a2a3a",
+            margin: 0,
+          }}>
+            Alert Management
+          </h1>
+          <p style={{
+            fontSize: 14,
+            color: "#8E8B8B",
+            margin: "4px 0 0",
+          }}>
+            Monitor and manage water quality alerts across all sites
+          </p>
+        </div>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger style={{
+              width: 148, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+              border: "1px solid #e2e5ea", background: "#fff", height: 38,
+            }}>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="unacknowledged">Unacknowledged</SelectItem>
+              <SelectItem value="acknowledged">Acknowledged</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterLevel} onValueChange={setFilterLevel}>
+            <SelectTrigger style={{
+              width: 140, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+              border: "1px solid #e2e5ea", background: "#fff", height: 38,
+            }}>
+              <SelectValue placeholder="All Levels" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="critical">Critical</SelectItem>
+              <SelectItem value="warning">Warning</SelectItem>
+            </SelectContent>
+          </Select>
+          <button
+            onClick={handleExport}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "0 16px", height: 38, borderRadius: 12,
+              border: "1px solid #e2e5ea",
+              background: "#fff", cursor: "pointer", fontSize: 13,
+              fontFamily: POPPINS, fontWeight: 500, color: "#374151",
+            }}
+          >
+            <Download size={15} /> Export
+          </button>
+        </div>
+      </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-          
-          <div className="flex flex-col items-start gap-1">
-            <h1 className="text-2xl font-semibold text-schistoguard-navy">Alert Management</h1>
-            <div className="text-muted-foreground text-sm">Monitor and manage water quality alerts across all sites</div>
-          </div>
-          
-          <div></div>
-          
-          <div className="flex flex-row items-center gap-3 w-full md:w-auto">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-[140px] border border-gray-300 rounded-lg bg-gray-50">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="unacknowledged">Unacknowledged</SelectItem>
-                <SelectItem value="acknowledged">Acknowledged</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={filterLevel}
-              onValueChange={setFilterLevel}
-            >
-              <SelectTrigger className="w-40 border border-gray-200">
-                <SelectValue placeholder="All Levels" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              className="w-40 flex items-center justify-center gap-2 border border-gray-200"
-              onClick={handleExport}
-            >
-              <Download className="w-4 h-4" /> Export Alerts
-            </Button>
+      {/* ── Stat Cards ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
+        gap: 16,
+        marginBottom: 24,
+      }}>
+        <StatCard icon={<Bell size={22} color="#3b82f6" />} label="Total Alerts" value={String(alerts.length)} valueColor="#1d4ed8" sub="All alerts (history)" />
+        <StatCard icon={<AlertTriangle size={22} color="#eab308" />} label="Unacknowledged" value={String(unacknowledgedCount)} valueColor="#a16207" sub="Require attention" />
+        <StatCard icon={<AlertTriangle size={22} color="#ef4444" />} label="Critical Alerts" value={String(criticalCount)} valueColor="#dc2626" sub="High priority" />
+        <StatCard icon={<CheckCircle2 size={22} color="#22c55e" />} label="Response Time" value={avgResponseTime} valueColor="#16a34a" sub="Avg response" />
+      </div>
+
+      {/* ── Alert List ── */}
+      <div style={{
+        background: "#fff",
+        borderRadius: 20,
+        boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",
+          borderBottom: "1px solid #f0f1f3",
+        }}>
+          <h2 style={{
+            fontSize: 17, fontWeight: 600, color: "#1a2a3a",
+            margin: 0,
+          }}>
+            Alert List
+          </h2>
+        </div>
+        <div style={{
+          padding: isMobile ? 12 : 20,
+          maxHeight: isMobile ? 400 : 480,
+          overflowY: "auto",
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {filteredAlerts.length > 0 ? (
+              filteredAlerts.map((alert) => (
+                <Dialog key={alert.id}>
+                  <AlertItem
+                    {...alert}
+                    onAcknowledge={handleAcknowledgeAlert}
+                    onExpand={() => { setSelectedAlert(alert); }}
+                    DetailsButtonComponent={({ onClick }) => (
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
+                          className="py-0.5 px-2 text-xs h-6 min-h-0"
+                        >
+                          Details
+                        </Button>
+                      </DialogTrigger>
+                    )}
+                  />
+                  <DialogContent className="max-w-2xl" style={{ fontFamily: POPPINS }}>
+                    <DialogHeader>
+                      <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
+                        Alert Details
+                      </DialogTitle>
+                    </DialogHeader>
+                    {selectedAlert && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                        <div style={{
+                          display: "grid",
+                          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                          gap: 28,
+                        }}>
+                          <div>
+                            <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
+                              Alert Information
+                            </h4>
+                            <table style={{ width: "100%", fontSize: 13 }}>
+                              <tbody>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
+                                  <td style={{ fontFamily: "monospace", fontWeight: 600, fontSize: 14 }}>{selectedAlert.id}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
+                                  <td>
+                                    <Badge
+                                      variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
+                                      className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
+                                    >
+                                      {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
+                                    </Badge>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
+                                  <td style={{ fontWeight: 600 }}>{selectedAlert.parameter}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
+                                  <td style={{ fontWeight: 600 }}>{selectedAlert.value} <span style={{ fontWeight: 400, fontSize: 11 }}>NTU</span></td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
+                                  <td>{selectedAlert.duration || '-'}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div>
+                            <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
+                              Site Information
+                            </h4>
+                            <table style={{ width: "100%", fontSize: 13 }}>
+                              <tbody>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
+                                  <td style={{ fontWeight: 600 }}>{selectedAlert.siteName}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
+                                  <td>{selectedAlert.barangay}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
+                                  <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(selectedAlert.timestamp)}</td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Status:</td>
+                                  <td>
+                                    <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
+                                      {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
+                                    </Badge>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                        <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 16 }}>
+                          <h4 style={{ fontWeight: 500, marginBottom: 12, fontSize: 14 }}>Alert Message</h4>
+                          <p style={{
+                            fontSize: 13, color: "#8E8B8B", background: "#f9fafb",
+                            borderRadius: 10, padding: 14, marginBottom: 20,
+                          }}>
+                            {selectedAlert.message}
+                          </p>
+                          {selectedAlert.acknowledgedBy && (
+                            <div style={{ textAlign: "center", paddingTop: 8 }}>
+                              <span style={{ fontSize: 12, color: "#8E8B8B", display: "block" }}>Acknowledged by</span>
+                              <span style={{ fontWeight: 500, fontSize: 13 }}>{selectedAlert.acknowledgedBy}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, paddingTop: 8 }}>
+                          {!selectedAlert.isAcknowledged && (
+                            <Button
+                              onClick={() => handleAcknowledgeAlert(selectedAlert.id)}
+                              className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              Acknowledge Alert
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              ))
+            ) : (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "#8E8B8B" }}>
+                <AlertTriangle size={48} style={{ margin: "0 auto 16px", display: "block", opacity: 0.4 }} />
+                <p style={{ margin: 0, fontSize: 15 }}>No alerts found matching your filters.</p>
+                <p style={{ fontSize: 13, margin: "6px 0 0" }}>Try adjusting your search criteria.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-md font-medium">Total Alerts</CardTitle>
-            <Bell className="h-7 w-7 text-blue-500" />
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-blue-700 text-center">{alerts.length}</div>
-            <p className="text-xs text-muted-foreground text-center">All alerts (history)</p>
-          </CardContent>
-        </Card>
+      <style>{`
+        *::-webkit-scrollbar { display: none; }
+      `}</style>
+    </div>
+  );
+}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-md font-medium">Unacknowledged</CardTitle>
-            <AlertTriangle className="h-7 w-7 text-yellow-500" />
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-yellow-700 text-center">{unacknowledgedCount}</div>
-            <p className="text-xs text-muted-foreground text-center">Require attention</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-md font-medium">Critical Alerts</CardTitle>
-            <AlertTriangle className="h-7 w-7 text-red-500" />
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center">
-            <p className="text-xs text-muted-foreground text-center">High priority</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-md font-medium">Response Time</CardTitle>
-            <CheckCircle2 className="h-7 w-7 text-green-500" />
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold text-green-600 text-center">{avgResponseTime}</div>
-            <p className="text-xs text-muted-foreground text-center">Average response (acknowledged alerts)</p>
-          </CardContent>
-        </Card>
+function StatCard({ icon, label, value, valueColor, sub }: {
+  icon: React.ReactNode; label: string; value: string; valueColor: string; sub: string;
+}) {
+  return (
+    <div style={{
+      background: "#fff",
+      borderRadius: 20,
+      padding: 20,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
+      display: "flex",
+      flexDirection: "column",
+      fontFamily: "'Poppins', sans-serif",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: "#77ABB2" }}>{label}</span>
+        {icon}
       </div>
-
-      
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="font-bold">Alert List</CardTitle>
-            
-          </div>
-        </CardHeader>
-        
-        <CardContent>
-          
-          <div className="rounded-md border overflow-x-auto h-80 overflow-y-auto scrollbar-hide space-y-4">
-            {filteredAlerts.length > 0 ? (
-              filteredAlerts.map((alert) => (
-                <div key={alert.id} className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <Dialog>
-                      <AlertItem
-                        {...alert}
-                        onAcknowledge={handleAcknowledgeAlert}
-                        onExpand={() => { setSelectedAlert(alert); }}
-                        DetailsButtonComponent={({ onClick }) => (
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
-                              className="py-0.5 px-2 text-xs h-6 min-h-0"
-                            >
-                              Details
-                            </Button>
-                          </DialogTrigger>
-                        )}
-                      />
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle className="text-center font-bold mt-6 mb-6">Alert Details</DialogTitle>
-                        </DialogHeader>
-                        {selectedAlert && (
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              <div>
-                                <h4 className="font-semibold text-md mb-4 text-schistoguard-navy">Alert Information</h4>
-                                <table className="w-full text-sm">
-                                  <tbody>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Alert ID:</td>
-                                      <td className="font-mono font-semibold text-base">{selectedAlert.id}</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Level:</td>
-                                      <td>
-                                        <Badge 
-                                          variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
-                                          className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
-                                        >
-                                          {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Parameter:</td>
-                                      <td className="font-semibold">{selectedAlert.parameter}</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Value:</td>
-                                      <td className="font-semibold text-md">{selectedAlert.value} <span className="font-normal text-xs">NTU</span></td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Duration:</td>
-                                      <td>{selectedAlert.duration || '-'}</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-md mb-4 text-schistoguard-navy">Site Information</h4>
-                                <table className="w-full text-sm">
-                                  <tbody>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Site:</td>
-                                      <td className="font-semibold">{selectedAlert.siteName}</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Barangay:</td>
-                                      <td>{selectedAlert.barangay}</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Timestamp:</td>
-                                      <td className="whitespace-nowrap">{formatDateTime(selectedAlert.timestamp)}</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="pr-2 py-2 text-muted-foreground font-medium">Status:</td>
-                                      <td>
-                                        <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
-                                          {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                            <div className="border-t pt-4">
-                              <h4 className="font-medium mb-4">Alert Message</h4>
-                              <p className="text-sm mb-8 text-muted-foreground bg-muted/50 rounded-md">
-                                {selectedAlert.message}
-                              </p>
-                              {selectedAlert.acknowledgedBy && (
-                                <div className="pt-2 flex flex-col items-center">
-                                  <span className="text-xs text-muted-foreground">Acknowledged by</span>
-                                  <span className="font-medium text-sm text-center">{selectedAlert.acknowledgedBy}</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex gap-2 pt-2">
-                              {!selectedAlert.isAcknowledged && (
-                                <Button 
-                                  onClick={() => handleAcknowledgeAlert(selectedAlert.id)}
-                                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-                                >
-                                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                                  Acknowledge Alert
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No alerts found matching your filters.</p>
-                <p className="text-sm">Try adjusting your search criteria.</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div style={{ fontSize: 28, fontWeight: 600, color: valueColor }}>{value}</div>
+      <span style={{ fontSize: 12, color: "#8E8B8B", marginTop: 4 }}>{sub}</span>
     </div>
   );
 }
