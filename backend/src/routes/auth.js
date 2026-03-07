@@ -65,7 +65,8 @@ router.post("/login", (req, res) => {
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
-            organization: user.organization
+            organization: user.organization,
+            lastView: user.lastView || 'dashboard'
           }
         });
       } catch (error) {
@@ -245,19 +246,51 @@ router.post("/admin/create-user", isAuthenticated, (req, res) => {
 // Session check endpoint
 router.get("/session", (req, res) => {
   if (req.session && req.session.userId) {
-    res.json({
-      loggedIn: true,
-      user: {
-        id: req.session.userId,
-        email: req.session.email,
-        role: req.session.role,
-        firstName: req.session.firstName,
-        lastName: req.session.lastName
+    // Fetch latest user data including lastView
+    db.get(
+      "SELECT id, email, role, firstName, lastName, lastView FROM users WHERE id = ?",
+      [req.session.userId],
+      (err, user) => {
+        if (err || !user) {
+          return res.json({ loggedIn: false });
+        }
+        
+        res.json({
+          loggedIn: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            lastView: user.lastView || 'dashboard'
+          }
+        });
       }
-    });
+    );
   } else {
     res.json({ loggedIn: false });
   }
+});
+
+// Update last view
+router.put("/lastview", isAuthenticated, (req, res) => {
+  const { lastView } = req.body;
+  
+  if (!lastView) {
+    return res.status(400).json({ success: false, message: "lastView is required" });
+  }
+  
+  db.run(
+    "UPDATE users SET lastView = ? WHERE id = ?",
+    [lastView, req.session.userId],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: err.message });
+      }
+      res.json({ success: true, lastView });
+    }
+  );
 });
 
 // Logout endpoint

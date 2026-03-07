@@ -58,9 +58,20 @@ if (DB_TYPE === 'postgres') {
           "lastName" TEXT NOT NULL,
           role TEXT NOT NULL CHECK(role IN ('bhw', 'lgu')),
           organization TEXT NOT NULL,
+          "lastView" TEXT DEFAULT 'dashboard',
           "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
+      `);
+      
+      // Migration: Add lastView column if it doesn't exist
+      await db.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='lastView') THEN
+            ALTER TABLE users ADD COLUMN "lastView" TEXT DEFAULT 'dashboard';
+          END IF;
+        END $$;
       `);
       
       await db.query(`
@@ -195,8 +206,7 @@ if (DB_TYPE === 'postgres') {
       firstName TEXT NOT NULL,
       lastName TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('bhw', 'lgu')),
-      organization TEXT NOT NULL,
-      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+      organization TEXT NOT NULL,      lastView TEXT DEFAULT 'dashboard',      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
     )`);
 
@@ -263,6 +273,23 @@ if (DB_TYPE === 'postgres') {
         db.run("ALTER TABLE residents ADD COLUMN createdAt TEXT", (err) => {
           if (err) console.error("Error adding createdAt column:", err);
           else console.log("✓ Added createdAt column to residents table");
+        });
+      }
+    });
+    
+    // Migration: Add lastView column to users table if it doesn't exist
+    db.all("PRAGMA table_info(users)", (err, columns) => {
+      if (err) {
+        console.error("Error checking users table:", err);
+        return;
+      }
+      
+      const columnNames = columns.map(col => col.name);
+      
+      if (!columnNames.includes('lastView')) {
+        db.run("ALTER TABLE users ADD COLUMN lastView TEXT DEFAULT 'dashboard'", (err) => {
+          if (err) console.error("Error adding lastView column:", err);
+          else console.log("✓ Added lastView column to users table");
         });
       }
     });
