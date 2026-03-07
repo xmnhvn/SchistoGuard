@@ -33,7 +33,8 @@ const navItems = [
   { title: "Reports", iconSrc: "/icons/icon-nav-reports.svg", view: "reports" },
 ];
 
-export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDrawer }: NavigationProps & { onLogout?: () => void; onToggleDrawer?: () => void }) {
+export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDrawer, drawerOpen }: NavigationProps & { onLogout?: () => void; onToggleDrawer?: () => void; drawerOpen?: boolean }) {
+  const expanded = !!drawerOpen;
   return (
     <aside
       style={{
@@ -41,21 +42,21 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
         top: 76,
         left: 0,
         bottom: 0,
-        width: 64,
+        width: expanded ? 260 : 80,
         background: "#fff",
         borderRight: "1px solid #e8e8e8",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        paddingTop: 16,
+        paddingTop: 18,
         paddingBottom: 16,
         gap: 4,
         zIndex: 50,
         overflowY: "hidden",
+        overflowX: "hidden",
+        transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)",
       }}
     >
-      {/* Nav icons only — hamburger lives in NavigationHeader */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, padding: "0 10px" }}>
         {navItems.map((item) => {
           const isActive = currentView === item.view;
           return (
@@ -64,25 +65,29 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
               title={item.title}
               onClick={() => onNavigate?.(item.view)}
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 8,
+                width: "100%",
+                height: 52,
+                borderRadius: 12,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
+                justifyContent: "flex-start",
+                gap: 14,
+                padding: "0 0 0 19px",
+                background: isActive
+                  ? "linear-gradient(135deg, #357D86, #026366)"
+                  : "transparent",
                 border: "none",
                 cursor: "pointer",
-                padding: 0,
+                flexShrink: 0,
+                transition: "background 0.25s",
               }}
             >
               <div
                 style={{
-                  width: 20,
-                  height: 20,
-                  background: isActive
-                    ? "linear-gradient(to bottom, #357D86, #036366)"
-                    : "#ABABAB",
+                  width: 22,
+                  height: 22,
+                  flexShrink: 0,
+                  background: isActive ? "#fff" : "#ABABAB",
                   WebkitMaskImage: `url('${item.iconSrc}')`,
                   maskImage: `url('${item.iconSrc}')`,
                   WebkitMaskSize: "contain",
@@ -91,13 +96,45 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
                   maskRepeat: "no-repeat",
                   WebkitMaskPosition: "center",
                   maskPosition: "center",
-                  transition: "background 0.2s",
+                  transition: "background 0.25s",
                 }}
               />
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? "#fff" : "#6b7280",
+                  fontFamily: "Poppins, sans-serif",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  opacity: expanded ? 1 : 0,
+                  maxWidth: expanded ? 180 : 0,
+                  transition: "opacity 0.25s cubic-bezier(0.4,0,0.2,1), max-width 0.3s cubic-bezier(0.4,0,0.2,1)",
+                }}
+              >
+                {item.title}
+              </span>
             </button>
           );
         })}
       </div>
+      {/* User info — only when expanded */}
+      {user && (
+        <div style={{
+          padding: "16px 22px",
+          borderTop: "1px solid #f0f0f0",
+          overflow: "hidden",
+          clipPath: expanded ? "inset(0 0 0 0)" : "inset(0 100% 0 0)",
+          transition: "clip-path 0.7s cubic-bezier(0.4,0,0.2,1)",
+        }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#1a3a4a", fontFamily: "Poppins, sans-serif", whiteSpace: "nowrap" }}>
+            {user.firstName} {user.lastName}
+          </p>
+          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: "Poppins, sans-serif", whiteSpace: "nowrap" }}>
+            {user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+          </p>
+        </div>
+      )}
     </aside>
   );
 }
@@ -220,10 +257,10 @@ export function NavigationHeader({
                 WebkitMaskPosition: "center", maskPosition: "center",
               }} />
             </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => onNavigate?.("dashboard")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
               <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 26, height: 26, objectFit: "contain" }} />
               <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 17, color: "#357D86" }}>SchistoGuard</span>
-            </div>
+            </button>
           </>
         ) : (
           /* Tablet / Desktop: hamburger separate from page title */
@@ -232,7 +269,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 64, height: 76, flexShrink: 0,
+                width: 80, height: 76, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: 0,
               }}
@@ -255,14 +292,17 @@ export function NavigationHeader({
         )}
       </div>
 
-      {/* Center logo — tablet/desktop only, hidden on phone */}
+      {/* Center logo — clickable, navigates to dashboard */}
       {!isPhone && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+        <button
+          onClick={() => onNavigate?.("dashboard")}
+          style={{ display: "flex", alignItems: "center", gap: 8, position: "absolute", left: "50%", transform: "translateX(-50%)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        >
           <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 28, height: 28, objectFit: "contain" }} />
           <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 18, color: "#357D86" }}>
             SchistoGuard
           </span>
-        </div>
+        </button>
       )}
 
       {/* Right: bell + avatar */}
@@ -386,14 +426,14 @@ export function NavigationProvider({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Close drawer when navigating
+  // Close drawer only on phone when navigating; tablet/desktop stays open
   const handleNavigate = (view: string) => {
-    setDrawerOpen(false);
+    if (isPhone) setDrawerOpen(false);
     onNavigate?.(view);
   };
 
-  // Mobile overlay drawer (phone only)
-  const mobileDrawer = isPhone && drawerOpen ? (
+  // Mobile overlay drawer (phone only) — always rendered, animated via transform
+  const mobileDrawer = isPhone ? (
     <>
       {/* Backdrop */}
       <div
@@ -401,6 +441,9 @@ export function NavigationProvider({
         style={{
           position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)",
           zIndex: 90,
+          opacity: drawerOpen ? 1 : 0,
+          pointerEvents: drawerOpen ? "auto" : "none",
+          transition: "opacity 0.3s cubic-bezier(0.4,0,0.2,1)",
         }}
       />
       {/* Drawer panel */}
@@ -415,6 +458,8 @@ export function NavigationProvider({
           flexDirection: "column",
           fontFamily: POPPINS_NAV,
           zIndex: 95,
+          transform: drawerOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.6s cubic-bezier(0.4,0,0.2,1)",
         }}
       >
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 10px 10px", display: "flex", flexDirection: "column", gap: 6, scrollbarWidth: "none" } as React.CSSProperties}>
@@ -458,76 +503,6 @@ export function NavigationProvider({
     </>
   ) : null;
 
-  // Expanded drawer panel — tablet/desktop only (pushes content)
-  const expandedDrawer = !isPhone && drawerOpen ? (
-    <aside
-      style={{
-        position: "fixed",
-        top: 76,
-        left: 0,
-        bottom: 0,
-        width: 260,
-        background: "#fff",
-        borderRight: "1px solid #e8e8e8",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: POPPINS_NAV,
-        zIndex: 50,
-      }}
-    >
-      {/* Nav items — same height/gap as AppSidebar icons so spacing never shifts */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 10px 10px", display: "flex", flexDirection: "column", gap: 6, scrollbarWidth: "none" } as React.CSSProperties}>
-        {navItems.map((item) => {
-          const isActive = currentView === item.view;
-          return (
-            <button
-              key={item.view}
-              onClick={() => handleNavigate(item.view)}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 14,
-                height: 44, padding: "0 12px 0 22px", borderRadius: 8,
-                background: isActive ? "#357D86" : "transparent",
-                border: "none", cursor: "pointer", textAlign: "left",
-                flexShrink: 0,
-                transition: "background 0.15s",
-              }}
-            >
-              <div style={{
-                width: 20, height: 20, flexShrink: 0,
-                background: isActive ? "#fff" : "#ABABAB",
-                WebkitMaskImage: `url('${item.iconSrc}')`,
-                maskImage: `url('${item.iconSrc}')`,
-                WebkitMaskSize: "contain", maskSize: "contain",
-                WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-                WebkitMaskPosition: "center", maskPosition: "center",
-              }} />
-              <span style={{
-                fontSize: 14,
-                fontWeight: isActive ? 600 : 400,
-                color: isActive ? "#fff" : "#6b7280",
-                fontFamily: POPPINS_NAV,
-              }}>
-                {item.title}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* User info */}
-      {user && (
-        <div style={{ padding: "16px 22px", borderTop: "1px solid #f0f0f0" }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#1a3a4a", fontFamily: POPPINS_NAV }}>
-            {user.firstName} {user.lastName}
-          </p>
-          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: POPPINS_NAV }}>
-            {user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-          </p>
-        </div>
-      )}
-    </aside>
-  ) : null;
-
   return (
     <div style={{ position: "fixed", inset: 0, background: "#f5f7fa", overflow: "hidden" }}>
       {/* Fixed nav bar — always on top */}
@@ -548,31 +523,28 @@ export function NavigationProvider({
       />
       {/* Mobile overlay drawer */}
       {mobileDrawer}
-      {/* Desktop: fixed sidebar OR expanded drawer */}
+      {/* Desktop/tablet: single expanding sidebar */}
       {!isPhone && (
-        drawerOpen
-          ? expandedDrawer
-          : (
-            <AppSidebar
-              currentView={currentView}
-              onNavigate={handleNavigate}
-              onLogout={onLogout}
-              user={user}
-              onToggleDrawer={() => setDrawerOpen((p) => !p)}
-            />
-          )
+        <AppSidebar
+          currentView={currentView}
+          onNavigate={handleNavigate}
+          onLogout={onLogout}
+          user={user}
+          onToggleDrawer={() => setDrawerOpen((p) => !p)}
+          drawerOpen={drawerOpen}
+        />
       )}
       {/* Main content — full width on phone, offset by sidebar on tablet/desktop */}
       <main
         style={{
           position: "fixed",
           top: 76,
-          left: isPhone ? 0 : (drawerOpen ? 260 : 64),
+          left: isPhone ? 0 : (drawerOpen ? 260 : 80),
           right: 0,
           bottom: 0,
           overflowY: "auto",
           overflowX: "hidden",
-          transition: "left 0.2s ease",
+          transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         {children}
