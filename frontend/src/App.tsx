@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ChevronLeft } from 'lucide-react';
 import { NavigationProvider } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
 import { AlertsPage } from './components/AlertsPage';
@@ -107,10 +108,20 @@ export default function App() {
             setCurrentView('dashboard');
           }
         } else {
-          setCurrentView('landing');
+          const lastView = localStorage.getItem('currentView');
+          if (lastView === 'sensor-info') {
+            setCurrentView('sensor-info');
+          } else {
+            setCurrentView('landing');
+          }
         }
       } catch {
-        setCurrentView('landing');
+        const lastView = localStorage.getItem('currentView');
+        if (lastView === 'sensor-info') {
+          setCurrentView('sensor-info');
+        } else {
+          setCurrentView('landing');
+        }
       }
       setLoading(false);
     })();
@@ -124,7 +135,10 @@ export default function App() {
     return (
       <LandingPage
         onViewMap={() => setCurrentView('login')}
-        onLearnMore={() => setCurrentView('sensor-info')}
+        onLearnMore={() => {
+          setCurrentView('sensor-info');
+          localStorage.setItem('currentView', 'sensor-info');
+        }}
         onEnterApp={() => setCurrentView('login')}
       />
     );
@@ -133,14 +147,20 @@ export default function App() {
   if (currentView === 'sensor-info') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <button
-            onClick={() => setCurrentView('landing')}
-            className="mb-6 px-4 py-2 text-sm font-medium text-schistoguard-navy hover:text-schistoguard-navy/80"
-          >
-            ← Back to Home
-          </button>
-          <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
+        <div className="px-3 py-6">
+          <div className="flex gap-3 items-start">
+            <button
+              onClick={() => setCurrentView('landing')}
+              className="flex items-center justify-center w-10 h-10 rounded-full text-schistoguard-navy hover:text-schistoguard-navy/80 transition-colors flex-shrink-0"
+              aria-label="Back to Home"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 min-w-0">
+              <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
+            </div>
+            <div className="w-10 flex-shrink-0" aria-hidden="true" />
+          </div>
         </div>
       </div>
     );

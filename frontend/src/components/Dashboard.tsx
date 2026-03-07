@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import SensorCard from "./SensorCard";
 import { AlertItem } from "./AlertItem";
 import { DashboardMap } from "./DashboardMap";
 import {
@@ -332,32 +331,134 @@ export function Dashboard({
     );
   })();
 
-  // ─── sensors-only mode (unchanged) ──────────────────────────────────────
+  // ─── sensors-only mode (map + sensor cards only) ───────────────────────
   if (viewMode === "sensors-only") {
+    const compactCards = isMobile || isTablet;
     return (
-      <div className="p-6 space-y-6">
-        <div className="animate-fade-up">
-          <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">
-            Water Quality Information
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Real-time sensor data for monitoring barangay water quality
-          </p>
+      <div
+        style={{
+          position: "relative",
+          minHeight: 560,
+          height: compactCards ? "calc(100vh - 48px)" : "calc(100vh - 48px)",
+          maxHeight: 1200,
+          borderRadius: 24,
+          overflow: "hidden",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+        }}
+      >
+        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+          {compactCards ? (
+            <DashboardMap mobileMode={true} interactive={isTablet} />
+          ) : (
+            <DashboardMap />
+          )}
         </div>
-        <div className="mb-6 mt-2 animate-fade-up animate-delay-200 max-w-2xl">
-          <SensorCard
-            readings={
-              latestReading && backendOk && dataOk
-                ? {
-                  turbidity: latestReading.turbidity,
-                  temperature: latestReading.temperature,
-                  ph: latestReading.ph,
-                }
-                : { turbidity: null, temperature: null, ph: null }
-            }
-            offline={!backendOk || !dataOk}
-          />
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to bottom right, #357D86 0%, rgba(53,125,134,0.6) 10%, rgba(152,244,255,0) 55%)",
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            width: compactCards ? "100%" : "46%",
+            height: "100%",
+            padding: compactCards ? "18px 14px 18px" : "30px 30px 30px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            overflowY: "auto",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            pointerEvents: "none",
+          } as React.CSSProperties}
+        >
+          <div style={{ pointerEvents: "none" }}>
+            <h1
+              style={{
+                margin: 0,
+                color: "#fff",
+                fontFamily: POPPINS,
+                fontWeight: 700,
+                fontSize: compactCards ? 28 : 34,
+                lineHeight: 1.15,
+                textShadow: "0 1px 6px rgba(0,0,0,0.18)",
+              }}
+            >
+              Water Quality Information
+            </h1>
+            <p
+              style={{
+                margin: "6px 0 0",
+                color: "rgba(255,255,255,0.92)",
+                fontFamily: POPPINS,
+                fontSize: compactCards ? 13 : 15,
+              }}
+            >
+              Real-time data For monitoring Schistosomiasis Risk
+            </p>
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+              gap: 12,
+              pointerEvents: "auto",
+            }}
+          >
+            <SensorMiniCard
+              label="Temperature"
+              iconSrc="/icons/icon-temperature.svg"
+              value={latestReading ? `${latestReading.temperature}` : "—"}
+              unit="°C"
+              sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
+              dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
+              active={!!latestReading}
+              compact={compactCards}
+            />
+
+            <SensorMiniCard
+              label="Turbidity"
+              iconSrc="/icons/icon-turbidity.svg"
+              value={latestReading ? `${latestReading.turbidity}` : "—"}
+              unit="NTU"
+              sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
+              dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
+              active={!!latestReading}
+              compact={compactCards}
+            />
+
+            <SensorMiniCard
+              label="pH Level"
+              iconSrc="/icons/icon-ph.svg"
+              value={latestReading ? `${latestReading.ph}` : "—"}
+              unit=""
+              sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
+              dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
+              active={!!latestReading}
+              compact={compactCards}
+            />
+          </div>
         </div>
+
+        <style>{`
+          @keyframes dotPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
+            60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
+          }
+          *::-webkit-scrollbar { display: none; }
+        `}</style>
       </div>
     );
   }
