@@ -235,16 +235,20 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             </CardHeader>
             <CardContent>
               {usersError && (
-                <div className="p-3 mb-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                  {usersError}
+                <div className="p-4 mb-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                  <strong>Error loading users:</strong> {usersError}
                 </div>
               )}
 
-              {loadingUsers ? (
+              {loadingUsers && (
                 <p className="text-center text-gray-500 py-8">Loading users...</p>
-              ) : users.length === 0 ? (
+              )}
+              
+              {!loadingUsers && !usersError && users.length === 0 && (
                 <p className="text-center text-gray-500 py-8">No users found</p>
-              ) : (
+              )}
+              
+              {!loadingUsers && !usersError && users.length > 0 && (
                 <div className="space-y-3 max-h-[600px] overflow-y-auto">
                   {users.map((user) => (
                     <div

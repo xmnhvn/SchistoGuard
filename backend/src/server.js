@@ -13,31 +13,33 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 let sessionStore = undefined;
 
 if (DB_TYPE === 'postgres') {
-  // Production: Use PostgreSQL for session store
+  // Production: Use PostgreSQL for session store with connection pool
   try {
     const pgSession = require("connect-pg-simple")(session);
-    const { Client } = require('pg');
+    const { Pool } = require('pg');
     
-    const pgClient = new Client({
+    // Create a connection pool for session store
+    const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }
     });
     
-    pgClient.connect((err) => {
+    // Test pool connection
+    pool.query('SELECT NOW()', (err, result) => {
       if (err) {
-        console.error('Session store database connection error:', err);
+        console.error('Session store pool connection error:', err);
       } else {
-        console.log('✓ PostgreSQL session store connected');
+        console.log('✓ PostgreSQL session store pool connected');
       }
     });
     
     sessionStore = new pgSession({
-      pool: pgClient,
+      pool: pool,
       tableName: 'session',
       createTableIfMissing: true
     });
     
-    console.log('✓ Using PostgreSQL session store (persistent)');
+    console.log('✓ Using PostgreSQL session store (persistent with connection pool)');
   } catch (err) {
     console.error('⚠ PostgreSQL session store error:', err.message);
     console.log('  Falling back to memory-based session store');
@@ -66,6 +68,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'schistoguard-secret-key';
 const corsOptions = {
   origin: [
     FRONTEND_URL, 
+    'http://localhost:5173',
     'http://localhost:3000', 
     'https://schisto-guard.vercel.app'
   ],
@@ -76,16 +79,23 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Railway/Render/other proxies need this so secure cookies are set correctly.
+if (NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(session({
   store: sessionStore,
   secret: SESSION_SECRET,
+  proxy: NODE_ENV === 'production',
   resave: false,
   saveUninitialized: false,
   cookie: { 
     secure: NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, 
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    sameSite: 'Lax' // Works for same-site requests (localhost:5173 -> localhost:3001)
+    // Cloud frontend (Vercel) -> cloud backend (Railway) is cross-site.
+    sameSite: NODE_ENV === 'production' ? 'none' : 'lax'
   }
 }));
 

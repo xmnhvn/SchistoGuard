@@ -24,23 +24,29 @@ const isAuthenticated = (req, res, next) => {
   }
 };
 
-// Middleware to check if user is authorized for admin (both LGU and BHW)
+// Middleware to check if user is authorized for admin (just need to be logged in)
 const isAdmin = (req, res, next) => {
-  const isAuthorized = req.session && req.session.userId && ['lgu', 'bhw'].includes(req.session.role);
+  const hasSession = !!req.session;
+  const hasUserId = req.session?.userId;
+  const isAuthorized = hasSession && hasUserId;
+  
   console.log("👤 Admin Check:", {
-    hasSession: !!req.session,
-    userId: req.session?.userId,
+    sessionID: req.sessionID,
+    hasSession,
+    userId: hasUserId ? `user#${hasUserId}` : null,
     role: req.session?.role,
-    isAuthorized: isAuthorized,
+    isAuthorized,
+    cookieHeader: req.headers.cookie ? '√ present' : '✗ missing',
     timestamp: new Date().toISOString()
   });
   
   if (isAuthorized) {
     next();
   } else {
+    const reason = !hasSession ? 'no session' : !hasUserId ? 'no userId' : 'unknown';
     res.status(403).json({ 
       success: false, 
-      message: "Admin access required. Please log in with your account." 
+      message: `Access required. Please log in with your account. (${reason})`
     });
   }
 };
@@ -377,30 +383,18 @@ router.get("/me", isAuthenticated, (req, res) => {
 router.get("/users", isAdmin, (req, res) => {
   console.log("GET /users endpoint hit by user:", req.session.userId, "role:", req.session.role);
   
-  // Simple test - get all rows without complex conversion
-  db.query('SELECT * FROM "users" LIMIT 10', [], (err, result) => {
-    if (err) {
-      console.error("Direct query error:", err);
-      return res.status(500).json({ success: false, message: "Query error: " + err.message });
-    }
-    console.log("Direct query result:", result.rows);
-    console.log("Number of rows:", result.rows?.length || 0);
-    
-    // Try the wrapped db.all() method
-    db.all(
-      "SELECT id, email, firstName, lastName, role, organization, createdAt FROM users ORDER BY createdAt DESC",
-      [],
-      (err, users) => {
-        if (err) {
-          console.error("Error fetching users via db.all():", err);
-          return res.status(500).json({ success: false, message: err.message });
-        }
-        console.log("db.all() result:", users);
-        console.log("Number of users via db.all():", users?.length || 0);
-        res.json({ success: true, users: users || [] });
+  db.all(
+    "SELECT id, email, firstName, lastName, role, organization, createdAt FROM users ORDER BY createdAt DESC",
+    [],
+    (err, users) => {
+      if (err) {
+        console.error("Error fetching users:", err);
+        return res.status(500).json({ success: false, message: err.message });
       }
-    );
-  });
+      console.log("✓ Fetched users:", users?.length || 0);
+      res.json({ success: true, users: users || [] });
+    }
+  );
 });
 
 // Delete user (admin endpoint - both LGU and BHW)
