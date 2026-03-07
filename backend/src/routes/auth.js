@@ -4,10 +4,44 @@ const bcrypt = require("bcryptjs");
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
-  if (req.session && req.session.userId) {
+  const sessionValid = req.session && req.session.userId;
+  console.log("🔐 Auth Check:", {
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
+    userId: req.session?.userId,
+    email: req.session?.email,
+    isValid: sessionValid,
+    timestamp: new Date().toISOString()
+  });
+  
+  if (sessionValid) {
     next();
   } else {
-    res.status(401).json({ success: false, message: "Not authenticated" });
+    res.status(401).json({ 
+      success: false, 
+      message: "Not authenticated - please log in again"
+    });
+  }
+};
+
+// Middleware to check if user is authorized for admin (both LGU and BHW)
+const isAdmin = (req, res, next) => {
+  const isAuthorized = req.session && req.session.userId && ['lgu', 'bhw'].includes(req.session.role);
+  console.log("👤 Admin Check:", {
+    hasSession: !!req.session,
+    userId: req.session?.userId,
+    role: req.session?.role,
+    isAuthorized: isAuthorized,
+    timestamp: new Date().toISOString()
+  });
+  
+  if (isAuthorized) {
+    next();
+  } else {
+    res.status(403).json({ 
+      success: false, 
+      message: "Admin access required. Please log in with your account." 
+    });
   }
 };
 
@@ -56,18 +90,33 @@ router.post("/login", (req, res) => {
         req.session.firstName = user.firstName;
         req.session.lastName = user.lastName;
 
-        res.json({
-          success: true,
-          message: "Login successful",
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            organization: user.organization,
-            lastView: user.lastView || 'dashboard'
+        console.log("✅ Session created:", {
+          sessionID: req.sessionID,
+          userId: req.session.userId,
+          email: req.session.email,
+          role: req.session.role,
+          timestamp: new Date().toISOString()
+        });
+
+        // Save session before sending response
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            return res.status(500).json({ success: false, message: "Failed to save session: " + saveErr.message });
           }
+          
+          res.json({
+            success: true,
+            message: "Login successful",
+            user: {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              organization: user.organization,
+              lastView: user.lastView || 'dashboard'
+            }
+          });
         });
       } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -146,17 +195,24 @@ router.post("/signup", (req, res) => {
           req.session.firstName = firstName;
           req.session.lastName = lastName;
 
-          res.json({
-            success: true,
-            message: "Account created successfully",
-            user: {
-              id: createdUserId,
-              email,
-              firstName,
-              lastName,
-              role,
-              organization
+          // Save session before sending response
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              return res.status(500).json({ success: false, message: "Failed to save session: " + saveErr.message });
             }
+            
+            res.json({
+              success: true,
+              message: "Account created successfully",
+              user: {
+                id: createdUserId,
+                email,
+                firstName,
+                lastName,
+                role,
+                organization
+              }
+            });
           });
         }
       );
@@ -166,8 +222,8 @@ router.post("/signup", (req, res) => {
   });
 });
 
-// Admin create user endpoint (does not change current session)
-router.post("/admin/create-user", isAuthenticated, (req, res) => {
+// Admin create user endpoint (both LGU and BHW - does not change current session)
+router.post("/admin/create-user", isAdmin, (req, res) => {
   const { email, password, confirmPassword, role, firstName, lastName, organization } = req.body;
 
   if (!["bhw", "lgu"].includes(role)) {
@@ -317,9 +373,9 @@ router.get("/me", isAuthenticated, (req, res) => {
   );
 });
 
-// Get all users (protected)
-router.get("/users", isAuthenticated, (req, res) => {
-  console.log("GET /users endpoint hit by user:", req.session.userId);
+// Get all users (admin endpoint - both LGU and BHW)
+router.get("/users", isAdmin, (req, res) => {
+  console.log("GET /users endpoint hit by user:", req.session.userId, "role:", req.session.role);
   
   // Simple test - get all rows without complex conversion
   db.query('SELECT * FROM "users" LIMIT 10', [], (err, result) => {
@@ -347,8 +403,8 @@ router.get("/users", isAuthenticated, (req, res) => {
   });
 });
 
-// Delete user (protected)
-router.delete("/users/:id", isAuthenticated, (req, res) => {
+// Delete user (admin endpoint - both LGU and BHW)
+router.delete("/users/:id", isAdmin, (req, res) => {
   const userId = req.params.id;
   
   // Prevent deleting own account

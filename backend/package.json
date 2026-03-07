@@ -11,6 +11,7 @@
   "dependencies": {
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
@@ -22,9 +23,9 @@
     "nodemon": "^3.0.1"
   },
   "optionalDependencies": {
+    "connect-sqlite3": "^0.9.16",
     "serialport": "^13.0.0",
-    "sqlite3": "^5.1.7",
-    "connect-sqlite3": "^0.9.16"
+    "sqlite3": "^5.1.7"
   },
   "description": "",
   "keywords": [],

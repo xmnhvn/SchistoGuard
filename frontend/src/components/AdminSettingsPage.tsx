@@ -17,7 +17,11 @@ interface User {
   createdAt?: string;
 }
 
-export function AdminSettingsPage() {
+interface AdminSettingsPageProps {
+  user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
+}
+
+export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -49,7 +53,14 @@ export function AdminSettingsPage() {
       }
     } catch (err: any) {
       console.error("Failed to fetch users:", err);
-      setUsersError(err?.message || "Failed to fetch users - make sure you are logged in");
+      const errorMsg = err?.message || "Failed to fetch users";
+      
+      // Provide helpful error message based on error
+      if (errorMsg.includes("Not authenticated")) {
+        setUsersError("Session expired. Please log in again.");
+      } else {
+        setUsersError(errorMsg);
+      }
     } finally {
       setLoadingUsers(false);
     }
@@ -228,6 +239,7 @@ export function AdminSettingsPage() {
                   {usersError}
                 </div>
               )}
+
               {loadingUsers ? (
                 <p className="text-center text-gray-500 py-8">Loading users...</p>
               ) : users.length === 0 ? (

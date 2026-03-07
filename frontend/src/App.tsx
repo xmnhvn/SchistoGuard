@@ -238,7 +238,7 @@ export default function App() {
         {currentView === 'recipients' && (
           <SettingsPage siteName={selectedSiteId || "All Sites"} />
         )}
-        {currentView === 'admin-settings' && <AdminSettingsPage />}
+        {currentView === 'admin-settings' && <AdminSettingsPage user={user} />}
       </NavigationProvider>
     );
   }
