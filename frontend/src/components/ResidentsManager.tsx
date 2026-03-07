@@ -388,7 +388,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Filters */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Search</Label>
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
               <Input
@@ -400,7 +399,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Filter by Designation</Label>
             <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger>
                 <SelectValue />

@@ -6,17 +6,46 @@ const db = require("../db");
 function getDateRange(type, customPeriod = null) {
   const now = new Date();
   let startDate, endDate;
+  const periodValue = typeof customPeriod === "string" ? customPeriod : "";
   
   switch (type) {
     case 'weekly':
-      // Last 7 days
+      // Custom weekly range: range:YYYY-MM-DD:YYYY-MM-DD
+      if (periodValue.startsWith('range:')) {
+        const [, start, end] = periodValue.split(':');
+        const parsedStart = new Date(`${start}T00:00:00`);
+        const parsedEnd = new Date(`${end}T23:59:59.999`);
+        const isValidRange = !Number.isNaN(parsedStart.getTime()) && !Number.isNaN(parsedEnd.getTime()) && parsedStart <= parsedEnd;
+
+        if (isValidRange) {
+          startDate = parsedStart;
+          endDate = parsedEnd;
+          break;
+        }
+      }
+
+      // Default: last 7 days
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       endDate = now;
       break;
       
     case 'monthly':
-      // Current month or last month
-      if (customPeriod === 'last-month') {
+      // Custom month: month:YYYY-MM
+      if (periodValue.startsWith('month:')) {
+        const monthMatch = periodValue.match(/^month:(\d{4})-(\d{2})$/);
+        if (monthMatch) {
+          const year = Number(monthMatch[1]);
+          const month = Number(monthMatch[2]) - 1;
+          if (month >= 0 && month <= 11) {
+            startDate = new Date(year, month, 1, 0, 0, 0, 0);
+            endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+            break;
+          }
+        }
+      }
+
+      // Backward compatibility: current month or last month
+      if (periodValue === 'last-month') {
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         endDate = new Date(now.getFullYear(), now.getMonth(), 0);
       } else {
@@ -26,14 +55,38 @@ function getDateRange(type, customPeriod = null) {
       break;
       
     case 'quarterly':
-      // Current quarter
+      // Custom quarter: quarter:YYYY-QN
+      if (periodValue.startsWith('quarter:')) {
+        const quarterMatch = periodValue.match(/^quarter:(\d{4})-Q([1-4])$/);
+        if (quarterMatch) {
+          const year = Number(quarterMatch[1]);
+          const quarterNumber = Number(quarterMatch[2]);
+          const startMonth = (quarterNumber - 1) * 3;
+          startDate = new Date(year, startMonth, 1, 0, 0, 0, 0);
+          endDate = new Date(year, startMonth + 3, 0, 23, 59, 59, 999);
+          break;
+        }
+      }
+
+      // Default: current quarter
       const quarter = Math.floor(now.getMonth() / 3);
       startDate = new Date(now.getFullYear(), quarter * 3, 1);
       endDate = now;
       break;
       
     case 'annual':
-      // Current year
+      // Optional year: year:YYYY
+      if (periodValue.startsWith('year:')) {
+        const yearMatch = periodValue.match(/^year:(\d{4})$/);
+        if (yearMatch) {
+          const year = Number(yearMatch[1]);
+          startDate = new Date(year, 0, 1, 0, 0, 0, 0);
+          endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+          break;
+        }
+      }
+
+      // Default: current year
       startDate = new Date(now.getFullYear(), 0, 1);
       endDate = now;
       break;
@@ -53,23 +106,24 @@ function getDateRange(type, customPeriod = null) {
 /**
  * Format period name for display
  */
-function formatPeriod(type, startDate) {
-  const date = new Date(startDate);
+function formatPeriod(type, startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
   
   switch (type) {
     case 'weekly':
-      return `Week of ${date.toLocaleDateString()}`;
+      return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
     case 'monthly':
-      return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+      return `${monthNames[start.getMonth()]} ${start.getFullYear()}`;
     case 'quarterly':
-      const quarter = Math.floor(date.getMonth() / 3) + 1;
-      return `Q${quarter} ${date.getFullYear()}`;
+      const quarter = Math.floor(start.getMonth() / 3) + 1;
+      return `Q${quarter} ${start.getFullYear()}`;
     case 'annual':
-      return `Year ${date.getFullYear()}`;
+      return `Year ${start.getFullYear()}`;
     default:
-      return `${date.toLocaleDateString()} - ${new Date().toLocaleDateString()}`;
+      return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
   }
 }
 
@@ -162,7 +216,7 @@ async function generateReportData(type, customPeriod = null) {
     );
     
     // Format period
-    const period = formatPeriod(type, startDate);
+    const period = formatPeriod(type, startDate, endDate);
     
     // Generate title
     const typeTitle = type.charAt(0).toUpperCase() + type.slice(1);
