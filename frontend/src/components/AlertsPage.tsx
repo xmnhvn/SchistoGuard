@@ -145,16 +145,18 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         <div>
           <h1 style={{
             fontSize: isMobile ? 22 : 26,
-            fontWeight: 600,
+            fontWeight: 700,
             color: "#1a2a3a",
             margin: 0,
+            fontFamily: POPPINS,
           }}>
             Alert Management
           </h1>
           <p style={{
             fontSize: 14,
-            color: "#8E8B8B",
+            color: "#7b8a9a",
             margin: "4px 0 0",
+            fontFamily: POPPINS,
           }}>
             Monitor and manage water quality alerts across all sites
           </p>

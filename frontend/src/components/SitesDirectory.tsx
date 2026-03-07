@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
-import SensorCard from './SensorCard';
-import { Clock, Search, Filter, Activity, Droplets, Thermometer, Eye, Download, Calendar } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import React, { useState, useEffect } from 'react';
+import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { useEffect } from 'react';
 import { apiGet } from '../utils/api';
+
+const POPPINS = "'Poppins', sans-serif";
+
+let _sitesFirstLoadDone = false;
 
 const fetchReadings = async () => {
   try {
@@ -62,11 +59,25 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [filterTimeRange, setFilterTimeRange] = useState<string>('all');
   const [readings, setReadings] = useState<any[]>([]);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const animate = !_sitesFirstLoadDone;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
   useEffect(() => {
     const getData = async () => {
       const data = await fetchReadings();
       setReadings(data);
+      if (!_sitesFirstLoadDone) {
+        setTimeout(() => { _sitesFirstLoadDone = true; }, 50);
+      }
     };
     getData();
     const interval = setInterval(getData, 5000);
@@ -151,26 +162,60 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   });
 
   return (
-    <div className="bg-schistoguard-light-bg">
-      <div className="max-w-7xl mx-auto p-6">
+    <div style={{ background: "#f5f7f9", minHeight: "100vh", fontFamily: POPPINS }}>
+      <style>{`
+        @keyframes contentSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes cardDataFadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "16px 12px 100px" : "24px 24px 40px" }}>
 
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
-          <div className="col-span-1 lg:col-span-2 flex flex-col lg:flex-row gap-4 lg:justify-end">
-            <div className="flex-1 max-w-xs">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search by time, turbidity, or temperature..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 border border-gray-300 bg-gray-50 focus:bg-white focus:border-schistoguard-teal transition-colors"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3">
+        {/* Header */}
+        <div style={{
+          display: "flex",
+          flexDirection: (isMobile || isTablet) ? "column" : "row",
+          justifyContent: "space-between",
+          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
+          gap: 12,
+          marginBottom: 20,
+          ...(animate ? { animation: "contentSlideIn 0.7s cubic-bezier(.22,1,.36,1) 0.05s both" } : {}),
+        }}>
+          <div>
+            <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Sites Directory
+            </h1>
+            <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
+              Real-time water quality readings & risk assessment
+            </p>
+          </div>
+          <div style={{
+            display: "flex",
+            flexWrap: isMobile ? "nowrap" : "wrap",
+            gap: 8,
+            width: isMobile ? "100%" : "auto",
+          }}>
+            <div style={{ flex: isMobile ? 1 : "unset" }}>
               <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
-                <SelectTrigger className="w-40 border border-gray-300 bg-gray-50 focus:bg-white focus:border-schistoguard-teal transition-colors">
-                  <Clock className="w-4 h-4 mr-2" />
+                <SelectTrigger style={{
+                  background: "#fff",
+                  border: "1px solid #d1d9e0",
+                  borderRadius: 8,
+                  fontFamily: POPPINS,
+                  fontSize: 13,
+                  height: 36,
+                  width: isMobile ? "100%" : 150,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "0 10px",
+                }}>
+                  <Clock style={{ width: 14, height: 14, color: "#357D86" }} />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,9 +225,24 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   <SelectItem value="24h">Last 24 Hours</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div style={{ flex: isMobile ? 1 : "unset" }}>
               <Select value={filterRisk} onValueChange={setFilterRisk}>
-                <SelectTrigger className="w-40 border border-gray-300 bg-gray-50 focus:bg-white focus:border-schistoguard-teal transition-colors">
-                  <Filter className="w-4 h-4 mr-2" />
+                <SelectTrigger style={{
+                  background: "#fff",
+                  border: "1px solid #d1d9e0",
+                  borderRadius: 8,
+                  fontFamily: POPPINS,
+                  fontSize: 13,
+                  height: 36,
+                  width: isMobile ? "100%" : 150,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "0 10px",
+                }}>
+                  <Filter style={{ width: 14, height: 14, color: "#357D86" }} />
                   <SelectValue placeholder="Risk Level" />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,125 +252,218 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   <SelectItem value="critical">Critical</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
             </div>
+            <button style={{
+              flex: isMobile ? 1 : "unset",
+              background: "#fff",
+              border: "1px solid #d1d9e0",
+              borderRadius: 8,
+              fontFamily: POPPINS,
+              fontSize: 13,
+              height: 36,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "0 14px",
+              color: "#1a2a3a",
+            }}>
+              <Download style={{ width: 14, height: 14 }} />
+              Export
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 -mt-6">
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-schistoguard-navy">{filteredReadings.length * 3}</div>
-              <p className="text-xs text-muted-foreground">All parameters in All range</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">Safe Readings</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-green-600">{safeCount}</div>
-              <p className="text-xs text-muted-foreground">All parameters in safe range</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">Warning Readings</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-yellow-600">{warningCount}</div>
-              <p className="text-xs text-muted-foreground">All parameters in warning range</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">Critical Readings</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-red-600">{criticalCount}</div>
-              <p className="text-xs text-muted-foreground">All parameters in critical range</p>
-            </CardContent>
-          </Card>
+        {/* Stat Cards */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: isMobile ? 10 : 16,
+          marginBottom: 20,
+          ...(animate ? { animation: "contentSlideIn 0.7s cubic-bezier(.22,1,.36,1) 0.2s both" } : {}),
+        }}>
+          {[
+            { label: "Total Readings", value: filteredReadings.length * 3, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3" },
+            { label: "Safe", value: safeCount, icon: <CheckCircle2 style={{ width: 20, height: 20, color: "#22c55e" }} />, color: "#22c55e", bg: "#f0fdf4" },
+            { label: "Warning", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#eab308" }} />, color: "#a16207", bg: "#fefce8" },
+            { label: "Critical", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#ef4444" }} />, color: "#dc2626", bg: "#fef2f2" },
+          ].map((card, i) => (
+            <div key={card.label} style={{
+              background: "#fff",
+              borderRadius: 14,
+              padding: isMobile ? "14px 10px" : "18px 20px",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 6,
+              ...(animate ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` } : {}),
+            }}>
+              <div style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: card.bg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {card.icon}
+              </div>
+              <span style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, color: card.color, fontFamily: POPPINS }}>{card.value}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>{card.label}</span>
+            </div>
+          ))}
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between mb-[-20]">
-              <CardTitle>Time-Series Data</CardTitle>
+        {/* Time-Series Data Card */}
+        <div style={{
+          background: "#fff",
+          borderRadius: 14,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          overflow: "hidden",
+          ...(animate ? { animation: "contentSlideIn 0.7s cubic-bezier(.22,1,.36,1) 0.35s both" } : {}),
+        }}>
+          <div style={{
+            padding: isMobile ? "14px 12px 10px" : "18px 20px 12px",
+            borderBottom: "1px solid #f0f0f0",
+          }}>
+            <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Time-Series Data
+            </h2>
+          </div>
 
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto h-80 overflow-y-auto scrollbar-hide">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-center">Turbidity (NTU)</TableHead>
-                    <TableHead className="text-center">Temperature (°C)</TableHead>
-                    <TableHead className="text-center">pH Level</TableHead>
-                    <TableHead className="text-center">Risk Level</TableHead>
-                    <TableHead className="text-right"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReadings.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="py-12 text-center">
-                        <div className="flex flex-col items-center justify-center">
-                          <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No readings found</h3>
-                          <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+          <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: isMobile ? 400 : 420 }}>
+            {filteredReadings.length === 0 ? (
+              <div style={{ padding: "48px 20px", textAlign: "center" }}>
+                <Calendar style={{ width: 48, height: 48, color: "#d1d9e0", margin: "0 auto 16px" }} />
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a2a3a", marginBottom: 6, fontFamily: POPPINS }}>No readings found</h3>
+                <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>Try adjusting your search or filter criteria</p>
+              </div>
+            ) : isMobile ? (
+              /* Mobile: Card-style list */
+              <div style={{ padding: "8px 12px 12px" }}>
+                {filteredReadings.map((reading, idx) => {
+                  const time = formatTimestamp(reading.timestamp);
+                  const riskColors: Record<string, { bg: string; color: string }> = {
+                    safe: { bg: "#f0fdf4", color: "#22c55e" },
+                    warning: { bg: "#fefce8", color: "#a16207" },
+                    critical: { bg: "#fef2f2", color: "#dc2626" },
+                  };
+                  const rc = riskColors[reading.riskLevel] || riskColors.safe;
+                  return (
+                    <div key={reading.id} style={{
+                      padding: "12px 0",
+                      borderBottom: idx < filteredReadings.length - 1 ? "1px solid #f0f0f0" : "none",
+                      ...(animate ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.05}s both` } : {}),
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{time.time} · {time.date}</span>
+                        <span style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: "3px 10px",
+                          borderRadius: 20,
+                          background: rc.bg,
+                          color: rc.color,
+                          textTransform: "capitalize",
+                          fontFamily: POPPINS,
+                        }}>{reading.riskLevel}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#357D86", fontFamily: POPPINS }}>{reading.turbidity}</span>
+                          <span style={{ fontSize: 11, color: "#7b8a9a" }}>NTU</span>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredReadings.map((reading) => {
-                      const time = formatTimestamp(reading.timestamp);
-                      return (
-                        <TableRow key={reading.id} className="hover:bg-gray-50">
-                          <TableCell className="font-medium">{time.time}</TableCell>
-                          <TableCell className="text-sm text-gray-600">{time.date}</TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Droplets className="w-4 h-4 text-blue-500" />
-                              <span className="font-medium">{reading.turbidity}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Thermometer className="w-4 h-4 text-orange-500" />
-                              <span className="font-medium">{reading.temperature}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center font-medium">{reading.ph}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge className={getRiskBadgeClass(reading.riskLevel)}>
-                              {reading.riskLevel}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right text-sm text-gray-500">
-                            {formatRelativeTime(reading.timestamp)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Thermometer style={{ width: 14, height: 14, color: "#357D86" }} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#357D86", fontFamily: POPPINS }}>{reading.temperature}</span>
+                          <span style={{ fontSize: 11, color: "#7b8a9a" }}>°C</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#357D86", fontFamily: POPPINS }}>{reading.ph}</span>
+                          <span style={{ fontSize: 11, color: "#7b8a9a" }}>pH</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Desktop/Tablet: Table */
+              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+                    {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map(h => (
+                      <th key={h} style={{
+                        padding: "10px 14px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#7b8a9a",
+                        textAlign: h === "" ? "right" : h === "Time" || h === "Date" ? "left" : "center",
+                        position: "sticky",
+                        top: 0,
+                        background: "#fff",
+                        zIndex: 1,
+                        fontFamily: POPPINS,
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReadings.map((reading, idx) => {
+                    const time = formatTimestamp(reading.timestamp);
+                    const riskColors: Record<string, { bg: string; color: string }> = {
+                      safe: { bg: "#f0fdf4", color: "#22c55e" },
+                      warning: { bg: "#fefce8", color: "#a16207" },
+                      critical: { bg: "#fef2f2", color: "#dc2626" },
+                    };
+                    const rc = riskColors[reading.riskLevel] || riskColors.safe;
+                    return (
+                      <tr key={reading.id} style={{
+                        borderBottom: "1px solid #f5f5f5",
+                        ...(animate ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both` } : {}),
+                      }}>
+                        <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#1a2a3a" }}>{time.time}</td>
+                        <td style={{ padding: "10px 14px", fontSize: 13, color: "#7b8a9a" }}>{time.date}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <Thermometer style={{ width: 14, height: 14, color: "#357D86" }} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.ph}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "3px 12px",
+                            borderRadius: 20,
+                            background: rc.bg,
+                            color: rc.color,
+                            textTransform: "capitalize",
+                            fontFamily: POPPINS,
+                          }}>{reading.riskLevel}</span>
+                        </td>
+                        <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 12, color: "#7b8a9a" }}>
+                          {formatRelativeTime(reading.timestamp)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

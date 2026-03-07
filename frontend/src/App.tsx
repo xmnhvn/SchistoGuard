@@ -241,7 +241,9 @@ export default function App() {
           <AlertsPage onNavigate={handleNavigate} />
         </div>
         {currentView === 'reports' && <ReportsPage />}
-        {currentView === 'sites' && <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />}
+        <div style={{ display: currentView === 'sites' ? 'contents' : 'none' }}>
+          <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />
+        </div>
         {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
           <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} />
         )}
