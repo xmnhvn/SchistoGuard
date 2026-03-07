@@ -75,6 +75,7 @@ export function SiteDetailView({
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-schistoguard-navy">{siteName}</h1>
             </div>
+            <p className="mt-1 text-sm text-muted-foreground">{barangay}, Leyte Province</p>
           </div>
         </div>
         <div className="flex flex-col gap-4 min-w-[260px]">
@@ -100,8 +101,8 @@ export function SiteDetailView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="min-w-0 lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6">
+        <div className="min-w-0">
           <Card className="w-full">
             <CardHeader>
               <CardTitle>Real-Time Monitoring (5mins intervals)</CardTitle>
@@ -186,37 +187,6 @@ export function SiteDetailView({
           </Card>
         </div>
 
-        <div className="space-y-6 w-full max-w-full lg:col-span-1 h-full flex flex-col">
-          <Card style={{ flex: 1, height: '100%' }}>
-            <CardHeader>
-              <CardTitle>Site Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-medium">Location:</span>
-                  <p className="text-muted-foreground">{barangay}, Leyte Province</p>
-                </div>
-                <div>
-                  <span className="font-medium">Coordinates:</span>
-                  <p className="text-muted-foreground">11.2436° N, 124.9936° E</p>
-                </div>
-                <div>
-                  <span className="font-medium">Installation Date:</span>
-                  <p className="text-muted-foreground">March 15, 2025</p>
-                </div>
-                <div>
-                  <span className="font-medium">Last Maintenance:</span>
-                  <p className="text-muted-foreground">September 10, 2025</p>
-                </div>
-                <div>
-                  <span className="font-medium">Sensor Type:</span>
-                  <p className="text-muted-foreground">Multi-parameter Water Quality</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
