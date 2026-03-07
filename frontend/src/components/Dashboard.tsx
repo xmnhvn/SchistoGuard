@@ -338,12 +338,12 @@ export function Dashboard({
       <div
         style={{
           position: "relative",
-          minHeight: 560,
-          height: compactCards ? "calc(100vh - 48px)" : "calc(100vh - 48px)",
-          maxHeight: 1200,
-          borderRadius: 24,
+          minHeight: isMobile ? '100vh' : 560,
+          height: compactCards ? (isMobile ? '100vh' : "calc(100vh - 48px)") : "calc(100vh - 48px)",
+          maxHeight: isMobile ? 'none' : 1200,
+          borderRadius: isMobile ? 0 : 24,
           overflow: "hidden",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          boxShadow: isMobile ? 'none' : "0 8px 32px rgba(0,0,0,0.12)",
         }}
       >
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
@@ -391,6 +391,7 @@ export function Dashboard({
                 fontSize: compactCards ? 28 : 34,
                 lineHeight: 1.15,
                 textShadow: "0 1px 6px rgba(0,0,0,0.18)",
+                paddingLeft: isMobile ? 40 : 0,
               }}
             >
               Water Quality Information
@@ -401,6 +402,7 @@ export function Dashboard({
                 color: "rgba(255,255,255,0.92)",
                 fontFamily: POPPINS,
                 fontSize: compactCards ? 13 : 15,
+                paddingLeft: isMobile ? 40 : 0,
               }}
             >
               Real-time data For monitoring Schistosomiasis Risk

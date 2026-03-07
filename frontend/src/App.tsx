@@ -23,6 +23,16 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
   const [user, setUser] = useState<{ id: number; email: string; firstName: string; lastName: string; role: string } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(window.innerWidth < 600);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const isViewType = (view: string | null): view is ViewType => {
     return (
       view === 'landing' ||
@@ -146,21 +156,52 @@ export default function App() {
 
   if (currentView === 'sensor-info') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
-        <div className="px-3 py-6">
-          <div className="flex gap-3 items-start">
-            <button
-              onClick={() => setCurrentView('landing')}
-              className="flex items-center justify-center w-10 h-10 rounded-full text-schistoguard-navy hover:text-schistoguard-navy/80 transition-colors flex-shrink-0"
-              aria-label="Back to Home"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex-1 min-w-0">
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white" style={isMobile ? { padding: 0, background: 'none' } : {}}>
+        <div className={isMobile ? "" : "px-3 py-6"}>
+          {isMobile ? (
+            /* Mobile: Full-screen dashboard with back button positioned beside header */
+            <div style={{ position: 'relative', height: '100vh' }}>
               <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
+              <button
+                onClick={() => setCurrentView('landing')}
+                style={{
+                  position: 'absolute',
+                  top: 20,
+                  left: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+                aria-label="Back to Home"
+              >
+                <ChevronLeft style={{ width: 20, height: 20 }} />
+              </button>
             </div>
-            <div className="w-10 flex-shrink-0" aria-hidden="true" />
-          </div>
+          ) : (
+            /* Desktop/Tablet: Original layout with left-aligned back button */
+            <div className="flex gap-3 items-start">
+              <button
+                onClick={() => setCurrentView('landing')}
+                className="flex items-center justify-center w-10 h-10 rounded-full text-schistoguard-navy hover:text-schistoguard-navy/80 transition-colors flex-shrink-0"
+                aria-label="Back to Home"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
+              </div>
+              <div className="w-10 flex-shrink-0" aria-hidden="true" />
+            </div>
+          )}
         </div>
       </div>
     );
