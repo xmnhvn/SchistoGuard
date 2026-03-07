@@ -125,10 +125,13 @@ export default function App() {
     (async () => {
       setLoading(true);
       try {
+        console.log("🔄 Checking session...");
         const data = await apiGet("/api/auth/session");
+        console.log("📡 Session response:", data);
         if (data.loggedIn) {
           setIsAuthenticated(true);
           setUser(data.user);
+          console.log("✓ User authenticated:", data.user.email);
           // Use lastView from cloud backend
           const lastView = data.user?.lastView || 'dashboard';
           if (isViewType(lastView) && lastView !== 'landing' && lastView !== 'login') {
@@ -137,10 +140,12 @@ export default function App() {
             setCurrentView('dashboard');
           }
         } else {
+          console.log("✗ Not logged in");
           // Not logged in - start at landing page
           setCurrentView('landing');
         }
-      } catch {
+      } catch (error) {
+        console.error("❌ Session check error:", error);
         // Error - start at landing page
         setCurrentView('landing');
       }

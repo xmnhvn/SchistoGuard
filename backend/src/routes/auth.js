@@ -306,7 +306,16 @@ router.post("/admin/create-user", isAdmin, (req, res) => {
 });
 
 // Session check endpoint
+// Session check endpoint
 router.get("/session", (req, res) => {
+  console.log("🔍 Session Check:", {
+    sessionID: req.sessionID,
+    hasSession: !!req.session,
+    userId: req.session?.userId,
+    cookieHeader: req.headers.cookie ? '√ present' : '✗ missing',
+    timestamp: new Date().toISOString()
+  });
+  
   if (req.session && req.session.userId) {
     // Fetch latest user data including lastView
     db.get(
@@ -314,9 +323,11 @@ router.get("/session", (req, res) => {
       [req.session.userId],
       (err, user) => {
         if (err || !user) {
+          console.log("⚠ Session check: user not found or DB error");
           return res.json({ loggedIn: false });
         }
         
+        console.log("✓ Session valid for user:", user.email);
         res.json({
           loggedIn: true,
           user: {
@@ -331,6 +342,7 @@ router.get("/session", (req, res) => {
       }
     );
   } else {
+    console.log("✗ No valid session found");
     res.json({ loggedIn: false });
   }
 });
