@@ -120,9 +120,11 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
     <div style={{
       fontFamily: POPPINS,
       height: "100%",
-      overflowY: "auto",
+      overflow: "hidden",
       background: "#f5f7f9",
       padding: pad,
+      display: "flex",
+      flexDirection: "column",
     }}>
       {/* ── Header + Filters ── */}
       <div style={{
@@ -204,10 +206,10 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         gap: 16,
         marginBottom: 24,
       }}>
-        <StatCard icon={<Bell size={22} color="#3b82f6" />} label="Total Alerts" value={String(alerts.length)} valueColor="#1d4ed8" sub="All alerts (history)" />
+        <StatCard icon={<Bell size={22} color="#357D86" />} label="Total Alerts" value={String(alerts.length)} valueColor="#357D86" sub="All alerts (history)" />
         <StatCard icon={<AlertTriangle size={22} color="#eab308" />} label="Unacknowledged" value={String(unacknowledgedCount)} valueColor="#a16207" sub="Require attention" />
         <StatCard icon={<AlertTriangle size={22} color="#ef4444" />} label="Critical Alerts" value={String(criticalCount)} valueColor="#dc2626" sub="High priority" />
-        <StatCard icon={<CheckCircle2 size={22} color="#22c55e" />} label="Response Time" value={avgResponseTime} valueColor="#16a34a" sub="Avg response" />
+        <StatCard icon={<CheckCircle2 size={22} color="#22c55e" />} label="Response Time" value={avgResponseTime} valueColor="#22c55e" sub="Avg response" />
       </div>
 
       {/* ── Alert List ── */}
@@ -216,6 +218,10 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         borderRadius: 20,
         boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
         overflow: "hidden",
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
       }}>
         <div style={{
           padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",
@@ -230,7 +236,8 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
         </div>
         <div style={{
           padding: isMobile ? 12 : 20,
-          maxHeight: isMobile ? 400 : 480,
+          flex: 1,
+          minHeight: 0,
           overflowY: "auto",
         }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
