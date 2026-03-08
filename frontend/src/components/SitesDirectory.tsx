@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
+import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3, ChevronRight, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
+import { Card, CardContent } from './ui/card';
+import { Badge } from './ui/badge';
 import { apiGet } from '../utils/api';
 
 const POPPINS = "'Poppins', sans-serif";
@@ -60,6 +63,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [filterTimeRange, setFilterTimeRange] = useState<string>('all');
   const [readings, setReadings] = useState<any[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [showMobileViewAll, setShowMobileViewAll] = useState(false);
   const animate = !_sitesFirstLoadDone;
 
   useEffect(() => {
@@ -330,6 +334,17 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           <h2 style={{ fontSize: 17, fontWeight: 600, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
             Time-Series Data
           </h2>
+          {isMobile && filteredReadings.length > 5 && (
+            <button
+              onClick={() => setShowMobileViewAll(true)}
+              style={{
+                background: "none", border: "none", color: "#357D86", fontSize: 13,
+                fontWeight: 600, fontFamily: POPPINS, display: "flex", alignItems: "center",
+                gap: 2, padding: 0, cursor: "pointer"
+              }}>
+              View All <ChevronRight size={14} />
+            </button>
+          )}
         </div>
 
         <div style={{
@@ -346,9 +361,9 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>Try adjusting your search or filter criteria</p>
             </div>
           ) : isMobile ? (
-            /* Mobile: Card-style list */
+            /* Mobile: Card-style list (Preview up to 5 items) */
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {filteredReadings.map((reading, idx) => {
+              {filteredReadings.slice(0, 5).map((reading, idx) => {
                 const time = formatTimestamp(reading.timestamp);
                 const riskColors: Record<string, { bg: string; color: string }> = {
                   safe: { bg: "#f0fdf4", color: "#22c55e" },
@@ -359,7 +374,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 return (
                   <div key={reading.id} style={{
                     padding: "12px 0",
-                    borderBottom: idx < filteredReadings.length - 1 ? "1px solid #f0f0f0" : "none",
+                    borderBottom: idx < Math.min(filteredReadings.length, 5) - 1 ? "1px solid #f0f0f0" : "none",
                     ...(animate ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.05}s both` } : {}),
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -468,6 +483,114 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           )}
         </div>
       </div>
+
+      {/* ── Mobile View All List Modal ── */}
+      {isMobile && showMobileViewAll && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10001,
+          background: "rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center",
+          padding: "92px 20px 20px",
+        }} onClick={() => setShowMobileViewAll(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxHeight: "calc(100vh - 108px)",
+              background: "#fff",
+              borderRadius: 16,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+              animation: "contentSlideIn 0.25s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: "16px 20px",
+              borderBottom: "1px solid #eef0f2",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              flexShrink: 0,
+            }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+                All Data Readings
+              </h2>
+              <button
+                onClick={() => setShowMobileViewAll(false)}
+                style={{
+                  width: 30, height: 30, borderRadius: "50%",
+                  border: "none", background: "#f3f4f6",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={16} color="#6b7280" />
+              </button>
+            </div>
+            {/* Modal Scrollable List */}
+            <div style={{
+              flex: 1, minHeight: 0, overflowY: "auto",
+              padding: 20,
+              scrollbarWidth: "none",
+            } as React.CSSProperties}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {filteredReadings.map((reading) => {
+                  const time = formatTimestamp(reading.timestamp);
+                  const riskColors: Record<string, { bg: string; color: string; border: string }> = {
+                    safe: { bg: "#f0fdf4", color: "#22c55e", border: "#22c55e" },
+                    warning: { bg: "#fefce8", color: "#a16207", border: "#eab308" },
+                    critical: { bg: "#fef2f2", color: "#dc2626", border: "#ef4444" },
+                  };
+                  const rc = riskColors[reading.riskLevel] || riskColors.safe;
+                  return (
+                    <div key={reading.id} style={{
+                      background: "#fff",
+                      padding: "16px",
+                      borderRadius: 12,
+                      border: "1px solid #f0f1f3",
+                      borderLeft: `4px solid ${rc.border}`,
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
+                            background: rc.bg, color: rc.color, textTransform: "capitalize", fontFamily: POPPINS,
+                          }}>{reading.riskLevel}</span>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
+                            border: "1px solid #e2e8f0", color: "#64748b", fontFamily: POPPINS,
+                          }}>Verified</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Droplets style={{ width: 14, height: 14, color: "#1a2a3a" }} />
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.turbidity} NTU</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Thermometer style={{ width: 14, height: 14, color: "#1a2a3a" }} />
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.temperature}°C</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>pH {reading.ph}</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#7b8a9a", fontFamily: POPPINS }}>
+                        {time.date}, {time.time}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

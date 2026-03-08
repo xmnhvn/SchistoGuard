@@ -38,6 +38,16 @@ export function SiteDetailView({
   const [timeRange, setTimeRange] = useState("24h");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
   useEffect(() => {
     if (visible && !_siteDetailFirstLoadDone) {
@@ -153,45 +163,66 @@ export function SiteDetailView({
     );
   };
 
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+
   return (
-    <div className="relative overflow-hidden bg-schistoguard-light-bg min-h-screen">
+    <div style={{
+      fontFamily: POPPINS,
+      height: "100%",
+      overflowY: "auto",
+      background: "#f5f7f9",
+      padding: pad,
+      display: "flex",
+      flexDirection: "column",
+    }}>
       <style>{`
+        *::-webkit-scrollbar { display: none; }
         @keyframes pageSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      <div className="mx-auto flex flex-col p-6 max-w-[1800px]" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
-        <div className="flex flex-shrink-0 items-start justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 style={{
-                  fontSize: 26,
-                  fontWeight: 700,
-                  color: "#1a2a3a",
-                  margin: 0,
-                  fontFamily: POPPINS,
-                }}>{siteName}</h1>
-              </div>
-              <p style={{
-                fontSize: 14,
-                color: "#7b8a9a",
-                margin: "4px 0 0",
+      <div style={{ display: "flex", flexDirection: "column", animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+        <div style={{
+          display: "flex",
+          flexDirection: (isMobile || isTablet) ? "column" : "row",
+          justifyContent: "space-between",
+          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
+          gap: 16,
+          marginBottom: 24,
+        }}>
+          <div style={{ minWidth: 0, width: (isMobile || isTablet) ? "100%" : "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              <h1 style={{
+                fontSize: 26,
+                fontWeight: 700,
+                color: "#1a2a3a",
+                margin: 0,
                 fontFamily: POPPINS,
-              }}>{barangay}, Leyte Province</p>
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}>{siteName}</h1>
             </div>
+            <p style={{
+              fontSize: 14,
+              color: "#7b8a9a",
+              margin: "4px 0 0",
+              fontFamily: POPPINS,
+            }}>{barangay}, Leyte Province</p>
           </div>
-          <div className="flex flex-col gap-4 min-w-[260px]">
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flexWrap: "wrap",
-            }}>
+
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: isMobile ? 8 : 10,
+            flexWrap: isMobile ? "nowrap" : "wrap",
+            ...(isMobile ? { width: "100%" } : {}),
+          }}>
+            <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={timeRange} onValueChange={setTimeRange}>
                 <SelectTrigger style={{
-                  width: 148,
+                  width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
                   minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
                   border: "1px solid #e2e5ea", background: "#fff", height: 38,
                 }}>
@@ -204,6 +235,8 @@ export function SiteDetailView({
                   <SelectItem value="30d">Last 30 days</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div style={{ flex: isMobile ? 1 : undefined }}>
               <button
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -211,9 +244,11 @@ export function SiteDetailView({
                   border: "1px solid #e2e5ea",
                   background: "#fff", cursor: "pointer", fontSize: 13,
                   fontFamily: POPPINS, fontWeight: 500, color: "#374151",
+                  whiteSpace: "nowrap",
+                  width: isMobile ? "100%" : undefined
                 }}
               >
-                <Download size={15} /> Export Data
+                <Download size={15} /> Export
               </button>
             </div>
           </div>
