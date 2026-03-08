@@ -303,48 +303,48 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   };
 
   return (
-    <>
+    <div className="relative h-full overflow-hidden bg-schistoguard-light-bg">
       <style>{`
         @keyframes pageSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      <Card className="w-full" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
-        <CardHeader className="bg-schistoguard-navy text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Users className="w-6 h-6" />
-              <CardTitle>Alert Recipients Management</CardTitle>
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleCSVUpload}
-                className="hidden"
-                id="csv-upload-input"
-                disabled={isUploadingCSV}
-              />
-              <Label
-                htmlFor="csv-upload-input"
-                className="flex items-center gap-2 px-3 py-2 bg-white text-schistoguard-navy hover:bg-gray-100 rounded-md cursor-pointer text-sm font-medium h-10 min-h-0"
-              >
-                <Upload className="w-4 h-4" />
-                Upload CSV
-              </Label>
-              <Button
-                onClick={() => setIsAddDialogOpen(true)}
-                className="bg-white text-schistoguard-navy hover:bg-gray-100"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Recipient
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3 mt-3">
+      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col p-6" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+        <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+            <CardHeader className="bg-white px-6 py-4 border-b">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Users className="w-6 h-6 text-schistoguard-navy" />
+                  <CardTitle className="text-schistoguard-navy">Alert Recipients Management</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleCSVUpload}
+                    className="hidden"
+                    id="csv-upload-input"
+                    disabled={isUploadingCSV}
+                  />
+                  <Label
+                    htmlFor="csv-upload-input"
+                    className="flex items-center gap-2 px-3 py-2 bg-white text-schistoguard-navy hover:bg-gray-100 rounded-md cursor-pointer text-sm font-medium h-10 min-h-0"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload CSV
+                  </Label>
+                  <Button
+                    onClick={() => setIsAddDialogOpen(true)}
+                    className="bg-schistoguard-teal text-white hover:bg-schistoguard-teal/90"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Recipient
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 mt-3">
           {error && (
             <div className="p-4 bg-red-100 text-red-800 rounded-lg flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
@@ -686,7 +686,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </AlertDialogContent>
           </AlertDialog>
         )}
-      </Card>
-    </>
+        </Card>
+      </div>
+    </div>
   );
 }
