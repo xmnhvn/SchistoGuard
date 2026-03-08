@@ -298,183 +298,178 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
   return (
     <>
-      <CardContent className="mt-6 space-y-3">
-        {error && (
-          <div className="p-4 bg-red-100 text-red-800 rounded-lg flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            {error}
-          </div>
-        )}
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* Left column card - Recipients */}
-          <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-            <CardHeader className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    placeholder="Name or phone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                <div className="w-[240px] min-w-[240px] max-w-[240px] shrink-0 flex items-center">
-                  <Select value={selectedRole} onValueChange={setSelectedRole}>
-                    <SelectTrigger className="w-[240px] min-w-[240px] max-w-[240px] text-center justify-center">
-                      <SelectValue placeholder="All Designations" className="truncate overflow-hidden text-ellipsis max-w-[180px] text-center" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Designations</SelectItem>
-                      <SelectItem value="resident">Residents</SelectItem>
-                      <SelectItem value="bhw">Barangay Health Workers (BHW)</SelectItem>
-                      <SelectItem value="lgu">Local Government Units (LGU)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="mb-4 mt-[-4]">
-                <p className="text-sm font-medium">Recipients List</p>
-              </div>
-
-              {loading ? (
-                <p className="py-8 text-center text-gray-500">Loading recipients...</p>
-              ) : filteredResidents.length === 0 ? (
-                <p className="py-8 text-center text-gray-500">
-                  {residents.length === 0
-                    ? "No recipients added yet"
-                    : "No recipients match your search"}
-                </p>
-              ) : (
-                <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                  {/* 4 x 80px card height + gap, adjust as needed */}
-                  {filteredResidents.map((resident) => (
-                    <div
-                      key={resident.id}
-                      className="flex items-center justify-between rounded-lg border p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex flex-1 items-center gap-4">
-                        {resident.verified ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-gray-400" />
-                        )}
-                        <div className="flex-1">
-                          <p className="font-medium">{resident.name}</p>
-                          <p className="text-sm text-gray-600">{resident.phone}</p>
-                        </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            roleColors[resident.role]
-                          }`}
-                        >
-                          {roleLabels[resident.role]}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(resident)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDeleteDialog(resident)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Right column card - Upload and Stats */}
-          <Card className="flex min-h-[640px] flex-col">
-            <CardHeader className="space-y-3 pb-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <style>{`
+        @keyframes pageSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Left column card - Recipients */}
+        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+          <CardHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleCSVUpload}
-                  className="hidden"
-                  id="csv-upload-input"
-                  disabled={isUploadingCSV}
+                  placeholder="Name or phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
                 />
-                <Label
-                  htmlFor="csv-upload-input"
-                  className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-                >
-                  <Upload className="w-4 h-4" />
-                  {isUploadingCSV ? "Uploading..." : "Upload CSV"}
-                </Label>
-                <Button
-                  onClick={() => setIsAddDialogOpen(true)}
-                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Recipient
-                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                <Card>
-                  <CardHeader className="pb-2 text-center">
-                    <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-blue-600">{residents.length}</div>
-                    <p className="text-xs text-muted-foreground">All designations combined</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2 text-center">
-                    <CardTitle className="text-sm font-medium">Resident</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-cyan-600">
-                      {residents.filter((r) => r.role === "resident").length}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Community members</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2 text-center">
-                    <CardTitle className="text-sm font-medium">BHW</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {residents.filter((r) => r.role === "bhw").length}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Health workers</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2 text-center">
-                    <CardTitle className="text-sm font-medium">LGU</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {residents.filter((r) => r.role === "lgu").length}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Local government</p>
-                  </CardContent>
-                </Card>
+
+              <div className="w-[240px] min-w-[240px] max-w-[240px] shrink-0 flex items-center">
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger className="w-[240px] min-w-[240px] max-w-[240px] text-center justify-center">
+                    <SelectValue placeholder="All Designations" className="truncate overflow-hidden text-ellipsis max-w-[180px] text-center" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Designations</SelectItem>
+                    <SelectItem value="resident">Residents</SelectItem>
+                    <SelectItem value="bhw">Barangay Health Workers (BHW)</SelectItem>
+                    <SelectItem value="lgu">Local Government Units (LGU)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </CardContent>
+            </div>
+          </CardHeader>
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="mb-4 mt-[-4]">
+              <p className="text-sm font-medium">Recipients List</p>
+            </div>
+
+            {loading ? (
+              <p className="py-8 text-center text-gray-500">Loading recipients...</p>
+            ) : filteredResidents.length === 0 ? (
+              <p className="py-8 text-center text-gray-500">
+                {residents.length === 0
+                  ? "No recipients added yet"
+                  : "No recipients match your search"}
+              </p>
+            ) : (
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {/* 4 x 80px card height + gap, adjust as needed */}
+                {filteredResidents.map((resident) => (
+                  <div
+                    key={resident.id}
+                    className="flex items-center justify-between rounded-lg border p-4 hover:bg-gray-50"
+                  >
+                    <div className="flex flex-1 items-center gap-4">
+                      {resident.verified ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-gray-400" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium">{resident.name}</p>
+                        <p className="text-sm text-gray-600">{resident.phone}</p>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${roleColors[resident.role]}`}
+                      >
+                        {roleLabels[resident.role]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(resident)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteDialog(resident)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right column card - Upload and Stats */}
+        <Card className="flex min-h-[640px] flex-col">
+          <CardHeader className="space-y-3 pb-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleCSVUpload}
+                className="hidden"
+                id="csv-upload-input"
+                disabled={isUploadingCSV}
+              />
+              <Label
+                htmlFor="csv-upload-input"
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+              >
+                <Upload className="w-4 h-4" />
+                {isUploadingCSV ? "Uploading..." : "Upload CSV"}
+              </Label>
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Recipient
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              <Card>
+                <CardHeader className="pb-2 text-center">
+                  <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center">
+                  <div className="text-2xl font-bold text-blue-600">{residents.length}</div>
+                  <p className="text-xs text-muted-foreground">All designations combined</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2 text-center">
+                  <CardTitle className="text-sm font-medium">Resident</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center">
+                  <div className="text-2xl font-bold text-cyan-600">
+                    {residents.filter((r) => r.role === "resident").length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Community members</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2 text-center">
+                  <CardTitle className="text-sm font-medium">BHW</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {residents.filter((r) => r.role === "bhw").length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Health workers</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2 text-center">
+                  <CardTitle className="text-sm font-medium">LGU</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {residents.filter((r) => r.role === "lgu").length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Local government</p>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Add Dialog */}
       <AlertDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -618,67 +613,70 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Upload Result Modal */}
-      {uploadResultOpen && uploadResult ? (
-        <AlertDialog open={uploadResultOpen} onOpenChange={setUploadResultOpen}>
-          <AlertDialogContent className="max-w-md">
-            <AlertDialogHeader>
-              <div className="flex items-center gap-3 w-full">
-                {uploadResult.success ? (
-                  <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
-                )}
-                <AlertDialogTitle>
-                  {uploadResult.success ? "Upload Successful" : "Upload Failed"}
-                </AlertDialogTitle>
-              </div>
-            </AlertDialogHeader>
-            {uploadResult.success ? (
-              <div className="space-y-3">
-                {uploadResult.inserted > 0 && (
-                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <p className="text-sm text-green-800">
-                      <span className="font-bold">{uploadResult.inserted}</span> new recipients added
-                    </p>
-                  </div>
-                )}
-                {uploadResult.updated > 0 && (
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                    <p className="text-sm text-blue-800">
-                      <span className="font-bold">{uploadResult.updated}</span> recipients updated
-                    </p>
-                  </div>
-                )}
-                {uploadResult.failed > 0 && (
-                  <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
-                    <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    <p className="text-sm text-yellow-800">
-                      <span className="font-bold">{uploadResult.failed}</span> recipients failed
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
-                  <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <AlertDialogDescription className="text-red-800 text-sm">
-                    {uploadResult.error || "An error occurred during upload"}
-                  </AlertDialogDescription>
+        {/* Upload Result Modal */}
+        {uploadResultOpen && uploadResult && (
+          <AlertDialog open={uploadResultOpen} onOpenChange={setUploadResultOpen}>
+            <AlertDialogContent className="max-w-md">
+              <AlertDialogHeader>
+                <div className="flex items-center gap-3 w-full">
+                  {uploadResult.success ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                  )}
+                  <AlertDialogTitle>
+                    {uploadResult.success ? "Upload Successful" : "Upload Failed"}
+                  </AlertDialogTitle>
                 </div>
-              </div>
-            )}
-            <AlertDialogFooter>
-              <AlertDialogAction className="bg-schistoguard-teal hover:bg-schistoguard-teal/90">
-                Close
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : null}
+              </AlertDialogHeader>
+
+              {uploadResult.success ? (
+                <div className="space-y-3">
+                  {uploadResult.inserted > 0 && (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <p className="text-sm text-green-800">
+                        <span className="font-bold">{uploadResult.inserted}</span> new recipients added
+                      </p>
+                    </div>
+                  )}
+                  {uploadResult.updated > 0 && (
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
+                      <p className="text-sm text-blue-800">
+                        <span className="font-bold">{uploadResult.updated}</span> recipients updated
+                      </p>
+                    </div>
+                  )}
+                  {uploadResult.failed > 0 && (
+                    <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
+                      <AlertCircle className="w-5 h-5 text-yellow-600" />
+                      <p className="text-sm text-yellow-800">
+                        <span className="font-bold">{uploadResult.failed}</span> recipients failed
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
+                    <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <AlertDialogDescription className="text-red-800 text-sm">
+                      {uploadResult.error || "An error occurred during upload"}
+                    </AlertDialogDescription>
+                  </div>
+                </div>
+              )}
+
+              <AlertDialogFooter>
+                <AlertDialogAction className="bg-schistoguard-teal hover:bg-schistoguard-teal/90">
+                  Close
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      
     </>
   );
 }

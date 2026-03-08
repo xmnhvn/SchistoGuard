@@ -203,13 +203,39 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         marginBottom: 24,
         animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
-        <div>
-          <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
+          <h1 style={{
+            fontSize: isMobile ? 22 : 26,
+            fontWeight: 700,
+            color: "#1a2a3a",
+            margin: 0,
+            fontFamily: POPPINS,
+            whiteSpace: isMobile ? "normal" : "nowrap",
+            overflow: isMobile ? undefined : "hidden",
+            textOverflow: isMobile ? undefined : "ellipsis",
+            letterSpacing: isMobile ? 0.1 : undefined,
+          }}>
             Sites Directory
           </h1>
-          <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
-            Real-time water quality readings & risk assessment
-          </p>
+          {isMobile && (
+            <span style={{
+              fontSize: 14,
+              color: "#7b8a9a",
+              fontWeight: 400,
+              marginTop: 2,
+              fontFamily: POPPINS,
+              lineHeight: 1.3,
+              display: "block",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }}>Real-time water quality readings & risk assessment</span>
+          )}
+          {!isMobile && (
+            <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
+              Real-time water quality readings & risk assessment
+            </p>
+          )}
         </div>
         <div style={{
           display: "flex",

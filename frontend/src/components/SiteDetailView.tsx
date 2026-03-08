@@ -13,7 +13,8 @@ import { apiGet } from "../utils/api";
 
 const POPPINS = "'Poppins', sans-serif";
 
-let _siteDetailFirstLoadDone = false;
+import { useRef } from "react";
+
 
 
 export interface SiteDetailViewProps {
@@ -34,10 +35,32 @@ export function SiteDetailView({
   visible = true
 }: SiteDetailViewProps) {
   console.log("SiteDetailView mounted");
-  const animate = !_siteDetailFirstLoadDone;
-  const [timeRange, setTimeRange] = useState("24h");
+  // Use a ref to persist animation state for the session
+  const firstLoadRef = useRef<boolean>(
+    typeof window !== 'undefined'
+      ? localStorage.getItem('sg_siteDetailFirstLoadDone') !== 'true'
+      : true
+  );
+  const animate = firstLoadRef.current;
+  // Load last selected timeRange from localStorage if available
+  const getInitialTimeRange = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sg_timeRange') || "24h";
+    }
+    return "24h";
+  };
+  const [timeRange, setTimeRange] = useState(getInitialTimeRange());
   const [alerts, setAlerts] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  // Cache history in memory and localStorage
+  const [history, setHistory] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('sg_history');
+      if (cached) {
+        try { return JSON.parse(cached); } catch { return []; }
+      }
+    }
+    return [];
+  });
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -50,21 +73,34 @@ export function SiteDetailView({
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
   useEffect(() => {
-    if (visible && !_siteDetailFirstLoadDone) {
-      setTimeout(() => { _siteDetailFirstLoadDone = true; }, 50);
+    if (visible && animate) {
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('sg_siteDetailFirstLoadDone', 'true');
+        }
+      }, 50);
     }
-  }, [visible]);
+  }, [visible, animate]);
 
+  // Only fetch if not already cached
   useEffect(() => {
+    if (history && history.length > 0) return;
     apiGet("/api/sensors/history")
       .then(data => {
         console.log("Site Details time series data:", data);
-        setHistory(Array.isArray(data) ? data : []);
+        if (Array.isArray(data)) {
+          setHistory(data);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('sg_history', JSON.stringify(data));
+          }
+        } else {
+          setHistory([]);
+        }
       })
       .catch(err => {
         console.error("Error fetching time series data:", err);
       });
-  }, []);
+  }, [history]);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert =>
@@ -163,6 +199,13 @@ export function SiteDetailView({
     );
   };
 
+  // Save timeRange to localStorage on change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sg_timeRange', timeRange);
+    }
+  }, [timeRange]);
+
   const pad = isMobile ? 16 : isTablet ? 24 : 32;
 
   return (
@@ -192,24 +235,41 @@ export function SiteDetailView({
           marginBottom: 24,
         }}>
           <div style={{ minWidth: 0, width: (isMobile || isTablet) ? "100%" : "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
               <h1 style={{
-                fontSize: 26,
+                fontSize: isMobile ? 23 : 26,
                 fontWeight: 700,
                 color: "#1a2a3a",
                 margin: 0,
                 fontFamily: POPPINS,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis"
+                whiteSpace: isMobile ? "normal" : "nowrap",
+                overflow: isMobile ? undefined : "hidden",
+                textOverflow: isMobile ? undefined : "ellipsis",
+                letterSpacing: isMobile ? 0.1 : undefined,
               }}>{siteName}</h1>
+              {isMobile && (
+                <span style={{
+                  fontSize: 14,
+                  color: "#7b8a9a",
+                  fontWeight: 400,
+                  marginTop: 2,
+                  fontFamily: POPPINS,
+                  lineHeight: 1.3,
+                  display: "block",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis"
+                }}>{barangay}, Leyte Province</span>
+              )}
+              {!isMobile && (
+                <p style={{
+                  fontSize: 14,
+                  color: "#7b8a9a",
+                  margin: "4px 0 0",
+                  fontFamily: POPPINS,
+                }}>{barangay}, Leyte Province</p>
+              )}
             </div>
-            <p style={{
-              fontSize: 14,
-              color: "#7b8a9a",
-              margin: "4px 0 0",
-              fontFamily: POPPINS,
-            }}>{barangay}, Leyte Province</p>
           </div>
 
           <div style={{
@@ -266,31 +326,50 @@ export function SiteDetailView({
               width: "100%",
               marginBottom: 20
             }}>
-              <div style={{
-                padding: "20px 24px 16px",
-                borderBottom: "1px solid #f0f1f3",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <h3 style={{
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: "#1a2a3a",
-                  margin: 0,
-                  fontFamily: POPPINS,
-                }}>
+              <div
+                style={{
+                  padding: "20px 24px 16px",
+                  borderBottom: "1px solid #f0f1f3",
+                  display: "flex",
+                  flexDirection: isMobile ? "column" : "row",
+                  justifyContent: isMobile ? "flex-start" : "space-between",
+                  alignItems: isMobile ? "flex-start" : "center"
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: "#1a2a3a",
+                    margin: 0,
+                    fontFamily: POPPINS,
+                    marginBottom: isMobile ? 10 : 0,
+                  }}
+                >
                   Real-Time Monitoring
                 </h3>
-                <div className="flex gap-4" style={{ fontSize: 13, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>
-                  <span className="flex items-center gap-2">
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#43c6b6" }} /> Temperature
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 18,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "#7b8a9a",
+                    fontFamily: POPPINS,
+                    marginTop: isMobile ? 4 : 0,
+                    marginLeft: isMobile ? 2 : 0,
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#43c6b6", flexShrink: 0 }} /> Temperature
                   </span>
-                  <span className="flex items-center gap-2">
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#4187d6" }} /> pH Level
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#4187d6", flexShrink: 0 }} /> pH Level
                   </span>
-                  <span className="flex items-center gap-2">
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2c5282" }} /> Turbidity
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2c5282", flexShrink: 0 }} /> Turbidity
                   </span>
                 </div>
               </div>
@@ -363,7 +442,7 @@ export function SiteDetailView({
           </div>
         </div>
         <div style={{
-          background: "#f8fafc",
+          background: "#ffffffc5",
           border: "1px solid #f1f5f9",
           borderRadius: 16,
           padding: "24px",
