@@ -142,10 +142,10 @@ export function Dashboard({
   }, []);
 
   useEffect(() => {
-    if (latestReading && !_dashboardFirstLoadDone) {
-      _dashboardFirstLoadDone = true;
+    if (visible && !_dashboardFirstLoadDone) {
+      setTimeout(() => { _dashboardFirstLoadDone = true; }, 50);
     }
-  }, [latestReading]);
+  }, [visible]);
 
   useEffect(() => {
     const fetchReadings = () => {

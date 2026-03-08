@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { apiPost, apiGet, apiCall } from "../utils/api";
 import { Trash2 } from "lucide-react";
 
+let _adminSettingsFirstLoadDone = false;
+
 interface User {
   id: number;
   email: string;
@@ -22,6 +24,7 @@ interface AdminSettingsPageProps {
 }
 
 export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
+  const animate = !_adminSettingsFirstLoadDone;
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -54,7 +57,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     } catch (err: any) {
       console.error("Failed to fetch users:", err);
       const errorMsg = err?.message || "Failed to fetch users";
-      
+
       // Provide helpful error message based on error
       if (errorMsg.includes("Not authenticated")) {
         setUsersError("Session expired. Please log in again.");
@@ -68,6 +71,9 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
   useEffect(() => {
     fetchUsers();
+    if (!_adminSettingsFirstLoadDone) {
+      setTimeout(() => { _adminSettingsFirstLoadDone = true; }, 50);
+    }
   }, []);
 
   const handleCreateAccount = async (e: React.FormEvent) => {
@@ -127,7 +133,13 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
   return (
     <div className="min-h-screen bg-schistoguard-light-bg p-6">
-      <div className="max-w-7xl mx-auto">
+      <style>{`
+        @keyframes pageSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div className="max-w-7xl mx-auto" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column - Create Account Form */}
           <Card>
@@ -243,11 +255,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               {loadingUsers && (
                 <p className="text-center text-gray-500 py-8">Loading users...</p>
               )}
-              
+
               {!loadingUsers && !usersError && users.length === 0 && (
                 <p className="text-center text-gray-500 py-8">No users found</p>
               )}
-              
+
               {!loadingUsers && !usersError && users.length > 0 && (
                 <div className="space-y-3 max-h-[600px] overflow-y-auto">
                   {users.map((user) => (

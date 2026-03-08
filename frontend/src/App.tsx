@@ -72,7 +72,7 @@ export default function App() {
             }
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   };
 
@@ -90,7 +90,7 @@ export default function App() {
   const handleNavigate = (view: string) => {
     if (isViewType(view)) {
       setCurrentView(view);
-      
+
       // Save to cloud backend if authenticated
       if (isAuthenticated && user) {
         apiPut("/api/auth/lastview", { lastView: view })
@@ -102,7 +102,7 @@ export default function App() {
   const handleViewSiteDetail = (siteId: string) => {
     setSelectedSiteId(siteId);
     setCurrentView('site-details');
-    
+
     // Save to cloud backend if authenticated
     if (isAuthenticated && user) {
       apiPut("/api/auth/lastview", { lastView: 'site-details' })
@@ -113,7 +113,7 @@ export default function App() {
   const handleBackFromSiteDetail = () => {
     setCurrentView('sites');
     setSelectedSiteId(null);
-    
+
     // Save to cloud backend if authenticated
     if (isAuthenticated && user) {
       apiPut("/api/auth/lastview", { lastView: 'sites' })
@@ -238,11 +238,11 @@ export default function App() {
           <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} />
         </div>
         <div style={{ display: currentView === 'alerts' ? 'contents' : 'none' }}>
-          <AlertsPage onNavigate={handleNavigate} />
+          <AlertsPage onNavigate={handleNavigate} visible={currentView === 'alerts'} />
         </div>
         {currentView === 'reports' && <ReportsPage />}
         <div style={{ display: currentView === 'sites' ? 'contents' : 'none' }}>
-          <SitesDirectory onViewSiteDetail={handleViewSiteDetail} />
+          <SitesDirectory onViewSiteDetail={handleViewSiteDetail} visible={currentView === 'sites'} />
         </div>
         {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
           <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} />

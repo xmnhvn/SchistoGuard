@@ -36,6 +36,8 @@ import {
 } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../utils/api";
 
+let _residentsFirstLoadDone = false;
+
 interface Resident {
   id: number;
   siteName: string;
@@ -52,6 +54,7 @@ interface ResidentsManagerProps {
 }
 
 export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }: ResidentsManagerProps) {
+  const animate = !_residentsFirstLoadDone;
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -83,6 +86,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   // Fetch residents
   useEffect(() => {
     fetchResidents();
+    if (!_residentsFirstLoadDone) {
+      setTimeout(() => { _residentsFirstLoadDone = true; }, 50);
+    }
   }, [siteName, refreshTrigger]);
 
   const fetchResidents = async () => {
@@ -93,7 +99,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
       if (siteName && siteName !== "All Sites") {
         endpoint += `?siteName=${encodeURIComponent(siteName)}`;
       }
-      
+
       console.log("Fetching residents from:", endpoint);
       const data = await apiGet(endpoint);
       console.log("Residents data:", data);
@@ -191,15 +197,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     setIsUploadingCSV(true);
     try {
       let csvContent = await file.text();
-      
+
       // Remove BOM if present
       if (csvContent.charCodeAt(0) === 0xFEFF) {
         csvContent = csvContent.slice(1);
       }
-      
+
       // Parse lines and auto-detect headers
       const lines = csvContent.trim().split('\n').map(line => line.trim()).filter(line => line);
-      
+
       if (lines.length === 0) {
         setUploadResult({
           success: false,
@@ -212,15 +218,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         setIsUploadingCSV(false);
         return;
       }
-      
+
       // Check if first line looks like headers
       const firstLine = lines[0].toLowerCase();
       const headerKeywords = ['name', 'phone', 'contact', 'number', 'mobile'];
       const isHeader = headerKeywords.some(keyword => firstLine.includes(keyword));
-      
+
       // Filter out header row if detected
       const dataLines = isHeader ? lines.slice(1) : lines;
-      
+
       if (dataLines.length === 0) {
         setUploadResult({
           success: false,
@@ -233,15 +239,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         setIsUploadingCSV(false);
         return;
       }
-      
+
       const cleanCsv = dataLines.join('\n');
-      
+
       try {
         const data = await apiPost('/api/sensors/upload-csv', {
           siteName: siteName === "All Sites" ? "Default" : siteName,
           csv: cleanCsv
         });
-      
+
         setUploadResult({
           success: true,
           inserted: data.inserted || 0,
@@ -297,383 +303,390 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="bg-schistoguard-navy text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Users className="w-6 h-6" />
-            <CardTitle>Alert Recipients Management</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              onChange={handleCSVUpload}
-              className="hidden"
-              id="csv-upload-input"
-              disabled={isUploadingCSV}
-            />
-            <Label
-              htmlFor="csv-upload-input"
-              className="flex items-center gap-2 px-3 py-2 bg-white text-schistoguard-navy hover:bg-gray-100 rounded-md cursor-pointer text-sm font-medium h-10 min-h-0"
-            >
-              <Upload className="w-4 h-4" />
-              Upload CSV
-            </Label>
-            <Button
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-white text-schistoguard-navy hover:bg-gray-100"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Recipient
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3 mt-3">
-        {error && (
-          <div className="p-4 bg-red-100 text-red-800 rounded-lg flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            {error}
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 -mt-2 mt[-2] mb-4">
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-blue-600">{residents.length}</div>
-              <p className="text-xs text-muted-foreground">All designations combined</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">Resident</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-cyan-600">
-                {residents.filter((r) => r.role === "resident").length}
-              </div>
-              <p className="text-xs text-muted-foreground">Community members</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">BHW</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-green-600">
-                {residents.filter((r) => r.role === "bhw").length}
-              </div>
-              <p className="text-xs text-muted-foreground">Health workers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2 text-center">
-              <CardTitle className="text-sm font-medium">LGU</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {residents.filter((r) => r.role === "lgu").length}
-              </div>
-              <p className="text-xs text-muted-foreground">Local government</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+    <>
+      <style>{`
+        @keyframes pageSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <Card className="w-full" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+        <CardHeader className="bg-schistoguard-navy text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="w-6 h-6" />
+              <CardTitle>Alert Recipients Management</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
               <Input
-                placeholder="Name or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleCSVUpload}
+                className="hidden"
+                id="csv-upload-input"
+                disabled={isUploadingCSV}
               />
+              <Label
+                htmlFor="csv-upload-input"
+                className="flex items-center gap-2 px-3 py-2 bg-white text-schistoguard-navy hover:bg-gray-100 rounded-md cursor-pointer text-sm font-medium h-10 min-h-0"
+              >
+                <Upload className="w-4 h-4" />
+                Upload CSV
+              </Label>
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-white text-schistoguard-navy hover:bg-gray-100"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Recipient
+              </Button>
             </div>
           </div>
-          <div className="space-y-2">
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Designations</SelectItem>
-                <SelectItem value="resident">Residents</SelectItem>
-                <SelectItem value="bhw">Barangay Health Workers (BHW)</SelectItem>
-                <SelectItem value="lgu">Local Government Units (LGU)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        </CardHeader>
 
-        {/* Recipients List */}
-        {loading ? (
-          <p className="text-center text-gray-500 py-8">Loading recipients...</p>
-        ) : filteredResidents.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">
-            {residents.length === 0
-              ? "No recipients added yet"
-              : "No recipients match your search"}
-          </p>
-        ) : (
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {filteredResidents.map((resident) => (
-              <div
-                key={resident.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  {resident.verified ? (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-gray-400" />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-medium">{resident.name}</p>
-                    <p className="text-sm text-gray-600">{resident.phone}</p>
+        <CardContent className="space-y-3 mt-3">
+          {error && (
+            <div className="p-4 bg-red-100 text-red-800 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 -mt-2 mt[-2] mb-4">
+            <Card>
+              <CardHeader className="pb-2 text-center">
+                <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-blue-600">{residents.length}</div>
+                <p className="text-xs text-muted-foreground">All designations combined</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 text-center">
+                <CardTitle className="text-sm font-medium">Resident</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-cyan-600">
+                  {residents.filter((r) => r.role === "resident").length}
+                </div>
+                <p className="text-xs text-muted-foreground">Community members</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 text-center">
+                <CardTitle className="text-sm font-medium">BHW</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {residents.filter((r) => r.role === "bhw").length}
+                </div>
+                <p className="text-xs text-muted-foreground">Health workers</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 text-center">
+                <CardTitle className="text-sm font-medium">LGU</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {residents.filter((r) => r.role === "lgu").length}
+                </div>
+                <p className="text-xs text-muted-foreground">Local government</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Name or phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Designations</SelectItem>
+                  <SelectItem value="resident">Residents</SelectItem>
+                  <SelectItem value="bhw">Barangay Health Workers (BHW)</SelectItem>
+                  <SelectItem value="lgu">Local Government Units (LGU)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Recipients List */}
+          {loading ? (
+            <p className="text-center text-gray-500 py-8">Loading recipients...</p>
+          ) : filteredResidents.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">
+              {residents.length === 0
+                ? "No recipients added yet"
+                : "No recipients match your search"}
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {filteredResidents.map((resident) => (
+                <div
+                  key={resident.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    {resident.verified ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-gray-400" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium">{resident.name}</p>
+                      <p className="text-sm text-gray-600">{resident.phone}</p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${roleColors[resident.role]
+                        }`}
+                    >
+                      {roleLabels[resident.role]}
+                    </span>
                   </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      roleColors[resident.role]
-                    }`}
-                  >
-                    {roleLabels[resident.role]}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(resident)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDeleteDialog(resident)}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEditDialog(resident)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openDeleteDialog(resident)}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+              ))}
+            </div>
+          )}
+        </CardContent>
 
-      {/* Add Dialog */}
-      <AlertDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add Alert Recipient</AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name-add">Name</Label>
-              <Input
-                id="name-add"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="e.g., Maria Santos"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone-add">Phone Number</Label>
-              <Input
-                id="phone-add"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                placeholder="e.g., +639171234567"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Format: +639XXXXXXXXX
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="role-add">Designation</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger id="role-add">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="resident">Resident</SelectItem>
-                  <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                  <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAddResident}>
-              Add Recipient
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Edit Dialog */}
-      <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Edit Alert Recipient</AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name-edit">Name</Label>
-              <Input
-                id="name-edit"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="e.g., Maria Santos"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone-edit">Phone Number</Label>
-              <Input
-                id="phone-edit"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                placeholder="e.g., +639171234567"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Format: +639XXXXXXXXX
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="role-edit">Designation</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger id="role-edit">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="resident">Resident</SelectItem>
-                  <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                  <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleEditResident}>
-              Save Changes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Alert Recipient?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove {selectedResident?.name} from the alert list. This
-              action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteResident}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Upload Result Modal */}
-      {uploadResultOpen && uploadResult && (
-        <AlertDialog open={uploadResultOpen} onOpenChange={setUploadResultOpen}>
-          <AlertDialogContent className="max-w-md">
+        {/* Add Dialog */}
+        <AlertDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <AlertDialogContent>
             <AlertDialogHeader>
-              <div className="flex items-center gap-3 w-full">
-                {uploadResult.success ? (
-                  <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
-                )}
-                <AlertDialogTitle>
-                  {uploadResult.success ? "Upload Successful" : "Upload Failed"}
-                </AlertDialogTitle>
-              </div>
+              <AlertDialogTitle>Add Alert Recipient</AlertDialogTitle>
             </AlertDialogHeader>
-            
-            {uploadResult.success ? (
-              <div className="space-y-3">
-                {uploadResult.inserted > 0 && (
-                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <p className="text-sm text-green-800">
-                      <span className="font-bold">{uploadResult.inserted}</span> new recipients added
-                    </p>
-                  </div>
-                )}
-                {uploadResult.updated > 0 && (
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                    <p className="text-sm text-blue-800">
-                      <span className="font-bold">{uploadResult.updated}</span> recipients updated
-                    </p>
-                  </div>
-                )}
-                {uploadResult.failed > 0 && (
-                  <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
-                    <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    <p className="text-sm text-yellow-800">
-                      <span className="font-bold">{uploadResult.failed}</span> recipients failed
-                    </p>
-                  </div>
-                )}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name-add">Name</Label>
+                <Input
+                  id="name-add"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder="e.g., Maria Santos"
+                />
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
-                  <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <AlertDialogDescription className="text-red-800 text-sm">
-                    {uploadResult.error || "An error occurred during upload"}
-                  </AlertDialogDescription>
-                </div>
+              <div>
+                <Label htmlFor="phone-add">Phone Number</Label>
+                <Input
+                  id="phone-add"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                  placeholder="e.g., +639171234567"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Format: +639XXXXXXXXX
+                </p>
               </div>
-            )}
-            
+              <div>
+                <Label htmlFor="role-add">Designation</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: any) =>
+                    setFormData((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger id="role-add">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resident">Resident</SelectItem>
+                    <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
+                    <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <AlertDialogFooter>
-              <AlertDialogAction className="bg-schistoguard-teal hover:bg-schistoguard-teal/90">
-                Close
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleAddResident}>
+                Add Recipient
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      )}
-    </Card>
+
+        {/* Edit Dialog */}
+        <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Edit Alert Recipient</AlertDialogTitle>
+            </AlertDialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name-edit">Name</Label>
+                <Input
+                  id="name-edit"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder="e.g., Maria Santos"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone-edit">Phone Number</Label>
+                <Input
+                  id="phone-edit"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                  placeholder="e.g., +639171234567"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Format: +639XXXXXXXXX
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="role-edit">Designation</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: any) =>
+                    setFormData((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger id="role-edit">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resident">Resident</SelectItem>
+                    <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
+                    <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleEditResident}>
+                Save Changes
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Alert Recipient?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove {selectedResident?.name} from the alert list. This
+                action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteResident}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Upload Result Modal */}
+        {uploadResultOpen && uploadResult && (
+          <AlertDialog open={uploadResultOpen} onOpenChange={setUploadResultOpen}>
+            <AlertDialogContent className="max-w-md">
+              <AlertDialogHeader>
+                <div className="flex items-center gap-3 w-full">
+                  {uploadResult.success ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                  )}
+                  <AlertDialogTitle>
+                    {uploadResult.success ? "Upload Successful" : "Upload Failed"}
+                  </AlertDialogTitle>
+                </div>
+              </AlertDialogHeader>
+
+              {uploadResult.success ? (
+                <div className="space-y-3">
+                  {uploadResult.inserted > 0 && (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <p className="text-sm text-green-800">
+                        <span className="font-bold">{uploadResult.inserted}</span> new recipients added
+                      </p>
+                    </div>
+                  )}
+                  {uploadResult.updated > 0 && (
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
+                      <p className="text-sm text-blue-800">
+                        <span className="font-bold">{uploadResult.updated}</span> recipients updated
+                      </p>
+                    </div>
+                  )}
+                  {uploadResult.failed > 0 && (
+                    <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
+                      <AlertCircle className="w-5 h-5 text-yellow-600" />
+                      <p className="text-sm text-yellow-800">
+                        <span className="font-bold">{uploadResult.failed}</span> recipients failed
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
+                    <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <AlertDialogDescription className="text-red-800 text-sm">
+                      {uploadResult.error || "An error occurred during upload"}
+                    </AlertDialogDescription>
+                  </div>
+                </div>
+              )}
+
+              <AlertDialogFooter>
+                <AlertDialogAction className="bg-schistoguard-teal hover:bg-schistoguard-teal/90">
+                  Close
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </Card>
+    </>
   );
 }

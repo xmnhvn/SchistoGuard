@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 
+let _userMgmtFirstLoadDone = false;
+
 interface User {
   id: string;
   name: string;
@@ -33,10 +35,17 @@ interface UserStats {
 }
 
 export const UserManagement: React.FC = () => {
+  const animate = !_userMgmtFirstLoadDone;
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (!_userMgmtFirstLoadDone) {
+      setTimeout(() => { _userMgmtFirstLoadDone = true; }, 50);
+    }
+  }, []);
 
   const users: User[] = [
     {
@@ -110,13 +119,13 @@ export const UserManagement: React.FC = () => {
   };
 
   const filteredUsers = users.filter(user => {
-  const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.barangay?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.barangay?.toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesRole = filterRole === 'all' || user.role === filterRole;
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -155,7 +164,7 @@ export const UserManagement: React.FC = () => {
     const date = new Date(lastLogin);
     const now = new Date();
     const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffHours < 1) return 'Just now';
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffHours < 168) return `${Math.floor(diffHours / 24)}d ago`;
@@ -168,7 +177,13 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-schistoguard-light-bg">
-      <div className="max-w-7xl mx-auto p-6">
+      <style>{`
+        @keyframes pageSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div className="max-w-7xl mx-auto p-6" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">User Management</h1>
@@ -313,7 +328,7 @@ export const UserManagement: React.FC = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex gap-3">
                   <Select value={filterRole} onValueChange={setFilterRole}>
                     <SelectTrigger className="w-48">
@@ -328,7 +343,7 @@ export const UserManagement: React.FC = () => {
                       <SelectItem value="resident">Resident</SelectItem>
                     </SelectContent>
                   </Select>
-                  
+
                   <Select value={filterStatus} onValueChange={setFilterStatus}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="All Status" />

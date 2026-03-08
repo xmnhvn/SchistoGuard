@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useEffect } from "react";
 import { apiGet } from "../utils/api";
 
+let _siteDetailFirstLoadDone = false;
+
 
 export interface SiteDetailViewProps {
   siteId: string;
@@ -21,7 +23,7 @@ export interface SiteDetailViewProps {
   onBack?: () => void;
 }
 
-export function SiteDetailView({ 
+export function SiteDetailView({
   siteId,
   siteName = "Mang Jose's Fishpond",
   barangay = "Riverside",
@@ -29,9 +31,16 @@ export function SiteDetailView({
   onBack
 }: SiteDetailViewProps) {
   console.log("SiteDetailView mounted");
+  const animate = !_siteDetailFirstLoadDone;
   const [timeRange, setTimeRange] = useState("24h");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!_siteDetailFirstLoadDone) {
+      setTimeout(() => { _siteDetailFirstLoadDone = true; }, 50);
+    }
+  }, []);
 
   useEffect(() => {
     apiGet("/api/sensors/history")
@@ -45,7 +54,7 @@ export function SiteDetailView({
   }, []);
 
   const handleAcknowledgeAlert = (alertId: string) => {
-    setAlerts(prev => prev.map(alert => 
+    setAlerts(prev => prev.map(alert =>
       alert.id === alertId ? { ...alert, isAcknowledged: true } : alert
     ));
   };
@@ -69,124 +78,132 @@ export function SiteDetailView({
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold text-schistoguard-navy">{siteName}</h1>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">{barangay}, Leyte Province</p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-4 min-w-[260px]">
-          <div className="flex items-center gap-2">
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24h">Last 24h</SelectItem>
-                <SelectItem value="72h">Last 72h</SelectItem>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="default">
-                <Download className="w-4 h-4 mr-2" />
-                Export Data
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        <div className="min-w-0">
-          <Card className="w-full">
-            <CardHeader>
-              <CardTitle>Real-Time Monitoring (5mins intervals)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {chartData.length === 0 ? (
-                <div className="h-96 flex items-center justify-center text-gray-400">No time series data available.</div>
-              ) : (
-                <div style={{ minHeight: 400, minWidth: 300, width: '100%', height: 475 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#007E88" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#007E88" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#28A745" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#28A745" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="time" />
-                      <YAxis />
-                      <Tooltip labelFormatter={(time) => `Time: ${time}`} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="turbidity" 
-                        stroke="#FF6B6B" 
-                        strokeWidth={2}
-                        fill="url(#turbidityGradient)" 
-                        name="Turbidity (NTU)"
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="temperature" 
-                        stroke="#007E88" 
-                        strokeWidth={2}
-                        fill="url(#temperatureGradient)" 
-                        name="Temperature (°C)"
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="ph" 
-                        stroke="#28A745" 
-                        strokeWidth={2}
-                        fill="url(#phGradient)" 
-                        name="pH Level"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-              <div className="text-sm text-muted-foreground mt-2 text-center">
-                <p>All parameters shown per 5-min interval (from time series table)</p>
-                <div className="flex gap-4 mt-2 justify-center">
-                  <span className="flex items-center gap-1">
-                    <span style={{ display: 'inline-block', width: 16, height: 4, background: '#FF6B6B', borderRadius: 2 }}></span>
-                    Turbidity
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span style={{ display: 'inline-block', width: 16, height: 4, background: '#007E88', borderRadius: 2 }}></span>
-                    Temperature
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span style={{ display: 'inline-block', width: 16, height: 4, background: '#28A745', borderRadius: 2 }}></span>
-                    pH Level
-                  </span>
-                </div>
-                <div className="mt-4 text-left text-xs text-gray-600 max-w-3xl mx-auto space-y-1">
-                  <p className="font-medium text-gray-700">Threshold Classification Guide:</p>
-                  <p><span className="font-medium">Temperature (°C)</span>: Critical 25–30 | Warning 20–24.99 or 30.01–32 | Safe outside these ranges</p>
-                  <p><span className="font-medium">Turbidity (NTU)</span>: Critical &lt; 5 | Warning 5–15 | Safe &gt; 15</p>
-                  <p><span className="font-medium">pH Level</span>: Critical 7.0–8.5 | Warning 6.5–6.99 or 8.51–9.0 | Safe outside these ranges</p>
-                </div>
+      <style>{`
+        @keyframes pageSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold text-schistoguard-navy">{siteName}</h1>
               </div>
-            </CardContent>
-          </Card>
+              <p className="mt-1 text-sm text-muted-foreground">{barangay}, Leyte Province</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 min-w-[260px]">
+            <div className="flex items-center gap-2">
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24h">Last 24h</SelectItem>
+                  <SelectItem value="72h">Last 72h</SelectItem>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-4">
+                <Button variant="outline" size="default">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Data
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <div className="grid grid-cols-1 gap-6">
+          <div className="min-w-0">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle>Real-Time Monitoring (5mins intervals)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {chartData.length === 0 ? (
+                  <div className="h-96 flex items-center justify-center text-gray-400">No time series data available.</div>
+                ) : (
+                  <div style={{ minHeight: 400, minWidth: 300, width: '100%', height: 475 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#007E88" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#007E88" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#28A745" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#28A745" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="time" />
+                        <YAxis />
+                        <Tooltip labelFormatter={(time) => `Time: ${time}`} />
+                        <Area
+                          type="monotone"
+                          dataKey="turbidity"
+                          stroke="#FF6B6B"
+                          strokeWidth={2}
+                          fill="url(#turbidityGradient)"
+                          name="Turbidity (NTU)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="temperature"
+                          stroke="#007E88"
+                          strokeWidth={2}
+                          fill="url(#temperatureGradient)"
+                          name="Temperature (°C)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="ph"
+                          stroke="#28A745"
+                          strokeWidth={2}
+                          fill="url(#phGradient)"
+                          name="pH Level"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+                <div className="text-sm text-muted-foreground mt-2 text-center">
+                  <p>All parameters shown per 5-min interval (from time series table)</p>
+                  <div className="flex gap-4 mt-2 justify-center">
+                    <span className="flex items-center gap-1">
+                      <span style={{ display: 'inline-block', width: 16, height: 4, background: '#FF6B6B', borderRadius: 2 }}></span>
+                      Turbidity
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span style={{ display: 'inline-block', width: 16, height: 4, background: '#007E88', borderRadius: 2 }}></span>
+                      Temperature
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span style={{ display: 'inline-block', width: 16, height: 4, background: '#28A745', borderRadius: 2 }}></span>
+                      pH Level
+                    </span>
+                  </div>
+                  <div className="mt-4 text-left text-xs text-gray-600 max-w-3xl mx-auto space-y-1">
+                    <p className="font-medium text-gray-700">Threshold Classification Guide:</p>
+                    <p><span className="font-medium">Temperature (°C)</span>: Critical 25–30 | Warning 20–24.99 or 30.01–32 | Safe outside these ranges</p>
+                    <p><span className="font-medium">Turbidity (NTU)</span>: Critical &lt; 5 | Warning 5–15 | Safe &gt; 15</p>
+                    <p><span className="font-medium">pH Level</span>: Critical 7.0–8.5 | Warning 6.5–6.99 or 8.51–9.0 | Safe outside these ranges</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+        </div>
       </div>
     </div>
   );

@@ -30,6 +30,8 @@ import {
 } from './ui/alert-dialog';
 import { apiGet, apiPost, apiDelete } from '../utils/api';
 
+let _reportsFirstLoadDone = false;
+
 interface Report {
   id: string;
   title: string;
@@ -62,6 +64,7 @@ const formatMonthInputValue = (date: Date) => {
 };
 
 export const ReportsPage: React.FC = () => {
+  const animate = !_reportsFirstLoadDone;
   const [selectedPeriod, setSelectedPeriod] = useState('current-month');
   const [selectedType, setSelectedType] = useState('all');
   const [reports, setReports] = useState<Report[]>([]);
@@ -89,6 +92,9 @@ export const ReportsPage: React.FC = () => {
 
   React.useEffect(() => {
     fetchReports();
+    if (!_reportsFirstLoadDone) {
+      setTimeout(() => { _reportsFirstLoadDone = true; }, 50);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -359,6 +365,12 @@ export const ReportsPage: React.FC = () => {
 
   return (
     <div className="relative h-full overflow-hidden bg-schistoguard-light-bg">
+      <style>{`
+        @keyframes pageSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <div className="pointer-events-none absolute left-1/2 top-3 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
         {successMessage && (
           <div className="pointer-events-auto flex min-w-[320px] max-w-[680px] items-start justify-between gap-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-800 shadow-lg">
@@ -389,7 +401,7 @@ export const ReportsPage: React.FC = () => {
         )}
       </div>
 
-      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col p-6">
+      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col p-6" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Reports List Column */}
           <Card className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -440,213 +452,212 @@ export const ReportsPage: React.FC = () => {
 
             <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-4">
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-2">
-              {loading ? (
-                <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">
-                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                  Loading reports...
-                </div>
-              ) : filteredReports.length === 0 ? (
-                <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">No reports available.</div>
-              ) : (
-                filteredReports.map((report) => (
-                  <div
-                    key={report.id}
-                    className={`cursor-pointer rounded-lg border bg-white p-4 transition-all hover:shadow-md ${
-                      selectedReport?.id === report.id ? 'border-schistoguard-teal bg-schistoguard-teal/5 shadow-md' : ''
-                    }`}
-                    onClick={() => handleViewReport(report)}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <h4 className="mb-1 text-base font-semibold text-schistoguard-navy">{report.title}</h4>
-                        <div className="mb-2 text-xs text-gray-600">
-                          {report.period} | Generated {new Date(report.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
+                {loading ? (
+                  <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                    Loading reports...
+                  </div>
+                ) : filteredReports.length === 0 ? (
+                  <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">No reports available.</div>
+                ) : (
+                  filteredReports.map((report) => (
+                    <div
+                      key={report.id}
+                      className={`cursor-pointer rounded-lg border bg-white p-4 transition-all hover:shadow-md ${selectedReport?.id === report.id ? 'border-schistoguard-teal bg-schistoguard-teal/5 shadow-md' : ''
+                        }`}
+                      onClick={() => handleViewReport(report)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <h4 className="mb-1 text-base font-semibold text-schistoguard-navy">{report.title}</h4>
+                          <div className="mb-2 text-xs text-gray-600">
+                            {report.period} | Generated {new Date(report.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Preview Panel Column */}
-        <div className="flex h-full min-h-0 flex-col">
-          {!selectedReport ? (
-            <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-slate-50 p-12 text-center">
-              <FileText className="mb-4 h-16 w-16 text-slate-300" />
-              <h3 className="mb-2 text-lg font-semibold text-slate-700">No Report Selected</h3>
-              <p className="text-sm text-slate-500">Select a report from the list to view its details</p>
-            </Card>
-          ) : (
-            <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
-              <div className="flex-shrink-0 border-b bg-white px-6 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <h4 className="text-xl font-semibold text-slate-900">{selectedReport.title}</h4>
-                  <div className="flex gap-2">
-                    <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          className="bg-white/90 text-red-600 hover:bg-red-50 hover:text-red-700"
-                          onClick={() => handleDeleteClick(selectedReport)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-red-600">Delete Report?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this report? This action cannot be undone.
-                          </AlertDialogDescription>
-                          <div className="rounded bg-gray-50 p-3 text-sm text-gray-600">
-                            <strong>{selectedReport.title}</strong>
-                            <br />
-                            {selectedReport.period}
-                          </div>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter className="mt-2">
-                          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-                          <AlertDialogAction asChild>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              onClick={handleDeleteConfirm}
-                              disabled={deleting}
-                            >
-                              {deleting ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Deleting...
-                                </>
-                              ) : (
-                                <>
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </>
-                              )}
-                            </Button>
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <Button
-                      className="bg-white/90 text-slate-700 hover:bg-white"
-                      size="sm"
-                      onClick={handleDownloadReport}
-                      disabled={downloading}
-                    >
-                      {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    </Button>
+          {/* Preview Panel Column */}
+          <div className="flex h-full min-h-0 flex-col">
+            {!selectedReport ? (
+              <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-slate-50 p-12 text-center">
+                <FileText className="mb-4 h-16 w-16 text-slate-300" />
+                <h3 className="mb-2 text-lg font-semibold text-slate-700">No Report Selected</h3>
+                <p className="text-sm text-slate-500">Select a report from the list to view its details</p>
+              </Card>
+            ) : (
+              <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
+                <div className="flex-shrink-0 border-b bg-white px-6 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <h4 className="text-xl font-semibold text-slate-900">{selectedReport.title}</h4>
+                    <div className="flex gap-2">
+                      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            className="bg-white/90 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => handleDeleteClick(selectedReport)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-red-600">Delete Report?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this report? This action cannot be undone.
+                            </AlertDialogDescription>
+                            <div className="rounded bg-gray-50 p-3 text-sm text-gray-600">
+                              <strong>{selectedReport.title}</strong>
+                              <br />
+                              {selectedReport.period}
+                            </div>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="mt-2">
+                            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={handleDeleteConfirm}
+                                disabled={deleting}
+                              >
+                                {deleting ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </>
+                                )}
+                              </Button>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <Button
+                        className="bg-white/90 text-slate-700 hover:bg-white"
+                        size="sm"
+                        onClick={handleDownloadReport}
+                        disabled={downloading}
+                      >
+                        {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-1 flex flex-nowrap items-center gap-2 overflow-hidden text-sm">
+                    <span className="shrink-0 text-slate-700">
+                      Generated {new Date(selectedReport.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
+                    </span>
+                    <span className="inline-flex shrink-0">{getRiskBadge(selectedReport.summary.riskLevel)}</span>
                   </div>
                 </div>
-                <div className="mt-1 flex flex-nowrap items-center gap-2 overflow-hidden text-sm">
-                  <span className="shrink-0 text-slate-700">
-                    Generated {new Date(selectedReport.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
-                  </span>
-                  <span className="inline-flex shrink-0">{getRiskBadge(selectedReport.summary.riskLevel)}</span>
+
+                <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+                  <article ref={previewDocumentRef} className="mx-auto w-full max-w-[760px] bg-white p-5 text-[13px] leading-relaxed text-slate-800 sm:p-7">
+                    <header className="border-b border-slate-300 pb-3 text-center">
+                      <h3 className="text-base font-semibold uppercase tracking-wide text-slate-900">Water Quality Report For SchistoSomiasis Risk</h3>
+                      <p className="mt-1 text-sm font-medium text-slate-700">{selectedReport.period}</p>
+                    </header>
+
+                    <section className="mt-4 overflow-x-auto">
+                      <table className="w-full border-collapse text-xs">
+                        <tbody>
+                          <tr>
+                            <td className="border border-slate-300 px-2 py-1 font-semibold">Report Title</td>
+                            <td className="border border-slate-300 px-2 py-1">{selectedReport.title}</td>
+                            <td className="border border-slate-300 px-2 py-1 font-semibold">Report Type</td>
+                            <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.type}</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-slate-300 px-2 py-1 font-semibold">Generated</td>
+                            <td className="border border-slate-300 px-2 py-1">
+                              {new Date(selectedReport.generatedDate)
+                                .toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                                .replaceAll('/', '-')}
+                            </td>
+                            <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
+                            <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.summary.riskLevel}</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
+                            <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.totalSites}</td>
+                            <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
+                            <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.alertsGenerated}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </section>
+
+                    <section className="mt-4">
+                      <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">Summary</h4>
+                      <p className="mt-2 text-xs text-slate-700">
+                        This {selectedReport.type} report covers monitoring data for {selectedReport.period}. A total of {selectedReport.summary.totalSites}{' '}
+                        monitoring sites were reviewed, and {selectedReport.summary.alertsGenerated} alerts were logged for follow-up.
+                      </p>
+                    </section>
+
+                    <section className="mt-4 overflow-x-auto">
+                      <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
+                        Key Actions And Metrics
+                      </h4>
+                      <table className="mt-2 w-full border-collapse text-xs">
+                        <thead>
+                          <tr>
+                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Metric</th>
+                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Average</th>
+                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Status</th>
+                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="border border-slate-300 px-2 py-1">Turbidity</td>
+                            <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTurbidity)} NTU</td>
+                            <td className="border border-slate-300 px-2 py-1">{getTurbidityRemark(selectedReport.summary.avgTurbidity).label}</td>
+                            <td className="border border-slate-300 px-2 py-1">Track suspended particles and clarity trends.</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-slate-300 px-2 py-1">Temperature</td>
+                            <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTemperature)} C</td>
+                            <td className="border border-slate-300 px-2 py-1">{getTemperatureRemark(selectedReport.summary.avgTemperature || 0).label}</td>
+                            <td className="border border-slate-300 px-2 py-1">Review thermal conditions affecting parasite viability.</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-slate-300 px-2 py-1">pH Level</td>
+                            <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgPh)} pH</td>
+                            <td className="border border-slate-300 px-2 py-1">{getPhRemark(selectedReport.summary.avgPh || 0).label}</td>
+                            <td className="border border-slate-300 px-2 py-1">Check acidity/alkalinity drift versus target range.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </section>
+
+                    <section className="mt-4">
+                      <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
+                        Findings And Observations
+                      </h4>
+                      <p className="mt-2 text-xs text-slate-700">
+                        Overall risk classification for this reporting period is <span className="font-semibold capitalize">{selectedReport.summary.riskLevel}</span>.
+                        {selectedReport.summary.alertsGenerated > 0
+                          ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
+                          : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
+                      </p>
+                    </section>
+
+                  </article>
                 </div>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
-                <article ref={previewDocumentRef} className="mx-auto w-full max-w-[760px] bg-white p-5 text-[13px] leading-relaxed text-slate-800 sm:p-7">
-                  <header className="border-b border-slate-300 pb-3 text-center">
-                    <h3 className="text-base font-semibold uppercase tracking-wide text-slate-900">Water Quality Report For SchistoSomiasis Risk</h3>
-                    <p className="mt-1 text-sm font-medium text-slate-700">{selectedReport.period}</p>
-                  </header>
-
-                  <section className="mt-4 overflow-x-auto">
-                    <table className="w-full border-collapse text-xs">
-                      <tbody>
-                        <tr>
-                          <td className="border border-slate-300 px-2 py-1 font-semibold">Report Title</td>
-                          <td className="border border-slate-300 px-2 py-1">{selectedReport.title}</td>
-                          <td className="border border-slate-300 px-2 py-1 font-semibold">Report Type</td>
-                          <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.type}</td>
-                        </tr>
-                        <tr>
-                          <td className="border border-slate-300 px-2 py-1 font-semibold">Generated</td>
-                          <td className="border border-slate-300 px-2 py-1">
-                            {new Date(selectedReport.generatedDate)
-                              .toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
-                              .replaceAll('/', '-')}
-                          </td>
-                          <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
-                          <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.summary.riskLevel}</td>
-                        </tr>
-                        <tr>
-                          <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
-                          <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.totalSites}</td>
-                          <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
-                          <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.alertsGenerated}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
-
-                  <section className="mt-4">
-                    <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">Summary</h4>
-                    <p className="mt-2 text-xs text-slate-700">
-                      This {selectedReport.type} report covers monitoring data for {selectedReport.period}. A total of {selectedReport.summary.totalSites}{' '}
-                      monitoring sites were reviewed, and {selectedReport.summary.alertsGenerated} alerts were logged for follow-up.
-                    </p>
-                  </section>
-
-                  <section className="mt-4 overflow-x-auto">
-                    <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
-                      Key Actions And Metrics
-                    </h4>
-                    <table className="mt-2 w-full border-collapse text-xs">
-                      <thead>
-                        <tr>
-                          <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Metric</th>
-                          <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Average</th>
-                          <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Status</th>
-                          <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="border border-slate-300 px-2 py-1">Turbidity</td>
-                          <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTurbidity)} NTU</td>
-                          <td className="border border-slate-300 px-2 py-1">{getTurbidityRemark(selectedReport.summary.avgTurbidity).label}</td>
-                          <td className="border border-slate-300 px-2 py-1">Track suspended particles and clarity trends.</td>
-                        </tr>
-                        <tr>
-                          <td className="border border-slate-300 px-2 py-1">Temperature</td>
-                          <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTemperature)} C</td>
-                          <td className="border border-slate-300 px-2 py-1">{getTemperatureRemark(selectedReport.summary.avgTemperature || 0).label}</td>
-                          <td className="border border-slate-300 px-2 py-1">Review thermal conditions affecting parasite viability.</td>
-                        </tr>
-                        <tr>
-                          <td className="border border-slate-300 px-2 py-1">pH Level</td>
-                          <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgPh)} pH</td>
-                          <td className="border border-slate-300 px-2 py-1">{getPhRemark(selectedReport.summary.avgPh || 0).label}</td>
-                          <td className="border border-slate-300 px-2 py-1">Check acidity/alkalinity drift versus target range.</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
-
-                  <section className="mt-4">
-                    <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
-                      Findings And Observations
-                    </h4>
-                    <p className="mt-2 text-xs text-slate-700">
-                      Overall risk classification for this reporting period is <span className="font-semibold capitalize">{selectedReport.summary.riskLevel}</span>.
-                      {selectedReport.summary.alertsGenerated > 0
-                        ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
-                        : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
-                    </p>
-                  </section>
-
-                </article>
-              </div>
-            </Card>
-          )}
-        </div>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
 
@@ -668,11 +679,10 @@ export const ReportsPage: React.FC = () => {
                   <button
                     key={type}
                     type="button"
-                    className={`cursor-pointer rounded-full border px-6 py-1 font-medium transition-colors ${
-                      reportType === type
-                        ? 'border-schistoguard-teal bg-schistoguard-teal text-white'
-                        : 'border-gray-200 bg-gray-50 hover:border-schistoguard-teal'
-                    }`}
+                    className={`cursor-pointer rounded-full border px-6 py-1 font-medium transition-colors ${reportType === type
+                      ? 'border-schistoguard-teal bg-schistoguard-teal text-white'
+                      : 'border-gray-200 bg-gray-50 hover:border-schistoguard-teal'
+                      }`}
                     onClick={() => setReportType(type)}
                     disabled={creating}
                   >

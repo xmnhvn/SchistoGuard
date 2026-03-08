@@ -17,22 +17,22 @@ const POPPINS = "'Poppins', sans-serif";
 
 let _alertsFirstLoadDone = false;
 
-export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void }) {
-      // Replace this with your actual user context or authentication logic
-      const userName = "Juan Dela Cruz (LGU)";
-    function formatDateTime(dt: string) {
-      if (!dt) return '-';
-      const d = new Date(dt);
-      if (isNaN(d.getTime())) return dt;
-      return d.toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-    }
+export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view: string) => void; visible?: boolean }) {
+  // Replace this with your actual user context or authentication logic
+  const userName = "Juan Dela Cruz (LGU)";
+  function formatDateTime(dt: string) {
+    if (!dt) return '-';
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return dt;
+    return d.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
   const [alerts, setAlerts] = useState<any[]>([]);
   const animate = !_alertsFirstLoadDone;
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -47,17 +47,20 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
   useEffect(() => {
+    if (visible && !_alertsFirstLoadDone) {
+      setTimeout(() => { _alertsFirstLoadDone = true; }, 50);
+    }
+  }, [visible]);
+
+  useEffect(() => {
     const fetchAlerts = () => {
       apiGet("/api/sensors/alerts")
         .then((data) => {
           if (Array.isArray(data)) {
             setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));
-            if (!_alertsFirstLoadDone) {
-              setTimeout(() => { _alertsFirstLoadDone = true; }, 50);
-            }
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     fetchAlerts();
     // Check for new alerts every 10 seconds
@@ -81,9 +84,9 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
   };
 
   const handleAcknowledgeAlert = (alertId: string) => {
-    setAlerts(prev => prev.map(alert => 
-      alert.id === alertId ? { 
-        ...alert, 
+    setAlerts(prev => prev.map(alert =>
+      alert.id === alertId ? {
+        ...alert,
         isAcknowledged: true,
         acknowledgedBy: userName
       } : alert
@@ -93,14 +96,14 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
 
   const filteredAlerts = alerts.filter(alert => {
     const matchesSearch = alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         alert.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         alert.parameter.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || 
-                         (filterStatus === "acknowledged" && alert.isAcknowledged) ||
-                         (filterStatus === "unacknowledged" && !alert.isAcknowledged);
+      alert.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      alert.parameter.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" ||
+      (filterStatus === "acknowledged" && alert.isAcknowledged) ||
+      (filterStatus === "unacknowledged" && !alert.isAcknowledged);
     const matchesLevel = filterLevel === "all" || alert.level === filterLevel;
     const matchesBarangay = filterBarangay === "all" || alert.barangay === filterBarangay;
-    
+
     return matchesSearch && matchesStatus && matchesLevel && matchesBarangay;
   });
 
@@ -275,133 +278,133 @@ export function AlertsPage({ onNavigate }: { onNavigate?: (view: string) => void
                 <div key={alert.id} style={{
                   animation: animate ? `cardDataFadeIn 0.6s ${0.35 + index * 0.07}s cubic-bezier(0.22,1,0.36,1) both` : "none",
                 }}>
-                <Dialog>
-                  <AlertItem
-                    {...alert}
-                    onAcknowledge={handleAcknowledgeAlert}
-                    onExpand={() => { setSelectedAlert(alert); }}
-                    DetailsButtonComponent={({ onClick }) => (
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
-                          className="py-0.5 px-2 text-xs h-6 min-h-0"
-                        >
-                          Details
-                        </Button>
-                      </DialogTrigger>
-                    )}
-                  />
-                  <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
-                    <DialogHeader>
-                      <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
-                        Alert Details
-                      </DialogTitle>
-                    </DialogHeader>
-                    {selectedAlert && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                        <div style={{
-                          display: "grid",
-                          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                          gap: 28,
-                        }}>
-                          <div>
-                            <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
-                              Alert Information
-                            </h4>
-                            <table style={{ width: "100%", fontSize: 13 }}>
-                              <tbody>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
-                                  <td style={{ fontFamily: "monospace", fontWeight: 600, fontSize: 14 }}>{selectedAlert.id}</td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
-                                  <td>
-                                    <Badge
-                                      variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
-                                      className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
-                                    >
-                                      {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
-                                    </Badge>
-                                  </td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
-                                  <td style={{ fontWeight: 600 }}>{selectedAlert.parameter}</td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
-                                  <td style={{ fontWeight: 600 }}>{selectedAlert.value} <span style={{ fontWeight: 400, fontSize: 11 }}>NTU</span></td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
-                                  <td>{selectedAlert.duration || '-'}</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                          <div>
-                            <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
-                              Site Information
-                            </h4>
-                            <table style={{ width: "100%", fontSize: 13 }}>
-                              <tbody>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
-                                  <td style={{ fontWeight: 600 }}>{selectedAlert.siteName}</td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
-                                  <td>{selectedAlert.barangay}</td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
-                                  <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(selectedAlert.timestamp)}</td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Status:</td>
-                                  <td>
-                                    <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
-                                      {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
-                                    </Badge>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                        <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 16 }}>
-                          <h4 style={{ fontWeight: 500, marginBottom: 12, fontSize: 14 }}>Alert Message</h4>
-                          <p style={{
-                            fontSize: 13, color: "#8E8B8B", background: "#f9fafb",
-                            borderRadius: 10, padding: 14, marginBottom: 20,
+                  <Dialog>
+                    <AlertItem
+                      {...alert}
+                      onAcknowledge={handleAcknowledgeAlert}
+                      onExpand={() => { setSelectedAlert(alert); }}
+                      DetailsButtonComponent={({ onClick }) => (
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
+                            className="py-0.5 px-2 text-xs h-6 min-h-0"
+                          >
+                            Details
+                          </Button>
+                        </DialogTrigger>
+                      )}
+                    />
+                    <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
+                      <DialogHeader>
+                        <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
+                          Alert Details
+                        </DialogTitle>
+                      </DialogHeader>
+                      {selectedAlert && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                          <div style={{
+                            display: "grid",
+                            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                            gap: 28,
                           }}>
-                            {selectedAlert.message}
-                          </p>
-                          {selectedAlert.acknowledgedBy && (
-                            <div style={{ textAlign: "center", paddingTop: 8 }}>
-                              <span style={{ fontSize: 12, color: "#8E8B8B", display: "block" }}>Acknowledged by</span>
-                              <span style={{ fontWeight: 500, fontSize: 13 }}>{selectedAlert.acknowledgedBy}</span>
+                            <div>
+                              <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
+                                Alert Information
+                              </h4>
+                              <table style={{ width: "100%", fontSize: 13 }}>
+                                <tbody>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
+                                    <td style={{ fontFamily: "monospace", fontWeight: 600, fontSize: 14 }}>{selectedAlert.id}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
+                                    <td>
+                                      <Badge
+                                        variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
+                                        className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
+                                      >
+                                        {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
+                                    <td style={{ fontWeight: 600 }}>{selectedAlert.parameter}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
+                                    <td style={{ fontWeight: 600 }}>{selectedAlert.value} <span style={{ fontWeight: 400, fontSize: 11 }}>NTU</span></td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
+                                    <td>{selectedAlert.duration || '-'}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
                             </div>
-                          )}
+                            <div>
+                              <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
+                                Site Information
+                              </h4>
+                              <table style={{ width: "100%", fontSize: 13 }}>
+                                <tbody>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
+                                    <td style={{ fontWeight: 600 }}>{selectedAlert.siteName}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
+                                    <td>{selectedAlert.barangay}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
+                                    <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(selectedAlert.timestamp)}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Status:</td>
+                                    <td>
+                                      <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
+                                        {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                          <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 16 }}>
+                            <h4 style={{ fontWeight: 500, marginBottom: 12, fontSize: 14 }}>Alert Message</h4>
+                            <p style={{
+                              fontSize: 13, color: "#8E8B8B", background: "#f9fafb",
+                              borderRadius: 10, padding: 14, marginBottom: 20,
+                            }}>
+                              {selectedAlert.message}
+                            </p>
+                            {selectedAlert.acknowledgedBy && (
+                              <div style={{ textAlign: "center", paddingTop: 8 }}>
+                                <span style={{ fontSize: 12, color: "#8E8B8B", display: "block" }}>Acknowledged by</span>
+                                <span style={{ fontWeight: 500, fontSize: 13 }}>{selectedAlert.acknowledgedBy}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", gap: 8, paddingTop: 8 }}>
+                            {!selectedAlert.isAcknowledged && (
+                              <Button
+                                onClick={() => handleAcknowledgeAlert(selectedAlert.id)}
+                                className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                Acknowledge Alert
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ display: "flex", gap: 8, paddingTop: 8 }}>
-                          {!selectedAlert.isAcknowledged && (
-                            <Button
-                              onClick={() => handleAcknowledgeAlert(selectedAlert.id)}
-                              className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-                            >
-                              <CheckCircle2 className="w-4 h-4 mr-2" />
-                              Acknowledge Alert
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </DialogContent>
-                </Dialog>
+                      )}
+                    </DialogContent>
+                  </Dialog>
                 </div>
               ))
             ) : (
