@@ -245,7 +245,9 @@ export default function App() {
           <SitesDirectory onViewSiteDetail={handleViewSiteDetail} visible={currentView === 'sites'} />
         </div>
         {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
-          <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} />
+          <div style={{ display: currentView === 'site-details' ? 'contents' : 'none' }}>
+            <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} visible={currentView === 'site-details'} />
+          </div>
         )}
         {currentView === 'recipients' && (
           <SettingsPage siteName={selectedSiteId || "All Sites"} />

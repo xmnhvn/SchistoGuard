@@ -7,10 +7,11 @@ import { AlertItem } from "./AlertItem";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { ArrowLeft, Download, Settings, Bell, Calendar, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { apiGet } from "../utils/api";
+
+const POPPINS = "'Poppins', sans-serif";
 
 let _siteDetailFirstLoadDone = false;
 
@@ -21,6 +22,7 @@ export interface SiteDetailViewProps {
   barangay?: string;
   currentRisk?: "safe" | "warning" | "critical";
   onBack?: () => void;
+  visible?: boolean;
 }
 
 export function SiteDetailView({
@@ -28,7 +30,8 @@ export function SiteDetailView({
   siteName = "Mang Jose's Fishpond",
   barangay = "Riverside",
   currentRisk,
-  onBack
+  onBack,
+  visible = true
 }: SiteDetailViewProps) {
   console.log("SiteDetailView mounted");
   const animate = !_siteDetailFirstLoadDone;
@@ -37,10 +40,10 @@ export function SiteDetailView({
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!_siteDetailFirstLoadDone) {
+    if (visible && !_siteDetailFirstLoadDone) {
       setTimeout(() => { _siteDetailFirstLoadDone = true; }, 50);
     }
-  }, []);
+  }, [visible]);
 
   useEffect(() => {
     apiGet("/api/sensors/history")
@@ -69,35 +72,129 @@ export function SiteDetailView({
   }
 
   const [infoOpen, setInfoOpen] = useState(false);
-  const chartData = history.map(r => ({
-    time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    turbidity: r.turbidity,
-    temperature: r.temperature,
-    ph: r.ph ?? 7.2
-  }));
+  const getCutoffTime = () => {
+    if (!history || history.length === 0) return 0;
+
+    // Find the latest timestamp in the data to use as our "now" anchor
+    // This allows the filter to work smoothly even if the mock database is old
+    const maxTime = Math.max(...history.map(r => new Date(r.timestamp).getTime()));
+
+    switch (timeRange) {
+      case "24h": return maxTime - 24 * 60 * 60 * 1000;
+      case "72h": return maxTime - 72 * 60 * 60 * 1000;
+      case "7d": return maxTime - 7 * 24 * 60 * 60 * 1000;
+      case "30d": return maxTime - 30 * 24 * 60 * 60 * 1000;
+      default: return 0;
+    }
+  };
+
+  const chartData = history
+    .filter(r => new Date(r.timestamp).getTime() >= getCutoffTime())
+    .filter(r => r.temperature > -50 && r.turbidity > -50 && (r.ph === undefined || r.ph > -10))
+    .map(r => {
+      const d = new Date(r.timestamp);
+      let timeLabel = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      if (timeRange === '7d' || timeRange === '30d') {
+        timeLabel = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      } else if (timeRange === '72h') {
+        timeLabel = d.toLocaleDateString([], { weekday: 'short' }) + ' ' + timeLabel;
+      }
+
+      return {
+        time: timeLabel,
+        turbidity: Math.max(0, r.turbidity),
+        temperature: r.temperature,
+        ph: r.ph ?? 7.2
+      };
+    });
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{
+          background: "#fff",
+          borderRadius: 8,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          padding: "12px 16px",
+          border: "none",
+          minWidth: 100,
+          textAlign: "center",
+          fontFamily: POPPINS,
+          position: "relative",
+          zIndex: 100
+        }}>
+          <p style={{ margin: "0 0 10px 0", fontSize: 13, fontWeight: 600, color: "#7b8a9a", borderBottom: "1px solid #f0f1f3", paddingBottom: 8 }}>
+            {label}
+          </p>
+          {[...payload].sort((a: any, b: any) => b.value - a.value).map((entry: any, index: number) => (
+            <div key={index} style={{ marginBottom: index !== payload.length - 1 ? 8 : 0 }}>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: entry.color, lineHeight: 1.2 }}>
+                {entry.value}
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 11, color: "#a0aec0", fontWeight: 500 }}>
+                {entry.name === "Turbidity (NTU)" ? "Turbidity" : entry.name === "Temperature (°C)" ? "Temperature" : "pH"}
+              </p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomActiveDot = (props: any) => {
+    const { cx, cy, stroke } = props;
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={6} fill="#fff" stroke={stroke} strokeWidth={2.5} />
+        <circle cx={cx} cy={cy} r={12} fill={stroke} fillOpacity={0.15} />
+      </g>
+    );
+  };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="relative overflow-hidden bg-schistoguard-light-bg min-h-screen">
       <style>{`
         @keyframes pageSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      <div style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
-        <div className="flex items-start justify-between">
+      <div className="mx-auto flex flex-col p-6 max-w-[1800px]" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+        <div className="flex flex-shrink-0 items-start justify-between mb-6">
           <div className="flex items-center gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-schistoguard-navy">{siteName}</h1>
+                <h1 style={{
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: "#1a2a3a",
+                  margin: 0,
+                  fontFamily: POPPINS,
+                }}>{siteName}</h1>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{barangay}, Leyte Province</p>
+              <p style={{
+                fontSize: 14,
+                color: "#7b8a9a",
+                margin: "4px 0 0",
+                fontFamily: POPPINS,
+              }}>{barangay}, Leyte Province</p>
             </div>
           </div>
           <div className="flex flex-col gap-4 min-w-[260px]">
-            <div className="flex items-center gap-2">
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+            }}>
               <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger style={{
+                  width: 148,
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                }}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -107,102 +204,207 @@ export function SiteDetailView({
                   <SelectItem value="30d">Last 30 days</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-4">
-                <Button variant="outline" size="default">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Data
-                </Button>
-              </div>
+              <button
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  padding: "0 16px", height: 38, borderRadius: 12,
+                  border: "1px solid #e2e5ea",
+                  background: "#fff", cursor: "pointer", fontSize: 13,
+                  fontFamily: POPPINS, fontWeight: 500, color: "#374151",
+                }}
+              >
+                <Download size={15} /> Export Data
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          <div className="min-w-0">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle>Real-Time Monitoring (5mins intervals)</CardTitle>
-              </CardHeader>
-              <CardContent>
+        <div className="flex flex-col gap-6 w-full">
+          <div className="flex flex-col w-full">
+            <div style={{
+              background: "#fff",
+              borderRadius: 20,
+              boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              width: "100%",
+              marginBottom: 20
+            }}>
+              <div style={{
+                padding: "20px 24px 16px",
+                borderBottom: "1px solid #f0f1f3",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <h3 style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "#1a2a3a",
+                  margin: 0,
+                  fontFamily: POPPINS,
+                }}>
+                  Real-Time Monitoring
+                </h3>
+                <div className="flex gap-4" style={{ fontSize: 13, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>
+                  <span className="flex items-center gap-2">
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#43c6b6" }} /> Temperature
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#4187d6" }} /> pH Level
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2c5282" }} /> Turbidity
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col px-6 pb-6 pt-4 w-full">
                 {chartData.length === 0 ? (
-                  <div className="h-96 flex items-center justify-center text-gray-400">No time series data available.</div>
+                  <div className="flex h-[350px] w-full items-center justify-center text-gray-400">No time series data available.</div>
                 ) : (
-                  <div style={{ minHeight: 400, minWidth: 300, width: '100%', height: 475 }}>
+                  <div className="w-full" style={{ height: 350 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <defs>
+                          <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4187d6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#4187d6" stopOpacity={0.05} />
+                          </linearGradient>
                           <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#2c5282" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#2c5282" stopOpacity={0.05} />
                           </linearGradient>
                           <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#007E88" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#007E88" stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#28A745" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#28A745" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#43c6b6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#43c6b6" stopOpacity={0.05} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" />
-                        <YAxis />
-                        <Tooltip labelFormatter={(time) => `Time: ${time}`} />
+                        <XAxis
+                          dataKey="time"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: "#cbd5e1", fontSize: 11, fontFamily: POPPINS }}
+                          dy={10}
+                        />
+                        <YAxis hide domain={['dataMin - 1', 'dataMax + 2']} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#e2e8f0", strokeWidth: 1, strokeDasharray: "4 4" }} />
+                        <Area
+                          type="monotone"
+                          dataKey="ph"
+                          stroke="#4187d6"
+                          strokeWidth={1.5}
+                          fill="url(#phGradient)"
+                          name="pH Level"
+                          activeDot={<CustomActiveDot stroke="#4187d6" />}
+                        />
                         <Area
                           type="monotone"
                           dataKey="turbidity"
-                          stroke="#FF6B6B"
+                          stroke="#2c5282"
                           strokeWidth={2}
                           fill="url(#turbidityGradient)"
                           name="Turbidity (NTU)"
+                          activeDot={<CustomActiveDot stroke="#2c5282" />}
                         />
                         <Area
                           type="monotone"
                           dataKey="temperature"
-                          stroke="#007E88"
+                          stroke="#43c6b6"
                           strokeWidth={2}
                           fill="url(#temperatureGradient)"
                           name="Temperature (°C)"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="ph"
-                          stroke="#28A745"
-                          strokeWidth={2}
-                          fill="url(#phGradient)"
-                          name="pH Level"
+                          activeDot={<CustomActiveDot stroke="#43c6b6" />}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 )}
-                <div className="text-sm text-muted-foreground mt-2 text-center">
+                <div className="flex-shrink-0 text-sm mt-3 text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS }}>
                   <p>All parameters shown per 5-min interval (from time series table)</p>
-                  <div className="flex gap-4 mt-2 justify-center">
-                    <span className="flex items-center gap-1">
-                      <span style={{ display: 'inline-block', width: 16, height: 4, background: '#FF6B6B', borderRadius: 2 }}></span>
-                      Turbidity
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span style={{ display: 'inline-block', width: 16, height: 4, background: '#007E88', borderRadius: 2 }}></span>
-                      Temperature
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span style={{ display: 'inline-block', width: 16, height: 4, background: '#28A745', borderRadius: 2 }}></span>
-                      pH Level
-                    </span>
-                  </div>
-                  <div className="mt-4 text-left text-xs text-gray-600 max-w-3xl mx-auto space-y-1">
-                    <p className="font-medium text-gray-700">Threshold Classification Guide:</p>
-                    <p><span className="font-medium">Temperature (°C)</span>: Critical 25–30 | Warning 20–24.99 or 30.01–32 | Safe outside these ranges</p>
-                    <p><span className="font-medium">Turbidity (NTU)</span>: Critical &lt; 5 | Warning 5–15 | Safe &gt; 15</p>
-                    <p><span className="font-medium">pH Level</span>: Critical 7.0–8.5 | Warning 6.5–6.99 or 8.51–9.0 | Safe outside these ranges</p>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
+        </div>
+        <div style={{
+          background: "#f8fafc",
+          border: "1px solid #f1f5f9",
+          borderRadius: 16,
+          padding: "24px",
+          marginTop: 12,
+          fontFamily: POPPINS,
+          width: "100%"
+        }}>
+          <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>
+            Threshold Classification Guide
+          </h4>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
 
+            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
+                  <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>25 – 30</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span>
+                  <span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 24.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 32</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span>
+                  <span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#4187d6" }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
+                  <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>7.0 – 8.5</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span>
+                  <span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.5 – 6.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.51 – 9.0</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span>
+                  <span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2c5282" }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
+                  <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span>
+                  <span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span>
+                  <span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     </div>
