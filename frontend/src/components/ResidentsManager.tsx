@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button, buttonVariants } from "./ui/button";
@@ -33,8 +34,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
+  Filter,
 } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../utils/api";
+
+const POPPINS = "'Poppins', sans-serif";
 
 interface Resident {
   id: number;
@@ -55,6 +59,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showMobileViewAll, setShowMobileViewAll] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -80,6 +85,18 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     error?: string;
   } | null>(null);
 
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+
   // Fetch residents
   useEffect(() => {
     fetchResidents();
@@ -93,7 +110,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
       if (siteName && siteName !== "All Sites") {
         endpoint += `?siteName=${encodeURIComponent(siteName)}`;
       }
-      
+
       console.log("Fetching residents from:", endpoint);
       const data = await apiGet(endpoint);
       console.log("Residents data:", data);
@@ -191,15 +208,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     setIsUploadingCSV(true);
     try {
       let csvContent = await file.text();
-      
+
       // Remove BOM if present
       if (csvContent.charCodeAt(0) === 0xFEFF) {
         csvContent = csvContent.slice(1);
       }
-      
+
       // Parse lines and auto-detect headers
       const lines = csvContent.trim().split('\n').map(line => line.trim()).filter(line => line);
-      
+
       if (lines.length === 0) {
         setUploadResult({
           success: false,
@@ -212,15 +229,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         setIsUploadingCSV(false);
         return;
       }
-      
+
       // Check if first line looks like headers
       const firstLine = lines[0].toLowerCase();
       const headerKeywords = ['name', 'phone', 'contact', 'number', 'mobile'];
       const isHeader = headerKeywords.some(keyword => firstLine.includes(keyword));
-      
+
       // Filter out header row if detected
       const dataLines = isHeader ? lines.slice(1) : lines;
-      
+
       if (dataLines.length === 0) {
         setUploadResult({
           success: false,
@@ -233,15 +250,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         setIsUploadingCSV(false);
         return;
       }
-      
+
       const cleanCsv = dataLines.join('\n');
-      
+
       try {
         const data = await apiPost('/api/sensors/upload-csv', {
           siteName: siteName === "All Sites" ? "Default" : siteName,
           csv: cleanCsv
         });
-      
+
         setUploadResult({
           success: true,
           inserted: data.inserted || 0,
@@ -298,178 +315,440 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
   return (
     <>
-      <style>{`
-        @keyframes pageSlideIn {
-          from { opacity: 0; transform: translateY(18px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Left column card - Recipients */}
-        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Name or phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="w-[240px] min-w-[240px] max-w-[240px] shrink-0 flex items-center">
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger className="w-[240px] min-w-[240px] max-w-[240px] text-center justify-center">
-                    <SelectValue placeholder="All Designations" className="truncate overflow-hidden text-ellipsis max-w-[180px] text-center" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Designations</SelectItem>
-                    <SelectItem value="resident">Residents</SelectItem>
-                    <SelectItem value="bhw">Barangay Health Workers (BHW)</SelectItem>
-                    <SelectItem value="lgu">Local Government Units (LGU)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <div style={{
+        fontFamily: POPPINS,
+        height: "100%",
+        overflow: "hidden",
+        background: "#f5f7f9",
+        padding: pad,
+        display: "flex",
+        flexDirection: "column",
+      }}>
+        <style>{`
+          *::-webkit-scrollbar { display: none; }
+          @keyframes contentSlideIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes cardDataFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+        {/* Header */}
+        <div style={{
+          display: "flex",
+          flexDirection: (isMobile || isTablet) ? "column" : "row",
+          justifyContent: "space-between",
+          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
+          gap: 16,
+          marginBottom: 24,
+          animation: "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both",
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
+            <h1 style={{
+              fontSize: isMobile ? 22 : 26,
+              fontWeight: 700,
+              color: "#1a2a3a",
+              margin: 0,
+              fontFamily: POPPINS,
+            }}>
+              Recipients
+            </h1>
+            <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
+              Manage alert recipients and their designations
+            </p>
+          </div>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: isMobile ? 8 : 10,
+            flexWrap: "wrap",
+            ...(isMobile ? { width: "100%" } : {}),
+          }}>
+            <div style={{ position: "relative", flex: isMobile ? "1 1 auto" : undefined, minWidth: isMobile ? 80 : undefined }}>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  paddingLeft: 34
+                }}
+              />
             </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="mb-4 mt-[-4]">
-              <p className="text-sm font-medium">Recipients List</p>
+            <div style={{ flex: isMobile ? "1 1 auto" : undefined, minWidth: isMobile ? 130 : undefined }}>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger style={{
+                  width: isMobile ? "100%" : 170,
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  padding: "0 10px",
+                  display: "flex", justifyContent: "space-between", alignItems: "center"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+                    <Filter style={{ width: 14, height: 14, color: "#357D86", flexShrink: 0 }} />
+                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <SelectValue placeholder="All Designations" />
+                    </span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent style={{ fontFamily: POPPINS }}>
+                  <SelectItem value="all">All Designations</SelectItem>
+                  <SelectItem value="resident">Residents</SelectItem>
+                  <SelectItem value="bhw">BHW</SelectItem>
+                  <SelectItem value="lgu">LGU</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            <Input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={handleCSVUpload}
+              className="hidden"
+              id="csv-upload-input"
+              disabled={isUploadingCSV}
+            />
+            <Label
+              htmlFor="csv-upload-input"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                padding: "0 16px", height: 38, borderRadius: 12,
+                border: "1px solid #e2e5ea",
+                background: "#fff", cursor: "pointer", fontSize: 13,
+                fontFamily: POPPINS, fontWeight: 500, color: "#374151",
+                margin: 0, flexShrink: 0,
+                ...(isMobile ? { padding: "0 10px", flex: "1 1 40%" } : {}),
+              }}
+            >
+              <Upload size={14} />
+              {isMobile ? "Import CSV" : (isUploadingCSV ? "Wait..." : "Import CSV")}
+            </Label>
+            <button
+              onClick={() => setIsAddDialogOpen(true)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                padding: "0 16px", height: 38, borderRadius: 12,
+                border: "none", flexShrink: 0,
+                background: "#357D86", cursor: "pointer", fontSize: 13,
+                fontFamily: POPPINS, fontWeight: 500, color: "#fff",
+                ...(isMobile ? { padding: "0 10px", flex: "1 1 40%" } : {}),
+              }}
+            >
+              <Plus size={15} />
+              {isMobile ? "Add" : "Add Recipient"}
+            </button>
+          </div>
+        </div>
 
+        {/* Stat Cards */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
+          gap: 16,
+          marginBottom: 24,
+          animation: "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both",
+        }}>
+          {[
+            { label: "Total Recipients", value: residents.length, icon: <Users style={{ width: 22, height: 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
+            { label: "Residents", value: residents.filter((r) => r.role === "resident").length, icon: <Users style={{ width: 22, height: 22, color: "#4478f6" }} />, color: "#4478f6", bg: "#ebf2ff" },
+            { label: "BHW", value: residents.filter((r) => r.role === "bhw").length, icon: <Users style={{ width: 22, height: 22, color: "#2cc865" }} />, color: "#2cc865", bg: "#eafff1" },
+            { label: "LGU", value: residents.filter((r) => r.role === "lgu").length, icon: <Users style={{ width: 22, height: 22, color: "#a559ea" }} />, color: "#a559ea", bg: "#f6eeff" },
+          ].map((card, i) => (
+            <div key={card.label} style={{
+              background: "#fff",
+              borderRadius: 20,
+              padding: 20,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 6,
+              animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both`,
+            }}>
+              <div style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: card.bg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {card.icon}
+              </div>
+              <span style={{ fontSize: isMobile ? 22 : 28, fontWeight: 600, color: card.color, fontFamily: POPPINS }}>{card.value}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>{card.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Main List Card */}
+        <div style={{
+          background: "#fff",
+          borderRadius: 20,
+          overflow: "hidden",
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          animation: "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both",
+        }}>
+          <div style={{
+            padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",
+            borderBottom: "1px solid #f0f1f3",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Recipients Directory
+            </h2>
+            {isMobile && (
+              <button
+                onClick={() => setShowMobileViewAll(true)}
+                style={{
+                  background: "none", border: "none", color: "#357D86", fontSize: 13,
+                  fontWeight: 600, fontFamily: POPPINS, display: "flex", alignItems: "center",
+                  gap: 2, padding: 0, cursor: "pointer"
+                }}
+              >
+                View All <ChevronRight size={14} />
+              </button>
+            )}
+          </div>
+          <div style={{
+            flex: 1,
+            minHeight: 0,
+            overflowX: "auto",
+            overflowY: "auto",
+            padding: isMobile ? 12 : 0,
+          }}>
             {loading ? (
-              <p className="py-8 text-center text-gray-500">Loading recipients...</p>
+              <div style={{ padding: "48px 20px", textAlign: "center", color: "#7b8a9a", fontFamily: POPPINS }}>Loading recipients...</div>
             ) : filteredResidents.length === 0 ? (
-              <p className="py-8 text-center text-gray-500">
-                {residents.length === 0
-                  ? "No recipients added yet"
-                  : "No recipients match your search"}
-              </p>
-            ) : (
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                {/* 4 x 80px card height + gap, adjust as needed */}
-                {filteredResidents.map((resident) => (
-                  <div
-                    key={resident.id}
-                    className="flex items-center justify-between rounded-lg border p-4 hover:bg-gray-50"
-                  >
-                    <div className="flex flex-1 items-center gap-4">
-                      {resident.verified ? (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-gray-400" />
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium">{resident.name}</p>
-                        <p className="text-sm text-gray-600">{resident.phone}</p>
+              <div style={{ padding: "48px 20px", textAlign: "center" }}>
+                <Users style={{ width: 48, height: 48, color: "#d1d9e0", margin: "0 auto 16px" }} />
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a2a3a", marginBottom: 6, fontFamily: POPPINS }}>No recipients found</h3>
+                <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>
+                  {residents.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
+                </p>
+              </div>
+            ) : isMobile ? (
+              /* Mobile List */
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {filteredResidents.slice(0, 5).map((resident, idx) => (
+                  <div key={resident.id} style={{
+                    padding: "12px 16px",
+                    borderRadius: 16,
+                    border: "1px solid #f0f0f0",
+                    background: "#fff",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                    animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.05}s both`,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{resident.name}</span>
+                        <span style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>{resident.phone}</span>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${roleColors[resident.role]}`}
-                      >
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: "3px 10px",
+                        borderRadius: 20,
+                        background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
+                        color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
+                        fontFamily: POPPINS,
+                      }}>
                         {roleLabels[resident.role]}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(resident)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openDeleteDialog(resident)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {resident.verified ? (
+                          <CheckCircle2 style={{ width: 14, height: 14, color: "#16a34a" }} />
+                        ) : (
+                          <Circle style={{ width: 14, height: 14, color: "#9ca3af" }} />
+                        )}
+                        <span style={{ fontSize: 12, color: resident.verified ? "#16a34a" : "#9ca3af", fontWeight: 500, fontFamily: POPPINS }}>
+                          {resident.verified ? "Verified" : "Unverified"}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => openEditDialog(resident)} style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#64748b" }}>
+                          <Edit size={16} />
+                        </button>
+                        <button onClick={() => openDeleteDialog(resident)} style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#ef4444" }}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
+            ) : (
+              /* Desktop Table */
+              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+                    {["Name", "Phone Number", "Designation", "Status", "Actions"].map(h => (
+                      <th key={h} style={{
+                        padding: "14px 24px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#7b8a9a",
+                        textAlign: h === "Actions" ? "right" : "left",
+                        position: "sticky",
+                        top: 0,
+                        background: "#fff",
+                        zIndex: 1,
+                        fontFamily: POPPINS,
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredResidents.map((resident, idx) => (
+                    <tr key={resident.id} style={{
+                      borderBottom: "1px solid #f5f5f5",
+                      animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both`,
+                    }}>
+                      <td style={{ padding: "14px 24px" }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1a2a3a" }}>{resident.name}</div>
+                      </td>
+                      <td style={{ padding: "14px 24px", fontSize: 13, color: "#475569", fontWeight: 500 }}>
+                        {resident.phone}
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        <span style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: "4px 12px",
+                          borderRadius: 20,
+                          background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
+                          color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
+                          fontFamily: POPPINS,
+                        }}>
+                          {roleLabels[resident.role]}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {resident.verified ? (
+                            <CheckCircle2 style={{ width: 16, height: 16, color: "#16a34a" }} />
+                          ) : (
+                            <Circle style={{ width: 16, height: 16, color: "#9ca3af" }} />
+                          )}
+                          <span style={{ fontSize: 13, color: resident.verified ? "#16a34a" : "#64748b", fontWeight: 500 }}>
+                            {resident.verified ? "Verified" : "Unverified"}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "14px 24px", textAlign: "right" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                          <button onClick={() => openEditDialog(resident)} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#64748b", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, fontFamily: POPPINS }}>
+                            <Edit size={14} /> Edit
+                          </button>
+                          <button onClick={() => openDeleteDialog(resident)} style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, fontFamily: POPPINS }}>
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Right column card - Upload and Stats */}
-        <Card className="flex min-h-[640px] flex-col">
-          <CardHeader className="space-y-3 pb-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleCSVUpload}
-                className="hidden"
-                id="csv-upload-input"
-                disabled={isUploadingCSV}
-              />
-              <Label
-                htmlFor="csv-upload-input"
-                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-              >
-                <Upload className="w-4 h-4" />
-                {isUploadingCSV ? "Uploading..." : "Upload CSV"}
-              </Label>
-              <Button
-                onClick={() => setIsAddDialogOpen(true)}
-                className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Recipient
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <Card>
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center">
-                  <div className="text-2xl font-bold text-blue-600">{residents.length}</div>
-                  <p className="text-xs text-muted-foreground">All designations combined</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-sm font-medium">Resident</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center">
-                  <div className="text-2xl font-bold text-cyan-600">
-                    {residents.filter((r) => r.role === "resident").length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Community members</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-sm font-medium">BHW</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {residents.filter((r) => r.role === "bhw").length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Health workers</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-sm font-medium">LGU</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {residents.filter((r) => r.role === "lgu").length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Local government</p>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
+
+      {/* ── Mobile View All List Modal ── */}
+      {isMobile && showMobileViewAll && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10001,
+          background: "rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center",
+          padding: "92px 20px 20px",
+        }} onClick={() => setShowMobileViewAll(false)}>
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 20,
+              width: "100%",
+              maxWidth: 420,
+              maxHeight: "calc(100vh - 120px)",
+              overflow: "hidden",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              display: "flex",
+              flexDirection: "column",
+              animation: "contentSlideIn 0.7s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "18px 20px 12px 20px", borderBottom: "1px solid #f0f1f3"
+            }}>
+              <span style={{ fontSize: 17, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>All Recipients</span>
+              <button onClick={() => setShowMobileViewAll(false)} style={{ background: "none", border: "none", padding: 2, cursor: "pointer" }}>
+                <X size={22} color="#7b8a9a" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "10px 0 10px 0" }}>
+              {filteredResidents.map((resident, idx) => (
+                <div key={resident.id} style={{
+                  padding: "12px 20px",
+                  borderBottom: idx < filteredResidents.length - 1 ? "1px solid #f0f0f0" : "none",
+                  background: "#fff",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{resident.name}</span>
+                      <span style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>{resident.phone}</span>
+                    </div>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                      background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
+                      color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
+                      fontFamily: POPPINS,
+                    }}>
+                      {roleLabels[resident.role]}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+                    {resident.verified ? (
+                      <CheckCircle2 style={{ width: 14, height: 14, color: "#16a34a" }} />
+                    ) : (
+                      <Circle style={{ width: 14, height: 14, color: "#9ca3af" }} />
+                    )}
+                    <span style={{ fontSize: 12, color: resident.verified ? "#16a34a" : "#9ca3af", fontWeight: 500, fontFamily: POPPINS }}>
+                      {resident.verified ? "Verified" : "Unverified"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {filteredResidents.length === 0 && (
+                <div style={{ padding: "48px 20px", textAlign: "center" }}>
+                  <Users style={{ width: 48, height: 48, color: "#d1d9e0", margin: "0 auto 16px" }} />
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a2a3a", marginBottom: 6, fontFamily: POPPINS }}>No recipients found</h3>
+                  <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>
+                    {residents.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Dialog */}
       <AlertDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -529,10 +808,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
       {/* Edit Dialog */}
-      <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      < AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Edit Alert Recipient</AlertDialogTitle>
@@ -589,10 +868,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
       {/* Delete Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      < AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Alert Recipient?</AlertDialogTitle>
@@ -611,10 +890,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
-        {/* Upload Result Modal */}
-        {uploadResultOpen && uploadResult && (
+      {/* Upload Result Modal */}
+      {
+        uploadResultOpen && uploadResult && (
           <AlertDialog open={uploadResultOpen} onOpenChange={setUploadResultOpen}>
             <AlertDialogContent className="max-w-md">
               <AlertDialogHeader>
@@ -675,8 +955,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        )}
-      
+        )
+      }
+
     </>
   );
 }

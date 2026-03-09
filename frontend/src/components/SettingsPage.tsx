@@ -6,8 +6,6 @@ interface SettingsPageProps {
 
 export function SettingsPage({ siteName = "All Sites" }: SettingsPageProps) {
   return (
-    <div className="min-h-screen bg-schistoguard-light-bg p-6">
-      <SubscriptionPanel siteName={siteName} />
-    </div>
+    <SubscriptionPanel siteName={siteName} />
   );
 }

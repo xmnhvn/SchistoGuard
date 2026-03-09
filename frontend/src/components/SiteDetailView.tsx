@@ -407,7 +407,7 @@ export function SiteDetailView({
                           type="monotone"
                           dataKey="ph"
                           stroke="#4187d6"
-                          strokeWidth={1.5}
+                          strokeWidth={2}
                           fill="url(#phGradient)"
                           name="pH Level"
                           activeDot={<CustomActiveDot stroke="#4187d6" />}

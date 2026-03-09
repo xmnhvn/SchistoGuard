@@ -6,14 +6,10 @@ interface SubscriptionPanelProps {
   siteName?: string;
 }
 
-export function SubscriptionPanel({ 
+export function SubscriptionPanel({
   siteName = "All Sites"
 }: SubscriptionPanelProps) {
   return (
-    <Card>
-      <CardContent className="p-0">
-        <ResidentsManager siteName={siteName} />
-      </CardContent>
-    </Card>
+    <ResidentsManager siteName={siteName} />
   );
 }

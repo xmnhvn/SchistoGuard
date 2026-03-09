@@ -307,14 +307,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         {[
           { label: "Total Readings", value: filteredReadings.length * 3, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3" },
           { label: "Safe", value: safeCount, icon: <CheckCircle2 style={{ width: 20, height: 20, color: "#22c55e" }} />, color: "#22c55e", bg: "#f0fdf4" },
-          { label: "Warning", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#eab308" }} />, color: "#a16207", bg: "#fefce8" },
+          { label: "Warning", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#eab308" }} />, color: "#eab308", bg: "#fefce8" },
           { label: "Critical", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#ef4444" }} />, color: "#dc2626", bg: "#fef2f2" },
         ].map((card, i) => (
           <div key={card.label} style={{
             background: "#fff",
             borderRadius: 20,
             padding: 20,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -342,7 +341,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       <div style={{
         background: "#fff",
         borderRadius: 20,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
         overflow: "hidden",
         flex: 1,
         minHeight: 0,
