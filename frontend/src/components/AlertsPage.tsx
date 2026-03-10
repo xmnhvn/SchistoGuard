@@ -290,7 +290,7 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
           minHeight: 0,
           overflowY: "auto",
         }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {filteredAlerts.length > 0 ? (
               filteredAlerts.map((alert, index) => (
                 <div key={alert.id} style={{
@@ -307,7 +307,7 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
                             variant="outline"
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
-                            className="py-0.5 px-2 text-xs h-6 min-h-0"
+                            className="border-schistoguard-teal text-schistoguard-teal hover:bg-schistoguard-teal hover:text-white py-1 px-3 text-xs h-7 rounded-lg transition-colors border-2 font-medium"
                           >
                             Details
                           </Button>

@@ -11,6 +11,7 @@ import {
   Thermometer,
   FlaskConical,
   Trash2,
+  ChevronRight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from './ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -63,6 +64,19 @@ const formatMonthInputValue = (date: Date) => {
   return `${year}-${month}`;
 };
 
+const POPPINS = "'Poppins', sans-serif";
+const SCHISTO_TEAL = "#357D86";
+const SCHISTO_NAVY = "#1a2b3c";
+
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'published': return 'bg-green-100 text-green-700 border-green-200';
+    case 'draft': return 'bg-amber-100 text-amber-700 border-amber-200';
+    case 'archived': return 'bg-gray-100 text-gray-700 border-gray-200';
+    default: return 'bg-blue-100 text-blue-700 border-blue-200';
+  }
+};
+
 export const ReportsPage: React.FC = () => {
   const animate = !_reportsFirstLoadDone;
   const [selectedPeriod, setSelectedPeriod] = useState('current-month');
@@ -88,6 +102,18 @@ export const ReportsPage: React.FC = () => {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1024;
+  const isWeb = windowWidth >= 1024;
+
   const previewDocumentRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
@@ -404,266 +430,378 @@ export const ReportsPage: React.FC = () => {
       <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col p-6" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Reports List Column */}
-          <Card className="flex h-full min-h-0 flex-col overflow-hidden">
-            <div className="flex-shrink-0 bg-white px-6 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                    <SelectTrigger className="w-40 border border-gray-300 bg-gray-50 transition-colors focus:border-schistoguard-teal focus:bg-white">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="Period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="current-month">Current Month</SelectItem>
-                      <SelectItem value="last-month">Last Month</SelectItem>
-                      <SelectItem value="current-quarter">Current Quarter</SelectItem>
-                      <SelectItem value="last-quarter">Last Quarter</SelectItem>
-                      <SelectItem value="current-year">Current Year</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="w-40 shrink-0">
-                    <Select value={selectedType} onValueChange={setSelectedType}>
-                      <SelectTrigger className="w-full border border-gray-300 bg-gray-50 transition-colors focus:border-schistoguard-teal focus:bg-white">
-                        <Filter className="mr-2 h-4 w-4 shrink-0" />
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="quarterly">Quarterly</SelectItem>
-                        <SelectItem value="annual">Annual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button
-                    className="flex items-center gap-2 bg-schistoguard-teal text-white hover:bg-schistoguard-teal/90"
-                    size="sm"
-                    onClick={() => setShowCreateReport(true)}
-                  >
-                    <FileText className="h-4 w-4" />
-                    Create Report
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-4">
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-2">
-                {loading ? (
-                  <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                    Loading reports...
-                  </div>
-                ) : filteredReports.length === 0 ? (
-                  <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">No reports available.</div>
-                ) : (
-                  filteredReports.map((report) => (
-                    <div
-                      key={report.id}
-                      className={`cursor-pointer rounded-lg border bg-white p-4 transition-all hover:shadow-md ${selectedReport?.id === report.id ? 'border-schistoguard-teal bg-schistoguard-teal/5 shadow-md' : ''
-                        }`}
-                      onClick={() => handleViewReport(report)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <h4 className="mb-1 text-base font-semibold text-schistoguard-navy">{report.title}</h4>
-                          <div className="mb-2 text-xs text-gray-600">
-                            {report.period} | Generated {new Date(report.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Preview Panel Column */}
           <div className="flex h-full min-h-0 flex-col">
-            {!selectedReport ? (
-              <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-slate-50 p-12 text-center">
-                <FileText className="mb-4 h-16 w-16 text-slate-300" />
-                <h3 className="mb-2 text-lg font-semibold text-slate-700">No Report Selected</h3>
-                <p className="text-sm text-slate-500">Select a report from the list to view its details</p>
-              </Card>
-            ) : (
-              <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
-                <div className="flex-shrink-0 border-b bg-white px-6 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <h4 className="text-xl font-semibold text-slate-900">{selectedReport.title}</h4>
-                    <div className="flex gap-2">
-                      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            className="bg-white/90 text-red-600 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => handleDeleteClick(selectedReport)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-red-600">Delete Report?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this report? This action cannot be undone.
-                            </AlertDialogDescription>
-                            <div className="rounded bg-gray-50 p-3 text-sm text-gray-600">
-                              <strong>{selectedReport.title}</strong>
-                              <br />
-                              {selectedReport.period}
-                            </div>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="mt-2">
-                            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-                            <AlertDialogAction asChild>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={handleDeleteConfirm}
-                                disabled={deleting}
-                              >
-                                {deleting ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Deleting...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </>
-                                )}
-                              </Button>
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+            <Card className="flex h-full min-h-0 flex-col overflow-hidden" style={{ borderRadius: 28, border: "1px solid #f1f5f9", boxShadow: "0 8px 30px rgba(0,0,0,0.06)" }}>
+              <div className="flex-shrink-0 bg-white px-6 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div
+                    className={
+                      isMobile
+                        ? 'flex flex-col w-full gap-3'
+                        : 'grid grid-cols-3 gap-4 w-full items-center'
+                    }
+                  >
+                    <div className={isMobile ? 'w-full' : 'col-span-1'}>
+                      <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <SelectTrigger
+                          className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
+                          style={{
+                            height: 38,
+                            borderRadius: 12,
+                            fontFamily: POPPINS,
+                            fontSize: 13,
+                            fontWeight: 500,
+                            border: "1px solid #e2e5ea",
+                            background: "#fff",
+                            flexShrink: 0
+                          }}
+                        >
+                          <Calendar className="mr-2 h-4 w-4 text-[#357D86]" />
+                          <SelectValue placeholder="Period" />
+                        </SelectTrigger>
+                        <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
+                          <SelectItem value="current-month">Current Month</SelectItem>
+                          <SelectItem value="last-month">Last Month</SelectItem>
+                          <SelectItem value="current-quarter">Current Quarter</SelectItem>
+                          <SelectItem value="last-quarter">Last Quarter</SelectItem>
+                          <SelectItem value="current-year">Current Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className={isMobile ? 'w-full' : 'col-span-1'}>
+                      <Select value={selectedType} onValueChange={setSelectedType}>
+                        <SelectTrigger
+                          className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
+                          style={{
+                            height: 38,
+                            borderRadius: 12,
+                            fontFamily: POPPINS,
+                            fontSize: 13,
+                            fontWeight: 500,
+                            border: "1px solid #e2e5ea",
+                            background: "#fff",
+                            flexShrink: 0
+                          }}
+                        >
+                          <Filter className="mr-2 h-4 w-4 shrink-0 text-[#357D86]" />
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="annual">Annual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className={isMobile ? 'w-full' : 'col-span-1'}>
                       <Button
-                        className="bg-white/90 text-slate-700 hover:bg-white"
+                        className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
+                        style={{
+                          height: 38,
+                          borderRadius: 12,
+                          fontFamily: POPPINS,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          backgroundColor: "#357D86",
+                          color: "#ffffff",
+                          flexShrink: 0
+                        }}
                         size="sm"
-                        onClick={handleDownloadReport}
-                        disabled={downloading}
+                        onClick={() => setShowCreateReport(true)}
                       >
-                        {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        <FileText className="h-4 w-4" />
+                        Create Report
                       </Button>
                     </div>
                   </div>
-                  <div className="mt-1 flex flex-nowrap items-center gap-2 overflow-hidden text-sm">
-                    <span className="shrink-0 text-slate-700">
-                      Generated {new Date(selectedReport.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
-                    </span>
-                    <span className="inline-flex shrink-0">{getRiskBadge(selectedReport.summary.riskLevel)}</span>
-                  </div>
                 </div>
+              </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
-                  <article ref={previewDocumentRef} className="mx-auto w-full max-w-[760px] bg-white p-5 text-[13px] leading-relaxed text-slate-800 sm:p-7">
-                    <header className="border-b border-slate-300 pb-3 text-center">
-                      <h3 className="text-base font-semibold uppercase tracking-wide text-slate-900">Water Quality Report For SchistoSomiasis Risk</h3>
-                      <p className="mt-1 text-sm font-medium text-slate-700">{selectedReport.period}</p>
-                    </header>
+              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-4">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-2">
+                  {loading ? (
+                    <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">
+                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                      Loading reports...
+                    </div>
+                  ) : filteredReports.length === 0 ? (
+                    <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">No reports available.</div>
+                  ) : (
+                    filteredReports.map((report) => (
+                      <div
+                        key={report.id}
+                        style={{
+                          marginBottom: 16,
+                          borderRadius: 15,
+                          boxShadow: "0 8px 30px rgba(0,0,0,0.06)",
+                          position: "relative"
+                        }}
+                      >
+                        <div
+                          className={`group cursor-pointer transition-all ${selectedReport?.id === report.id ? 'bg-[#F5FBFB]' : 'bg-white'
+                            }`}
+                          onClick={() => handleViewReport(report)}
+                          style={{
+                            display: "flex",
+                            overflow: "hidden",
+                            position: "relative",
+                            minHeight: 92,
+                            borderRadius: 15,
+                            border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9"
+                          }}
+                        >
+                          {/* Wrapped Teal Accent Left - Clipped by parent overflow:hidden */}
+                          <div style={{
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: 8,
+                            backgroundColor: selectedReport?.id === report.id ? "#357D86" : "#357D86",
+                            zIndex: 1
+                          }} />
 
-                    <section className="mt-4 overflow-x-auto">
-                      <table className="w-full border-collapse text-xs">
-                        <tbody>
-                          <tr>
-                            <td className="border border-slate-300 px-2 py-1 font-semibold">Report Title</td>
-                            <td className="border border-slate-300 px-2 py-1">{selectedReport.title}</td>
-                            <td className="border border-slate-300 px-2 py-1 font-semibold">Report Type</td>
-                            <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.type}</td>
-                          </tr>
-                          <tr>
-                            <td className="border border-slate-300 px-2 py-1 font-semibold">Generated</td>
-                            <td className="border border-slate-300 px-2 py-1">
-                              {new Date(selectedReport.generatedDate)
-                                .toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
-                                .replaceAll('/', '-')}
-                            </td>
-                            <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
-                            <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.summary.riskLevel}</td>
-                          </tr>
-                          <tr>
-                            <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
-                            <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.totalSites}</td>
-                            <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
-                            <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.alertsGenerated}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </section>
+                          <div className="flex w-full items-center justify-between px-8 py-5">
+                            <div className="flex flex-1 flex-col justify-center overflow-hidden">
+                              <h4
+                                className="truncate text-[15.5px]"
+                                style={{
+                                  fontFamily: POPPINS,
+                                  fontWeight: selectedReport?.id === report.id ? 700 : 500,
+                                  color: "#357D86",
+                                  letterSpacing: "-0.01em",
+                                  lineHeight: "1.2"
+                                }}
+                              >
+                                {report.title}
+                              </h4>
+                              <div
+                                className="mt-1"
+                                style={{
+                                  fontFamily: POPPINS,
+                                  fontWeight: 500,
+                                  color: "#64748b",
+                                  fontSize: "12px",
+                                  letterSpacing: "0.01em"
+                                }}
+                              >
+                                {report.period} · {new Date(report.generatedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                              </div>
+                            </div>
 
-                    <section className="mt-4">
-                      <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">Summary</h4>
-                      <p className="mt-2 text-xs text-slate-700">
-                        This {selectedReport.type} report covers monitoring data for {selectedReport.period}. A total of {selectedReport.summary.totalSites}{' '}
-                        monitoring sites were reviewed, and {selectedReport.summary.alertsGenerated} alerts were logged for follow-up.
-                      </p>
-                    </section>
-
-                    <section className="mt-4 overflow-x-auto">
-                      <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
-                        Key Actions And Metrics
-                      </h4>
-                      <table className="mt-2 w-full border-collapse text-xs">
-                        <thead>
-                          <tr>
-                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Metric</th>
-                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Average</th>
-                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Status</th>
-                            <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Notes</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td className="border border-slate-300 px-2 py-1">Turbidity</td>
-                            <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTurbidity)} NTU</td>
-                            <td className="border border-slate-300 px-2 py-1">{getTurbidityRemark(selectedReport.summary.avgTurbidity).label}</td>
-                            <td className="border border-slate-300 px-2 py-1">Track suspended particles and clarity trends.</td>
-                          </tr>
-                          <tr>
-                            <td className="border border-slate-300 px-2 py-1">Temperature</td>
-                            <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTemperature)} C</td>
-                            <td className="border border-slate-300 px-2 py-1">{getTemperatureRemark(selectedReport.summary.avgTemperature || 0).label}</td>
-                            <td className="border border-slate-300 px-2 py-1">Review thermal conditions affecting parasite viability.</td>
-                          </tr>
-                          <tr>
-                            <td className="border border-slate-300 px-2 py-1">pH Level</td>
-                            <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgPh)} pH</td>
-                            <td className="border border-slate-300 px-2 py-1">{getPhRemark(selectedReport.summary.avgPh || 0).label}</td>
-                            <td className="border border-slate-300 px-2 py-1">Check acidity/alkalinity drift versus target range.</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </section>
-
-                    <section className="mt-4">
-                      <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
-                        Findings And Observations
-                      </h4>
-                      <p className="mt-2 text-xs text-slate-700">
-                        Overall risk classification for this reporting period is <span className="font-semibold capitalize">{selectedReport.summary.riskLevel}</span>.
-                        {selectedReport.summary.alertsGenerated > 0
-                          ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
-                          : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
-                      </p>
-                    </section>
-
-                  </article>
+                            <div className="flex items-center pl-4">
+                              <ChevronRight
+                                size={18}
+                                strokeWidth={2.5}
+                                style={{ color: "#357D86" }}
+                                className="shrink-0 transition-transform group-hover:translate-x-1"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-              </Card>
-            )}
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Column 2: Preview Panel (Desktop/Tablet Only) */}
+          {!isMobile && (
+            <div className="flex h-full min-h-0 flex-col lg:flex">
+              {!selectedReport ? (
+                <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-white p-12 text-center" style={{ borderRadius: 28, border: "1px solid #f1f5f9", boxShadow: "0 8px 30px rgba(0,0,0,0.06)" }}>
+                  <FileText className="mb-4 h-16 w-16 text-slate-300" />
+                  <h3 className="mb-2 text-lg font-semibold text-slate-700">No Report Selected</h3>
+                  <p className="text-sm text-slate-500">Select a report from the list to view its details</p>
+                </Card>
+              ) : (
+                <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0" style={{ borderRadius: 28, border: "1px solid #f1f5f9", boxShadow: "0 8px 30px rgba(0,0,0,0.06)" }}>
+                  <div className="flex-shrink-0 border-b bg-white px-6 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h4 className="text-xl font-semibold text-slate-900">{selectedReport.title}</h4>
+                      <div className="flex gap-2">
+                        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              className="bg-white/90 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => handleDeleteClick(selectedReport!)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-red-600">Delete Report?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this report? This action cannot be undone.
+                              </AlertDialogDescription>
+                              <div className="rounded bg-gray-50 p-3 text-sm text-gray-600">
+                                <strong>{selectedReport?.title}</strong>
+                                <br />
+                                {selectedReport?.period}
+                              </div>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="mt-2">
+                              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                              <AlertDialogAction asChild>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  onClick={handleDeleteConfirm}
+                                  disabled={deleting}
+                                >
+                                  {deleting ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Deleting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </>
+                                  )}
+                                </Button>
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <Button
+                          className="bg-white/90 text-slate-700 hover:bg-white"
+                          size="sm"
+                          onClick={() => handleDownloadReport()}
+                          disabled={downloading}
+                        >
+                          {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-1 flex flex-nowrap items-center gap-2 overflow-hidden text-sm">
+                      <span className="shrink-0 text-slate-700">
+                        Generated {new Date(selectedReport!.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
+                      </span>
+                      <span className="inline-flex shrink-0">{getRiskBadge(selectedReport!.summary.riskLevel)}</span>
+                    </div>
+                  </div>
+
+                  <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+                    <article ref={previewDocumentRef} className="mx-auto w-full max-w-[760px] bg-white p-5 text-[13px] leading-relaxed text-slate-800 sm:p-7">
+                      <header className="border-b border-slate-300 pb-3 text-center">
+                        <h3 className="text-base font-semibold uppercase tracking-wide text-slate-900">Water Quality Report For SchistoSomiasis Risk</h3>
+                        <p className="mt-1 text-sm font-medium text-slate-700">{selectedReport.period}</p>
+                      </header>
+
+                      <section className="mt-4 overflow-x-auto">
+                        <table className="w-full border-collapse text-xs">
+                          <tbody>
+                            <tr>
+                              <td className="border border-slate-300 px-2 py-1 font-semibold">Report Title</td>
+                              <td className="border border-slate-300 px-2 py-1">{selectedReport.title}</td>
+                              <td className="border border-slate-300 px-2 py-1 font-semibold">Report Type</td>
+                              <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.type}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-300 px-2 py-1 font-semibold">Generated</td>
+                              <td className="border border-slate-300 px-2 py-1">
+                                {new Date(selectedReport.generatedDate)
+                                  .toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                                  .replaceAll('/', '-')}
+                              </td>
+                              <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
+                              <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.summary.riskLevel}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
+                              <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.totalSites}</td>
+                              <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
+                              <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.alertsGenerated}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </section>
+
+                      <section className="mt-4">
+                        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">Summary</h4>
+                        <p className="mt-2 text-xs text-slate-700">
+                          This {selectedReport.type} report covers monitoring data for {selectedReport.period}. A total of {selectedReport.summary.totalSites}{' '}
+                          monitoring sites were reviewed, and {selectedReport.summary.alertsGenerated} alerts were logged for follow-up.
+                        </p>
+                      </section>
+
+                      <section className="mt-4 overflow-x-auto">
+                        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
+                          Key Actions And Metrics
+                        </h4>
+                        <table className="mt-2 w-full border-collapse text-xs">
+                          <thead>
+                            <tr>
+                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Metric</th>
+                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Average</th>
+                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Status</th>
+                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Notes</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="border border-slate-300 px-2 py-1">Turbidity</td>
+                              <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTurbidity)} NTU</td>
+                              <td className="border border-slate-300 px-2 py-1">{getTurbidityRemark(selectedReport.summary.avgTurbidity).label}</td>
+                              <td className="border border-slate-300 px-2 py-1">Track suspended particles and clarity trends.</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-300 px-2 py-1">Temperature</td>
+                              <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTemperature)} C</td>
+                              <td className="border border-slate-300 px-2 py-1">{getTemperatureRemark(selectedReport.summary.avgTemperature || 0).label}</td>
+                              <td className="border border-slate-300 px-2 py-1">Review thermal conditions affecting parasite viability.</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-300 px-2 py-1">pH Level</td>
+                              <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgPh)} pH</td>
+                              <td className="border border-slate-300 px-2 py-1">{getPhRemark(selectedReport.summary.avgPh || 0).label}</td>
+                              <td className="border border-slate-300 px-2 py-1">Check acidity/alkalinity drift versus target range.</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </section>
+
+                      <section className="mt-4">
+                        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
+                          Findings And Observations
+                        </h4>
+                        <p className="mt-2 text-xs text-slate-700">
+                          Overall risk classification for this reporting period is <span className="font-semibold capitalize">{selectedReport.summary.riskLevel}</span>.
+                          {selectedReport.summary.alertsGenerated > 0
+                            ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
+                            : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
+                        </p>
+                      </section>
+
+                    </article>
+                  </div>
+                </Card >
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Create Report Dialog */}
-      <Dialog open={showCreateReport} onOpenChange={setShowCreateReport}>
-        <DialogContent className="w-11/12 max-w-md sm:w-1/2">
+      < Dialog open={showCreateReport} onOpenChange={setShowCreateReport} >
+        <DialogContent
+          style={{
+            width: 420,
+            maxWidth: 420,
+            minWidth: 420,
+            borderRadius: 20,
+            padding: 32,
+            boxSizing: 'border-box',
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="mb-1 text-center text-2xl font-bold">Create New Report</DialogTitle>
             <p className="mb-2 text-center text-sm text-muted-foreground">
@@ -792,7 +930,144 @@ export const ReportsPage: React.FC = () => {
             </div>
           </form>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+      {/* Mobile Report Details Modal */}
+      {
+        isMobile && showViewReport && selectedReport && (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 10001,
+              background: "rgba(0,0,0,0.3)",
+              display: "flex", alignItems: "flex-start", justifyContent: "center",
+              padding: "92px 20px 20px",
+            }}
+            onClick={() => setShowViewReport(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxHeight: "calc(100vh - 108px)",
+                background: "#fff",
+                borderRadius: 16,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+                animation: "contentSlideIn 0.25s cubic-bezier(0.22,1,0.36,1) both",
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #eef0f2",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                flexShrink: 0,
+              }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+                  Report Details
+                </h2>
+                <button
+                  onClick={() => setShowViewReport(false)}
+                  style={{
+                    width: 30, height: 30, borderRadius: "50%",
+                    border: "none", background: "#f3f4f6",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <X size={16} color="#6b7280" />
+                </button>
+              </div>
+
+              {/* Modal Content - Inheriting Spacing from All Data Readings */}
+              <div style={{
+                flex: 1, minHeight: 0, overflowY: "auto",
+                padding: 20,
+                scrollbarWidth: "none",
+              } as React.CSSProperties}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {/* Title & Status Card */}
+                  <div style={{
+                    background: "#fff",
+                    padding: "16px",
+                    borderRadius: 12,
+                    border: "1px solid #f0f1f3",
+                    borderLeft: `4px solid ${selectedReport.summary.riskLevel === 'high' ? '#ef4444' : selectedReport.summary.riskLevel === 'moderate' ? '#eab308' : '#22c55e'}`,
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
+                        background: selectedReport.summary.riskLevel === 'high' ? '#fef2f2' : selectedReport.summary.riskLevel === 'moderate' ? '#fefce8' : '#f0fdf4',
+                        color: selectedReport.summary.riskLevel === 'high' ? '#dc2626' : selectedReport.summary.riskLevel === 'moderate' ? '#a16207' : '#22c55e',
+                        textTransform: "capitalize", fontFamily: POPPINS,
+                      }}>{selectedReport.summary.riskLevel} Risk</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{selectedReport.period}</span>
+                    </div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>{selectedReport.title}</h3>
+                  </div>
+
+                  {/* Metrics Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div style={{ padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #f1f5f9" }}>
+                      <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 4px 0", textTransform: "uppercase", fontWeight: 700 }}>Total Sites</p>
+                      <p style={{ fontSize: 18, color: "#1a2a3a", margin: 0, fontWeight: 800 }}>{selectedReport.summary.totalSites}</p>
+                    </div>
+                    <div style={{ padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #f1f5f9" }}>
+                      <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 4px 0", textTransform: "uppercase", fontWeight: 700 }}>Alerts Logged</p>
+                      <p style={{ fontSize: 18, color: "#1a2a3a", margin: 0, fontWeight: 800 }}>{selectedReport.summary.alertsGenerated}</p>
+                    </div>
+                  </div>
+
+                  {/* Parameters Section */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "#64748b", margin: 0, textTransform: "uppercase" }}>Key Parameters</h4>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Droplet size={14} color="#357D86" />
+                        <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>Turbidity</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgTurbidity)} NTU</span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Thermometer size={14} color="#357D86" />
+                        <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>Temperature</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgTemperature)} °C</span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <FlaskConical size={14} color="#357D86" />
+                        <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>pH Level</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgPh)} pH</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
+                    <Button
+                      className="flex-1"
+                      style={{ backgroundColor: "#357D86", color: "#fff", borderRadius: 10 }}
+                      onClick={() => handleDownloadReport()}
+                    >
+                      <Download className="mr-2 h-4 w-4" /> Download PDF
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };
