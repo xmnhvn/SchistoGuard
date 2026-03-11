@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   FileText,
   Download,
-  Calendar,
-  Filter,
   Loader2,
   X,
   AlertTriangle,
@@ -431,7 +429,7 @@ export const ReportsPage: React.FC = () => {
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Reports List Column */}
           <div className="flex h-full min-h-0 flex-col">
-            <Card className="flex h-full min-h-0 flex-col overflow-hidden" style={{ borderRadius: 28, border: "1px solid #f1f5f9", boxShadow: "0 8px 30px rgba(0,0,0,0.06)" }}>
+            <Card className="flex h-full min-h-0 flex-col overflow-hidden" style={{ borderRadius: 28 }}>
               <div className="flex-shrink-0 bg-white px-6 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div
@@ -456,7 +454,6 @@ export const ReportsPage: React.FC = () => {
                             flexShrink: 0
                           }}
                         >
-                          <Calendar className="mr-2 h-4 w-4 text-[#357D86]" />
                           <SelectValue placeholder="Period" />
                         </SelectTrigger>
                         <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
@@ -483,7 +480,6 @@ export const ReportsPage: React.FC = () => {
                             flexShrink: 0
                           }}
                         >
-                          <Filter className="mr-2 h-4 w-4 shrink-0 text-[#357D86]" />
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
                         <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
@@ -535,7 +531,6 @@ export const ReportsPage: React.FC = () => {
                         style={{
                           marginBottom: 16,
                           borderRadius: 15,
-                          boxShadow: "0 8px 30px rgba(0,0,0,0.06)",
                           position: "relative"
                         }}
                       >
@@ -613,13 +608,13 @@ export const ReportsPage: React.FC = () => {
           {!isMobile && (
             <div className="flex h-full min-h-0 flex-col lg:flex">
               {!selectedReport ? (
-                <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-white p-12 text-center" style={{ borderRadius: 28, border: "1px solid #f1f5f9", boxShadow: "0 8px 30px rgba(0,0,0,0.06)" }}>
+                <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-white p-12 text-center" style={{ borderRadius: 28 }}>
                   <FileText className="mb-4 h-16 w-16 text-slate-300" />
                   <h3 className="mb-2 text-lg font-semibold text-slate-700">No Report Selected</h3>
                   <p className="text-sm text-slate-500">Select a report from the list to view its details</p>
                 </Card>
               ) : (
-                <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0" style={{ borderRadius: 28, border: "1px solid #f1f5f9", boxShadow: "0 8px 30px rgba(0,0,0,0.06)" }}>
+                <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0" style={{ borderRadius: 28 }}>
                   <div className="flex-shrink-0 border-b bg-white px-6 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <h4 className="text-xl font-semibold text-slate-900">{selectedReport.title}</h4>
@@ -678,6 +673,13 @@ export const ReportsPage: React.FC = () => {
                           disabled={downloading}
                         >
                           {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          className="bg-gray-100/80 text-slate-500 hover:bg-gray-200 hover:text-slate-700"
+                          size="sm"
+                          onClick={() => setSelectedReport(null)}
+                        >
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -941,7 +943,7 @@ export const ReportsPage: React.FC = () => {
               display: "flex", alignItems: "flex-start", justifyContent: "center",
               padding: "92px 20px 20px",
             }}
-            onClick={() => setShowViewReport(false)}
+            onClick={() => { setShowViewReport(false); setSelectedReport(null); }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -968,7 +970,7 @@ export const ReportsPage: React.FC = () => {
                   Report Details
                 </h2>
                 <button
-                  onClick={() => setShowViewReport(false)}
+                  onClick={() => { setShowViewReport(false); setSelectedReport(null); }}
                   style={{
                     width: 30, height: 30, borderRadius: "50%",
                     border: "none", background: "#f3f4f6",
@@ -994,7 +996,6 @@ export const ReportsPage: React.FC = () => {
                     borderRadius: 12,
                     border: "1px solid #f0f1f3",
                     borderLeft: `4px solid ${selectedReport.summary.riskLevel === 'high' ? '#ef4444' : selectedReport.summary.riskLevel === 'moderate' ? '#eab308' : '#22c55e'}`,
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
                     display: "flex",
                     flexDirection: "column",
                     gap: 8

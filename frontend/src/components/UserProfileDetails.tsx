@@ -4,11 +4,11 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
 interface UserProfileDetailsProps {
-  user?: { 
-    id: number; 
-    email: string; 
-    firstName: string; 
-    lastName: string; 
+  user?: {
+    id: number;
+    email: string;
+    firstName: string;
+    lastName: string;
     role: string;
   } | null;
   onDelete?: () => void;
@@ -16,13 +16,13 @@ interface UserProfileDetailsProps {
 
 export const UserProfileDetails: React.FC<UserProfileDetailsProps> = ({ user, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
-  const initials = user 
+
+  const initials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
     : 'JD';
-  
+
   const roleDisplay = user?.role === 'bhw' ? 'Barangay Health Worker' : 'LGU Officer';
-  
+
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
   };
@@ -31,7 +31,7 @@ export const UserProfileDetails: React.FC<UserProfileDetailsProps> = ({ user, on
     setShowDeleteConfirm(false);
     onDelete?.();
   };
-  
+
   return (
     <div
       className="relative flex flex-col items-center justify-center w-full max-w-md mx-auto p-8"
@@ -42,7 +42,7 @@ export const UserProfileDetails: React.FC<UserProfileDetailsProps> = ({ user, on
       }}
     >
       <div className="relative mb-6 flex flex-col items-center">
-        <Avatar className="w-20 h-20 ring-4" style={{ boxShadow: '0 0 0 4px var(--schistoguard-teal), 0 1px 4px rgba(0,0,0,0.04)' }}>
+        <Avatar className="w-20 h-20 ring-4 ring-schistoguard-teal">
           <AvatarFallback className="text-3xl font-semibold" style={{ color: 'var(--schistoguard-navy)' }}>{initials}</AvatarFallback>
         </Avatar>
       </div>

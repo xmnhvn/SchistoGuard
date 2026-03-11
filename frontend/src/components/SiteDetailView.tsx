@@ -237,7 +237,7 @@ export function SiteDetailView({
           <div style={{ minWidth: 0, width: (isMobile || isTablet) ? "100%" : "auto" }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
               <h1 style={{
-                fontSize: isMobile ? 23 : 26,
+                fontSize: isMobile ? 20 : 26,
                 fontWeight: 700,
                 color: "#1a2a3a",
                 margin: 0,
@@ -249,16 +249,14 @@ export function SiteDetailView({
               }}>{siteName}</h1>
               {isMobile && (
                 <span style={{
-                  fontSize: 14,
+                  fontSize: 12.5,
                   color: "#7b8a9a",
                   fontWeight: 400,
                   marginTop: 2,
                   fontFamily: POPPINS,
                   lineHeight: 1.3,
                   display: "block",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis"
+                  whiteSpace: "normal",
                 }}>{barangay}, Leyte Province</span>
               )}
               {!isMobile && (
@@ -319,7 +317,6 @@ export function SiteDetailView({
             <div style={{
               background: "#fff",
               borderRadius: 20,
-              boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -407,7 +404,7 @@ export function SiteDetailView({
                           type="monotone"
                           dataKey="ph"
                           stroke="#4187d6"
-                          strokeWidth={2}
+                          strokeWidth={1}
                           fill="url(#phGradient)"
                           name="pH Level"
                           activeDot={<CustomActiveDot stroke="#4187d6" />}
@@ -416,7 +413,7 @@ export function SiteDetailView({
                           type="monotone"
                           dataKey="turbidity"
                           stroke="#2c5282"
-                          strokeWidth={2}
+                          strokeWidth={1}
                           fill="url(#turbidityGradient)"
                           name="Turbidity (NTU)"
                           activeDot={<CustomActiveDot stroke="#2c5282" />}
@@ -425,7 +422,7 @@ export function SiteDetailView({
                           type="monotone"
                           dataKey="temperature"
                           stroke="#43c6b6"
-                          strokeWidth={2}
+                          strokeWidth={1}
                           fill="url(#temperatureGradient)"
                           name="Temperature (°C)"
                           activeDot={<CustomActiveDot stroke="#43c6b6" />}
@@ -453,9 +450,9 @@ export function SiteDetailView({
           <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>
             Threshold Classification Guide
           </h4>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
 
-            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
                 <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
@@ -476,7 +473,7 @@ export function SiteDetailView({
               </div>
             </div>
 
-            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#4187d6" }} />
                 <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
@@ -497,7 +494,7 @@ export function SiteDetailView({
               </div>
             </div>
 
-            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2c5282" }} />
                 <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>

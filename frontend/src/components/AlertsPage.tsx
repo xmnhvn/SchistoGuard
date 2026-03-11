@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Bell,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { apiGet } from "../utils/api";
 
@@ -147,7 +148,7 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <h1 style={{
-            fontSize: isMobile ? 22 : 26,
+            fontSize: isMobile ? 20 : 26,
             fontWeight: 700,
             color: "#1a2a3a",
             margin: 0,
@@ -161,16 +162,14 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
           </h1>
           {isMobile && (
             <span style={{
-              fontSize: 14,
+              fontSize: 12.5,
               color: "#7b8a9a",
               fontWeight: 400,
               marginTop: 2,
               fontFamily: POPPINS,
               lineHeight: 1.3,
               display: "block",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis"
+              whiteSpace: "normal",
             }}>Monitor and manage water quality alerts across all sites</span>
           )}
           {!isMobile && (
@@ -242,7 +241,7 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
         animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <StatCard icon={<Bell size={22} color="#357D86" />} label="Total Alerts" value={String(alerts.length)} valueColor="#357D86" sub="All alerts (history)" />
-        <StatCard icon={<AlertTriangle size={22} color="#eab308" />} label="Unacknowledged" value={String(unacknowledgedCount)} valueColor="#a16207" sub="Require attention" />
+        <StatCard icon={<AlertTriangle size={22} color="#eab308" />} label="Unacknowledged" value={String(unacknowledgedCount)} valueColor="#eab308" sub="Require attention" />
         <StatCard icon={<AlertTriangle size={22} color="#ef4444" />} label="Critical Alerts" value={String(criticalCount)} valueColor="#dc2626" sub="High priority" />
         <StatCard icon={<CheckCircle2 size={22} color="#22c55e" />} label="Response Time" value={avgResponseTime} valueColor="#22c55e" sub="Avg response" />
       </div>
@@ -251,7 +250,6 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
       <div style={{
         background: "#fff",
         borderRadius: 20,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
         overflow: "hidden",
         flex: 1,
         minHeight: 0,
@@ -296,24 +294,23 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
                 <div key={alert.id} style={{
                   animation: animate ? `cardDataFadeIn 0.6s ${0.35 + index * 0.07}s cubic-bezier(0.22,1,0.36,1) both` : "none",
                 }}>
-                  <Dialog>
-                    <AlertItem
-                      {...alert}
-                      onAcknowledge={handleAcknowledgeAlert}
-                      onExpand={() => { setSelectedAlert(alert); }}
-                      DetailsButtonComponent={({ onClick }) => (
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
-                            className="border-schistoguard-teal text-schistoguard-teal hover:bg-schistoguard-teal hover:text-white py-1 px-3 text-xs h-7 rounded-lg transition-colors border-2 font-medium"
-                          >
-                            Details
-                          </Button>
-                        </DialogTrigger>
-                      )}
-                    />
+                  <Dialog onOpenChange={(open) => { if (!open) setSelectedAlert(null); }}>
+                    <DialogTrigger asChild>
+                      <div onClick={() => setSelectedAlert(alert)}>
+                        <AlertItem
+                          {...alert}
+                          isSelected={selectedAlert?.id === alert.id}
+                          onAcknowledge={handleAcknowledgeAlert}
+                          DetailsButtonComponent={() => (
+                            <ChevronRight
+                              size={20}
+                              strokeWidth={2.5}
+                              className="text-schistoguard-teal transition-transform group-hover:translate-x-1"
+                            />
+                          )}
+                        />
+                      </div>
+                    </DialogTrigger>
                     <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
                       <DialogHeader>
                         <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
@@ -505,24 +502,23 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {filteredAlerts.length > 0 ? (
                   filteredAlerts.map((alert) => (
-                    <Dialog key={alert.id}>
-                      <AlertItem
-                        {...alert}
-                        onAcknowledge={handleAcknowledgeAlert}
-                        onExpand={() => { setSelectedAlert(alert); }}
-                        DetailsButtonComponent={({ onClick }) => (
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); onClick && onClick(e); }}
-                              className="py-0.5 px-2 text-xs h-6 min-h-0"
-                            >
-                              Details
-                            </Button>
-                          </DialogTrigger>
-                        )}
-                      />
+                    <Dialog key={alert.id} onOpenChange={(open) => { if (!open) setSelectedAlert(null); }}>
+                      <DialogTrigger asChild>
+                        <div onClick={() => setSelectedAlert(alert)}>
+                          <AlertItem
+                            {...alert}
+                            isSelected={selectedAlert?.id === alert.id}
+                            onAcknowledge={handleAcknowledgeAlert}
+                            DetailsButtonComponent={() => (
+                              <ChevronRight
+                                size={18}
+                                strokeWidth={2.5}
+                                className="text-schistoguard-teal"
+                              />
+                            )}
+                          />
+                        </div>
+                      </DialogTrigger>
                       <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
                         <DialogHeader>
                           <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
@@ -615,13 +611,12 @@ function StatCard({ icon, label, value, valueColor, sub }: {
       background: "#fff",
       borderRadius: 20,
       padding: 20,
-      boxShadow: "0 2px 12px rgba(0,0,0,0.09)",
       display: "flex",
       flexDirection: "column",
       fontFamily: "'Poppins', sans-serif",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "#77ABB2" }}>{label}</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: "#8E8B8B" }}>{label}</span>
         {icon}
       </div>
       <div style={{ fontSize: 28, fontWeight: 600, color: valueColor }}>{value}</div>
