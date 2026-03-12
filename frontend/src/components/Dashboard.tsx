@@ -119,6 +119,8 @@ export function Dashboard({
     alertsOpenRef.current = true;
     alertsClosingRef.current = false;
     window.dispatchEvent(new CustomEvent("alertsDropdownStateChanged", { detail: { open: true } }));
+    // Close other UI elements like Navigation dropdowns when this opens
+    window.dispatchEvent(new CustomEvent("sg_closeAllPopups"));
   };
 
   useEffect(() => {
@@ -209,11 +211,15 @@ export function Dashboard({
     return () => window.removeEventListener("resize", handleResize);
   }, [showAlertsDropdown]);
 
-  // Listen for the bell icon click from NavigationHeader
   useEffect(() => {
-    const handler = () => openAlertsDropdown();
-    window.addEventListener("openAlertsDropdown", handler);
-    return () => window.removeEventListener("openAlertsDropdown", handler);
+    const openHandler = () => openAlertsDropdown();
+    const closeHandler = () => closeAlertsDropdown();
+    window.addEventListener("openAlertsDropdown", openHandler);
+    window.addEventListener("sg_closeAlerts", closeHandler);
+    return () => {
+      window.removeEventListener("openAlertsDropdown", openHandler);
+      window.removeEventListener("sg_closeAlerts", closeHandler);
+    };
   }, []);
 
   const handleAcknowledgeAlert = (alertId: string) => {
@@ -313,7 +319,7 @@ export function Dashboard({
           borderRadius: 16,
           boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
           border: "1px solid #e8e8e8",
-          zIndex: 9999,
+          zIndex: 40,
           overflow: "hidden",
           fontFamily: POPPINS,
           animation: alertsClosing

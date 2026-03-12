@@ -123,8 +123,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
 
     const infoItems = [
         { icon: <Mail size={16} color="#357D86" />, label: "Email", value: user?.email || "N/A" },
-        { icon: <Shield size={16} color="#357D86" />, label: "Designation", value: roleDisplay },
-        { icon: <CheckCircle size={16} color="#22c55e" />, label: "Status", value: "Active", valueColor: "#22c55e" },
+        { icon: <CheckCircle size={16} color="#22c55e" />, label: "Status", value: "Active", valueColor: "#22c55e", hasAction: true },
     ];
 
     const pad = isMobile ? 16 : isTablet ? 24 : 32;
@@ -441,109 +440,6 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                 </span>
                             </div>
 
-                            <div style={{
-                                marginTop: 12,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                position: "relative",
-                            }}>
-                                <div style={{
-                                    fontSize: 11, fontWeight: 700,
-                                    padding: "4px 12px", borderRadius: 8,
-                                    background: "#dcfce7", color: "#166534",
-                                    fontFamily: POPPINS, textTransform: "uppercase",
-                                    letterSpacing: "0.1em",
-                                    display: "flex", alignItems: "center", gap: 6,
-                                }}>
-                                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#166534" }} />
-                                    Active Account
-                                </div>
-
-                                <button
-                                    onClick={() => { setShowDeleteMenu(!showDeleteMenu); setShowDeleteConfirm(false); }}
-                                    style={{
-                                        background: "none", border: "none",
-                                        padding: 6, borderRadius: "50%",
-                                        cursor: "pointer", display: "flex",
-                                        alignItems: "center", justifyContent: "center",
-                                        transition: "background 0.2s",
-                                        color: showDeleteMenu ? "#ef4444" : "#64748b"
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                                >
-                                    <MoreHorizontal size={18} />
-                                </button>
-
-                                {/* Contextual Delete Menu */}
-                                {showDeleteMenu && (
-                                    <div className="premium-shadow" style={{
-                                        position: "absolute",
-                                        top: "100%",
-                                        left: "50%",
-                                        transform: "translateX(-50%) translateY(8px)",
-                                        background: "#fff",
-                                        borderRadius: 16,
-                                        padding: 8,
-                                        minWidth: 160,
-                                        zIndex: 100,
-                                        border: "1px solid rgba(0,0,0,0.05)",
-                                        animation: "contentSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both"
-                                    }}>
-                                        {!showDeleteConfirm ? (
-                                            <button
-                                                onClick={() => setShowDeleteConfirm(true)}
-                                                style={{
-                                                    width: "100%", padding: "10px 14px",
-                                                    borderRadius: 10, border: "none",
-                                                    background: "none", color: "#ef4444",
-                                                    fontSize: 13, fontWeight: 700,
-                                                    fontFamily: POPPINS, cursor: "pointer",
-                                                    display: "flex", alignItems: "center", gap: 10,
-                                                    textAlign: "left"
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                                            >
-                                                <Trash2 size={16} /> Delete Profile
-                                            </button>
-                                        ) : (
-                                            <div style={{ padding: 4 }}>
-                                                <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center", textTransform: "uppercase" }}>Confirm?</div>
-                                                <div style={{ display: "flex", gap: 6 }}>
-                                                    <button
-                                                        onClick={() => setShowDeleteConfirm(false)}
-                                                        disabled={deleting}
-                                                        style={{
-                                                            flex: 1, padding: "8px 0",
-                                                            borderRadius: 8, border: "1px solid #e2e8f0",
-                                                            background: "#fff", color: "#64748b",
-                                                            fontSize: 11, fontWeight: 700,
-                                                            fontFamily: POPPINS, cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        No
-                                                    </button>
-                                                    <button
-                                                        onClick={handleDeleteAccount}
-                                                        disabled={deleting}
-                                                        style={{
-                                                            flex: 1.5, padding: "8px 0",
-                                                            borderRadius: 8, border: "none",
-                                                            background: "#ef4444", color: "#fff",
-                                                            fontSize: 11, fontWeight: 700,
-                                                            fontFamily: POPPINS, cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        {deleting ? "Wait..." : "Yes, Delete"}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
                         </div>
 
                         {/* Divider */}
@@ -561,18 +457,6 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                     transition: "all 0.3s ease",
                                     animation: animate ? `contentSlideIn 0.8s ${0.3 + i * 0.12}s cubic-bezier(0.16, 1, 0.3, 1) both` : "none",
                                 }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = "#fff";
-                                        e.currentTarget.style.borderColor = "rgba(53, 125, 134, 0.2)";
-                                        e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.04)";
-                                        e.currentTarget.style.transform = "scale(1.02)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = "rgba(0,0,0,0.02)";
-                                        e.currentTarget.style.borderColor = "rgba(0,0,0,0.03)";
-                                        e.currentTarget.style.boxShadow = "none";
-                                        e.currentTarget.style.transform = "scale(1)";
-                                    }}
                                 >
                                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                                         <div style={{
@@ -597,6 +481,94 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                             </span>
                                         </div>
                                     </div>
+
+                                    {item.hasAction && (
+                                        <div style={{ position: "relative" }}>
+                                            <button
+                                                onClick={() => { setShowDeleteMenu(!showDeleteMenu); setShowDeleteConfirm(false); }}
+                                                style={{
+                                                    background: "none", border: "none",
+                                                    padding: 8, borderRadius: "50%",
+                                                    cursor: "pointer", display: "flex",
+                                                    alignItems: "center", justifyContent: "center",
+                                                    transition: "background 0.2s",
+                                                    color: showDeleteMenu ? "#ef4444" : "#64748b"
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                                            >
+                                                <MoreHorizontal size={18} />
+                                            </button>
+
+                                            {/* Contextual Delete Menu */}
+                                            {showDeleteMenu && (
+                                                <div className="premium-shadow" style={{
+                                                    position: "absolute",
+                                                    bottom: "100%",
+                                                    right: 0,
+                                                    transform: "translateY(-8px)",
+                                                    background: "#fff",
+                                                    borderRadius: 16,
+                                                    padding: 8,
+                                                    minWidth: 160,
+                                                    zIndex: 100,
+                                                    border: "1px solid rgba(0,0,0,0.05)",
+                                                    animation: "contentSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both"
+                                                }}>
+                                                    {!showDeleteConfirm ? (
+                                                        <button
+                                                            onClick={() => setShowDeleteConfirm(true)}
+                                                            style={{
+                                                                width: "100%", padding: "10px 14px",
+                                                                borderRadius: 10, border: "none",
+                                                                background: "none", color: "#ef4444",
+                                                                fontSize: 13, fontWeight: 700,
+                                                                fontFamily: POPPINS, cursor: "pointer",
+                                                                display: "flex", alignItems: "center", gap: 10,
+                                                                textAlign: "left"
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                                                        >
+                                                            <Trash2 size={16} /> Delete Profile
+                                                        </button>
+                                                    ) : (
+                                                        <div style={{ padding: 4 }}>
+                                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center", textTransform: "uppercase" }}>Confirm?</div>
+                                                            <div style={{ display: "flex", gap: 6 }}>
+                                                                <button
+                                                                    onClick={() => setShowDeleteConfirm(false)}
+                                                                    disabled={deleting}
+                                                                    style={{
+                                                                        flex: 1, padding: "8px 0",
+                                                                        borderRadius: 8, border: "1px solid #e2e8f0",
+                                                                        background: "#fff", color: "#64748b",
+                                                                        fontSize: 11, fontWeight: 700,
+                                                                        fontFamily: POPPINS, cursor: "pointer",
+                                                                    }}
+                                                                >
+                                                                    No
+                                                                </button>
+                                                                <button
+                                                                    onClick={handleDeleteAccount}
+                                                                    disabled={deleting}
+                                                                    style={{
+                                                                        flex: 1.5, padding: "8px 0",
+                                                                        borderRadius: 8, border: "none",
+                                                                        background: "#ef4444", color: "#fff",
+                                                                        fontSize: 11, fontWeight: 700,
+                                                                        fontFamily: POPPINS, cursor: "pointer",
+                                                                    }}
+                                                                >
+                                                                    {deleting ? "Wait..." : "Yes, Delete"}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>

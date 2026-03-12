@@ -430,7 +430,7 @@ export const ReportsPage: React.FC = () => {
           {/* Reports List Column */}
           <div className="flex h-full min-h-0 flex-col">
             <Card className="flex h-full min-h-0 flex-col overflow-hidden" style={{ borderRadius: 28 }}>
-              <div className="flex-shrink-0 bg-white px-6 py-4">
+              <div className="flex-shrink-0 bg-white p-6">
                 <div className="flex items-center justify-between gap-3">
                   <div
                     className={
@@ -515,7 +515,7 @@ export const ReportsPage: React.FC = () => {
                 </div>
               </div>
 
-              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-4">
+              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6">
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-2">
                   {loading ? (
                     <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">

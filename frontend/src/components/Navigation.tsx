@@ -361,7 +361,11 @@ export function NavigationHeader({
           </div>
         </button>
 
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(open) => {
+          if (open) {
+            window.dispatchEvent(new CustomEvent("sg_closeAlerts"));
+          }
+        }}>
           <DropdownMenuTrigger asChild>
             <button
               style={{
@@ -388,18 +392,40 @@ export function NavigationHeader({
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onNavigate?.("user-profile")}>
-              <User className="w-4 h-4 mr-2" />
-              User Profile
+          <DropdownMenuContent
+            align="end"
+            sideOffset={27}
+            alignOffset={12}
+            className="w-56 p-2"
+            style={{
+              borderRadius: 16,
+              boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+              border: "1px solid #e8e8e8",
+              background: "#fff",
+            }}
+          >
+            <DropdownMenuItem
+              onClick={() => onNavigate?.("user-profile")}
+              style={{ padding: "12px 16px", borderRadius: 12, cursor: "pointer", fontFamily: "Poppins, sans-serif" }}
+            >
+              <User className="w-4 h-4 mr-3" style={{ color: "#6b7280" }} />
+              <span style={{ fontWeight: 500, color: "#1a3a4a" }}>User Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onNavigate?.("admin-settings")}>
-              <Settings className="w-4 h-4 mr-2" />
-              Admin Settings
+            <DropdownMenuItem
+              onClick={() => onNavigate?.("admin-settings")}
+              style={{ padding: "12px 16px", borderRadius: 12, cursor: "pointer", fontFamily: "Poppins, sans-serif" }}
+            >
+              <Settings className="w-4 h-4 mr-3" style={{ color: "#6b7280" }} />
+              <span style={{ fontWeight: 500, color: "#1a3a4a" }}>Admin Settings</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600" onClick={onLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+            <div style={{ height: 1, background: "#f0f0f0", margin: "4px 8px" }} />
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={onLogout}
+              style={{ padding: "12px 16px", borderRadius: 12, cursor: "pointer", fontFamily: "Poppins, sans-serif" }}
+            >
+              <LogOut className="w-4 h-4 mr-3" />
+              <span style={{ fontWeight: 500 }}>Sign Out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
