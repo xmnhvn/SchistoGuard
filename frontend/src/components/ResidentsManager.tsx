@@ -46,6 +46,8 @@ import { apiGet, apiPost, apiPut, apiDelete } from "../utils/api";
 
 const POPPINS = "'Poppins', sans-serif";
 
+let _recipientsFirstLoadDone = false;
+
 interface Resident {
   id: number;
   siteName: string;
@@ -62,6 +64,7 @@ interface ResidentsManagerProps {
 }
 
 export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }: ResidentsManagerProps) {
+  const animate = !_recipientsFirstLoadDone;
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -106,6 +109,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   // Fetch residents
   useEffect(() => {
     fetchResidents();
+    if (!_recipientsFirstLoadDone) {
+      setTimeout(() => { _recipientsFirstLoadDone = true; }, 50);
+    }
   }, [siteName, refreshTrigger]);
 
   const fetchResidents = async () => {
@@ -349,7 +355,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           alignItems: (isMobile || isTablet) ? "flex-start" : "center",
           gap: 16,
           marginBottom: 24,
-          animation: "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both",
+          animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
@@ -455,7 +461,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
           gap: 16,
           marginBottom: 24,
-          animation: "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both",
+          animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           {[
             { label: "Total Recipients", value: residents.length, icon: <Users style={{ width: 22, height: 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
@@ -471,7 +477,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               flexDirection: "column",
               alignItems: "center",
               gap: 6,
-              animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both`,
+              animation: animate ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` : "none",
             }}>
               <div style={{
                 width: 38,
@@ -499,7 +505,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           minHeight: 0,
           display: "flex",
           flexDirection: "column",
-          animation: "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both",
+          animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{
             padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",

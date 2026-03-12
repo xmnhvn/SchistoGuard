@@ -13,7 +13,7 @@ import { apiGet } from "../utils/api";
 
 const POPPINS = "'Poppins', sans-serif";
 
-import { useRef } from "react";
+let _siteDetailFirstLoadDone = false;
 
 
 
@@ -35,13 +35,7 @@ export function SiteDetailView({
   visible = true
 }: SiteDetailViewProps) {
   console.log("SiteDetailView mounted");
-  // Use a ref to persist animation state for the session
-  const firstLoadRef = useRef<boolean>(
-    typeof window !== 'undefined'
-      ? localStorage.getItem('sg_siteDetailFirstLoadDone') !== 'true'
-      : true
-  );
-  const animate = firstLoadRef.current;
+  const animate = !_siteDetailFirstLoadDone;
   // Load last selected timeRange from localStorage if available
   const getInitialTimeRange = () => {
     if (typeof window !== 'undefined') {
@@ -73,14 +67,10 @@ export function SiteDetailView({
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
   useEffect(() => {
-    if (visible && animate) {
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('sg_siteDetailFirstLoadDone', 'true');
-        }
-      }, 50);
+    if (visible && !_siteDetailFirstLoadDone) {
+      setTimeout(() => { _siteDetailFirstLoadDone = true; }, 50);
     }
-  }, [visible, animate]);
+  }, [visible]);
 
   // Only fetch if not already cached
   useEffect(() => {

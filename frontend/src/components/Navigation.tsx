@@ -13,8 +13,6 @@ import {
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Dialog, DialogContent } from "./ui/dialog";
-import { UserProfileDetails } from "./UserProfileDetails";
 import React, { useState, useEffect } from "react";
 import { apiCall } from "../utils/api";
 
@@ -131,7 +129,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
             {user.firstName} {user.lastName}
           </p>
           <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: "Poppins, sans-serif", whiteSpace: "nowrap" }}>
-            {user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+            {user.role === 'bhw' ? 'Barangay Health Worker' : user.role === 'lgu' ? 'Local Government Unit Personnel' : user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
           </p>
         </div>
       )}
@@ -156,9 +154,21 @@ export function NavigationHeader({
   onNavigate?: (view: string) => void;
   onToggleDrawer?: () => void;
 }) {
-  const [showProfile, setShowProfile] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+
+  // Load profile photo from localStorage and listen for changes
+  useEffect(() => {
+    const saved = localStorage.getItem("sg_profilePhoto");
+    if (saved) setProfilePhoto(saved);
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setProfilePhoto(detail?.photo || null);
+    };
+    window.addEventListener("profilePhotoChanged", handler);
+    return () => window.removeEventListener("profilePhotoChanged", handler);
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -188,6 +198,7 @@ export function NavigationHeader({
       case "site-details": return { title: "Site Details", subtitle: "Detailed Site Information" };
       case "recipients": return { title: "Recipients", subtitle: "Manage alert recipients" };
       case "admin-settings": return { title: "Admin Settings", subtitle: "Create and manage user accounts" };
+      case "user-profile": return { title: "My Profile", subtitle: "Manage your account information" };
       default: return { title: "Dashboard", subtitle: "Water Quality Monitoring Overview" };
     }
   };
@@ -211,16 +222,7 @@ export function NavigationHeader({
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
     : "U";
 
-  const handleDeleteUser = async () => {
-    try {
-      await apiCall(`/api/auth/users/${user?.id}`, { method: "DELETE" });
-      setShowProfile(false);
-      onLogout?.();
-    } catch (error) {
-      console.error("Failed to delete user:", error);
-      alert("Failed to delete account. Please try again.");
-    }
-  };
+
 
   return (
     <header
@@ -359,47 +361,48 @@ export function NavigationHeader({
           </div>
         </button>
 
-        <Dialog open={showProfile} onOpenChange={setShowProfile}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "#357D86",
-                  color: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  fontSize: 14,
-                }}
-              >
-                {initials}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setShowProfile(true)}>
-                <User className="w-4 h-4 mr-2" />
-                User Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate?.("admin-settings")}>
-                <Settings className="w-4 h-4 mr-2" />
-                Admin Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600" onClick={onLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DialogContent>
-            <UserProfileDetails user={user} onDelete={handleDeleteUser} />
-          </DialogContent>
-        </Dialog>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: profilePhoto ? "transparent" : "#357D86",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 700,
+                fontSize: 14,
+                overflow: "hidden",
+                padding: 0,
+              }}
+            >
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                initials
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => onNavigate?.("user-profile")}>
+              <User className="w-4 h-4 mr-2" />
+              User Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNavigate?.("admin-settings")}>
+              <Settings className="w-4 h-4 mr-2" />
+              Admin Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600" onClick={onLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
@@ -502,7 +505,7 @@ export function NavigationProvider({
         {user && (
           <div style={{ padding: "16px 22px", borderTop: "1px solid #f0f0f0" }}>
             <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#1a3a4a", fontFamily: POPPINS_NAV }}>{user.firstName} {user.lastName}</p>
-            <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: POPPINS_NAV }}>{user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+            <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: POPPINS_NAV }}>{user.role === 'bhw' ? 'Barangay Health Worker' : user.role === 'lgu' ? 'Local Government Unit Personnel' : user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
           </div>
         )}
       </aside>
