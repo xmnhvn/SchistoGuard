@@ -19,6 +19,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
     const [showDeleteMenu, setShowDeleteMenu] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
@@ -233,7 +234,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                     width: "100%",
                     animation: animate
                         ? "contentSlideIn 1s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both"
-                        : "float 6s ease-in-out infinite",
+                        : "none",
                 }}>
                     <div className="glass-card premium-shadow" style={{
                         maxWidth: 500,
@@ -276,9 +277,11 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                 onClick={() => fileInputRef.current?.click()}
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.transform = "scale(1.02)";
+                                    setIsHoveringAvatar(true);
                                 }}
                                 onMouseLeave={(e) => {
                                     e.currentTarget.style.transform = "scale(1)";
+                                    setIsHoveringAvatar(false);
                                 }}
                             >
                                 <div style={{
@@ -312,7 +315,11 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                     display: "flex",
                                     flexDirection: "column",
                                     gap: 8,
-                                    zIndex: 10
+                                    zIndex: 10,
+                                    opacity: isHoveringAvatar ? 1 : 0,
+                                    transform: isHoveringAvatar ? "translateX(0) scale(1)" : "translateX(-10px) scale(0.9)",
+                                    pointerEvents: isHoveringAvatar ? "auto" : "none",
+                                    transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
                                 }}>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
