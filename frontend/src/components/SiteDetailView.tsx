@@ -82,6 +82,24 @@ export function SiteDetailView({
     }
   }, [visible, animate]);
 
+  // Auto-refresh readings every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      apiGet("/api/sensors/history")
+        .then(data => {
+          if (Array.isArray(data)) {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('sg_history', JSON.stringify(data));
+            }
+          }
+        })
+        .catch(err => {
+          console.error("Auto-refresh error fetching time series data:", err);
+        });
+    }, 30000); // 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   // Only fetch if not already cached
   useEffect(() => {
     if (history && history.length > 0) return;
