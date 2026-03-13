@@ -37,6 +37,9 @@ export function Dashboard({
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
+  // Interval config state
+  const [intervalValue, setIntervalValue] = useState(5);
+  const [intervalUnit, setIntervalUnit] = useState("min");
   const [mapReady, setMapReady] = useState(false);
   // Only animate on the very first load — not on re-navigation (Dashboard stays mounted)
   const animate = !_dashboardFirstLoadDone;
@@ -149,9 +152,46 @@ export function Dashboard({
     }
   }, [visible]);
 
+  // Load interval config from backend
+  const loadIntervalConfig = async () => {
+    try {
+      const data = await apiGet("/api/sensors/interval-config");
+      let ms = data.intervalMs || 300000;
+      if (ms % 3600000 === 0) {
+        setIntervalValue(ms / 3600000);
+        setIntervalUnit("hr");
+      } else if (ms % 60000 === 0) {
+        setIntervalValue(ms / 60000);
+        setIntervalUnit("min");
+      } else {
+        setIntervalValue(ms / 1000);
+        setIntervalUnit("sec");
+      }
+    } catch {
+      setIntervalValue(5);
+      setIntervalUnit("min");
+    }
+  };
+  useEffect(() => {
+    loadIntervalConfig();
+    // Listen for interval update event
+    const handler = () => loadIntervalConfig();
+    window.addEventListener("sg_interval_updated", handler);
+    return () => window.removeEventListener("sg_interval_updated", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Helper to get interval string for API and label
+  const getIntervalString = () => {
+    if (intervalUnit === "hr") return `${intervalValue}hr`;
+    if (intervalUnit === "min") return `${intervalValue}min`;
+    if (intervalUnit === "sec") return `${intervalValue}sec`;
+    return `${intervalValue}min`;
+  };
+
   useEffect(() => {
     const fetchReadings = () => {
-      apiGet("/api/sensors/history?interval=5min&range=24h")
+      apiGet(`/api/sensors/history?interval=${getIntervalString()}&range=24h`)
         .then((data) => {
           if (Array.isArray(data)) setReadings(data);
           setBackendOk(true);
@@ -161,7 +201,8 @@ export function Dashboard({
     fetchReadings();
     const interval = setInterval(fetchReadings, 60000);
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intervalValue, intervalUnit]);
 
   useEffect(() => {
     if (setSystemStatus) {
@@ -772,7 +813,7 @@ export function Dashboard({
                       Total Parameter Readings
                     </p>
                     <p style={{ margin: "5px 0 0", color: "#9ca3af", fontSize: 10, lineHeight: 1.4 }}>
-                      Total readings (5 min interval, last 24 hours)
+                      Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
@@ -803,7 +844,7 @@ export function Dashboard({
                       Total Parameter Readings
                     </p>
                     <p style={{ margin: "4px 0 10px", color: "#9ca3af", fontSize: 12, lineHeight: 1.4 }}>
-                      Total readings (5 min interval, last 24 hours)
+                      Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
                     </p>
                     <p style={{ margin: 0, fontSize: 40, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
                       {readings.length}
@@ -1051,7 +1092,7 @@ export function Dashboard({
               Total Parameter Readings
             </p>
             <p style={{ margin: "4px 0 12px", color: "#9ca3af", fontSize: 13 }}>
-              Total readings (5 min interval, last 24 hours)
+              Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
             </p>
             <p style={{ margin: 0, fontSize: 44, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
               {readings.length}

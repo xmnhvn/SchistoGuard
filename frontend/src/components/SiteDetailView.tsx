@@ -72,6 +72,47 @@ export function SiteDetailView({
     }
   }, [visible]);
 
+  // Interval config state
+  const [intervalValue, setIntervalValue] = useState(5);
+  const [intervalUnit, setIntervalUnit] = useState("min");
+  // Load interval config from backend
+  const loadIntervalConfig = async () => {
+    try {
+      const data = await apiGet("/api/sensors/interval-config");
+      let ms = data.intervalMs || 300000;
+      if (ms % 3600000 === 0) {
+        setIntervalValue(ms / 3600000);
+        setIntervalUnit("hr");
+      } else if (ms % 60000 === 0) {
+        setIntervalValue(ms / 60000);
+        setIntervalUnit("min");
+      } else {
+        setIntervalValue(ms / 1000);
+        setIntervalUnit("sec");
+      }
+    } catch {
+      setIntervalValue(5);
+      setIntervalUnit("min");
+    }
+  };
+  useEffect(() => {
+    loadIntervalConfig();
+    // Listen for interval update event
+    const handler = () => {
+      // Clear cached history and reset state so graph resets
+      setHistory([]);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('sg_history');
+      }
+      loadIntervalConfig();
+    };
+    window.addEventListener("sg_interval_updated", handler);
+    return () => window.removeEventListener("sg_interval_updated", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Helper to get interval string for label
+  const getIntervalString = () => `${intervalValue} ${intervalUnit}`;
+
   // Auto-refresh readings every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -86,7 +127,7 @@ export function SiteDetailView({
         .catch(err => {
           console.error("Auto-refresh error fetching time series data:", err);
         });
-    }, 30000); // 30 seconds
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -440,7 +481,7 @@ export function SiteDetailView({
                   </div>
                 )}
                 <div className="flex-shrink-0 text-sm mt-3 text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS }}>
-                  <p>All parameters shown per 5-min interval (from time series table)</p>
+                  <p>All parameters shown per {getIntervalString()} interval (from time series table)</p>
                 </div>
               </div>
             </div>
