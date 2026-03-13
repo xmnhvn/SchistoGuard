@@ -43,8 +43,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/sensors/interval-config");
-        const data = await res.json();
+        const data = await apiGet("/api/sensors/interval-config");
         let ms = data.intervalMs || 300000;
         if (ms % 3600000 === 0) {
           setIntervalValue(ms / 3600000);
@@ -74,12 +73,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     setIntervalMsg("");
     try {
       const ms = getIntervalMs();
-      const res = await fetch("/api/sensors/interval-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intervalMs: ms })
-      });
-      if (!res.ok) throw new Error("Failed to update");
+      await apiPost("/api/sensors/interval-config", { intervalMs: ms });
       setIntervalMsg("Interval updated successfully!");
     } catch (err: any) {
       setIntervalMsg("Failed to update interval");
