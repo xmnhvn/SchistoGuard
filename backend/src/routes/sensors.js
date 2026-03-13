@@ -30,7 +30,8 @@ router.post('/interval-config', (req, res) => {
     fs.writeFileSync(configPath, JSON.stringify({ intervalMs }, null, 2), 'utf8');
     res.json({ success: true, intervalMs });
   } catch (e) {
-    res.status(500).json({ error: 'Failed to write interval config' });
+    console.error('Failed to write interval config:', e);
+    res.status(500).json({ error: 'Failed to write interval config', details: e.message });
   }
 });
 
