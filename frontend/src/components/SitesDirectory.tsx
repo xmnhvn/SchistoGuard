@@ -205,7 +205,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <h1 style={{
-            fontSize: isMobile ? 22 : 26,
+            fontSize: isMobile ? 20 : 26,
             fontWeight: 700,
             color: "#1a2a3a",
             margin: 0,
@@ -219,16 +219,14 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           </h1>
           {isMobile && (
             <span style={{
-              fontSize: 14,
+              fontSize: 12.5,
               color: "#7b8a9a",
               fontWeight: 400,
               marginTop: 2,
               fontFamily: POPPINS,
               lineHeight: 1.3,
               display: "block",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis"
+              whiteSpace: "normal",
             }}>Real-time water quality readings & risk assessment</span>
           )}
           {!isMobile && (
@@ -251,7 +249,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
                 border: "1px solid #e2e5ea", background: "#fff", height: 38,
               }}>
-                <Clock style={{ width: 14, height: 14, color: "#357D86" }} />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -269,7 +266,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
                 border: "1px solid #e2e5ea", background: "#fff", height: 38,
               }}>
-                <Filter style={{ width: 14, height: 14, color: "#357D86" }} />
                 <SelectValue placeholder="Risk Level" />
               </SelectTrigger>
               <SelectContent>
@@ -574,7 +570,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                       borderRadius: 12,
                       border: "1px solid #f0f1f3",
                       borderLeft: `4px solid ${rc.border}`,
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
                       display: "flex",
                       flexDirection: "column",
                       gap: 12

@@ -12,6 +12,12 @@ import {
   SelectValue,
 } from "./ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -34,11 +40,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
-  Filter,
+  MoreHorizontal,
 } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../utils/api";
 
 const POPPINS = "'Poppins', sans-serif";
+
+let _recipientsFirstLoadDone = false;
 
 interface Resident {
   id: number;
@@ -56,6 +64,7 @@ interface ResidentsManagerProps {
 }
 
 export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }: ResidentsManagerProps) {
+  const animate = !_recipientsFirstLoadDone;
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -100,6 +109,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   // Fetch residents
   useEffect(() => {
     fetchResidents();
+    if (!_recipientsFirstLoadDone) {
+      setTimeout(() => { _recipientsFirstLoadDone = true; }, 50);
+    }
   }, [siteName, refreshTrigger]);
 
   const fetchResidents = async () => {
@@ -343,11 +355,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           alignItems: (isMobile || isTablet) ? "flex-start" : "center",
           gap: 16,
           marginBottom: 24,
-          animation: "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both",
+          animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: isMobile ? 22 : 26,
+              fontSize: isMobile ? 20 : 26,
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -355,7 +367,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             }}>
               Recipients
             </h1>
-            <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
+            <p style={{ fontSize: 12.5, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
               Manage alert recipients and their designations
             </p>
           </div>
@@ -366,7 +378,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             flexWrap: "wrap",
             ...(isMobile ? { width: "100%" } : {}),
           }}>
-            <div style={{ position: "relative", flex: isMobile ? "1 1 auto" : undefined, minWidth: isMobile ? 80 : undefined }}>
+            <div style={{ position: "relative", flex: isMobile ? "1 1 calc(50% - 4px)" : undefined, minWidth: isMobile ? 0 : undefined }}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder="Search..."
@@ -380,7 +392,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 }}
               />
             </div>
-            <div style={{ flex: isMobile ? "1 1 auto" : undefined, minWidth: isMobile ? 130 : undefined }}>
+            <div style={{ flex: isMobile ? "1 1 calc(50% - 4px)" : undefined, minWidth: isMobile ? 0 : undefined }}>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger style={{
                   width: isMobile ? "100%" : 170,
@@ -390,7 +402,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-                    <Filter style={{ width: 14, height: 14, color: "#357D86", flexShrink: 0 }} />
                     <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       <SelectValue placeholder="All Designations" />
                     </span>
@@ -421,7 +432,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 background: "#fff", cursor: "pointer", fontSize: 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 margin: 0, flexShrink: 0,
-                ...(isMobile ? { padding: "0 10px", flex: "1 1 40%" } : {}),
+                ...(isMobile ? { padding: "0 10px", flex: "1 1 calc(50% - 4px)" } : {}),
               }}
             >
               <Upload size={14} />
@@ -435,7 +446,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 border: "none", flexShrink: 0,
                 background: "#357D86", cursor: "pointer", fontSize: 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
-                ...(isMobile ? { padding: "0 10px", flex: "1 1 40%" } : {}),
+                ...(isMobile ? { padding: "0 10px", flex: "1 1 calc(50% - 4px)" } : {}),
               }}
             >
               <Plus size={15} />
@@ -450,7 +461,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
           gap: 16,
           marginBottom: 24,
-          animation: "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both",
+          animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           {[
             { label: "Total Recipients", value: residents.length, icon: <Users style={{ width: 22, height: 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
@@ -466,7 +477,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               flexDirection: "column",
               alignItems: "center",
               gap: 6,
-              animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both`,
+              animation: animate ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` : "none",
             }}>
               <div style={{
                 width: 38,
@@ -494,7 +505,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           minHeight: 0,
           display: "flex",
           flexDirection: "column",
-          animation: "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both",
+          animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{
             padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",
@@ -539,13 +550,12 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             ) : isMobile ? (
               /* Mobile List */
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {filteredResidents.slice(0, 5).map((resident, idx) => (
+                {filteredResidents.slice(0, 5).map((resident, idx) => (
                   <div key={resident.id} style={{
                     padding: "12px 16px",
                     borderRadius: 16,
                     border: "1px solid #f0f0f0",
                     background: "#fff",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
                     animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.05}s both`,
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
@@ -576,14 +586,21 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                           {resident.verified ? "Verified" : "Unverified"}
                         </span>
                       </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => openEditDialog(resident)} style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#64748b" }}>
-                          <Edit size={16} />
-                        </button>
-                        <button onClick={() => openDeleteDialog(resident)} style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#ef4444" }}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#64748b" }}>
+                            <MoreHorizontal size={20} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" style={{ fontFamily: POPPINS }}>
+                          <DropdownMenuItem onClick={() => openEditDialog(resident)} className="cursor-pointer">
+                            <Edit size={14} className="mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openDeleteDialog(resident)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                            <Trash2 size={14} className="mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
@@ -647,13 +664,32 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                         </div>
                       </td>
                       <td style={{ padding: "14px 24px", textAlign: "right" }}>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                          <button onClick={() => openEditDialog(resident)} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#64748b", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, fontFamily: POPPINS }}>
-                            <Edit size={14} /> Edit
-                          </button>
-                          <button onClick={() => openDeleteDialog(resident)} style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, fontFamily: POPPINS }}>
-                            <Trash2 size={14} /> Delete
-                          </button>
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button style={{
+                                background: "none",
+                                border: "none",
+                                padding: "4px 8px",
+                                cursor: "pointer",
+                                color: "#64748b",
+                                borderRadius: 6,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}>
+                                <MoreHorizontal size={20} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" style={{ fontFamily: POPPINS }}>
+                              <DropdownMenuItem onClick={() => openEditDialog(resident)} className="cursor-pointer">
+                                <Edit size={14} className="mr-2" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openDeleteDialog(resident)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                                <Trash2 size={14} className="mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>

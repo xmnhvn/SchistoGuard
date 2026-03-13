@@ -40,6 +40,15 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState("");
+  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
 
   const fetchUsers = async () => {
     try {
@@ -131,38 +140,112 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     return role === "bhw" ? "Barangay Health Worker" : "LGU Officer";
   };
 
+  const POPPINS = "'Poppins', sans-serif";
+
   return (
-    <div className="min-h-screen bg-schistoguard-light-bg p-6">
+    <div className="min-h-screen bg-[#f8fafc]" style={{ padding: 32 }}>
       <style>{`
-        @keyframes pageSlideIn {
-          from { opacity: 0; transform: translateY(18px); }
+        @keyframes contentSlideIn {
+          from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        .premium-shadow {
+          box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05), 0 2px 10px -2px rgba(0,0,0,0.02);
+        }
+        .glass-card {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .custom-input {
+          background: rgba(0,0,0,0.02) !important;
+          border: 1px solid rgba(0,0,0,0.03) !important;
+          border-radius: 14px !important;
+          padding: 12px 16px !important;
+          font-family: ${POPPINS} !important;
+          font-size: 14px !important;
+          transition: all 0.2s ease !important;
+        }
+        .custom-input:focus {
+          background: #fff !important;
+          border-color: #357D86 !important;
+          box-shadow: 0 0 0 4px rgba(53, 125, 134, 0.1) !important;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(0,0,0,0.1);
+          border-radius: 10px;
+        }
       `}</style>
-      <div className="max-w-7xl mx-auto" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col" style={{ animation: animate ? 'contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both' : 'none' }}>
+        {/* Standardized Header Section */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          marginBottom: 32,
+        }}>
+          <h1 style={{
+            fontSize: 26,
+            fontWeight: 700,
+            color: "#1a2a3a",
+            margin: 0,
+            fontFamily: POPPINS,
+            letterSpacing: "-0.01em"
+          }}>
+            Admin Settings
+          </h1>
+          <p style={{
+            fontSize: 12.5,
+            color: "#7b8a9a",
+            margin: "4px 0 0",
+            fontFamily: POPPINS,
+            fontWeight: 400
+          }}>
+            Manage system users and administrative permissions
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Left Column - Create Account Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Create User Account</CardTitle>
-              <p className="text-sm text-muted-foreground">Add new users to the system.</p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateAccount} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div style={{
+            animation: animate ? "contentSlideIn 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
+          }}>
+            <div className="glass-card premium-shadow" style={{
+              borderRadius: 28,
+              padding: 32,
+              border: "1px solid rgba(0,0,0,0.03)",
+              minHeight: "100%"
+            }}>
+              <div style={{ marginBottom: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
+                <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
+              </div>
+
+              <form onSubmit={handleCreateAccount} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="firstName" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>First Name</Label>
                     <Input
                       id="firstName"
+                      className="custom-input"
                       value={formData.firstName}
                       onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="lastName" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Last Name</Label>
                     <Input
                       id="lastName"
+                      className="custom-input"
                       value={formData.lastName}
                       onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
                       required
@@ -171,10 +254,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Email Address</Label>
                   <Input
                     id="email"
                     type="email"
+                    className="custom-input"
                     value={formData.email}
                     onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                     required
@@ -182,44 +266,54 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="designation">Designation</Label>
+                  <Label htmlFor="designation" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Designation</Label>
                   <Select value={formData.role} onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}>
-                    <SelectTrigger id="designation">
+                    <SelectTrigger id="designation" style={{
+                      background: "rgba(0,0,0,0.02)",
+                      border: "1px solid rgba(0,0,0,0.03)",
+                      borderRadius: 14,
+                      padding: "12px 16px",
+                      height: "auto",
+                      fontFamily: POPPINS
+                    }}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bhw">Barangay Health Worker</SelectItem>
-                      <SelectItem value="lgu">LGU Officer</SelectItem>
+                      <SelectItem value="bhw" style={{ fontFamily: POPPINS }}>Barangay Health Worker</SelectItem>
+                      <SelectItem value="lgu" style={{ fontFamily: POPPINS }}>LGU Officer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="organization">Organization</Label>
+                  <Label htmlFor="organization" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Organization</Label>
                   <Input
                     id="organization"
+                    className="custom-input"
                     value={formData.organization}
                     onChange={(e) => setFormData((prev) => ({ ...prev, organization: e.target.value }))}
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Password</Label>
                     <Input
                       id="password"
                       type="password"
+                      className="custom-input"
                       value={formData.password}
                       onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Confirm</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
+                      className="custom-input"
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
                       required
@@ -227,68 +321,124 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   </div>
                 </div>
 
-                {error && <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{error}</div>}
-                {success && <div className="p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">{success}</div>}
+                {error && <div style={{ padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13, fontFamily: POPPINS }}>{error}</div>}
+                {success && <div style={{ padding: 12, borderRadius: 12, background: "#f0fdf4", border: "1px solid #dcfce7", color: "#15803d", fontSize: 13, fontFamily: POPPINS }}>{success}</div>}
 
-                <Button type="submit" className="w-full bg-schistoguard-teal hover:bg-schistoguard-teal/90" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading} style={{
+                  background: "#357D86",
+                  color: "#fff",
+                  borderRadius: 14,
+                  padding: "16px",
+                  height: "auto",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  fontFamily: POPPINS,
+                  border: "none",
+                  boxShadow: "0 4px 12px rgba(53, 125, 134, 0.2)",
+                  marginTop: 8
+                }}>
                   {loading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Right Column - User List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Existing User Accounts</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {users.length} user{users.length !== 1 ? "s" : ""} registered
-              </p>
-            </CardHeader>
-            <CardContent>
+          <div style={{
+            animation: animate ? "contentSlideIn 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
+          }}>
+            <div className="glass-card premium-shadow" style={{
+              borderRadius: 28,
+              padding: 32,
+              border: "1px solid rgba(0,0,0,0.03)",
+              minHeight: "100%"
+            }}>
+              <div style={{ marginBottom: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>Existing User Accounts</h2>
+                <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>
+                  {users.length} user{users.length !== 1 ? "s" : ""} registered
+                </p>
+              </div>
+
               {usersError && (
-                <div className="p-4 mb-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                <div style={{ padding: 16, background: "#fef2f2", borderRadius: 16, border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13, fontFamily: POPPINS, marginBottom: 16 }}>
                   <strong>Error loading users:</strong> {usersError}
                 </div>
               )}
 
               {loadingUsers && (
-                <p className="text-center text-gray-500 py-8">Loading users...</p>
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                  <div className="animate-pulse" style={{ color: "#94a3b8", fontFamily: POPPINS, fontSize: 14 }}>Loading users cache...</div>
+                </div>
               )}
 
               {!loadingUsers && !usersError && users.length === 0 && (
-                <p className="text-center text-gray-500 py-8">No users found</p>
+                <div style={{ padding: 40, textAlign: "center", background: "rgba(0,0,0,0.01)", borderRadius: 24, border: "2px dashed rgba(0,0,0,0.05)" }}>
+                  <p style={{ color: "#94a3b8", fontFamily: POPPINS, fontSize: 14 }}>No users found in the system.</p>
+                </div>
               )}
 
               {!loadingUsers && !usersError && users.length > 0 && (
-                <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                  {users.map((user) => (
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                  {users.map((item) => (
                     <div
-                      key={user.id}
-                      className="p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
+                      key={item.id}
+                      className="transition-all duration-300 hover:shadow-md"
+                      style={{
+                        padding: "16px 20px",
+                        borderRadius: 18,
+                        border: "1px solid rgba(0,0,0,0.04)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "rgba(0,0,0,0.015)"
+                      }}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-schistoguard-navy">
-                            {user.firstName} {user.lastName}
-                          </h3>
-                          <p className="text-sm text-gray-600">{getRoleDisplay(user.role)}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        {!isMobile && (
+                          <div style={{
+                            width: 44, height: 44, borderRadius: 14,
+                            background: "linear-gradient(135deg, #357D86 0%, #2a636b 100%)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: POPPINS,
+                            boxShadow: "0 4px 12px rgba(53, 125, 134, 0.15)",
+                            flexShrink: 0
+                          }}>
+                            {item.firstName[0]}{item.lastName[0]}
+                          </div>
+                        )}
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS }}>
+                            {item.firstName} {item.lastName}
+                          </span>
+                          <span style={{ fontSize: 11.5, fontWeight: 500, color: "#64748b", fontFamily: POPPINS, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {getRoleDisplay(item.role)} • {item.organization}
+                          </span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
+
+                      <button
+                        onClick={() => handleDeleteUser(item.id)}
+                        className="transition-all duration-200"
+                        style={{
+                          padding: 8,
+                          borderRadius: 10,
+                          background: "rgba(239, 68, 68, 0.05)",
+                          border: "none",
+                          color: "#ef4444",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.05)"; }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

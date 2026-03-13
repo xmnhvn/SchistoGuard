@@ -8,14 +8,15 @@ import { SitesDirectory } from './components/SitesDirectory';
 import { SiteDetailView } from './components/SiteDetailView';
 import { SettingsPage } from './components/SettingsPage';
 import { AdminSettingsPage } from './components/AdminSettingsPage';
+import { UserProfilePage } from './components/UserProfilePage';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm } from './components/LoginForm';
 import { apiGet, apiPost, apiPut } from './utils/api';
 
-type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings';
+type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings' | 'user-profile';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings' | 'user-profile'>('landing');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,8 @@ export default function App() {
       view === 'alerts' ||
       view === 'reports' ||
       view === 'recipients' ||
-      view === 'admin-settings'
+      view === 'admin-settings' ||
+      view === 'user-profile'
     );
   };
 
@@ -253,6 +255,7 @@ export default function App() {
           <SettingsPage siteName={selectedSiteId || "All Sites"} />
         )}
         {currentView === 'admin-settings' && <AdminSettingsPage user={user} />}
+        {currentView === 'user-profile' && <UserProfilePage user={user} onBack={() => handleNavigate('dashboard')} onLogout={handleLogout} />}
       </NavigationProvider>
     );
   }
