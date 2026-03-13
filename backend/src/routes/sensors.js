@@ -1,3 +1,33 @@
+// API: Get current interval config
+const fs = require('fs');
+const configPath = require('path').resolve(__dirname, '../../interval-config.json');
+
+router.get('/interval-config', (req, res) => {
+  try {
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      res.json({ intervalMs: config.intervalMs });
+    } else {
+      res.json({ intervalMs: 5 * 60 * 1000 }); // default 5 min
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to read interval config' });
+  }
+});
+
+// API: Update interval config
+router.post('/interval-config', (req, res) => {
+  const { intervalMs } = req.body;
+  if (!intervalMs || typeof intervalMs !== 'number' || intervalMs < 1000) {
+    return res.status(400).json({ error: 'Invalid intervalMs' });
+  }
+  try {
+    fs.writeFileSync(configPath, JSON.stringify({ intervalMs }, null, 2), 'utf8');
+    res.json({ success: true, intervalMs });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to write interval config' });
+  }
+});
 
 const router = require("express").Router();
 const classifyWater = require("../utils/classifyWater");
@@ -104,10 +134,27 @@ router.post("/alerts/:id/acknowledge", (req, res) => {
 
 let latestData = null;
 
+// Generalized interval for aggregation (default 5 min, can be loaded from config/db)
+let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
+try {
+  const fs = require('fs');
+  const configPath = require('path').resolve(__dirname, '../../interval-config.json');
+  if (fs.existsSync(configPath)) {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (config && config.intervalMs) AGGREGATE_INTERVAL_MS = config.intervalMs;
+  }
+} catch (e) { /* ignore */ }
+
 let firstLogged = false;
 setInterval(() => {
   if (!latestData) return;
   const now = new Date();
+  // Always log to raw_readings (per event/second)
+  db.run(
+    "INSERT INTO raw_readings (turbidity, temperature, ph, status, timestamp) VALUES (?, ?, ?, ?, ?)",
+    [latestData.turbidity, latestData.temperature, latestData.ph, latestData.status, now.toISOString()]
+  );
+  // Aggregate/copy to readings table based on interval
   db.get("SELECT timestamp FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
     if (err) return;
     let shouldLog = false;
@@ -116,7 +163,7 @@ setInterval(() => {
       firstLogged = true;
     } else if (row) {
       const last = new Date(row.timestamp);
-      if (now.getTime() - last.getTime() >= 5 * 60 * 1000) {
+      if (now.getTime() - last.getTime() >= AGGREGATE_INTERVAL_MS) {
         shouldLog = true;
       }
     }

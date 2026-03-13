@@ -34,6 +34,57 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     password: "",
     confirmPassword: "",
   });
+  // Generalized interval state (ms)
+  // Generalized interval state (value + unit)
+  const [intervalValue, setIntervalValue] = useState(5);
+  const [intervalUnit, setIntervalUnit] = useState("min");
+  const [intervalMsg, setIntervalMsg] = useState("");
+  // Load interval from backend
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/sensors/interval-config");
+        const data = await res.json();
+        let ms = data.intervalMs || 300000;
+        if (ms % 3600000 === 0) {
+          setIntervalValue(ms / 3600000);
+          setIntervalUnit("hr");
+        } else if (ms % 60000 === 0) {
+          setIntervalValue(ms / 60000);
+          setIntervalUnit("min");
+        } else {
+          setIntervalValue(ms / 1000);
+          setIntervalUnit("sec");
+        }
+      } catch {
+        setIntervalValue(5);
+        setIntervalUnit("min");
+      }
+    })();
+  }, []);
+  // Convert to ms for saving
+  const getIntervalMs = () => {
+    if (intervalUnit === "sec") return intervalValue * 1000;
+    if (intervalUnit === "min") return intervalValue * 60000;
+    if (intervalUnit === "hr") return intervalValue * 3600000;
+    return intervalValue;
+  };
+  // Save handler
+  const handleSaveInterval = async () => {
+    setIntervalMsg("");
+    try {
+      const ms = getIntervalMs();
+      const res = await fetch("/api/sensors/interval-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intervalMs: ms })
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setIntervalMsg("Interval updated successfully!");
+    } catch (err: any) {
+      setIntervalMsg("Failed to update interval");
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -144,6 +195,38 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
   return (
     <div className="min-h-screen bg-[#f8fafc]" style={{ padding: 32 }}>
+      {/* Generalized Interval Settings Section */}
+      <div className="glass-card premium-shadow" style={{ borderRadius: 28, padding: 32, marginBottom: 32, border: "1px solid rgba(0,0,0,0.03)", maxWidth: 600 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: "'Poppins', sans-serif", margin: 0 }}>System Interval Setting</h2>
+        <p style={{ fontSize: 13, color: "#64748b", fontFamily: "'Poppins', sans-serif", marginTop: 4 }}>Customize the interval for sensor logging, reporting, alert stream, and SMS sending. All related processes will follow this interval.</p>
+        <div style={{ marginTop: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86" }}>General Interval:</label>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={intervalValue}
+            onChange={e => setIntervalValue(Number(e.target.value))}
+            style={{ padding: 8, borderRadius: 8, border: "1px solid #ddd", width: 80 }}
+          />
+          <select
+            value={intervalUnit}
+            onChange={e => setIntervalUnit(e.target.value)}
+            style={{ padding: 8, borderRadius: 8, border: "1px solid #ddd", width: 90 }}
+          >
+            <option value="sec">seconds</option>
+            <option value="min">minutes</option>
+            <option value="hr">hours</option>
+          </select>
+        </div>
+        <button
+          onClick={handleSaveInterval}
+          style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: "'Poppins', sans-serif", fontSize: 15 }}
+        >
+          Save Interval
+        </button>
+        {intervalMsg && <div style={{ marginTop: 12, color: intervalMsg.includes("success") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
+      </div>
       <style>{`
         @keyframes contentSlideIn {
           from { opacity: 0; transform: translateY(20px); }
