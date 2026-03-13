@@ -27,10 +27,8 @@ router.post('/interval-config', (req, res) => {
     return res.status(400).json({ error: 'Invalid intervalMs' });
   }
   try {
-    // Add lastChanged timestamp
-    const config = { intervalMs, lastChanged: new Date().toISOString() };
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
-    res.json({ success: true, intervalMs, lastChanged: config.lastChanged });
+    fs.writeFileSync(configPath, JSON.stringify({ intervalMs }, null, 2), 'utf8');
+    res.json({ success: true, intervalMs });
   } catch (e) {
     console.error('Failed to write interval config:', e);
     res.status(500).json({ error: 'Failed to write interval config', details: e.message });
@@ -428,23 +426,7 @@ router.get("/latest", (req, res) => {
 });
 
 router.get("/history", (req, res) => {
-  // Read lastChanged from interval-config.json
-  let lastChanged = null;
-  try {
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (config && config.lastChanged) lastChanged = config.lastChanged;
-    }
-  } catch (e) { /* ignore */ }
-
-  let query = "SELECT * FROM readings";
-  let params = [];
-  if (lastChanged) {
-    query += " WHERE timestamp >= ?";
-    params.push(lastChanged);
-  }
-  query += " ORDER BY timestamp DESC LIMIT 288";
-  db.all(query, params, (err, rows) => {
+  db.all("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows.reverse());
   });

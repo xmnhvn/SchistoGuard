@@ -153,32 +153,26 @@ export function Dashboard({
   }, [visible]);
 
   // Load interval config from backend
-  const loadIntervalConfig = async () => {
-    try {
-      const data = await apiGet("/api/sensors/interval-config");
-      let ms = data.intervalMs || 300000;
-      if (ms % 3600000 === 0) {
-        setIntervalValue(ms / 3600000);
-        setIntervalUnit("hr");
-      } else if (ms % 60000 === 0) {
-        setIntervalValue(ms / 60000);
-        setIntervalUnit("min");
-      } else {
-        setIntervalValue(ms / 1000);
-        setIntervalUnit("sec");
-      }
-    } catch {
-      setIntervalValue(5);
-      setIntervalUnit("min");
-    }
-  };
   useEffect(() => {
-    loadIntervalConfig();
-    // Listen for interval update event
-    const handler = () => loadIntervalConfig();
-    window.addEventListener("sg_interval_updated", handler);
-    return () => window.removeEventListener("sg_interval_updated", handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      try {
+        const data = await apiGet("/api/sensors/interval-config");
+        let ms = data.intervalMs || 300000;
+        if (ms % 3600000 === 0) {
+          setIntervalValue(ms / 3600000);
+          setIntervalUnit("hr");
+        } else if (ms % 60000 === 0) {
+          setIntervalValue(ms / 60000);
+          setIntervalUnit("min");
+        } else {
+          setIntervalValue(ms / 1000);
+          setIntervalUnit("sec");
+        }
+      } catch {
+        setIntervalValue(5);
+        setIntervalUnit("min");
+      }
+    })();
   }, []);
 
   // Helper to get interval string for API and label

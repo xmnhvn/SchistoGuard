@@ -75,8 +75,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       const ms = getIntervalMs();
       await apiPost("/api/sensors/interval-config", { intervalMs: ms });
       setIntervalMsg("Interval updated successfully!");
-      // Notify other components to reload interval config
-      window.dispatchEvent(new CustomEvent("sg_interval_updated"));
     } catch (err: any) {
       setIntervalMsg("Failed to update interval");
     }
