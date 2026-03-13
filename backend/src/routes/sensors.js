@@ -1,7 +1,12 @@
-// API: Get current interval config
+const router = require("express").Router();
 const fs = require('fs');
 const configPath = require('path').resolve(__dirname, '../../interval-config.json');
+const classifyWater = require("../utils/classifyWater");
+const { validatePhoneNumber, formatPhoneNumber } = require("../utils/validatePhone");
+const db = require("../db");
+const axios = require("axios");
 
+// API: Get current interval config
 router.get('/interval-config', (req, res) => {
   try {
     if (fs.existsSync(configPath)) {
@@ -28,12 +33,6 @@ router.post('/interval-config', (req, res) => {
     res.status(500).json({ error: 'Failed to write interval config' });
   }
 });
-
-const router = require("express").Router();
-const classifyWater = require("../utils/classifyWater");
-const { validatePhoneNumber, formatPhoneNumber } = require("../utils/validatePhone");
-const db = require("../db");
-const axios = require("axios");
 
 // ESP32 connection for SMS
 const ESP32_HOSTNAME = 'schistoguard-esp32.local';
