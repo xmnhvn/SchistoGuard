@@ -81,11 +81,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     try {
       const ms = getIntervalMs();
       await apiPost("/api/sensors/interval-config", { intervalMs: ms });
-      
+
       // Trigger success animation
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
-      
+
     } catch (err: any) {
       setIntervalMsg("Failed to update interval");
     }
@@ -317,12 +317,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
               </div>
 
-              <form 
+              <form
                 id="create_user_form"
                 name="create_user_form"
                 action="#"
-                onSubmit={handleCreateAccount} 
-                className="space-y-6" 
+                onSubmit={handleCreateAccount}
+                className="space-y-6"
                 autoComplete="on"
               >
                 <div className="grid grid-cols-2 gap-4">
@@ -368,7 +368,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
                 {/* Hidden input to bridge autofill for custom Select role */}
                 <input type="text" name="role_autocomplete" autoComplete="organization-title" style={{ display: "none" }} tabIndex={-1} />
-                
+
                 <div className="space-y-3">
                   <Label htmlFor="designation" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Designation</Label>
                   <Select value={formData.role} onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}>
@@ -532,7 +532,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
               )}
 
-               {!loadingUsers && !usersError && filteredUsers.length > 0 && (
+              {!loadingUsers && !usersError && filteredUsers.length > 0 && (
                 <div className="space-y-4 max-h-[600px] overflow-y-auto px-4 py-2 custom-scrollbar">
                   {filteredUsers.map((item) => (
                     <div
@@ -609,13 +609,13 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         </div>
 
         {/* Generalized Interval Settings Section - Moved to bottom */}
-        <div className="glass-card premium-shadow w-full" style={{ 
-          borderRadius: 28, 
-          padding: 32, 
+        <div className="glass-card premium-shadow w-full" style={{
+          borderRadius: 28,
+          padding: 32,
           marginTop: gap,
           position: "relative",
-          border: "1px solid rgba(0,0,0,0.03)", 
-          animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none" 
+          border: "1px solid rgba(0,0,0,0.03)",
+          animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
         }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Interval Setting</h2>
           <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the interval for sensor logging, reporting, alert stream, and SMS sending. All related processes will follow this interval.</p>
@@ -646,7 +646,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             Save Interval
           </button>
           {intervalMsg && <div style={{ marginTop: 12, color: intervalMsg.includes("success") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
-          
+
           {/* Centered Success Popup */}
           {showSuccess && (
             <div style={{
@@ -696,7 +696,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             </div>
           )}
         </div>
-        
+
         {/* Balanced Bottom Spacer matching other pages */}
         <div style={{ height: gap, width: '100%', flexShrink: 0 }} />
       </div>

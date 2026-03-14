@@ -497,6 +497,61 @@ export function Dashboard({
             >
               Real-time data For monitoring Schistosomiasis Risk
             </p>
+            {/* System Status & Recenter Button for Preview Mode */}
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 8, 
+              marginTop: 10,
+              paddingLeft: isMobile ? 40 : 0,
+              pointerEvents: "auto"
+            }}>
+              <div style={{
+                display: "inline-flex", 
+                alignItems: "center", 
+                gap: 6,
+                background: "rgba(255,255,255,0.92)", 
+                borderRadius: 999,
+                padding: "4px 12px", 
+                fontSize: 11, 
+                fontWeight: 600, 
+                color: "#15803d",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)", 
+                backdropFilter: "blur(4px)",
+                fontFamily: POPPINS
+              }}>
+                <span style={{
+                  width: 7, 
+                  height: 7, 
+                  borderRadius: "50%",
+                  background: (backendOk && dataOk) ? "#22c55e" : "#9ca3af",
+                  display: "inline-block",
+                  animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
+                  "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
+                } as any} />
+                {(backendOk && dataOk) ? "System Operational" : "System Down"}
+              </div>
+              
+              <button
+                onClick={() => mapRef.current?.resetView()}
+                style={{
+                  width: 26, 
+                  height: 26, 
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.92)", 
+                  border: "none", 
+                  cursor: "pointer",
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.12)", 
+                  backdropFilter: "blur(4px)",
+                }}
+                title="Reset map position"
+              >
+                <LocateFixed size={13} color="#357D86" strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
 
           <div style={{ flex: 1 }} />
