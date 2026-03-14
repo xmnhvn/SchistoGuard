@@ -5,7 +5,13 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { apiPost, apiGet, apiCall } from "../utils/api";
-import { Trash2 } from "lucide-react";
+import { Trash2, MoreHorizontal, Search } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 let _adminSettingsFirstLoadDone = false;
 
@@ -85,6 +91,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -94,6 +101,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   }, []);
 
   const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const isWeb = windowWidth >= 1100;
+
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const gap = isMobile ? 16 : isTablet ? 18 : 24;
 
   const fetchUsers = async () => {
     try {
@@ -185,14 +197,30 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     return role === "bhw" ? "Barangay Health Worker" : "LGU Officer";
   };
 
+  const filteredUsers = users.filter(u =>
+    `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.organization.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const POPPINS = "'Poppins', sans-serif";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]" style={{ padding: 32 }}>
+    <div style={{
+      fontFamily: POPPINS,
+      height: "100%",
+      overflowY: "auto",
+      background: "#f5f7f9",
+      padding: pad,
+      scrollbarWidth: "none",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "stretch",
+    }}>
       {/* Generalized Interval Settings Section */}
-      <div className="glass-card premium-shadow" style={{ borderRadius: 28, padding: 32, marginBottom: 32, border: "1px solid rgba(0,0,0,0.03)", maxWidth: 600 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: "'Poppins', sans-serif", margin: 0 }}>System Interval Setting</h2>
-        <p style={{ fontSize: 13, color: "#64748b", fontFamily: "'Poppins', sans-serif", marginTop: 4 }}>Customize the interval for sensor logging, reporting, alert stream, and SMS sending. All related processes will follow this interval.</p>
+      <div className="glass-card premium-shadow" style={{ borderRadius: 28, padding: 32, marginBottom: 32, border: "1px solid rgba(0,0,0,0.03)", maxWidth: 600, animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none" }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Interval Setting</h2>
+        <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the interval for sensor logging, reporting, alert stream, and SMS sending. All related processes will follow this interval.</p>
         <div style={{ marginTop: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
           <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86" }}>General Interval:</label>
           <input
@@ -215,7 +243,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         </div>
         <button
           onClick={handleSaveInterval}
-          style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: "'Poppins', sans-serif", fontSize: 15 }}
+          style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
         >
           Save Interval
         </button>
@@ -223,7 +251,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       </div>
       <style>{`
         @keyframes contentSlideIn {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(24px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .premium-shadow {
@@ -240,6 +268,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           border: 1px solid rgba(0,0,0,0.03) !important;
           border-radius: 14px !important;
           padding: 12px 16px !important;
+          height: 48px !important;
           font-family: ${POPPINS} !important;
           font-size: 14px !important;
           transition: all 0.2s ease !important;
@@ -259,38 +288,44 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           background: rgba(0,0,0,0.1);
           border-radius: 10px;
         }
+        .user-card-item {
+          transition: all 0.2s ease !important;
+        }
       `}</style>
 
-      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col" style={{ animation: animate ? 'contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both' : 'none' }}>
-        {/* Standardized Header Section */}
+      <div className={`mx-auto flex h-full min-h-0 flex-col ${isMobile ? 'w-full' : 'w-full max-w-[1700px] pb-6'}`}>
+        {/* Synchronized Header Section */}
         <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
           marginBottom: 32,
+          animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
         }}>
-          <h1 style={{
-            fontSize: 26,
-            fontWeight: 700,
-            color: "#1a2a3a",
-            margin: 0,
-            fontFamily: POPPINS,
-            letterSpacing: "-0.01em"
-          }}>
-            Admin Settings
-          </h1>
-          <p style={{
-            fontSize: 12.5,
-            color: "#7b8a9a",
-            margin: "4px 0 0",
-            fontFamily: POPPINS,
-            fontWeight: 400
-          }}>
-            Manage system users and administrative permissions
-          </p>
+          <div>
+            <h1 style={{
+              fontSize: isMobile ? 20 : 26,
+              fontWeight: 700,
+              color: "#1a2a3a",
+              margin: 0,
+              fontFamily: POPPINS,
+              letterSpacing: "-0.01em"
+            }}>
+              Admin Settings
+            </h1>
+            <p style={{
+              fontSize: 12.5,
+              color: "#7b8a9a",
+              margin: "4px 0 0",
+              fontFamily: POPPINS,
+              fontWeight: 400
+            }}>
+              Manage system users and administrative permissions
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div
+          className="grid grid-cols-1 lg:grid-cols-2"
+          style={{ gap: gap }}
+        >
           {/* Left Column - Create Account Form */}
           <div style={{
             animation: animate ? "contentSlideIn 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
@@ -301,27 +336,38 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               border: "1px solid rgba(0,0,0,0.03)",
               minHeight: "100%"
             }}>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
-                <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
+              <div style={{ marginBottom: 28 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
+                <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
               </div>
 
-              <form onSubmit={handleCreateAccount} className="space-y-5">
+              <form 
+                id="create_user_form"
+                name="create_user_form"
+                action="#"
+                onSubmit={handleCreateAccount} 
+                className="space-y-6" 
+                autoComplete="on"
+              >
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>First Name</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="firstName" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>First Name</Label>
                     <Input
                       id="firstName"
+                      name="firstName"
+                      autoComplete="given-name"
                       className="custom-input"
                       value={formData.firstName}
                       onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Last Name</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="lastName" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Last Name</Label>
                     <Input
                       id="lastName"
+                      name="lastName"
+                      autoComplete="family-name"
                       className="custom-input"
                       value={formData.lastName}
                       onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
@@ -330,10 +376,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Email Address</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="email" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Email Address</Label>
                   <Input
                     id="email"
+                    name="email"
+                    autoComplete="email"
                     type="email"
                     className="custom-input"
                     value={formData.email}
@@ -342,15 +390,18 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="designation" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Designation</Label>
+                {/* Hidden input to bridge autofill for custom Select role */}
+                <input type="text" name="role_autocomplete" autoComplete="organization-title" style={{ display: "none" }} tabIndex={-1} />
+                
+                <div className="space-y-3">
+                  <Label htmlFor="designation" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Designation</Label>
                   <Select value={formData.role} onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}>
-                    <SelectTrigger id="designation" style={{
+                    <SelectTrigger id="designation" name="designation" style={{
                       background: "rgba(0,0,0,0.02)",
                       border: "1px solid rgba(0,0,0,0.03)",
                       borderRadius: 14,
                       padding: "12px 16px",
-                      height: "auto",
+                      height: 48,
                       fontFamily: POPPINS
                     }}>
                       <SelectValue />
@@ -362,10 +413,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="organization" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Organization</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="organization" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Organization</Label>
                   <Input
                     id="organization"
+                    name="organization"
+                    autoComplete="organization"
                     className="custom-input"
                     value={formData.organization}
                     onChange={(e) => setFormData((prev) => ({ ...prev, organization: e.target.value }))}
@@ -374,10 +427,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Password</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="password" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Password</Label>
                     <Input
                       id="password"
+                      name="password"
+                      autoComplete="new-password"
                       type="password"
                       className="custom-input"
                       value={formData.password}
@@ -385,10 +440,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: POPPINS }}>Confirm</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="confirmPassword" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Confirm</Label>
                     <Input
                       id="confirmPassword"
+                      name="confirmPassword"
+                      autoComplete="new-password"
                       type="password"
                       className="custom-input"
                       value={formData.confirmPassword}
@@ -430,11 +487,53 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               border: "1px solid rgba(0,0,0,0.03)",
               minHeight: "100%"
             }}>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>Existing User Accounts</h2>
-                <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>
-                  {users.length} user{users.length !== 1 ? "s" : ""} registered
-                </p>
+              <div style={{ marginBottom: 28 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Existing User Accounts</h2>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 4 }}>
+                  <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS, margin: 0 }}>
+                    {users.length} user{users.length !== 1 ? "s" : ""} registered
+                  </p>
+                  {searchQuery && (
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "#357D86", fontFamily: POPPINS, margin: 0 }}>
+                      Found {filteredUsers.length} match{filteredUsers.length !== 1 ? "es" : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Search Bar Implementation */}
+              <div style={{ position: "relative", marginBottom: 20 }}>
+                <Search
+                  size={16}
+                  style={{
+                    position: "absolute",
+                    left: 14,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#94a3b8"
+                  }}
+                />
+                <input
+                  id="user-list-search"
+                  name="userListSearch"
+                  type="text"
+                  placeholder="Search by name, email or org..."
+                  autoComplete="off"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px 10px 40px",
+                    borderRadius: 14,
+                    border: "1px solid rgba(0,0,0,0.05)",
+                    background: "rgba(0,0,0,0.02)",
+                    fontSize: 13,
+                    fontFamily: POPPINS,
+                    transition: "all 0.2s ease",
+                    outline: "none"
+                  }}
+                  className="focus:ring-2 focus:ring-[#357D86]/10 focus:border-[#357D86]/40"
+                />
               </div>
 
               {usersError && (
@@ -449,18 +548,20 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
               )}
 
-              {!loadingUsers && !usersError && users.length === 0 && (
+              {!loadingUsers && !usersError && filteredUsers.length === 0 && (
                 <div style={{ padding: 40, textAlign: "center", background: "rgba(0,0,0,0.01)", borderRadius: 24, border: "2px dashed rgba(0,0,0,0.05)" }}>
-                  <p style={{ color: "#94a3b8", fontFamily: POPPINS, fontSize: 14 }}>No users found in the system.</p>
+                  <p style={{ color: "#94a3b8", fontFamily: POPPINS, fontSize: 14 }}>
+                    {searchQuery ? "No users matching your search." : "No users found in the system."}
+                  </p>
                 </div>
               )}
 
-              {!loadingUsers && !usersError && users.length > 0 && (
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                  {users.map((item) => (
+               {!loadingUsers && !usersError && filteredUsers.length > 0 && (
+                <div className="space-y-4 max-h-[600px] overflow-y-auto px-4 py-2 custom-scrollbar">
+                  {filteredUsers.map((item) => (
                     <div
                       key={item.id}
-                      className="transition-all duration-300 hover:shadow-md"
+                      className="group user-card-item"
                       style={{
                         padding: "16px 20px",
                         borderRadius: 18,
@@ -468,10 +569,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        background: "rgba(0,0,0,0.015)"
+                        background: "rgba(0,0,0,0.015)",
+                        cursor: "pointer",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
                         {!isMobile && (
                           <div style={{
                             width: 44, height: 44, borderRadius: 14,
@@ -494,22 +596,34 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => handleDeleteUser(item.id)}
-                        className="transition-all duration-200"
-                        style={{
-                          padding: 8,
-                          borderRadius: 10,
-                          background: "rgba(239, 68, 68, 0.05)",
-                          border: "none",
-                          color: "#ef4444",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.05)"; }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="transition-all duration-200"
+                            style={{
+                              padding: 8,
+                              borderRadius: 10,
+                              background: "rgba(0, 0, 0, 0.03)",
+                              border: "none",
+                              color: "#64748b",
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0, 0, 0, 0.06)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0, 0, 0, 0.03)"; }}
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" style={{ fontFamily: POPPINS, borderRadius: 12 }}>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteUser(item.id)}
+                            className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete User</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>

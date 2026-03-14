@@ -157,6 +157,7 @@ export function NavigationHeader({
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Load profile photo from localStorage and listen for changes
   useEffect(() => {
@@ -187,6 +188,14 @@ export function NavigationHeader({
     window.addEventListener("alertsUnreadCount", handler);
     return () => window.removeEventListener("alertsUnreadCount", handler);
   }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      setIsProfileOpen(false);
+    };
+    window.addEventListener("sg_closeAllPopups", handler);
+    return () => window.removeEventListener("sg_closeAllPopups", handler);
+  }, []);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const getPageTitle = (view?: string) => {
@@ -197,7 +206,7 @@ export function NavigationHeader({
       case "reports": return { title: "Reports", subtitle: "Water Quality Insights" };
       case "site-details": return { title: "Site Details", subtitle: "Detailed Site Information" };
       case "recipients": return { title: "Recipients", subtitle: "Manage alert recipients" };
-      case "admin-settings": return { title: "Admin Settings", subtitle: "Create and manage user accounts" };
+      case "admin-settings": return { title: "Admin Settings", subtitle: "Manage system users and administrative permissions" };
       case "user-profile": return { title: "My Profile", subtitle: "Manage your account information" };
       default: return { title: "Dashboard", subtitle: "Water Quality Monitoring Overview" };
     }
@@ -361,7 +370,8 @@ export function NavigationHeader({
           </div>
         </button>
 
-        <DropdownMenu onOpenChange={(open) => {
+        <DropdownMenu open={isProfileOpen} onOpenChange={(open) => {
+          setIsProfileOpen(open);
           if (open) {
             window.dispatchEvent(new CustomEvent("sg_closeAlerts"));
           }
