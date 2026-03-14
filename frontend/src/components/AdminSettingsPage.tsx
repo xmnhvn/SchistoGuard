@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { apiPost, apiGet, apiCall } from "../utils/api";
-import { Trash2, MoreHorizontal, Search } from "lucide-react";
+import { Trash2, MoreHorizontal, Search, CheckCircle2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +45,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [intervalMsg, setIntervalMsg] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   // Load interval from backend
   useEffect(() => {
     (async () => {
@@ -80,7 +81,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     try {
       const ms = getIntervalMs();
       await apiPost("/api/sensors/interval-config", { intervalMs: ms });
-      setIntervalMsg("Interval updated successfully!");
+      
+      // Trigger success animation
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+      
     } catch (err: any) {
       setIntervalMsg("Failed to update interval");
     }
@@ -208,47 +213,18 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   return (
     <div style={{
       fontFamily: POPPINS,
-      height: "100%",
+      minHeight: "100%",
       overflowY: "auto",
       background: "#f5f7f9",
-      padding: pad,
+      paddingTop: pad,
+      paddingLeft: pad,
+      paddingRight: pad,
+      paddingBottom: 0,
       scrollbarWidth: "none",
       display: "flex",
       flexDirection: "column",
       alignItems: "stretch",
     }}>
-      {/* Generalized Interval Settings Section */}
-      <div className="glass-card premium-shadow" style={{ borderRadius: 28, padding: 32, marginBottom: 32, border: "1px solid rgba(0,0,0,0.03)", maxWidth: 600, animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Interval Setting</h2>
-        <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the interval for sensor logging, reporting, alert stream, and SMS sending. All related processes will follow this interval.</p>
-        <div style={{ marginTop: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86" }}>General Interval:</label>
-          <input
-            type="number"
-            min={1}
-            step={1}
-            value={intervalValue}
-            onChange={e => setIntervalValue(Number(e.target.value))}
-            style={{ padding: 8, borderRadius: 8, border: "1px solid #ddd", width: 80 }}
-          />
-          <select
-            value={intervalUnit}
-            onChange={e => setIntervalUnit(e.target.value)}
-            style={{ padding: 8, borderRadius: 8, border: "1px solid #ddd", width: 90 }}
-          >
-            <option value="sec">seconds</option>
-            <option value="min">minutes</option>
-            <option value="hr">hours</option>
-          </select>
-        </div>
-        <button
-          onClick={handleSaveInterval}
-          style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
-        >
-          Save Interval
-        </button>
-        {intervalMsg && <div style={{ marginTop: 12, color: intervalMsg.includes("success") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
-      </div>
       <style>{`
         @keyframes contentSlideIn {
           from { opacity: 0; transform: translateY(24px); }
@@ -293,7 +269,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         }
       `}</style>
 
-      <div className={`mx-auto flex h-full min-h-0 flex-col ${isMobile ? 'w-full' : 'w-full max-w-[1700px] pb-6'}`}>
+      <div className={`mx-auto flex h-full min-h-0 flex-col ${isMobile ? 'w-full' : 'w-full max-w-[1700px]'}`}>
         {/* Synchronized Header Section */}
         <div style={{
           marginBottom: 32,
@@ -631,6 +607,98 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             </div>
           </div>
         </div>
+
+        {/* Generalized Interval Settings Section - Moved to bottom */}
+        <div className="glass-card premium-shadow w-full" style={{ 
+          borderRadius: 28, 
+          padding: 32, 
+          marginTop: gap,
+          position: "relative",
+          border: "1px solid rgba(0,0,0,0.03)", 
+          animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none" 
+        }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Interval Setting</h2>
+          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the interval for sensor logging, reporting, alert stream, and SMS sending. All related processes will follow this interval.</p>
+          <div style={{ marginTop: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86" }}>General Interval:</label>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={intervalValue}
+              onChange={e => setIntervalValue(Number(e.target.value))}
+              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", width: 70, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS }}
+            />
+            <select
+              value={intervalUnit}
+              onChange={e => setIntervalUnit(e.target.value)}
+              style={{ padding: "0 8px", borderRadius: 10, border: "1px solid #ddd", width: 110, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
+            >
+              <option value="sec">seconds</option>
+              <option value="min">minutes</option>
+              <option value="hr">hours</option>
+            </select>
+          </div>
+          <button
+            onClick={handleSaveInterval}
+            style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
+          >
+            Save Interval
+          </button>
+          {intervalMsg && <div style={{ marginTop: 12, color: intervalMsg.includes("success") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
+          
+          {/* Centered Success Popup */}
+          {showSuccess && (
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 50,
+              pointerEvents: "none"
+            }}>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.95)",
+                backdropFilter: "blur(8px)",
+                padding: "24px",
+                borderRadius: "24px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 12,
+                pointerEvents: "auto",
+                boxShadow: "0 20px 40px -10px rgba(53, 125, 134, 0.2)",
+                border: "1px solid rgba(53, 125, 134, 0.1)",
+                animation: "contentSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both"
+              }}>
+                <div style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: "50%",
+                  background: "#f0fdf4",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#15803d"
+                }}>
+                  <CheckCircle2 size={32} />
+                </div>
+                <span style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#1e293b",
+                  fontFamily: POPPINS
+                }}>
+                  Interval Updated
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Balanced Bottom Spacer matching other pages */}
+        <div style={{ height: gap, width: '100%', flexShrink: 0 }} />
       </div>
     </div>
   );
