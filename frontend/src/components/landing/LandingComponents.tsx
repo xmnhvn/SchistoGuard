@@ -7,6 +7,9 @@ interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   ariaLabel?: string;
+  style?: React.CSSProperties;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 export const CTAButton: React.FC<ButtonProps> = ({
@@ -15,13 +18,16 @@ export const CTAButton: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   className = '',
-  ariaLabel
+  ariaLabel,
+  style,
+  onMouseEnter,
+  onMouseLeave
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-schistoguard-teal';
+  const baseClasses = 'inline-flex items-center justify-center rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-schistoguard-teal font-poppins';
 
   const variantClasses = {
-    primary: 'bg-schistoguard-teal text-white hover:bg-opacity-90 hover:scale-105 hover:shadow-lg',
-    secondary: 'border-2 border-schistoguard-teal text-schistoguard-teal bg-white hover:bg-schistoguard-teal hover:text-white hover:scale-105 hover:shadow-lg',
+    primary: 'bg-schistoguard-teal text-white shadow-md hover:bg-opacity-90 hover:scale-105 hover:shadow-lg',
+    secondary: 'border-2 border-schistoguard-teal text-schistoguard-teal bg-white shadow-md hover:bg-schistoguard-teal hover:text-white hover:scale-105 hover:shadow-lg',
     tertiary: 'text-schistoguard-teal hover:text-schistoguard-navy hover:underline'
   };
 
@@ -36,6 +42,9 @@ export const CTAButton: React.FC<ButtonProps> = ({
       onClick={onClick}
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       aria-label={ariaLabel}
+      style={style}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {children}
     </button>
@@ -79,13 +88,14 @@ export const StatusBadge: React.FC<BadgeProps> = ({ children, variant, size = 'm
 interface TrustBadgeProps {
   icon: React.ReactNode;
   label: string;
+  small?: boolean;
 }
 
-export const TrustBadge: React.FC<TrustBadgeProps> = ({ icon, label }) => {
+export const TrustBadge: React.FC<TrustBadgeProps> = ({ icon, label, small }) => {
   return (
-    <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white bg-opacity-90 rounded-full text-sm text-gray-700 border border-gray-200">
-      {icon}
-      <span>{label}</span>
+    <div className={`inline-flex items-center ${small ? 'gap-2 px-3 py-1 text-xs shadow-sm' : 'gap-2.5 px-4 py-1.5 text-sm shadow-lg'} bg-white rounded-full font-light text-gray-500 border border-gray-100`}>
+      <div className="flex-shrink-0 flex items-center">{icon}</div>
+      <span className="whitespace-nowrap">{label}</span>
     </div>
   );
 };
@@ -112,7 +122,7 @@ export const AlertOverlay: React.FC<AlertOverlayProps> = ({
   };
 
   return (
-    <div className={`rounded-lg border-l-4 p-4 shadow-lg bg-white ${levelColors[level]} animate-pulse`}>
+    <div className={`rounded-lg border-l-4 p-4 shadow-lg bg-white ${levelColors[level]}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-1">
@@ -199,7 +209,7 @@ export const SiteSpotCard: React.FC<SiteSpotProps> = ({
       </div>
 
       <div className="h-6 bg-gray-100 rounded mb-3 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200 to-transparent transform -skew-x-12 animate-pulse"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200 to-transparent transform -skew-x-12"></div>
       </div>
 
       <div className="flex justify-between items-center">
@@ -238,8 +248,8 @@ export const AlertsQuickviewModal: React.FC<AlertsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto border border-white/40">
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="font-medium">Recent Alerts</h3>
           <button

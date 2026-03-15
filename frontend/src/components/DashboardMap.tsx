@@ -56,65 +56,68 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     const center = sitesToShow[0];
 
     // Mobile/tablet: the map container fills the ENTIRE screen (inset:0).
-    // desiredPinY = target Y position of the pin from the content top (px).
-    // Calibrated per device width so the pin sits in the right spot on each phone.
-    const NAV_H = 76;
-    const contentH = window.innerHeight - NAV_H;
-    const mapCenterY = contentH / 2;          // map anchor point in screen px
-    const w = window.innerWidth;
-    const desiredPinY =
-      w <= 393 ? 280 :   // iPhone 14 Pro  (393×852)
-        w <= 430 ? 325 :   // iPhone 14 Pro Max (430×932)
-          w <= 480 ? 370 :   // Pixel 7 Pro (480×1040)
-            w <= 829 ? 420 :   // iPad Air 5 (829×1170)  ← adjust this number
-              400;               // other tablets
-    // tablet — unchanged
-    const pixelDelta = mapCenterY - desiredPinY;
-    // meters/pixel at zoom 13, latitude ~11°  (WebMercator formula)
-    const mPerPx = (156543.03392 * Math.cos(center.lat * Math.PI / 180)) / (1 << 13);
-    const latOffset = (pixelDelta * mPerPx) / 111000;
+    const updateMapCenter = () => {
+      const NAV_H = 76;
+      const contentH = window.innerHeight - NAV_H;
+      const mapCenterY = contentH / 2;
+      const w = window.innerWidth;
+      
+      const desiredPinY =
+        w <= 393 ? 280 :   // iPhone 14 Pro
+          w <= 430 ? 325 :   // iPhone 14 Pro Max
+            w <= 480 ? 370 :   // Pixel 7 Pro
+              w <= 829 ? 420 :   // iPad Air 5
+                400;
 
-    const mapCenter: [number, number] = mobileMode
-      ? [center.lng, center.lat - latOffset]
-      : [center.lng - 0.060, center.lat];    // desktop: original westward offset
+      const pixelDelta = mapCenterY - desiredPinY;
+      const mPerPx = (156543.03392 * Math.cos(center.lat * Math.PI / 180)) / (1 << 13);
+      const latOffset = (pixelDelta * mPerPx) / 111000;
 
-    const mapZoom = mobileMode ? 13 : 12;
-    defaultView.current = { center: mapCenter, zoom: mapZoom };
+      const mapCenter: [number, number] = mobileMode
+        ? [center.lng, center.lat - latOffset]
+        : [center.lng - 0.060, center.lat];
 
-    if (!map.current) {
-      map.current = new maplibregl.Map({
-        container: mapContainer.current,
-        style: 'https://tiles.openfreemap.org/styles/positron',
-        center: mapCenter,
-        zoom: mapZoom,
-        attributionControl: false,
-        interactive: interactive !== undefined ? interactive : !mobileMode,
-      });
-    } else if (mobileMode) {
-      // Hot-reload / re-render: update center/zoom on the existing map instance
-      map.current.setCenter(mapCenter);
-      map.current.setZoom(13);
-      // Explicitly enforce interactivity so it's correct even on hot-reload
-      const isInteractive = interactive !== undefined ? interactive : false;
-      const handlers = [
-        map.current.dragPan,
-        map.current.scrollZoom,
-        map.current.boxZoom,
-        map.current.dragRotate,
-        map.current.keyboard,
-        map.current.doubleClickZoom,
-        map.current.touchZoomRotate,
-      ] as Array<{ enable: () => void; disable: () => void }>;
-      handlers.forEach(h => isInteractive ? h.enable() : h.disable());
-    }
+      const mapZoom = mobileMode ? 13 : 12;
+      defaultView.current = { center: mapCenter, zoom: mapZoom };
+
+      if (!map.current) {
+        map.current = new maplibregl.Map({
+          container: mapContainer.current!,
+          style: 'https://tiles.openfreemap.org/styles/positron',
+          center: mapCenter,
+          zoom: mapZoom,
+          attributionControl: false,
+          interactive: interactive !== undefined ? interactive : !mobileMode,
+        });
+      } else {
+        map.current.jumpTo({ center: mapCenter, zoom: mapZoom });
+        
+        // Update handlers if needed
+        const isInteractive = interactive !== undefined ? interactive : !mobileMode;
+        const handlers = [
+          map.current.dragPan,
+          map.current.scrollZoom,
+          map.current.boxZoom,
+          map.current.dragRotate,
+          map.current.keyboard,
+          map.current.doubleClickZoom,
+          map.current.touchZoomRotate,
+        ] as Array<{ enable: () => void; disable: () => void }>;
+        handlers.forEach(h => isInteractive ? h.enable() : h.disable());
+      }
+    };
+
+    updateMapCenter();
 
     // Remove old markers
     markers.current.forEach(m => m.remove());
     markers.current = [];
 
     const addMarkers = () => {
+      if (!map.current) return;
       sitesToShow.forEach((site) => {
         const el = document.createElement('div');
+        el.className = 'site-marker-container'; // Better for CSS selection
         el.innerHTML = `
           <div class="site-marker">
             <div class="site-marker__pulse"></div>
@@ -130,21 +133,33 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       });
     };
 
-    if (map.current.isStyleLoaded()) {
+    if (map.current!.isStyleLoaded()) {
       addMarkers();
       onMapReady?.();
     } else {
-      map.current.once('load', () => {
+      map.current!.once('load', () => {
         addMarkers();
         onMapReady?.();
       });
     }
 
+    // Performance optimization: resize listener with throttle/debounce equivalent or simple re-calc
+    const handleResize = () => {
+      if (map.current) {
+        map.current.resize();
+        if (mobileMode) updateMapCenter();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
     return () => {
+      window.removeEventListener('resize', handleResize);
       markers.current.forEach(m => m.remove());
       markers.current = [];
     };
-  }, [sites, mobileMode]);
+  }, [sites, mobileMode, interactive]);
+
 
   // Destroy map on unmount
   useEffect(() => {
