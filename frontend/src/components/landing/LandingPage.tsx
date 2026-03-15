@@ -216,22 +216,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2 animate-fade-up animate-delay-300">
+                <div 
+                  className="flex flex-wrap animate-fade-up animate-delay-300"
+                  style={{ gap: '24px' }}
+                >
                   <TrustBadge
                     icon={
-                      <Shield className="w-3 h-3 text-schistoguard-green" />
+                      <Shield className="w-4 h-4 text-schistoguard-green" />
                     }
                     label="Real-time monitoring"
                   />
                   <TrustBadge
                     icon={
-                      <SensorIcon className="w-3 h-3 text-schistoguard-teal" />
+                      <SensorIcon className="w-4 h-4 text-schistoguard-teal" />
                     }
                     label="Multiple locations"
                   />
                   <TrustBadge
                     icon={
-                      <Users className="w-3 h-3 text-schistoguard-coral" />
+                      <Users className="w-4 h-4 text-schistoguard-coral" />
                     }
                     label="Public health focus"
                   />

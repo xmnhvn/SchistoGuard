@@ -93,7 +93,10 @@ interface TrustBadgeProps {
 
 export const TrustBadge: React.FC<TrustBadgeProps> = ({ icon, label, small }) => {
   return (
-    <div className={`inline-flex items-center ${small ? 'gap-2 px-3 py-1 text-xs shadow-sm' : 'gap-2.5 px-4 py-1.5 text-sm shadow-lg'} bg-white rounded-full font-light text-gray-500 border border-gray-100`}>
+    <div 
+      className={`inline-flex items-center ${small ? 'px-3 py-1 text-xs shadow-sm' : 'px-4 py-1.5 text-sm shadow-lg'} bg-white rounded-full font-light text-gray-500 border border-gray-100`}
+      style={{ gap: '10px' }}
+    >
       <div className="flex-shrink-0 flex items-center">{icon}</div>
       <span className="whitespace-nowrap">{label}</span>
     </div>
