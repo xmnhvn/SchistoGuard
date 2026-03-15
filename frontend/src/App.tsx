@@ -151,12 +151,37 @@ export default function App() {
         // Error - start at landing page
         setCurrentView('landing');
       }
-      setLoading(false);
+
+      // Add artificial delay to make the loading screen stay longer
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
+      
     })();
   }, []);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="fixed inset-0 h-[100dvh] w-full flex items-center justify-center bg-white z-[100]">
+        <div className="flex items-center space-x-3 animate-pulse">
+           <img
+              src="/schistoguard.png"
+              alt="SchistoGuard Logo"
+              style={{ width: 48, height: 48, objectFit: "contain" }}
+            />
+            <h1
+              style={{
+                fontFamily: "Poppins, sans-serif",
+                color: "#357D86",
+                fontWeight: 600,
+                fontSize: 32,
+              }}
+            >
+              SchistoGuard
+            </h1>
+        </div>
+      </div>
+    );
   }
 
   if (currentView === 'landing') {

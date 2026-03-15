@@ -33,6 +33,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   );
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [isMonitoringHovered, setIsMonitoringHovered] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   React.useEffect(() => {
     const check = () => {
@@ -85,13 +86,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden bg-white">
-      {/* Map Background with Teal Gradient Overlay */}
-      <div className="fixed inset-0 z-0">
-        <DashboardMap
-          interactive={false}
-          mobileMode={isMobileOrTablet}
-        />
-        {/* Exact teal gradient overlay from the Dashboard preview */}
+      {/* Solid White Background container */}
+      <div className="fixed inset-0 z-0 bg-white">
+        
+        {/* Map loads behind gradient, fades in when ready */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: "opacity 0.8s ease" }}>
+          <DashboardMap
+            interactive={false}
+            mobileMode={isMobileOrTablet}
+            onMapReady={() => setMapLoaded(true)}
+          />
+        </div>
+
+        {/* Exact teal gradient overlay from the Dashboard preview - ALWAYS ON top */}
         <div
           className="absolute inset-0 backdrop-blur-[1px]"
           style={{
@@ -175,9 +182,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="hidden lg:block w-full py-8">
           <div className="w-full" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
             <div className="grid lg:grid-cols-2 gap-10 items-center">
-              <div className="space-y-6 max-w-4xl py-8" style={{ position: 'relative', top: '-20px' }}>
+              <div className="space-y-6 max-w-4xl py-8 animate-fade-up" style={{ position: 'relative', top: '-20px' }}>
                 <div className="space-y-4">
                   <h2
+                    className="animate-fade-up animate-delay-100"
                     style={{
                       color: '#FFFFFF',
                       textShadow: '0 2px 10px rgba(0,0,0,0.3)',
@@ -192,7 +200,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </h2>
 
                   <p
-                    className="leading-relaxed"
+                    className="leading-relaxed animate-fade-up animate-delay-200"
                     style={{
                       color: 'rgba(255,255,255,0.95)',
                       textShadow: '0 1px 8px rgba(0,0,0,0.35)',
@@ -204,7 +212,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 animate-fade-up animate-delay-300">
                   <TrustBadge
                     icon={
                       <Shield className="w-3 h-3 text-schistoguard-green" />
@@ -224,7 +232,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     label="Public health focus"
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3" style={{ marginTop: '100px' }}>
+                <div className="flex flex-col sm:flex-row gap-3 animate-fade-up animate-delay-400" style={{ marginTop: '100px' }}>
                   <CTAButton
                     variant="primary"
                     size="md"
@@ -232,7 +240,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     ariaLabel="Live updates"
                     className="group transition-transform duration-500 transform active:scale-95"
                     style={{
-                      background: 'linear-gradient(135deg, #b9e7eeff 0%, #55becbff 45%, #0f8691ff 100%)',
+                      background: 'linear-gradient(135deg, #87b1b7ff 0%, #4a8b94ff 45%, #145e64ff 100%)',
                       backdropFilter: 'blur(10px)',
                       WebkitBackdropFilter: 'blur(10px)',
                       color: '#ffffffff',
@@ -283,8 +291,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           }}
         >
           <div className="text-center p-6 flex flex-col items-center">
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mb-6 animate-fade-up">
               <h2
+                className="animate-fade-up animate-delay-100"
                 style={{
                   color: '#FFFFFF',
                   textShadow: '0 2px 10px rgba(0,0,0,0.3)',
@@ -299,7 +308,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </h2>
 
               <p
-                className="leading-relaxed max-w-2xl mx-auto"
+                className="leading-relaxed max-w-2xl mx-auto animate-fade-up animate-delay-200"
                 style={{
                   color: 'rgba(255,255,255,0.95)',
                   textShadow: '0 1px 8px rgba(0,0,0,0.35)',
@@ -311,7 +320,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 sites to help prevent schistosomiasis.
               </p>
             </div>
-            <div className="flex flex-wrap justify-center gap-1.5 mb-10">
+            <div className="flex flex-wrap justify-center gap-1.5 mb-10 animate-fade-up animate-delay-300">
               <TrustBadge
                 icon={
                   <Shield className="w-3 h-3 text-schistoguard-green" />
@@ -334,7 +343,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 small
               />
             </div>
-            <div className="flex justify-center w-full mx-auto" style={{ marginTop: '80px' }}>
+            <div className="flex justify-center w-full mx-auto animate-fade-up animate-delay-400" style={{ marginTop: '80px' }}>
               <CTAButton
                 variant="primary"
                 size="md"

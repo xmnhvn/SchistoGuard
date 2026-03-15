@@ -135,10 +135,17 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
     if (map.current!.isStyleLoaded()) {
       addMarkers();
-      onMapReady?.();
     } else {
       map.current!.once('load', () => {
         addMarkers();
+      });
+    }
+
+    // Wait for the map to become completely idle (all tiles loaded and painted)
+    if (map.current!.loaded()) {
+      onMapReady?.();
+    } else {
+      map.current!.once('idle', () => {
         onMapReady?.();
       });
     }
