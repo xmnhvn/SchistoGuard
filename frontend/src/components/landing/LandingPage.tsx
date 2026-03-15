@@ -90,11 +90,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div className="fixed inset-0 z-0 bg-white">
         
         {/* Map loads behind gradient, fades in when ready */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: "opacity 0.8s ease" }}>
+        <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${mapLoaded ? 'opacity-100' : 'opacity-0'}`}>
           <DashboardMap
             interactive={false}
             mobileMode={isMobileOrTablet}
-            onMapReady={() => setMapLoaded(true)}
+            onMapReady={() => {
+            // Wait a full 2 seconds after the map is idle to give it extra time 
+            // for all tiles to render completely before fading the map in.
+            setTimeout(() => setMapLoaded(true), 2000);
+          }}
           />
         </div>
 
