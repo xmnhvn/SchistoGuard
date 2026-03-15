@@ -1,23 +1,60 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   MapPin,
   Shield,
   Users,
   ArrowRight,
   Activity,
+  ChevronLeft,
+  LocateFixed,
 } from "lucide-react";
 import { DashboardMap } from "../DashboardMap";
+import type { DashboardMapHandle } from "../DashboardMap";
 import {
   CTAButton,
   TrustBadge,
   AlertsQuickviewModal,
   SensorIcon,
 } from "./LandingComponents";
+import { apiGet } from "../../utils/api";
 
 interface LandingPageProps {
   onViewMap?: () => void;
   onLearnMore?: () => void;
   onEnterApp?: () => void;
+}
+
+// Sensor status helper
+function getSensorStatus(
+  type: "temperature" | "turbidity" | "ph",
+  value: number
+): { label: string; color: string } {
+  if (type === "temperature") {
+    if (value >= 25 && value <= 30)
+      return { label: "Possible Schistosomiasis Risk", color: "#E7B213" };
+    if ((value >= 20 && value < 25) || (value > 30 && value <= 32))
+      return { label: "Moderate Risk", color: "#E7B213" };
+    return { label: "Safe", color: "#22c55e" };
+  }
+  if (type === "turbidity") {
+    if (value < 5) return { label: "Clear Water – Higher Schisto Risk", color: "#ef4444" };
+    if (value <= 15) return { label: "Moderate Turbidity", color: "#E7B213" };
+    return { label: "High Turbidity", color: "#22c55e" };
+  }
+  if (type === "ph") {
+    if (value >= 7.0 && value <= 8.5) return { label: "Critical Range", color: "#ef4444" };
+    if ((value >= 6.5 && value < 7.0) || (value > 8.5 && value <= 9.0))
+      return { label: "Warning Range", color: "#f59e0b" };
+    return { label: "Safe", color: "#22c55e" };
+  }
+  return { label: "", color: "#9ca3af" };
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -34,6 +71,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [isMonitoringHovered, setIsMonitoringHovered] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [showLiveUpdates, setShowLiveUpdates] = useState(false);
+  const [latestReading, setLatestReading] = useState<any>(null);
+  const [backendOk, setBackendOk] = useState(true);
+  const [dataOk, setDataOk] = useState(true);
+  const [siteData, setSiteData] = useState<any>({
+    siteName: "Mang Jose's Fish Pond",
+    barangay: "San Miguel",
+    municipality: "Tacloban City",
+    area: "100 square meters",
+  });
+  const mapRef = useRef<DashboardMapHandle>(null);
 
   React.useEffect(() => {
     const check = () => {
@@ -45,6 +93,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  // Fetch sensor data when live updates is shown
+  useEffect(() => {
+    if (!showLiveUpdates) return;
+    
+    const fetchLatest = () => {
+      apiGet("/api/sensors/latest")
+        .then((data) => {
+          setLatestReading(data);
+          setBackendOk(true);
+          setDataOk(true);
+          if (data && data.siteName) {
+            setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+          }
+        })
+        .catch(() => {
+          setBackendOk(false);
+          setDataOk(false);
+        });
+    };
+    fetchLatest();
+    const interval = setInterval(fetchLatest, 1000);
+    return () => clearInterval(interval);
+  }, [showLiveUpdates]);
+
+  const handleLiveUpdatesClick = () => {
+    setShowLiveUpdates(true);
+  };
+
+  const handleBackFromLiveUpdates = () => {
+    setShowLiveUpdates(false);
+  };
 
   const getHeroFontSize = () => {
     if (screenWidth < 480) return '30px'; // Small mobile
@@ -92,7 +172,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Map loads behind gradient, fades in when ready */}
         <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${mapLoaded ? 'opacity-100' : 'opacity-0'}`}>
           <DashboardMap
-            interactive={false}
+            ref={mapRef}
+            interactive={showLiveUpdates}
             mobileMode={isMobileOrTablet}
             onMapReady={() => {
             // Wait a full 2 seconds after the map is idle to give it extra time 
@@ -102,7 +183,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           />
         </div>
 
-        {/* Exact teal gradient overlay from the Dashboard preview - ALWAYS ON top */}
+        {/* Gradient overlay - hidden when preview is shown */}
         <div
           className="absolute inset-0 backdrop-blur-[1px]"
           style={{
@@ -111,13 +192,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               : "linear-gradient(to right, #357D86 0%, rgba(53,125,134,0.85) 35%, rgba(53,125,134,0.4) 55%, rgba(152,244,255,0) 85%)",
             zIndex: 1,
             pointerEvents: "none",
+            opacity: showLiveUpdates ? 0 : 1,
+            transition: 'opacity 0.5s ease',
           }}
         />
       </div>
 
       <header
         className="relative z-50 border-b border-gray-100"
-        style={{ backgroundColor: '#FFFFFF' }}
+        style={{ 
+          backgroundColor: '#FFFFFF',
+          transform: showLiveUpdates ? 'translateY(-100%)' : 'translateY(0)',
+          transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          pointerEvents: showLiveUpdates ? 'none' : 'auto',
+        }}
       >
         <div className="w-full py-6" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
           <div className="flex justify-between items-center">
@@ -182,7 +270,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 flex flex-col justify-center">
+      <main className="relative z-10 flex-1 flex flex-col justify-center" style={{ 
+        transform: showLiveUpdates ? 'translateX(-100%)' : 'translateX(0)',
+        transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        pointerEvents: showLiveUpdates ? 'none' : 'auto',
+      }}>
         <section className="hidden lg:block w-full py-8">
           <div className="w-full" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
             <div className="grid lg:grid-cols-2 gap-10 items-center">
@@ -243,7 +335,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <CTAButton
                     variant="primary"
                     size="md"
-                    onClick={onLearnMore}
+                    onClick={handleLiveUpdatesClick}
                     ariaLabel="Live updates"
                     className="group transition-transform duration-500 transform active:scale-95"
                     style={{
@@ -354,7 +446,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <CTAButton
                 variant="primary"
                 size="md"
-                onClick={onLearnMore}
+                onClick={handleLiveUpdatesClick}
                 ariaLabel="Live updates"
                 className="group transition-transform duration-500 transform active:scale-95"
                 style={{
@@ -390,6 +482,325 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
       </main>
+
+      {/* Live Updates Overlay */}
+      {showLiveUpdates && (
+        <div
+          className="fixed inset-0 z-40"
+          style={{
+            animation: 'fadeIn 0.5s ease-out forwards',
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Dashboard-style gradient overlay - exact match to dashboard */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: "linear-gradient(to bottom right, #357D86 0%, rgba(53,125,134,0.6) 10%, rgba(152,244,255,0) 55%)",
+              zIndex: 1,
+              pointerEvents: 'none',
+            }}
+          />
+
+          {/* Content overlay on left side */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: isMobileOrTablet ? '100%' : '50%',
+              padding: isMobileOrTablet 
+                ? (screenWidth < 600 ? '80px 20px 20px' : '90px 30px 30px') 
+                : '100px 50px 50px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+              overflowY: 'auto',
+              scrollbarWidth: 'none' as const,
+              msOverflowStyle: 'none' as const,
+              animation: 'contentSlideIn 0.7s 0.1s cubic-bezier(0.22,1,0.36,1) both',
+              zIndex: 2,
+              pointerEvents: 'auto',
+            }}
+          >
+            {/* Back button */}
+            <button
+              onClick={handleBackFromLiveUpdates}
+              style={{
+                position: 'absolute',
+                top: isMobileOrTablet ? 20 : 30,
+                left: isMobileOrTablet ? 16 : 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                background: 'rgba(255,255,255,0.9)',
+                borderRadius: '50%',
+                border: 'none',
+                color: '#357D86',
+                cursor: 'pointer',
+                zIndex: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                backdropFilter: 'blur(4px)',
+              }}
+              aria-label="Back to Home"
+            >
+              <ChevronLeft style={{ width: 20, height: 20 }} />
+            </button>
+
+            {/* Header */}
+            <div style={{ pointerEvents: 'none', marginTop: isMobileOrTablet ? 20 : 0 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  color: '#fff',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 700,
+                  fontSize: isMobileOrTablet ? (screenWidth < 600 ? 26 : 32) : 38,
+                  lineHeight: 1.15,
+                  textShadow: '0 1px 6px rgba(0,0,0,0.18)',
+                  animation: 'slideInFromRight 0.6s 0.2s ease-out both',
+                }}
+              >
+                {siteData.siteName}
+              </h1>
+              <p
+                style={{
+                  margin: '6px 0 0',
+                  color: 'rgba(255,255,255,0.92)',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontSize: isMobileOrTablet ? 13 : 16,
+                  animation: 'slideInFromRight 0.6s 0.3s ease-out both',
+                }}
+              >
+                {siteData.area} • {siteData.barangay}, {siteData.municipality}
+              </p>
+              
+              {/* System Status Badge + Location Button */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                marginTop: 12,
+                pointerEvents: 'auto',
+                animation: 'slideInFromRight 0.6s 0.4s ease-out both',
+              }}>
+                <div style={{
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 6,
+                  background: 'rgba(255,255,255,0.92)', 
+                  borderRadius: 999,
+                  padding: '5px 14px', 
+                  fontSize: 12, 
+                  fontWeight: 600, 
+                  color: (backendOk && dataOk) ? '#15803d' : '#6b7280',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)', 
+                  backdropFilter: 'blur(4px)',
+                  fontFamily: "'Poppins', sans-serif",
+                }}>
+                  <span style={{
+                    width: 7, 
+                    height: 7, 
+                    borderRadius: '50%',
+                    background: (backendOk && dataOk) ? '#22c55e' : '#9ca3af',
+                    display: 'inline-block',
+                    animation: (backendOk && dataOk) ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                  }} />
+                  {(backendOk && dataOk) ? 'System Operational' : 'System Down'}
+                </div>
+                
+                {/* Location/Recenter Button */}
+                <button
+                  onClick={() => mapRef.current?.resetView()}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.92)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                  title="Reset map position"
+                >
+                  <LocateFixed size={15} color="#357D86" strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+
+            {/* Sensor Cards - Stacked Vertically */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                pointerEvents: 'auto',
+                marginTop: 16,
+                maxWidth: isMobileOrTablet ? '100%' : 320,
+              }}
+            >
+              {/* Temperature Card */}
+              <div
+                style={{
+                  background: 'rgba(255,255,255,0.96)',
+                  borderRadius: 20,
+                  padding: '16px 18px 14px',
+                  boxShadow: '0 4px 18px rgba(0,0,0,0.11)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.3s ease-out both',
+                }}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: 14,
+                  right: 14,
+                  width: 9,
+                  height: 9,
+                  borderRadius: '50%',
+                  background: latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af',
+                  display: 'inline-block',
+                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                }} />
+                <img src="/icons/icon-temperature.svg" alt="temp"
+                  style={{ width: 36, height: 36, objectFit: 'contain', marginBottom: 8 }} />
+                <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: 14, color: '#77ABB2' }}>Temperature</p>
+                <p style={{ margin: '0 0 4px', lineHeight: 1.1, display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                  <span style={{ fontWeight: 700, fontSize: 26, color: '#6b7280' }}>
+                    {latestReading ? latestReading.temperature : '—'}
+                  </span>
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: '#6b7280' }}> °C</span>}
+                </p>
+                {latestReading && (
+                  <p style={{ margin: 0, fontSize: 11, color: '#8E8B8B', lineHeight: 1.3 }}>
+                    {getSensorStatus('temperature', latestReading.temperature).label}
+                  </p>
+                )}
+              </div>
+
+              {/* Turbidity Card */}
+              <div
+                style={{
+                  background: 'rgba(255,255,255,0.96)',
+                  borderRadius: 20,
+                  padding: '16px 18px 14px',
+                  boxShadow: '0 4px 18px rgba(0,0,0,0.11)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.4s ease-out both',
+                }}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: 14,
+                  right: 14,
+                  width: 9,
+                  height: 9,
+                  borderRadius: '50%',
+                  background: latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af',
+                  display: 'inline-block',
+                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                }} />
+                <img src="/icons/icon-turbidity.svg" alt="turbidity"
+                  style={{ width: 36, height: 36, objectFit: 'contain', marginBottom: 8 }} />
+                <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: 14, color: '#77ABB2' }}>Turbidity</p>
+                <p style={{ margin: '0 0 4px', lineHeight: 1.1, display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                  <span style={{ fontWeight: 700, fontSize: 26, color: '#6b7280' }}>
+                    {latestReading ? latestReading.turbidity : '—'}
+                  </span>
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: '#6b7280' }}> NTU</span>}
+                </p>
+                {latestReading && (
+                  <p style={{ margin: 0, fontSize: 11, color: '#8E8B8B', lineHeight: 1.3 }}>
+                    {getSensorStatus('turbidity', latestReading.turbidity).label}
+                  </p>
+                )}
+              </div>
+
+              {/* pH Card */}
+              <div
+                style={{
+                  background: 'rgba(255,255,255,0.96)',
+                  borderRadius: 20,
+                  padding: '16px 18px 14px',
+                  boxShadow: '0 4px 18px rgba(0,0,0,0.11)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.5s ease-out both',
+                }}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: 14,
+                  right: 14,
+                  width: 9,
+                  height: 9,
+                  borderRadius: '50%',
+                  background: latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af',
+                  display: 'inline-block',
+                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                }} />
+                <img src="/icons/icon-ph.svg" alt="ph"
+                  style={{ width: 36, height: 36, objectFit: 'contain', marginBottom: 8 }} />
+                <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: 14, color: '#77ABB2' }}>pH Level</p>
+                <p style={{ margin: '0 0 4px', lineHeight: 1.1, display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                  <span style={{ fontWeight: 700, fontSize: 26, color: '#6b7280' }}>
+                    {latestReading ? latestReading.ph : '—'}
+                  </span>
+                </p>
+                {latestReading && (
+                  <p style={{ margin: 0, fontSize: 11, color: '#8E8B8B', lineHeight: 1.3 }}>
+                    {getSensorStatus('ph', latestReading.ph).label}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInFromRight {
+          from { opacity: 0; transform: translateX(40px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes contentSlideIn {
+          from { opacity: 0; transform: translateX(30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes cardFadeIn {
+          from { opacity: 0; transform: translateY(20px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes dotPulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+          60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
+        }
+        *::-webkit-scrollbar { display: none; }
+      `}</style>
 
 
       <AlertsQuickviewModal
