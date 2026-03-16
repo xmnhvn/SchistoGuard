@@ -19,8 +19,9 @@ interface DashboardMapProps {
 }
 
 export interface DashboardMapHandle {
-  resetView: () => void;
+  resetView: (center?: { lat: number; lng: number }) => void;
   resize: () => void;
+  returnToDashboard: () => void;
 }
 
 export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, mobileMode = false, interactive, onMapReady }, ref) {
@@ -28,20 +29,43 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
+  const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
 
   useImperativeHandle(ref, () => ({
-    resetView: () => {
+    resetView: (center?: { lat: number; lng: number }) => {
       if (map.current) {
-        map.current.flyTo({
-          center: defaultView.current.center,
-          zoom: defaultView.current.zoom,
-          duration: 800,
+        // If centering to preview, use provided coordinates
+        // If returning to dashboard, ALWAYS use the saved original position
+        const targetCenter: [number, number] = center 
+          ? [center.lng, center.lat]
+          : (originalDashboardView.current?.center || defaultView.current.center);
+        
+        console.log('resetView called:', { 
+          hasCenter: !!center, 
+          targetCenter, 
+          hasOriginalView: !!originalDashboardView.current,
+          defaultCenter: defaultView.current.center 
+        });
+        
+        // Use panTo for smooth slide instead of flyTo to avoid zoom/glitch
+        map.current.panTo(targetCenter, {
+          duration: 1000, // Slower, smoother animation
+          easing: (t) => t, // Linear easing for clean slide
         });
       }
     },
     resize: () => {
       if (map.current) {
         map.current.resize();
+      }
+    },
+    // New method to explicitly return to original dashboard position
+    returnToDashboard: () => {
+      if (map.current && originalDashboardView.current) {
+        map.current.panTo(originalDashboardView.current.center, {
+          duration: 1000, // Slower, smoother animation
+          easing: (t) => t,
+        });
       }
     },
   }));
@@ -79,6 +103,11 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
       const mapZoom = mobileMode ? 13 : 12;
       defaultView.current = { center: mapCenter, zoom: mapZoom };
+      
+      // Save the original dashboard view position (before any preview centering)
+      if (!originalDashboardView.current && !mobileMode) {
+        originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
+      }
 
       if (!map.current) {
         map.current = new maplibregl.Map({

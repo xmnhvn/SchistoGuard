@@ -72,6 +72,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isMonitoringHovered, setIsMonitoringHovered] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showLiveUpdates, setShowLiveUpdates] = useState(false);
+  const [isExitingLiveUpdates, setIsExitingLiveUpdates] = useState(false);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
@@ -120,10 +121,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const handleLiveUpdatesClick = () => {
     setShowLiveUpdates(true);
+    // Move map slightly left (not full center) - subtle movement from dashboard position
+    // Dashboard is at lng 125.0041 - 0.060 = 124.9441
+    // Preview moves to lng 125.0041 - 0.030 = 124.9741 (subtle shift, not dramatic)
+    setTimeout(() => {
+      mapRef.current?.resetView({ lat: 11.2447, lng: 124.9741 });
+    }, 100);
   };
 
   const handleBackFromLiveUpdates = () => {
-    setShowLiveUpdates(false);
+    setIsExitingLiveUpdates(true);
+    // Start exit animation
+    setTimeout(() => {
+      setShowLiveUpdates(false);
+      setIsExitingLiveUpdates(false);
+      // Wait for overlay fade-out to complete before resetting map
+      // This ensures smooth transition - map slides back as overlay fades
+      setTimeout(() => {
+        // Use explicit returnToDashboard method for guaranteed smooth slide
+        if (mapRef.current?.returnToDashboard) {
+          mapRef.current.returnToDashboard();
+        } else {
+          // Fallback to resetView if returnToDashboard not available
+          mapRef.current?.resetView();
+        }
+      }, 100); // Small delay to sync with overlay exit
+    }, 200);
   };
 
   const getHeroFontSize = () => {
@@ -167,19 +190,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden bg-white">
       {/* Solid White Background container */}
-      <div className="fixed inset-0 z-0 bg-white">
+      <div className="fixed inset-0 z-0" style={{ backgroundColor: '#e8eff1' }}>
         
-        {/* Map loads behind gradient, fades in when ready */}
-        <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${mapLoaded ? 'opacity-100' : 'opacity-0'}`}>
+        {/* Map loads behind gradient, fades in when ready - Dashboard style */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
           <DashboardMap
             ref={mapRef}
             interactive={showLiveUpdates}
             mobileMode={isMobileOrTablet}
             onMapReady={() => {
-            // Wait a full 2 seconds after the map is idle to give it extra time 
-            // for all tiles to render completely before fading the map in.
-            setTimeout(() => setMapLoaded(true), 2000);
-          }}
+              // Shorter delay - just wait for initial render
+              setTimeout(() => setMapLoaded(true), 300);
+            }}
           />
         </div>
 
@@ -193,7 +215,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             zIndex: 1,
             pointerEvents: "none",
             opacity: showLiveUpdates ? 0 : 1,
-            transition: 'opacity 0.5s ease',
+            transition: 'opacity 0.3s ease',
           }}
         />
       </div>
@@ -203,7 +225,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         style={{ 
           backgroundColor: '#FFFFFF',
           transform: showLiveUpdates ? 'translateY(-100%)' : 'translateY(0)',
-          transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: isExitingLiveUpdates ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           pointerEvents: showLiveUpdates ? 'none' : 'auto',
         }}
       >
@@ -272,7 +294,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       <main className="relative z-10 flex-1 flex flex-col justify-center" style={{ 
         transform: showLiveUpdates ? 'translateX(-100%)' : 'translateX(0)',
-        transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         pointerEvents: showLiveUpdates ? 'none' : 'auto',
       }}>
         <section className="hidden lg:block w-full py-8">
@@ -281,7 +303,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="space-y-6 max-w-4xl py-8 animate-fade-up" style={{ position: 'relative', top: '-20px' }}>
                 <div className="space-y-4">
                   <h2
-                    className="animate-fade-up animate-delay-100"
+                    className="animate-fade-up animate-delay-50"
                     style={{
                       color: '#FFFFFF',
                       textShadow: '0 2px 10px rgba(0,0,0,0.3)',
@@ -296,7 +318,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </h2>
 
                   <p
-                    className="leading-relaxed animate-fade-up animate-delay-200"
+                    className="leading-relaxed animate-fade-up animate-delay-100"
                     style={{
                       color: 'rgba(255,255,255,0.95)',
                       textShadow: '0 1px 8px rgba(0,0,0,0.35)',
@@ -309,7 +331,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
 
                 <div 
-                  className="flex flex-wrap animate-fade-up animate-delay-300"
+                  className="flex flex-wrap animate-fade-up animate-delay-150"
                   style={{ gap: '24px' }}
                 >
                   <TrustBadge
@@ -331,7 +353,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     label="Public health focus"
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 animate-fade-up animate-delay-400" style={{ marginTop: '100px' }}>
+                <div className="flex flex-col sm:flex-row gap-3 animate-fade-up animate-delay-200" style={{ marginTop: '100px' }}>
                   <CTAButton
                     variant="primary"
                     size="md"
@@ -392,7 +414,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="text-center p-6 flex flex-col items-center">
             <div className="space-y-3 mb-6 animate-fade-up">
               <h2
-                className="animate-fade-up animate-delay-100"
+                className="animate-fade-up animate-delay-50"
                 style={{
                   color: '#FFFFFF',
                   textShadow: '0 2px 10px rgba(0,0,0,0.3)',
@@ -407,7 +429,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </h2>
 
               <p
-                className="leading-relaxed max-w-2xl mx-auto animate-fade-up animate-delay-200"
+                className="leading-relaxed max-w-2xl mx-auto animate-fade-up animate-delay-100"
                 style={{
                   color: 'rgba(255,255,255,0.95)',
                   textShadow: '0 1px 8px rgba(0,0,0,0.35)',
@@ -419,7 +441,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 sites to help prevent schistosomiasis.
               </p>
             </div>
-            <div className="flex flex-wrap justify-center gap-1.5 mb-10 animate-fade-up animate-delay-300">
+            <div className="flex flex-wrap justify-center gap-1.5 mb-10 animate-fade-up animate-delay-150">
               <TrustBadge
                 icon={
                   <Shield className="w-3 h-3 text-schistoguard-green" />
@@ -442,7 +464,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 small
               />
             </div>
-            <div className="flex justify-center w-full mx-auto animate-fade-up animate-delay-400" style={{ marginTop: '80px' }}>
+            <div className="flex justify-center w-full mx-auto animate-fade-up animate-delay-200" style={{ marginTop: '80px' }}>
               <CTAButton
                 variant="primary"
                 size="md"
@@ -484,11 +506,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </main>
 
       {/* Live Updates Overlay */}
-      {showLiveUpdates && (
+      {(showLiveUpdates || isExitingLiveUpdates) && (
         <div
           className="fixed inset-0 z-40"
           style={{
-            animation: 'fadeIn 0.5s ease-out forwards',
+            animation: isExitingLiveUpdates ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.3s ease-out forwards',
             pointerEvents: 'none',
           }}
         >
@@ -778,6 +800,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
         }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(20px); }
