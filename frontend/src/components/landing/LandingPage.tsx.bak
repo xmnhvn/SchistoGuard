@@ -115,7 +115,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         });
     };
     fetchLatest();
-    const interval = setInterval(fetchLatest, 1000);
+    const interval = setInterval(fetchLatest, 5000); // Reduced from 1000ms to reduce lag
     return () => clearInterval(interval);
   }, [showLiveUpdates]);
 
@@ -205,7 +205,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Gradient overlay - hidden when preview is shown */}
         <div
-          className="absolute inset-0 backdrop-blur-[1px]"
+          className="absolute inset-0"
           style={{
             background: isMobileOrTablet
               ? "linear-gradient(to top, #357D86 0%, #357D86 1%, rgba(53,125,134,0.85) 50%, rgba(152,244,255,0) 95%)"
@@ -538,10 +538,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
               padding: isMobileOrTablet 
-                ? (screenWidth < 400 ? '70px 16px 16px' : // Very small phones
-                   screenWidth < 600 ? '80px 20px 20px' : // Small phones
-                   screenWidth < 800 ? '90px 24px 24px' : // Large phones
-                   '100px 28px 28px') // Tablets
+                ? (screenWidth < 400 ? '70px 16px 80px' : // Very small phones
+                   screenWidth < 600 ? '80px 20px 90px' : // Small phones
+                   screenWidth < 800 ? '90px 24px 100px' : // Large phones
+                   '100px 28px 110px') // Tablets
                 : '100px 50px 50px', // Desktop
               display: 'flex',
               flexDirection: 'column',
@@ -675,9 +675,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: 16,
                 pointerEvents: 'auto',
                 marginTop: 16,
-                // Desktop & Tablet: Wider for more square appearance
+                // Desktop & Tablet: Narrow width for tall appearance
                 // Mobile: Full width with smaller margins
-                maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 380 : 420,
+                maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 240 : 260,
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
@@ -695,6 +695,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   flexDirection: 'column',
                   fontFamily: "'Poppins', sans-serif",
                   animation: 'cardFadeIn 0.6s 0.3s ease-out both',
+                  height: screenWidth < 600 ? 'auto' : 205,
                   minWidth: screenWidth < 600 ? 0 : 'auto',
                 }}
               >
@@ -737,6 +738,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   flexDirection: 'column',
                   fontFamily: "'Poppins', sans-serif",
                   animation: 'cardFadeIn 0.6s 0.4s ease-out both',
+                  height: screenWidth < 600 ? 'auto' : 205,
                   minWidth: screenWidth < 600 ? 0 : 'auto',
                 }}
               >
@@ -779,6 +781,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   flexDirection: 'column',
                   fontFamily: "'Poppins', sans-serif",
                   animation: 'cardFadeIn 0.6s 0.5s ease-out both',
+                  height: screenWidth < 600 ? 'auto' : 205,
                   minWidth: screenWidth < 600 ? 0 : 'auto',
                 }}
               >
