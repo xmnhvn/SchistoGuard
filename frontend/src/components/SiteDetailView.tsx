@@ -65,6 +65,13 @@ export function SiteDetailView({
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
     if (!chartRef.current) return;
+    // Find the PDF-only explanation element
+    const pdfOnlyElem = chartRef.current.querySelector('.sg-pdf-only') as HTMLElement | null;
+    let prevDisplay = '';
+    if (pdfOnlyElem) {
+      prevDisplay = pdfOnlyElem.style.display;
+      pdfOnlyElem.style.display = 'block';
+    }
     try {
       const html2pdf = await loadHtml2Pdf();
       if (typeof html2pdf !== 'function') throw new Error('PDF export library is unavailable.');
@@ -94,6 +101,10 @@ export function SiteDetailView({
         .save();
     } catch (err) {
       alert('Failed to export chart PDF.');
+    } finally {
+      if (pdfOnlyElem) {
+        pdfOnlyElem.style.display = prevDisplay || 'none';
+      }
     }
   };
 
