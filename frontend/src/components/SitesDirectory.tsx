@@ -109,7 +109,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       styles: { fontSize: 10, cellPadding: 4 },
       headStyles: { fillColor: [53, 125, 134] },
     });
-    doc.save('schistoguard_timeseries_export.pdf');
+    // Filename: schistoguard_timeseries_[risk]_[timerange]_YYYYMMDD-HHmm.pdf
+    const now = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;
+    const hm = `${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const risk = filterRisk !== 'all' ? filterRisk : 'allrisk';
+    const time = filterTimeRange !== 'all' ? filterTimeRange : 'alltime';
+    const filename = `schistoguard_timeseries_${risk}_${time}_${ymd}-${hm}.pdf`;
+    doc.save(filename);
   };
   useEffect(() => {
     if (visible && !_sitesFirstLoadDone) {
