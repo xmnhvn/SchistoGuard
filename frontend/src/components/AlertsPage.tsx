@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import autoTable from "jspdf-autotable";
 import { AlertItem } from "./AlertItem";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -77,22 +77,43 @@ export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: 
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const [showMobileAlertList, setShowMobileAlertList] = useState(false);
   // Export alerts as PDF
-  const alertListRef = useRef<HTMLDivElement>(null);
-  const handleExport = async () => {
+  // Export alerts as PDF table
+  const handleExport = () => {
     if (!filteredAlerts.length) return;
-    const input = alertListRef.current;
-    if (!input) return;
-    const canvas = await html2canvas(input, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    // Fit image to page width, keep aspect ratio
-    const imgProps = { width: canvas.width, height: canvas.height };
-    const ratio = Math.min(pageWidth / imgProps.width, pageHeight / imgProps.height);
-    const imgWidth = imgProps.width * ratio;
-    const imgHeight = imgProps.height * ratio;
-    pdf.addImage(imgData, 'PNG', (pageWidth - imgWidth) / 2, 20, imgWidth, imgHeight);
+    const columns = [
+      { header: 'ID', dataKey: 'id' },
+      { header: 'Level', dataKey: 'level' },
+      { header: 'Parameter', dataKey: 'parameter' },
+      { header: 'Value', dataKey: 'value' },
+      { header: 'Site', dataKey: 'siteName' },
+      { header: 'Barangay', dataKey: 'barangay' },
+      { header: 'Timestamp', dataKey: 'timestamp' },
+      { header: 'Status', dataKey: 'isAcknowledged' },
+      { header: 'Message', dataKey: 'message' }
+    ];
+    const rows = filteredAlerts.map(alert => ({
+      id: alert.id,
+      level: alert.level,
+      parameter: alert.parameter,
+      value: alert.value,
+      siteName: alert.siteName,
+      barangay: alert.barangay,
+      timestamp: alert.timestamp,
+      isAcknowledged: alert.isAcknowledged ? 'Acknowledged' : 'Pending',
+      message: alert.message
+    }));
+    autoTable(pdf, {
+      columns,
+      body: rows,
+      styles: { fontSize: 10, cellPadding: 4 },
+      headStyles: { fillColor: '#357D86', textColor: '#fff' },
+      margin: { top: 40 },
+      didDrawPage: (data) => {
+        pdf.setFontSize(16);
+        pdf.text('SchistoGuard Alerts Export', 40, 24);
+      }
+    });
     pdf.save('alerts_export.pdf');
   };
 
@@ -160,7 +181,7 @@ export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: 
       flexDirection: "column",
     }}>
       {/* ── Header + Filters ── */}
-      <div ref={alertListRef} style={{
+      <div style={{
         display: "flex",
         flexDirection: (isMobile || isTablet) ? "column" : "row",
         justifyContent: "space-between",
