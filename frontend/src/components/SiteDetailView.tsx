@@ -12,43 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
-  // Ref for chart container
-  const chartRef = useRef<HTMLDivElement>(null);
-
-  // Export handler for chart as PDF
-  const handleExportChartPDF = async () => {
-    if (!chartRef.current) return;
-    try {
-      const html2pdf = await loadHtml2Pdf();
-      if (typeof html2pdf !== 'function') throw new Error('PDF export library is unavailable.');
-      // Filename: SchistoGuard_TimeseriesGraph_[Risk]_[TimeRange]_dd-mm-yyyy.pdf
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
-      const risk = currentRisk ? (currentRisk.charAt(0).toUpperCase() + currentRisk.slice(1)) : 'AllRisk';
-      let time = 'AllTime';
-      if (timeRange && timeRange !== 'all') {
-        if (timeRange.endsWith('h')) {
-          time = timeRange.toUpperCase();
-        } else {
-          time = timeRange.charAt(0).toUpperCase() + timeRange.slice(1);
-        }
-      }
-      const filename = `SchistoGuard_TimeseriesGraph_${risk}_${time}_${dmy}.pdf`;
-      await html2pdf()
-        .set({
-          margin: [10, 10, 10, 10],
-          filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-        })
-        .from(chartRef.current)
-        .save();
-    } catch (err) {
-      alert('Failed to export chart PDF.');
-    }
-  };
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -95,6 +58,44 @@ export function SiteDetailView({
     return [];
   });
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  // Ref for chart container
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // Export handler for chart as PDF
+  const handleExportChartPDF = async () => {
+    if (!chartRef.current) return;
+    try {
+      const html2pdf = await loadHtml2Pdf();
+      if (typeof html2pdf !== 'function') throw new Error('PDF export library is unavailable.');
+      // Filename: SchistoGuard_TimeseriesGraph_[Risk]_[TimeRange]_dd-mm-yyyy.pdf
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
+      const risk = currentRisk ? (currentRisk.charAt(0).toUpperCase() + currentRisk.slice(1)) : 'AllRisk';
+      let time = 'AllTime';
+      if (timeRange && timeRange !== 'all') {
+        if (timeRange.endsWith('h')) {
+          time = timeRange.toUpperCase();
+        } else {
+          time = timeRange.charAt(0).toUpperCase() + timeRange.slice(1);
+        }
+      }
+      const filename = `SchistoGuard_TimeseriesGraph_${risk}_${time}_${dmy}.pdf`;
+      await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        })
+        .from(chartRef.current)
+        .save();
+    } catch (err) {
+      alert('Failed to export chart PDF.');
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
