@@ -12,7 +12,7 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-import { apiGet, apiPut } from "../utils/api";
+import { apiGet, apiPost } from "../utils/api";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -92,7 +92,7 @@ export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view:
         acknowledgedBy: userName
       } : alert
     ));
-    apiPut(`/api/sensors/alerts/${alertId}/acknowledge`, {
+    apiPost(`/api/sensors/alerts/${alertId}/acknowledge`, {
       acknowledgedBy: userName,
     })
       .then((data) => {
