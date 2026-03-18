@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3, ChevronRight, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
@@ -79,8 +77,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       const animate = !_sitesFirstLoadDone;
   useEffect(() => {
       // PDF Export handler
-      const handleExportPDF = () => {
+      const handleExportPDF = async () => {
         if (!filteredReadings.length) return;
+        const jsPDFModule = await import('jspdf');
+        const autoTableModule = await import('jspdf-autotable');
+        const jsPDF = jsPDFModule.default;
+        const autoTable = autoTableModule.default;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
         const columns = [
           { header: 'Time', dataKey: 'time' },
