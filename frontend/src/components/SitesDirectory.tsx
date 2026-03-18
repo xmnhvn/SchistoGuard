@@ -112,11 +112,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     // Filename: schistoguard_timeseries_[risk]_[timerange]_YYYYMMDD-HHmm.pdf
     const now = new Date();
     const pad = (n) => n.toString().padStart(2, '0');
-    const ymd = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;
+    const dmy = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
     const hm = `${pad(now.getHours())}${pad(now.getMinutes())}`;
     const risk = filterRisk !== 'all' ? filterRisk : 'allrisk';
     const time = filterTimeRange !== 'all' ? filterTimeRange : 'alltime';
-    const filename = `schistoguard_timeseries_${risk}_${time}_${ymd}-${hm}.pdf`;
+    const filename = `schistoguard_timeseries_${risk}_${time}_${dmy}-${hm}.pdf`;
     doc.save(filename);
   };
   useEffect(() => {
