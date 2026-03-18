@@ -76,7 +76,7 @@ export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: 
   const [showMobileAlertList, setShowMobileAlertList] = useState(false);
   // Export alerts as PDF
   // Export alerts as PDF table
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!filteredAlerts.length) return;
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
