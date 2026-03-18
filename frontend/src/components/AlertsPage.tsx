@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import { AlertItem } from "./AlertItem";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -74,14 +76,24 @@ export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: 
   const [filterBarangay, setFilterBarangay] = useState("all");
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const [showMobileAlertList, setShowMobileAlertList] = useState(false);
-  const handleExport = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredAlerts, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "alerts_export.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+  // Export alerts as PDF
+  const alertListRef = useRef<HTMLDivElement>(null);
+  const handleExport = async () => {
+    if (!filteredAlerts.length) return;
+    const input = alertListRef.current;
+    if (!input) return;
+    const canvas = await html2canvas(input, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    // Fit image to page width, keep aspect ratio
+    const imgProps = { width: canvas.width, height: canvas.height };
+    const ratio = Math.min(pageWidth / imgProps.width, pageHeight / imgProps.height);
+    const imgWidth = imgProps.width * ratio;
+    const imgHeight = imgProps.height * ratio;
+    pdf.addImage(imgData, 'PNG', (pageWidth - imgWidth) / 2, 20, imgWidth, imgHeight);
+    pdf.save('alerts_export.pdf');
   };
 
   const handleAcknowledgeAlert = (alertId: string) => {
@@ -148,7 +160,7 @@ export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: 
       flexDirection: "column",
     }}>
       {/* ── Header + Filters ── */}
-      <div style={{
+      <div ref={alertListRef} style={{
         display: "flex",
         flexDirection: (isMobile || isTablet) ? "column" : "row",
         justifyContent: "space-between",
