@@ -18,9 +18,9 @@ const POPPINS = "'Poppins', sans-serif";
 
 let _alertsFirstLoadDone = false;
 
-export function AlertsPage({ onNavigate, visible = true }: { onNavigate?: (view: string) => void; visible?: boolean }) {
-  // Replace this with your actual user context or authentication logic
-  const userName = "Juan Dela Cruz (LGU)";
+export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: (view: string) => void; visible?: boolean; user?: any }) {
+  // Use logged-in user for acknowledge
+  const userName = user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown";
   function formatDateTime(dt: string) {
     if (!dt) return '-';
     const d = new Date(dt);

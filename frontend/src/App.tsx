@@ -265,7 +265,7 @@ export default function App() {
           <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} />
         </div>
         <div style={{ display: currentView === 'alerts' ? 'contents' : 'none' }}>
-          <AlertsPage onNavigate={handleNavigate} visible={currentView === 'alerts'} />
+          <AlertsPage onNavigate={handleNavigate} visible={currentView === 'alerts'} user={user} />
         </div>
         {currentView === 'reports' && <ReportsPage />}
         <div style={{ display: currentView === 'sites' ? 'contents' : 'none' }}>
