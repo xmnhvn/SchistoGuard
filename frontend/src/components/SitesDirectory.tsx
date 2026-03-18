@@ -320,9 +320,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               fontFamily: POPPINS, fontWeight: 500, color: "#374151",
               ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
             }}
+            onClick={handleExportPDF}
           >
             <Download size={15} />
-            Export
+            Export PDF
           </button>
         </div>
       </div>
