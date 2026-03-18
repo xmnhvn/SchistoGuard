@@ -193,7 +193,7 @@ export function Dashboard({
         .catch(() => setBackendOk(false));
     };
     fetchReadings();
-    const interval = setInterval(fetchReadings, 60000);
+    const interval = setInterval(fetchReadings, 10000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intervalValue, intervalUnit]);
