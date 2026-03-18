@@ -222,7 +222,7 @@ function checkAndAlertImmediate(data) {
     }
   }
 
-  // Send SMS for ANY alerts (critical or warning)
+  // Send SMS and insert alert for ANY alerts (critical or warning)
   if (alertMessages.length > 0) {
     console.log('🔍 Alert detected, looking for residents for site:', data.siteName || "Mang Jose's Fishpond");
     const now = new Date();
@@ -230,7 +230,28 @@ function checkAndAlertImmediate(data) {
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     const timestamp = `${dateStr}, ${timeStr}`;
     const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
-    
+
+    // Insert alert into alerts table (one row per alert message)
+    alertMessages.forEach((msg) => {
+      db.run(
+        `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          level,
+          msg,
+          '', // parameter (optional: parse from msg if needed)
+          '', // value (optional: parse from msg if needed)
+          now.toISOString(),
+          0,
+          data.siteName || "Mang Jose's Fishpond",
+          data.barangay || "Unknown",
+          '-',
+          null
+        ],
+        (err) => { if (err) console.error('alerts insert error:', err); }
+      );
+    });
+
     // Get resident phone numbers for this site - prioritize BHWs and LGUs
     const siteName = data.siteName || "Mang Jose's Fishpond";
     db.all(
