@@ -118,9 +118,10 @@ async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
 router.post("/alerts/:id/acknowledge", (req, res) => {
   const { id } = req.params;
   const { acknowledgedBy } = req.body;
+  const now = new Date().toISOString();
   db.run(
-    "UPDATE alerts SET isAcknowledged = 1, acknowledgedBy = ? WHERE id = ?",
-    [acknowledgedBy || null, id],
+    "UPDATE alerts SET isAcknowledged = 1, acknowledgedBy = ?, acknowledgedAt = ? WHERE id = ?",
+    [acknowledgedBy || null, now, id],
     function (err) {
       if (err) return res.status(500).json({ success: false, message: err.message });
       if (this.changes === 0) return res.status(404).json({ success: false, message: "Alert not found" });

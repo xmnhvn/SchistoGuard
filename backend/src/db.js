@@ -101,7 +101,8 @@ if (DB_TYPE === 'postgres') {
           "siteName" TEXT,
           barangay TEXT,
           duration TEXT,
-          "acknowledgedBy" TEXT
+          "acknowledgedBy" TEXT,
+          "acknowledgedAt" TEXT
         )
       `);
       
@@ -249,7 +250,8 @@ if (DB_TYPE === 'postgres') {
       siteName TEXT,
       barangay TEXT,
       duration TEXT,
-      acknowledgedBy TEXT
+      acknowledgedBy TEXT,
+      acknowledgedAt TEXT
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS residents (
