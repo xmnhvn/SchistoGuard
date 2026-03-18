@@ -113,10 +113,17 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     const now = new Date();
     const pad = (n) => n.toString().padStart(2, '0');
     const dmy = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
-    const hm = `${pad(now.getHours())}${pad(now.getMinutes())}`;
-    const risk = filterRisk !== 'all' ? filterRisk : 'allrisk';
-    const time = filterTimeRange !== 'all' ? filterTimeRange : 'alltime';
-    const filename = `schistoguard_timeseries_${risk}_${time}_${dmy}-${hm}.pdf`;
+    // Capitalize risk and time range for filename
+    const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
+    let time = 'AllTime';
+    if (filterTimeRange !== 'all') {
+      if (filterTimeRange.endsWith('h')) {
+        time = filterTimeRange.toUpperCase();
+      } else {
+        time = filterTimeRange.charAt(0).toUpperCase() + filterTimeRange.slice(1);
+      }
+    }
+    const filename = `SchistoGuard_Timeseries_${risk}_${time}_${dmy}.pdf`;
     doc.save(filename);
   };
   useEffect(() => {
