@@ -231,16 +231,28 @@ function checkAndAlertImmediate(data) {
     const timestamp = `${dateStr}, ${timeStr}`;
     const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
 
-    // Insert alert into alerts table (one row per alert message)
+    // Insert alert into alerts table (one row per alert message, with parameter/value)
     alertMessages.forEach((msg) => {
+      let parameter = '';
+      let value = '';
+      if (msg.includes('Temperature')) {
+        parameter = 'Temperature';
+        value = typeof data.temperature === 'number' ? data.temperature.toFixed(2) + '°C' : '';
+      } else if (msg.includes('Turbidity')) {
+        parameter = 'Turbidity';
+        value = typeof data.turbidity === 'number' ? data.turbidity.toFixed(2) + ' NTU' : '';
+      } else if (msg.includes('pH')) {
+        parameter = 'pH';
+        value = typeof data.ph === 'number' ? data.ph.toFixed(2) : '';
+      }
       db.run(
         `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           level,
           msg,
-          '', // parameter (optional: parse from msg if needed)
-          '', // value (optional: parse from msg if needed)
+          parameter,
+          value,
           now.toISOString(),
           0,
           data.siteName || "Mang Jose's Fishpond",
