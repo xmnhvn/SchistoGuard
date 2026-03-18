@@ -152,7 +152,8 @@ setInterval(() => {
   // Always log to raw_readings (per event/second)
   db.run(
     "INSERT INTO raw_readings (turbidity, temperature, ph, status, timestamp) VALUES (?, ?, ?, ?, ?)",
-    [latestData.turbidity, latestData.temperature, latestData.ph, latestData.status, now.toISOString()]
+    [latestData.turbidity, latestData.temperature, latestData.ph, latestData.status, now.toISOString()],
+    (err) => { if (err) console.error('raw_readings insert error:', err); }
   );
   // Aggregate/copy to readings table based on interval
   db.get("SELECT timestamp FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
@@ -178,7 +179,7 @@ setInterval(() => {
       db.all("SELECT id FROM readings ORDER BY timestamp", [], (err, rows) => {
         if (!err && rows.length > 288) {
           const toDelete = rows.slice(0, rows.length - 288);
-          toDelete.forEach(r => db.run("DELETE FROM readings WHERE id = ?", [r.id]));
+          toDelete.forEach(r => db.run("DELETE FROM readings WHERE id = ?", [r.id], (err) => { if (err) console.error('readings delete error:', err); }));
         }
       });
     }
@@ -216,7 +217,8 @@ function generateAlertsFromData(data, now = new Date()) {
         data.barangay || "Unknown",
         "-",
         null
-      ]
+      ],
+      (err) => { if (err) console.error('alerts insert error:', err); }
     );
     
     alertMessages.push(`Temp: ${data.temperature.toFixed(1)} Degree Celsius (${level === "critical" ? "High" : "Possible"} Risk)`);
@@ -238,7 +240,8 @@ function generateAlertsFromData(data, now = new Date()) {
         data.barangay || "Unknown",
         "-",
         null
-      ]
+      ],
+      (err) => { if (err) console.error('alerts insert error:', err); }
     );
     alertMessages.push(`Turbidity: ${data.turbidity.toFixed(1)} NTU (Clear Water - High Risk)`);
   } else if (data.turbidity != null && data.turbidity >= 5 && data.turbidity <= 15) {
@@ -256,7 +259,8 @@ function generateAlertsFromData(data, now = new Date()) {
         data.barangay || "Unknown",
         "-",
         null
-      ]
+      ],
+      (err) => { if (err) console.error('alerts insert error:', err); }
     );
     alertMessages.push(`Turbidity: ${data.turbidity.toFixed(1)} NTU (Moderate - Possible Risk)`);
   }
@@ -277,7 +281,8 @@ function generateAlertsFromData(data, now = new Date()) {
         data.barangay || "Unknown",
         "-",
         null
-      ]
+      ],
+      (err) => { if (err) console.error('alerts insert error:', err); }
     );
     alertMessages.push(`pH: ${data.ph.toFixed(1)} (High Risk)`);
   } else if (data.ph != null && ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5))) {
@@ -295,7 +300,8 @@ function generateAlertsFromData(data, now = new Date()) {
         data.barangay || "Unknown",
         "-",
         null
-      ]
+      ],
+      (err) => { if (err) console.error('alerts insert error:', err); }
     );
     alertMessages.push(`pH: ${data.ph.toFixed(1)} (Possible Risk)`);
   }
