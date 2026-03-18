@@ -149,6 +149,17 @@ let firstLogged = false;
 setInterval(() => {
   if (!latestData) return;
   const now = new Date();
+
+  // --- Auto-reload interval config every cycle ---
+  let intervalMs = 5 * 60 * 1000; // default 5min
+  try {
+    const configPath = require('path').resolve(__dirname, '../../interval-config.json');
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (config && config.intervalMs) intervalMs = config.intervalMs;
+    }
+  } catch (e) { /* ignore */ }
+
   // Always log to raw_readings (per event/second)
   db.run(
     "INSERT INTO raw_readings (turbidity, temperature, ph, status, timestamp) VALUES (?, ?, ?, ?, ?)",
@@ -164,7 +175,7 @@ setInterval(() => {
       firstLogged = true;
     } else if (row) {
       const last = new Date(row.timestamp);
-      if (now.getTime() - last.getTime() >= AGGREGATE_INTERVAL_MS) {
+      if (now.getTime() - last.getTime() >= intervalMs) {
         shouldLog = true;
       }
     }
