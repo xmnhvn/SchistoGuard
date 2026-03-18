@@ -381,6 +381,7 @@ export function SiteDetailView({
                   whiteSpace: "nowrap",
                   width: isMobile ? "100%" : undefined
                 }}
+                onClick={handleExportChartPDF}
               >
                 <Download size={15} /> Export
               </button>
@@ -508,14 +509,7 @@ export function SiteDetailView({
                   </div>
                 )}
                 <div className="flex flex-row justify-center gap-2 mt-3">
-                  <Button
-                    variant="outline"
-                    style={{ borderRadius: 8, fontFamily: POPPINS, fontSize: 13, padding: '0 14px', height: 34 }}
-                    onClick={handleExportChartPDF}
-                  >
-                    <Download size={15} style={{ marginRight: 6 }} /> Export Chart PDF
-                  </Button>
-                  <span className="flex-shrink-0 text-sm text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS, alignSelf: 'center', marginLeft: 8 }}>
+                  <span className="flex-shrink-0 text-sm text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS, alignSelf: 'center' }}>
                     All parameters shown per {getIntervalString()} interval (from time series table)
                   </span>
                 </div>
