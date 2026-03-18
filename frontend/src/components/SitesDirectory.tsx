@@ -74,7 +74,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
-      const animate = !_sitesFirstLoadDone;
   useEffect(() => {
       // PDF Export handler
       const handleExportPDF = async () => {
