@@ -8,8 +8,47 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ArrowLeft, Download, Settings, Bell, Calendar, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
+import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+  // Ref for chart container
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // Export handler for chart as PDF
+  const handleExportChartPDF = async () => {
+    if (!chartRef.current) return;
+    try {
+      const html2pdf = await loadHtml2Pdf();
+      if (typeof html2pdf !== 'function') throw new Error('PDF export library is unavailable.');
+      // Filename: SchistoGuard_TimeseriesGraph_[Risk]_[TimeRange]_dd-mm-yyyy.pdf
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
+      const risk = currentRisk ? (currentRisk.charAt(0).toUpperCase() + currentRisk.slice(1)) : 'AllRisk';
+      let time = 'AllTime';
+      if (timeRange && timeRange !== 'all') {
+        if (timeRange.endsWith('h')) {
+          time = timeRange.toUpperCase();
+        } else {
+          time = timeRange.charAt(0).toUpperCase() + timeRange.slice(1);
+        }
+      }
+      const filename = `SchistoGuard_TimeseriesGraph_${risk}_${time}_${dmy}.pdf`;
+      await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        })
+        .from(chartRef.current)
+        .save();
+    } catch (err) {
+      alert('Failed to export chart PDF.');
+    }
+  };
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -410,7 +449,7 @@ export function SiteDetailView({
                 {chartData.length === 0 ? (
                   <div className="flex h-[350px] w-full items-center justify-center text-gray-400">No time series data available.</div>
                 ) : (
-                  <div className="w-full" style={{ height: 350 }}>
+                  <div ref={chartRef} className="w-full" style={{ height: 350 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <defs>
@@ -467,8 +506,17 @@ export function SiteDetailView({
                     </ResponsiveContainer>
                   </div>
                 )}
-                <div className="flex-shrink-0 text-sm mt-3 text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS }}>
-                  <p>All parameters shown per {getIntervalString()} interval (from time series table)</p>
+                <div className="flex flex-row justify-center gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    style={{ borderRadius: 8, fontFamily: POPPINS, fontSize: 13, padding: '0 14px', height: 34 }}
+                    onClick={handleExportChartPDF}
+                  >
+                    <Download size={15} style={{ marginRight: 6 }} /> Export Chart PDF
+                  </Button>
+                  <span className="flex-shrink-0 text-sm text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS, alignSelf: 'center', marginLeft: 8 }}>
+                    All parameters shown per {getIntervalString()} interval (from time series table)
+                  </span>
                 </div>
               </div>
             </div>
