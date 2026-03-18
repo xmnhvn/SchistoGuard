@@ -6,6 +6,9 @@
 #include <WiFi.h>
 #include <ArduinoOTA.h>
 #include <WebServer.h>
+#include <HTTPClient.h>
+// Cloud backend URL for real-time sensor sync
+#define CLOUD_BACKEND_URL "https://schistoguard-production.up.railway.app/api/sensors"
 #include <ESPmDNS.h>
 #include <math.h>
 
@@ -522,6 +525,23 @@ void loop() {
   latestPHConnected = phSensorConnected;
   latestTurbidity = turbidityNTU;
   latestTurbConnected = turbSensorConnected;
+
+  // --- Real-time POST to cloud backend every second ---
+  if (otaReady && WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(CLOUD_BACKEND_URL);
+    http.addHeader("Content-Type", "application/json");
+    String payload = "{";
+    payload += "\"temperature\":" + String(tempValid ? tempC : -999, 2) + ",";
+    payload += "\"turbidity\":" + String(turbSensorConnected ? turbidityNTU : -999, 2) + ",";
+    payload += "\"ph\":" + String(phSensorConnected ? phValue : -999, 2) + ",";
+    payload += "\"device_ip\":\"" + WiFi.localIP().toString() + "\"";
+    payload += "}";
+    int httpResponseCode = http.POST(payload);
+    Serial.print("POST /api/sensors: ");
+    Serial.println(httpResponseCode);
+    http.end();
+  }
   
   // Debug: print pH stddev
   Serial.print("DEBUG pH_StdDev=");
