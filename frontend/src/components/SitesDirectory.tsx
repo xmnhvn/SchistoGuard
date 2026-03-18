@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3, ChevronRight, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
@@ -74,8 +76,41 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
-
+      const animate = !_sitesFirstLoadDone;
   useEffect(() => {
+      // PDF Export handler
+      const handleExportPDF = () => {
+        if (!filteredReadings.length) return;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        const columns = [
+          { header: 'Time', dataKey: 'time' },
+          { header: 'Date', dataKey: 'date' },
+          { header: 'Turbidity (NTU)', dataKey: 'turbidity' },
+          { header: 'Temperature (°C)', dataKey: 'temperature' },
+          { header: 'pH Level', dataKey: 'ph' },
+          { header: 'Risk Level', dataKey: 'riskLevel' },
+        ];
+        const rows = filteredReadings.map(r => {
+          const t = formatTimestamp(r.timestamp);
+          return {
+            time: t.time,
+            date: t.date,
+            turbidity: r.turbidity,
+            temperature: r.temperature,
+            ph: r.ph,
+            riskLevel: r.riskLevel,
+          };
+        });
+        doc.text('SchistoGuard Time-Series Data Export', 40, 40);
+        autoTable(doc, {
+          columns,
+          body: rows,
+          startY: 60,
+          styles: { fontSize: 10, cellPadding: 4 },
+          headStyles: { fillColor: [53, 125, 134] },
+        });
+        doc.save('schistoguard_timeseries_export.pdf');
+      };
     if (visible && !_sitesFirstLoadDone) {
       setTimeout(() => { _sitesFirstLoadDone = true; }, 50);
     }
