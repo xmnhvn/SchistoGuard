@@ -508,10 +508,47 @@ export function SiteDetailView({
                     </ResponsiveContainer>
                   </div>
                 )}
-                <div className="flex flex-row justify-center gap-2 mt-3">
+                <div className="flex flex-col items-center gap-2 mt-3">
                   <span className="flex-shrink-0 text-sm text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS, alignSelf: 'center' }}>
                     All parameters shown per {getIntervalString()} interval (from time series table)
                   </span>
+                  <div
+                    className="sg-pdf-only"
+                    style={{
+                      marginTop: 8,
+                      color: '#475569',
+                      background: '#f1f5f9',
+                      borderRadius: 8,
+                      padding: '10px 18px',
+                      fontSize: 13,
+                      fontFamily: POPPINS,
+                      maxWidth: 600,
+                      textAlign: 'center',
+                      display: 'none', // Hide in UI, show in PDF
+                    }}
+                  >
+                    <b>Graph Summary:</b> This chart visualizes the time series trends for Temperature, pH Level, and Turbidity based on the selected time range. Use this summary as a quick reference for water quality monitoring and risk assessment.<br /><br />
+                    <b>How to interpret the graph:</b><br />
+                    <ul style={{textAlign: 'left', margin: '8px auto', maxWidth: 540, paddingLeft: 18}}>
+                      <li><b>Temperature (°C):</b> Indicates the water temperature. Sudden spikes or drops may signal environmental changes or sensor issues. Critical range: 25–30°C.</li>
+                      <li><b>pH Level:</b> Shows the acidity or alkalinity of the water. Values outside the safe range (6.5–9.0) may affect aquatic life and water safety.</li>
+                      <li><b>Turbidity (NTU):</b> Measures water clarity. Higher turbidity can indicate contamination or sediment disturbance. Critical if below 5 NTU.</li>
+                    </ul>
+                    <b>Understanding Graph Trends:</b><br />
+                    <ul style={{textAlign: 'left', margin: '8px auto', maxWidth: 540, paddingLeft: 18}}>
+                      <li><b>Rising Trend:</b> A steady increase in temperature, pH, or turbidity may indicate warming weather, chemical changes, or increased sediment in the water. Monitor for values approaching or exceeding critical thresholds.</li>
+                      <li><b>Falling Trend:</b> A consistent decrease could mean cooling, dilution, or improved water clarity. Sudden drops may also signal sensor malfunction or external intervention.</li>
+                      <li><b>Flat/Stable Trend:</b> Stable readings within safe ranges suggest normal conditions. Extended flat lines at extreme values may indicate sensor issues.</li>
+                      <li><b>Sudden Spikes/Dips:</b> Abrupt changes often signal events like contamination, rainfall, or equipment error. Investigate the cause if these occur.</li>
+                    </ul>
+                    Observing these trends helps in early detection of water quality issues and supports timely decision-making for site management.
+                  </div>
+                      <style>{`
+                        .sg-pdf-only { display: none; }
+                        @media print {
+                          .sg-pdf-only { display: block !important; }
+                        }
+                      `}</style>
                 </div>
               </div>
             </div>
