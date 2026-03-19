@@ -77,11 +77,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    const defaultSites = [
-      { id: 'site-1', name: "Mang Jose's Fish Pond", lat: 11.2447, lng: 125.0041 }
-    ];
-    const sitesToShow = sites && sites.length > 0 ? sites : defaultSites;
-    const center = sitesToShow[0];
+    const sitesToShow = sites && sites.length > 0 ? sites : [];
+    // If no sites, center map to Philippines as neutral view
+    const center = sitesToShow[0] || { lat: 12.8797, lng: 121.7740, name: '', id: '' };
 
     // Mobile/tablet: the map container fills the ENTIRE screen (inset:0).
     const updateMapCenter = () => {
@@ -89,30 +87,25 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       const contentH = window.innerHeight - NAV_H;
       const mapCenterY = contentH / 2;
       const w = window.innerWidth;
-      
       const desiredPinY =
-        w <= 393 ? 280 :   // iPhone 14 Pro
-          w <= 430 ? 325 :   // iPhone 14 Pro Max
-            w <= 480 ? 370 :   // Pixel 7 Pro
-              w <= 829 ? 420 :   // iPad Air 5
+        w <= 393 ? 280 :
+          w <= 430 ? 325 :
+            w <= 480 ? 370 :
+              w <= 829 ? 420 :
                 400;
-
       const pixelDelta = mapCenterY - desiredPinY;
       const mPerPx = (156543.03392 * Math.cos(center.lat * Math.PI / 180)) / (1 << 13);
       const latOffset = (pixelDelta * mPerPx) / 111000;
-
-      const mapCenter: [number, number] = mobileMode
-        ? [center.lng, center.lat - latOffset]
-        : [center.lng - 0.060, center.lat];
-
-      const mapZoom = mobileMode ? 13 : 12;
+      const mapCenter: [number, number] = sitesToShow.length > 0
+        ? (mobileMode
+            ? [center.lng, center.lat - latOffset]
+            : [center.lng - 0.060, center.lat])
+        : [121.7740, 12.8797]; // Center of PH
+      const mapZoom = sitesToShow.length > 0 ? (mobileMode ? 13 : 12) : 6;
       defaultView.current = { center: mapCenter, zoom: mapZoom };
-      
-      // Save the original dashboard view position (before any preview centering)
       if (!originalDashboardView.current && !mobileMode) {
         originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
       }
-
       if (!map.current) {
         map.current = new maplibregl.Map({
           container: mapContainer.current!,
@@ -124,8 +117,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         });
       } else {
         map.current.jumpTo({ center: mapCenter, zoom: mapZoom });
-        
-        // Update handlers if needed
         const isInteractive = interactive !== undefined ? interactive : !mobileMode;
         const handlers = [
           map.current.dragPan,
@@ -146,32 +137,32 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     markers.current.forEach(m => m.remove());
     markers.current = [];
 
-    const addMarkers = () => {
-      if (!map.current) return;
-      sitesToShow.forEach((site) => {
-        const el = document.createElement('div');
-        el.className = 'site-marker-container'; // Better for CSS selection
-        el.innerHTML = `
-          <div class="site-marker">
-            <div class="site-marker__pulse"></div>
-            <div class="site-marker__ring"></div>
-            <div class="site-marker__dot"></div>
-          </div>`;
-
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([site.lng, site.lat])
-          .addTo(map.current!);
-
-        markers.current.push(marker);
-      });
-    };
-
-    if (map.current!.isStyleLoaded()) {
-      addMarkers();
-    } else {
-      map.current!.once('load', () => {
+    // Only add markers if sitesToShow is not empty
+    if (sitesToShow.length > 0) {
+      const addMarkers = () => {
+        if (!map.current) return;
+        sitesToShow.forEach((site) => {
+          const el = document.createElement('div');
+          el.className = 'site-marker-container';
+          el.innerHTML = `
+            <div class="site-marker">
+              <div class="site-marker__pulse"></div>
+              <div class="site-marker__ring"></div>
+              <div class="site-marker__dot"></div>
+            </div>`;
+          const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([site.lng, site.lat])
+            .addTo(map.current!);
+          markers.current.push(marker);
+        });
+      };
+      if (map.current!.isStyleLoaded()) {
         addMarkers();
-      });
+      } else {
+        map.current!.once('load', () => {
+          addMarkers();
+        });
+      }
     }
 
     // Wait for the map to become completely idle (all tiles loaded and painted)
