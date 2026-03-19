@@ -96,10 +96,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Fetch sensor data when live updates is shown
+  // Always fetch sensor data (like Dashboard)
   useEffect(() => {
-    if (!showLiveUpdates) return;
-    
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
         .then((data) => {
@@ -118,7 +116,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     fetchLatest();
     const interval = setInterval(fetchLatest, 1000);
     return () => clearInterval(interval);
-  }, [showLiveUpdates]);
+  }, []);
 
   const handleLiveUpdatesClick = () => {
     setShowLiveUpdates(true);
