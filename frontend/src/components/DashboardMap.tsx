@@ -78,30 +78,25 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     if (!mapContainer.current) return;
 
     const sitesToShow = sites && sites.length > 0 ? sites : [];
+
     // If no sites, center map to Philippines as neutral view
     const center = sitesToShow[0] || { lat: 12.8797, lng: 121.7740, name: '', id: '' };
 
-    // Mobile/tablet: the map container fills the ENTIRE screen (inset:0).
+    // Center map exactly on marker and use higher zoom if only one marker
+    // Only set center/zoom on initial mount or when sites change, not on every render
     const updateMapCenter = () => {
-      const NAV_H = 76;
-      const contentH = window.innerHeight - NAV_H;
-      const mapCenterY = contentH / 2;
-      const w = window.innerWidth;
-      const desiredPinY =
-        w <= 393 ? 280 :
-          w <= 430 ? 325 :
-            w <= 480 ? 370 :
-              w <= 829 ? 420 :
-                400;
-      const pixelDelta = mapCenterY - desiredPinY;
-      const mPerPx = (156543.03392 * Math.cos(center.lat * Math.PI / 180)) / (1 << 13);
-      const latOffset = (pixelDelta * mPerPx) / 111000;
-      const mapCenter: [number, number] = sitesToShow.length > 0
-        ? (mobileMode
-            ? [center.lng, center.lat - latOffset]
-            : [center.lng - 0.060, center.lat])
-        : [121.7740, 12.8797]; // Center of PH
-      const mapZoom = sitesToShow.length > 0 ? (mobileMode ? 13 : 12) : 6;
+      let mapCenter: [number, number];
+      let mapZoom: number;
+      if (sitesToShow.length === 1) {
+        mapCenter = [center.lng, center.lat];
+        mapZoom = 17;
+      } else if (sitesToShow.length > 1) {
+        mapCenter = [center.lng, center.lat];
+        mapZoom = 13;
+      } else {
+        mapCenter = [121.7740, 12.8797];
+        mapZoom = 6;
+      }
       defaultView.current = { center: mapCenter, zoom: mapZoom };
       if (!originalDashboardView.current && !mobileMode) {
         originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
@@ -112,23 +107,26 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
           style: 'https://tiles.openfreemap.org/styles/positron',
           center: mapCenter,
           zoom: mapZoom,
+          minZoom: 0, // allow zooming out to entire world
+          maxZoom: 19, // allow zooming in to street level
           attributionControl: false,
-          interactive: interactive !== undefined ? interactive : !mobileMode,
+          interactive: true, // Always allow user interaction (zoom, pan)
         });
-      } else {
+      } else if (sitesToShow.length !== markers.current.length) {
+        // Only reset view if number of markers/sites changed
         map.current.jumpTo({ center: mapCenter, zoom: mapZoom });
-        const isInteractive = interactive !== undefined ? interactive : !mobileMode;
-        const handlers = [
-          map.current.dragPan,
-          map.current.scrollZoom,
-          map.current.boxZoom,
-          map.current.dragRotate,
-          map.current.keyboard,
-          map.current.doubleClickZoom,
-          map.current.touchZoomRotate,
-        ] as Array<{ enable: () => void; disable: () => void }>;
-        handlers.forEach(h => isInteractive ? h.enable() : h.disable());
       }
+      // Always enable interactivity
+      const handlers = [
+        map.current!.dragPan,
+        map.current!.scrollZoom,
+        map.current!.boxZoom,
+        map.current!.dragRotate,
+        map.current!.keyboard,
+        map.current!.doubleClickZoom,
+        map.current!.touchZoomRotate,
+      ] as Array<{ enable: () => void; disable: () => void }>;
+      handlers.forEach(h => h.enable());
     };
 
     updateMapCenter();
