@@ -72,6 +72,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [isMonitoringHovered, setIsMonitoringHovered] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [shouldRenderMap, setShouldRenderMap] = useState(false);
   const [showLiveUpdates, setShowLiveUpdates] = useState(false);
   const [isExitingLiveUpdates, setIsExitingLiveUpdates] = useState(false);
   const [latestReading, setLatestReading] = useState<any>(null);
@@ -85,6 +86,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     area: "100 square meters",
   });
   const mapRef = useRef<DashboardMapHandle>(null);
+  const cardsGridRef = useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const check = () => {
@@ -97,7 +99,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Always fetch sensor data (like Dashboard)
+  // Lazy-mount map to reduce initial landing page jank
+  React.useEffect(() => {
+    if (showLiveUpdates) {
+      setShouldRenderMap(true);
+      return;
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let idleId: number | null = null;
+
+    const run = () => setShouldRenderMap(true);
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(run, { timeout: 1200 });
+    } else {
+      timeoutId = setTimeout(run, 600);
+    }
+
+    return () => {
+      if (idleId !== null) window.cancelIdleCallback(idleId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [showLiveUpdates]);
+
+  // Fetch sensor data when live updates is shown
   useEffect(() => {
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
@@ -124,19 +150,58 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         });
     };
     fetchLatest();
-    const interval = setInterval(fetchLatest, 1000);
+    const interval = setInterval(fetchLatest, 5000);
     return () => clearInterval(interval);
   }, []);
 
   const handleLiveUpdatesClick = () => {
     setShowLiveUpdates(true);
-    // Move map slightly left (not full center) - subtle movement from dashboard position
-    // Dashboard is at lng 125.0041 - 0.060 = 124.9441
-    // Preview moves to lng 125.0041 - 0.030 = 124.9741 (subtle shift, not dramatic)
-    setTimeout(() => {
-      mapRef.current?.resetView({ lat: 11.2447, lng: 124.9741 });
-    }, 100);
+    // Desktop: subtle horizontal shift (unchanged)
+    if (!isMobileOrTablet) {
+      setTimeout(() => {
+        mapRef.current?.resetView({ lat: 11.2447, lng: 124.9741 });
+      }, 100);
+    }
+    // Mobile/tablet: pin positioned by the useEffect below after DOM renders
   };
+
+  // Position map pin in the vacant space (right side on tablet, lower area on mobile)
+  useEffect(() => {
+    if (!showLiveUpdates || !isMobileOrTablet) return;
+
+    const positionPin = () => {
+      const grid = cardsGridRef.current;
+      if (!grid) return;
+
+      const screenH = window.innerHeight;
+      const screenW = window.innerWidth;
+      const SITE_LAT = 11.2447;
+      const SITE_LNG = 125.0041;
+
+      // Pixel scale at MapLibre zoom 13 for this latitude
+      const mPerPx = (156543.03392 * Math.cos(SITE_LAT * Math.PI / 180)) / 8192;
+      const latPerPx = mPerPx / 111000;
+      const lngPerPx = mPerPx / (111000 * Math.cos(SITE_LAT * Math.PI / 180));
+
+      const rect = grid.getBoundingClientRect();
+
+      if (screenW >= 600) {
+        // Tablet: center pin horizontally in the right vacant space, vertically at screen center
+        const vacantCenterX = rect.right + (screenW - rect.right) / 2;
+        const lngOffset = (vacantCenterX - screenW / 2) * lngPerPx;
+        mapRef.current?.resetView({ lat: SITE_LAT, lng: SITE_LNG - lngOffset });
+      } else {
+        // Mobile: center pin vertically in the blank space below the cards
+        const vacantCenterY = rect.bottom + (screenH - rect.bottom) / 2;
+        const latOffset = (vacantCenterY - screenH / 2) * latPerPx;
+        mapRef.current?.resetView({ lat: SITE_LAT + latOffset, lng: SITE_LNG });
+      }
+    };
+
+    // Wait for the overlay DOM to finish rendering before measuring
+    const timer = setTimeout(positionPin, 200);
+    return () => clearTimeout(timer);
+  }, [showLiveUpdates, isMobileOrTablet]);
 
   const handleBackFromLiveUpdates = () => {
     setIsExitingLiveUpdates(true);
@@ -201,20 +266,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         
         {/* Map loads behind gradient, fades in when ready - Dashboard style */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
-          <DashboardMap
-            ref={mapRef}
-            interactive={showLiveUpdates}
-            mobileMode={isMobileOrTablet}
-            onMapReady={() => {
-              // Shorter delay - just wait for initial render
-              setTimeout(() => setMapLoaded(true), 300);
-            }}
-          />
+          {shouldRenderMap && (
+            <DashboardMap
+              ref={mapRef}
+              interactive={showLiveUpdates}
+              mobileMode={isMobileOrTablet}
+              onMapReady={() => {
+                // Shorter delay - just wait for initial render
+                setTimeout(() => setMapLoaded(true), 300);
+              }}
+            />
+          )}
         </div>
 
         {/* Gradient overlay - hidden when preview is shown */}
         <div
-          className="absolute inset-0 backdrop-blur-[1px]"
+          className="absolute inset-0"
           style={{
             background: isMobileOrTablet
               ? "linear-gradient(to top, #357D86 0%, #357D86 1%, rgba(53,125,134,0.85) 50%, rgba(152,244,255,0) 95%)"
@@ -568,8 +635,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onClick={handleBackFromLiveUpdates}
               style={{
                 position: 'absolute',
-                top: isMobileOrTablet ? 20 : 30,
-                left: isMobileOrTablet ? 16 : 40,
+              top: isMobileOrTablet
+                  ? (screenWidth < 400 ? 18 : screenWidth < 600 ? 20 : screenWidth < 800 ? 22 : 26)
+                  : 32,
+                left: isMobileOrTablet
+                  ? (screenWidth < 400 ? 16 : screenWidth < 600 ? 20 : screenWidth < 800 ? 24 : 28)
+                  : 50,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -647,8 +718,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     background: (deviceConnected && backendOk && dataOk) ? '#22c55e' : '#9ca3af',
                     display: 'inline-block',
                     animation: (deviceConnected && backendOk && dataOk) ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                  }} />
-                  {(deviceConnected && backendOk && dataOk) ? 'System Operational' : 'Device Not Connected'}
+                    "--dot-glow": (deviceConnected && backendOk && dataOk) ? 'rgba(34,197,94,0.5)' : 'transparent',
+                  } as any} />
+                  {(deviceConnected && backendOk && dataOk) ? 'System Operational' : 'System Down'}
                 </div>
                 <button
                   onClick={() => mapRef.current?.resetView()}
@@ -674,48 +746,148 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Sensor Cards - Dashboard style, using SensorMiniCard */}
             <div
+              ref={cardsGridRef}
               style={{
                 display: 'grid',
                 gridTemplateColumns: screenWidth < 600 ? '1fr 1fr' : '1fr',
                 gap: 16,
                 pointerEvents: 'auto',
                 marginTop: 16,
-                maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 380 : 420,
+                // Desktop & Tablet: Wider for more square appearance
+                // Mobile: Full width with smaller margins
+                maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 340 : 340,
               }}
             >
-              <SensorMiniCard
-                label="Temperature"
-                iconSrc="/icons/icon-temperature.svg"
-                value={!deviceConnected ? "—" : latestReading ? `${latestReading.temperature}` : '—'}
-                unit="°C"
-                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('temperature', latestReading.temperature).label : ''}
-                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af'}
-                active={deviceConnected && !!latestReading}
-                compact={screenWidth < 600}
-                fadeIn
-              />
-              <SensorMiniCard
-                label="Turbidity"
-                iconSrc="/icons/icon-turbidity.svg"
-                value={!deviceConnected ? "—" : latestReading ? `${latestReading.turbidity}` : '—'}
-                unit="NTU"
-                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('turbidity', latestReading.turbidity).label : ''}
-                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af'}
-                active={deviceConnected && !!latestReading}
-                compact={screenWidth < 600}
-                fadeIn
-              />
-              <SensorMiniCard
-                label="pH Level"
-                iconSrc="/icons/icon-ph.svg"
-                value={!deviceConnected ? "—" : latestReading ? `${latestReading.ph}` : '—'}
-                unit=""
-                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('ph', latestReading.ph).label : ''}
-                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af'}
-                active={deviceConnected && !!latestReading}
-                compact={screenWidth < 600}
-                fadeIn
-              />
+              {/* Temperature Card - Full Width on Mobile */}
+              <div
+                style={{
+                  // Mobile: Span full width (both columns)
+                  // Tablet & Desktop: Normal width
+                  gridColumn: screenWidth < 600 ? '1 / -1' : 'auto',
+                  background: '#fff',
+                  borderRadius: 20,
+                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
+                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.3s ease-out both',
+                  minWidth: screenWidth < 600 ? 0 : 'auto',
+                }}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: screenWidth < 600 ? 14 : 20,
+                  right: screenWidth < 600 ? 14 : 20,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af',
+                  display: 'inline-block',
+                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus('temperature', latestReading.temperature).color, 0.5) : 'transparent',
+                } as any} />
+                <img src="/icons/icon-temperature.svg" alt="temp"
+                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>Temperature</p>
+                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
+                    {latestReading ? latestReading.temperature : '—'}
+                  </span>
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : 20, color: '#6b7280' }}> °C</span>}
+                </p>
+                {latestReading && (
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                    {getSensorStatus('temperature', latestReading.temperature).label}
+                  </p>
+                )}
+              </div>
+
+              {/* Turbidity Card */}
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: 20,
+                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
+                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.4s ease-out both',
+                  minWidth: screenWidth < 600 ? 0 : 'auto',
+                }}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: screenWidth < 600 ? 14 : 20,
+                  right: screenWidth < 600 ? 14 : 20,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af',
+                  display: 'inline-block',
+                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus('turbidity', latestReading.turbidity).color, 0.5) : 'transparent',
+                } as any} />
+                <img src="/icons/icon-turbidity.svg" alt="turbidity"
+                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>Turbidity</p>
+                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
+                    {latestReading ? latestReading.turbidity : '—'}
+                  </span>
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : 20, color: '#6b7280' }}> NTU</span>}
+                </p>
+                {latestReading && (
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                    {getSensorStatus('turbidity', latestReading.turbidity).label}
+                  </p>
+                )}
+              </div>
+
+              {/* pH Card */}
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: 20,
+                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
+                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.5s ease-out both',
+                  minWidth: screenWidth < 600 ? 0 : 'auto',
+                }}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: screenWidth < 600 ? 14 : 20,
+                  right: screenWidth < 600 ? 14 : 20,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af',
+                  display: 'inline-block',
+                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus('ph', latestReading.ph).color, 0.5) : 'transparent',
+                } as any} />
+                <img src="/icons/icon-ph.svg" alt="ph"
+                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>pH Level</p>
+                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
+                    {latestReading ? latestReading.ph : '—'}
+                  </span>
+                </p>
+                {latestReading && (
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                    {getSensorStatus('ph', latestReading.ph).label}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -748,7 +920,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes dotPulse {
-          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow, rgba(34,197,94,0.4)); }
           60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
         }
         *::-webkit-scrollbar { display: none; }
