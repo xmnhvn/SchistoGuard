@@ -65,6 +65,8 @@ if (DB_TYPE === 'postgres') {
           temperature REAL,
           ph REAL,
           status TEXT,
+          latitude REAL,
+          longitude REAL,
           "timestamp" TEXT
         )
       `);

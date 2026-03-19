@@ -166,10 +166,18 @@ setInterval(() => {
     }
   } catch (e) { /* ignore */ }
 
-  // Always log to raw_readings (per event/second)
+  // Always log to raw_readings (per event/second), now with GPS
   db.run(
-    "INSERT INTO raw_readings (turbidity, temperature, ph, status, timestamp) VALUES (?, ?, ?, ?, ?)",
-    [latestData.turbidity, latestData.temperature, latestData.ph, latestData.status, now.toISOString()],
+    "INSERT INTO raw_readings (turbidity, temperature, ph, status, latitude, longitude, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [
+      latestData.turbidity,
+      latestData.temperature,
+      latestData.ph,
+      latestData.status,
+      typeof latestData.latitude === 'number' ? latestData.latitude : null,
+      typeof latestData.longitude === 'number' ? latestData.longitude : null,
+      now.toISOString()
+    ],
     (err) => { if (err) console.error('raw_readings insert error:', err); }
   );
   // Aggregate/copy to readings table based on interval

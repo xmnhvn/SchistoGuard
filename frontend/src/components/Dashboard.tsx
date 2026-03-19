@@ -87,8 +87,9 @@ export function Dashboard({
     }
   }, [latestReading && latestReading.latitude, latestReading && latestReading.longitude, siteData.siteName]);
 
-  // Prepare GPS site for map (use last saved if device not connected)
+  // Prepare GPS site for map (always show last saved marker if available)
   let gpsSites: Array<{ id: string; name: string; lat: number; lng: number }> | undefined = undefined;
+  let lastSavedLocation: { lat: number; lng: number; siteName?: string } | null = null;
   if (
     latestReading &&
     typeof latestReading.latitude === 'number' &&
@@ -102,6 +103,7 @@ export function Dashboard({
       lat: latestReading.latitude,
       lng: latestReading.longitude,
     }];
+    lastSavedLocation = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
   } else {
     // Try to load from localStorage
     const last = localStorage.getItem('lastGpsLocation');
@@ -115,6 +117,7 @@ export function Dashboard({
             lat: parsed.lat,
             lng: parsed.lng,
           }];
+          lastSavedLocation = parsed;
         }
       } catch {}
     }
@@ -1197,7 +1200,9 @@ export function Dashboard({
               ? gpsAddress
                 ? gpsAddress
                 : `Lat: ${latestReading.latitude.toFixed(6)}, Lng: ${latestReading.longitude.toFixed(6)}`
-              : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
+              : lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number'
+                ? `Last location: Lat: ${lastSavedLocation.lat.toFixed(6)}, Lng: ${lastSavedLocation.lng.toFixed(6)}`
+                : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
           </p>
         </div>
 
