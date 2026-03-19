@@ -438,15 +438,20 @@ router.post("/", (req, res) => {
 
 router.get("/latest", (req, res) => {
   if (latestData) {
-    res.json({
-      ...latestData,
-      timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp
-    });
+    // Consider device disconnected if last data is older than 10 seconds
+    const now = Date.now();
+    const ts = new Date(latestData.timestamp).getTime();
+    if (Math.abs(now - ts) < 10000) {
+      res.json({
+        ...latestData,
+        deviceConnected: true,
+        timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp
+      });
+    } else {
+      res.json({ deviceConnected: false });
+    }
   } else {
-    db.get("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(row || null);
-    });
+    res.json({ deviceConnected: false });
   }
 });
 

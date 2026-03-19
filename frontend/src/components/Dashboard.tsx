@@ -37,6 +37,8 @@ export function Dashboard({
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
+    // Device connection state
+    const [deviceConnected, setDeviceConnected] = useState(true);
   // Interval config state
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
@@ -130,15 +132,25 @@ export function Dashboard({
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
         .then((data) => {
+          // If backend says deviceConnected: false, treat as disconnected
+          if (data && data.deviceConnected === false) {
+            setDeviceConnected(false);
+            setLatestReading(null);
+            setBackendOk(true);
+            setDataOk(false);
+            return;
+          }
           setLatestReading(data);
           setBackendOk(true);
           setDataOk(true);
+          setDeviceConnected(true);
           if (data && data.siteName)
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
         })
         .catch(() => {
           setBackendOk(false);
           setDataOk(false);
+          setDeviceConnected(false);
         });
     };
     fetchLatest();
@@ -207,28 +219,36 @@ export function Dashboard({
 
   useEffect(() => {
     if (setSystemStatus) {
-      setSystemStatus(!backendOk || !dataOk ? "down" : "operational");
+        if (!deviceConnected) {
+          setSystemStatus("DEVICE NOT CONNECTED");
+        } else {
+          setSystemStatus(!backendOk || !dataOk ? "down" : "operational");
+        }
     }
   }, [backendOk, dataOk, setSystemStatus]);
 
   useEffect(() => {
     const fetchAlerts = () => {
-      apiGet("/api/sensors/alerts")
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setAlerts(
-              data.filter((alert) =>
-                ["Temperature", "Turbidity", "pH"].includes(alert.parameter)
-              )
-            );
-          }
-        })
-        .catch(() => { });
+        if (!deviceConnected) {
+          setAlerts([]);
+          return;
+        }
+        apiGet("/api/sensors/alerts")
+          .then((data) => {
+            if (Array.isArray(data)) {
+              setAlerts(
+                data.filter((alert) =>
+                  ["Temperature", "Turbidity", "pH"].includes(alert.parameter)
+                )
+              );
+            }
+          })
+          .catch(() => { });
     };
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
-  }, []);
+    }, [deviceConnected]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -571,41 +591,41 @@ export function Dashboard({
               pointerEvents: "auto",
             }}
           >
-            <SensorMiniCard
-              label="Temperature"
-              iconSrc="/icons/icon-temperature.svg"
-              value={latestReading ? `${latestReading.temperature}` : "—"}
-              unit="°C"
-              sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-              dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-              active={!!latestReading}
-              compact={compactCards}
-              fadeIn={animate}
-            />
+              <SensorMiniCard
+                label="Temperature"
+                iconSrc="/icons/icon-temperature.svg"
+                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.temperature}` : "—"}
+                unit="°C"
+                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
+                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
+                active={deviceConnected && !!latestReading}
+                compact={compactCards}
+                fadeIn={animate}
+              />
 
-            <SensorMiniCard
-              label="Turbidity"
-              iconSrc="/icons/icon-turbidity.svg"
-              value={latestReading ? `${latestReading.turbidity}` : "—"}
-              unit="NTU"
-              sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-              dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-              active={!!latestReading}
-              compact={compactCards}
-              fadeIn={animate}
-            />
+              <SensorMiniCard
+                label="Turbidity"
+                iconSrc="/icons/icon-turbidity.svg"
+                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.turbidity}` : "—"}
+                unit="NTU"
+                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
+                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
+                active={deviceConnected && !!latestReading}
+                compact={compactCards}
+                fadeIn={animate}
+              />
 
-            <SensorMiniCard
-              label="pH Level"
-              iconSrc="/icons/icon-ph.svg"
-              value={latestReading ? `${latestReading.ph}` : "—"}
-              unit=""
-              sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-              dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-              active={!!latestReading}
-              compact={compactCards}
-              fadeIn={animate}
-            />
+              <SensorMiniCard
+                label="pH Level"
+                iconSrc="/icons/icon-ph.svg"
+                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.ph}` : "—"}
+                unit=""
+                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
+                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
+                active={deviceConnected && !!latestReading}
+                compact={compactCards}
+                fadeIn={animate}
+              />
           </div>
         </div>
 
