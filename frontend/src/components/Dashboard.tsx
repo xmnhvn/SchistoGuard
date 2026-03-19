@@ -69,15 +69,56 @@ export function Dashboard({
 
 
 
-  // Prepare GPS site for map
-  const gpsSites = latestReading && typeof latestReading.latitude === 'number' && typeof latestReading.longitude === 'number' && latestReading.latitude !== null && latestReading.longitude !== null
-    ? [{
-        id: 'device-gps',
-        name: siteData.siteName || 'Device Location',
+  // Persist last valid GPS location to localStorage
+  useEffect(() => {
+    if (
+      latestReading &&
+      typeof latestReading.latitude === 'number' &&
+      typeof latestReading.longitude === 'number' &&
+      latestReading.latitude !== null &&
+      latestReading.longitude !== null
+    ) {
+      // Save to localStorage
+      localStorage.setItem('lastGpsLocation', JSON.stringify({
         lat: latestReading.latitude,
         lng: latestReading.longitude,
-      }]
-    : undefined;
+        siteName: siteData.siteName || 'Device Location',
+      }));
+    }
+  }, [latestReading && latestReading.latitude, latestReading && latestReading.longitude, siteData.siteName]);
+
+  // Prepare GPS site for map (use last saved if device not connected)
+  let gpsSites: Array<{ id: string; name: string; lat: number; lng: number }> | undefined = undefined;
+  if (
+    latestReading &&
+    typeof latestReading.latitude === 'number' &&
+    typeof latestReading.longitude === 'number' &&
+    latestReading.latitude !== null &&
+    latestReading.longitude !== null
+  ) {
+    gpsSites = [{
+      id: 'device-gps',
+      name: siteData.siteName || 'Device Location',
+      lat: latestReading.latitude,
+      lng: latestReading.longitude,
+    }];
+  } else {
+    // Try to load from localStorage
+    const last = localStorage.getItem('lastGpsLocation');
+    if (last) {
+      try {
+        const parsed = JSON.parse(last);
+        if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+          gpsSites = [{
+            id: 'device-gps',
+            name: parsed.siteName || 'Last Known Location',
+            lat: parsed.lat,
+            lng: parsed.lng,
+          }];
+        }
+      } catch {}
+    }
+  }
 
   // Reverse geocode when GPS changes
   useEffect(() => {
