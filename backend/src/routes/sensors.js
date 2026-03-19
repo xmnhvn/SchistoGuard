@@ -374,40 +374,42 @@ function checkAndAlertImmediate(data) {
     }
   }
 
-  // Send SMS for ANY alerts (critical or warning)
+  // Send SMS for ANY alerts (critical or warning) ONLY if device is connected (last data < 10s)
   if (alertMessages.length > 0) {
-    console.log('🔍 Alert detected, looking for residents for site:', data.siteName || "Mang Jose's Fishpond");
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    const timestamp = `${dateStr}, ${timeStr}`;
-    const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
-    
-    // Get resident phone numbers for this site - prioritize BHWs and LGUs
-    const siteName = data.siteName || "Mang Jose's Fishpond";
-    db.all(
-      "SELECT phone, role FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
-      [siteName],
-      (err, rows) => {
-        if (err) {
-          console.error("❌ Error fetching residents:", err.message);
-          return;
+    const now = Date.now();
+    const ts = new Date(data.timestamp).getTime();
+    if (Math.abs(now - ts) < 10000) {
+      console.log('🔍 Alert detected, looking for residents for site:', data.siteName || "Mang Jose's Fishpond");
+      const nowDate = new Date();
+      const dateStr = nowDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      const timeStr = nowDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const timestamp = `${dateStr}, ${timeStr}`;
+      const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
+      // Get resident phone numbers for this site - prioritize BHWs and LGUs
+      const siteName = data.siteName || "Mang Jose's Fishpond";
+      db.all(
+        "SELECT phone, role FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
+        [siteName],
+        (err, rows) => {
+          if (err) {
+            console.error("❌ Error fetching residents:", err.message);
+            return;
+          }
+          if (!rows || rows.length === 0) {
+            console.log(`⚠️ No residents found for site: "${siteName}"`);
+            return;
+          }
+          // Send to all residents (BHWs + LGUs + residents)
+          const phoneNumbers = rows.map(r => r.phone).filter(p => p);
+          const roles = [...new Set(rows.map(r => r.role))];
+          console.log(`✓ Found ${rows.length} alert recipients for site: "${siteName}"`);
+          console.log(`   Roles: ${roles.join(', ').toUpperCase()}`);
+          sendSMSViaESP32(smsMessage, alertMessages, phoneNumbers);
         }
-        
-        if (!rows || rows.length === 0) {
-          console.log(`⚠️ No residents found for site: "${siteName}"`);
-          return;
-        }
-        
-        // Send to all residents (BHWs + LGUs + residents)
-        const phoneNumbers = rows.map(r => r.phone).filter(p => p);
-        const roles = [...new Set(rows.map(r => r.role))];
-        
-        console.log(`✓ Found ${rows.length} alert recipients for site: "${siteName}"`);
-        console.log(`   Roles: ${roles.join(', ').toUpperCase()}`);
-        sendSMSViaESP32(smsMessage, alertMessages, phoneNumbers);
-      }
-    );
+      );
+    } else {
+      console.log('Device not connected: SMS alert not sent.');
+    }
   }
 }
 

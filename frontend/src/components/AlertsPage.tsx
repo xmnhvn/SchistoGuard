@@ -18,7 +18,7 @@ const POPPINS = "'Poppins', sans-serif";
 
 let _alertsFirstLoadDone = false;
 
-export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: (view: string) => void; visible?: boolean; user?: any }) {
+export function AlertsPage({ onNavigate, visible = true, user, deviceConnected = true }: { onNavigate?: (view: string) => void; visible?: boolean; user?: any; deviceConnected?: boolean }) {
   // Use logged-in user for acknowledge
   const userName = user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown";
   function formatDateTime(dt: string) {
@@ -54,6 +54,10 @@ export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: 
   }, [visible]);
 
   useEffect(() => {
+    if (!deviceConnected) {
+      setAlerts([]);
+      return;
+    }
     const fetchAlerts = () => {
       apiGet("/api/sensors/alerts")
         .then((data) => {
@@ -67,7 +71,7 @@ export function AlertsPage({ onNavigate, visible = true, user }: { onNavigate?: 
     // Check for new alerts every 10 seconds
     const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [deviceConnected]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterLevel, setFilterLevel] = useState("all");
