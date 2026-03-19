@@ -166,7 +166,7 @@ export function Dashboard({
 
   // Load interval config from backend
   useEffect(() => {
-    let lastIntervalMs = null;
+    let lastIntervalMs: number | null = null;
     const fetchIntervalConfig = async () => {
       try {
         const data = await apiGet("/api/sensors/interval-config");
@@ -219,11 +219,11 @@ export function Dashboard({
 
   useEffect(() => {
     if (setSystemStatus) {
-        if (!deviceConnected) {
-          setSystemStatus("DEVICE NOT CONNECTED");
-        } else {
-          setSystemStatus(!backendOk || !dataOk ? "down" : "operational");
-        }
+      if (!deviceConnected) {
+        setSystemStatus("down");
+      } else {
+        setSystemStatus(!backendOk || !dataOk ? "down" : "operational");
+      }
     }
   }, [backendOk, dataOk, setSystemStatus]);
 

@@ -16,6 +16,7 @@ import {
   AlertsQuickviewModal,
   SensorIcon,
 } from "./LandingComponents";
+import SensorMiniCard from "../../../../../frontend/src/components/SensorMiniCard";
 import { apiGet } from "../../utils/api";
 
 interface LandingPageProps {
@@ -608,32 +609,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 {siteData.area} • {siteData.barangay}, {siteData.municipality}
               </p>
               
-              {/* System Status Badge + Location Button */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 8, 
+              {/* System Status Capsule (Dashboard style) + Location Button */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
                 marginTop: 12,
                 pointerEvents: 'auto',
                 animation: 'slideInFromRight 0.6s 0.4s ease-out both',
               }}>
                 <div style={{
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
+                  display: 'inline-flex',
+                  alignItems: 'center',
                   gap: 6,
-                  background: 'rgba(255,255,255,0.92)', 
+                  background: 'rgba(255,255,255,0.92)',
                   borderRadius: 999,
-                  padding: '5px 14px', 
-                  fontSize: 12, 
-                  fontWeight: 600, 
+                  padding: '5px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
                   color: (backendOk && dataOk) ? '#15803d' : '#6b7280',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)', 
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                   backdropFilter: 'blur(4px)',
                   fontFamily: "'Poppins', sans-serif",
                 }}>
                   <span style={{
-                    width: 7, 
-                    height: 7, 
+                    width: 7,
+                    height: 7,
                     borderRadius: '50%',
                     background: (backendOk && dataOk) ? '#22c55e' : '#9ca3af',
                     display: 'inline-block',
@@ -641,8 +642,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   }} />
                   {(backendOk && dataOk) ? 'System Operational' : 'Device Not Connected'}
                 </div>
-                
-                {/* Location/Recenter Button */}
                 <button
                   onClick={() => mapRef.current?.resetView()}
                   style={{
@@ -665,148 +664,50 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Sensor Cards - Responsive Grid Layout */}
+            {/* Sensor Cards - Dashboard style, using SensorMiniCard */}
             <div
               style={{
                 display: 'grid',
-                // Mobile: 2 cards on top row, 1 card below
-                // Tablet & Desktop: 3 cards stacked vertically (Dashboard-style)
                 gridTemplateColumns: screenWidth < 600 ? '1fr 1fr' : '1fr',
                 gap: 16,
                 pointerEvents: 'auto',
                 marginTop: 16,
-                // Desktop & Tablet: Wider for more square appearance
-                // Mobile: Full width with smaller margins
                 maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 380 : 420,
               }}
             >
-              {/* Temperature Card - Full Width on Mobile */}
-              <div
-                style={{
-                  // Mobile: Span full width (both columns)
-                  // Tablet & Desktop: Normal width
-                  gridColumn: screenWidth < 600 ? '1 / -1' : 'auto',
-                  background: '#fff',
-                  borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
-                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  fontFamily: "'Poppins', sans-serif",
-                  animation: 'cardFadeIn 0.6s 0.3s ease-out both',
-                  minWidth: screenWidth < 600 ? 0 : 'auto',
-                }}
-              >
-                <span style={{
-                  position: 'absolute',
-                  top: screenWidth < 600 ? 14 : 20,
-                  right: screenWidth < 600 ? 14 : 20,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  background: latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af',
-                  display: 'inline-block',
-                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                }} />
-                <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>Temperature</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
-                    {latestReading ? latestReading.temperature : '—'}
-                  </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : 20, color: '#6b7280' }}> °C</span>}
-                </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                    {getSensorStatus('temperature', latestReading.temperature).label}
-                  </p>
-                )}
-              </div>
-
-              {/* Turbidity Card */}
-              <div
-                style={{
-                  background: '#fff',
-                  borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
-                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  fontFamily: "'Poppins', sans-serif",
-                  animation: 'cardFadeIn 0.6s 0.4s ease-out both',
-                  minWidth: screenWidth < 600 ? 0 : 'auto',
-                }}
-              >
-                <span style={{
-                  position: 'absolute',
-                  top: screenWidth < 600 ? 14 : 20,
-                  right: screenWidth < 600 ? 14 : 20,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  background: latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af',
-                  display: 'inline-block',
-                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                }} />
-                <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>Turbidity</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
-                    {latestReading ? latestReading.turbidity : '—'}
-                  </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : 20, color: '#6b7280' }}> NTU</span>}
-                </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                    {getSensorStatus('turbidity', latestReading.turbidity).label}
-                  </p>
-                )}
-              </div>
-
-              {/* pH Card */}
-              <div
-                style={{
-                  background: '#fff',
-                  borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
-                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  fontFamily: "'Poppins', sans-serif",
-                  animation: 'cardFadeIn 0.6s 0.5s ease-out both',
-                  minWidth: screenWidth < 600 ? 0 : 'auto',
-                }}
-              >
-                <span style={{
-                  position: 'absolute',
-                  top: screenWidth < 600 ? 14 : 20,
-                  right: screenWidth < 600 ? 14 : 20,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  background: latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af',
-                  display: 'inline-block',
-                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                }} />
-                <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>pH Level</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
-                    {latestReading ? latestReading.ph : '—'}
-                  </span>
-                </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                    {getSensorStatus('ph', latestReading.ph).label}
-                  </p>
-                )}
-              </div>
+              <SensorMiniCard
+                label="Temperature"
+                iconSrc="/icons/icon-temperature.svg"
+                value={latestReading ? `${latestReading.temperature}` : '—'}
+                unit="°C"
+                sub={latestReading ? getSensorStatus('temperature', latestReading.temperature).label : ''}
+                dot={latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af'}
+                active={!!latestReading}
+                compact={screenWidth < 600}
+                fadeIn
+              />
+              <SensorMiniCard
+                label="Turbidity"
+                iconSrc="/icons/icon-turbidity.svg"
+                value={latestReading ? `${latestReading.turbidity}` : '—'}
+                unit="NTU"
+                sub={latestReading ? getSensorStatus('turbidity', latestReading.turbidity).label : ''}
+                dot={latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af'}
+                active={!!latestReading}
+                compact={screenWidth < 600}
+                fadeIn
+              />
+              <SensorMiniCard
+                label="pH Level"
+                iconSrc="/icons/icon-ph.svg"
+                value={latestReading ? `${latestReading.ph}` : '—'}
+                unit=""
+                sub={latestReading ? getSensorStatus('ph', latestReading.ph).label : ''}
+                dot={latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af'}
+                active={!!latestReading}
+                compact={screenWidth < 600}
+                fadeIn
+              />
             </div>
           </div>
         </div>
