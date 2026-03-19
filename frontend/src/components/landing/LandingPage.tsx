@@ -16,7 +16,7 @@ import {
   AlertsQuickviewModal,
   SensorIcon,
 } from "./LandingComponents";
-import SensorMiniCard from "../../../../../frontend/src/components/SensorMiniCard";
+import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
 
 interface LandingPageProps {
