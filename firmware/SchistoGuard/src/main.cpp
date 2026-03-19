@@ -12,6 +12,8 @@
 #include <ESPmDNS.h>
 #include <math.h>
 
+#include "gps_module.h" // Neo-6M GPS integration
+
 // Pins (ESP32 GPIO numbers)
 const int LCD_SDA = 33; // D33
 const int LCD_SCL = 26; // D26
@@ -455,6 +457,8 @@ void setup() {
   connectWiFiAndSetupOTA();
   initGSM(); // Initialize SIM800L GSM module
 
+  setupGPS(); // Initialize Neo-6M GPS
+
   // Display WiFi status on LCD
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -479,6 +483,9 @@ void setup() {
 }
 
 void loop() {
+  // Read GPS data from Neo-6M
+  readGPS();
+
   if (!otaReady && (millis() - lastWifiRetryMs >= WIFI_RETRY_INTERVAL_MS)) {
     lastWifiRetryMs = millis();
     connectWiFiAndSetupOTA();
@@ -535,7 +542,13 @@ void loop() {
     payload += "\"temperature\":" + String(tempValid ? tempC : -999, 2) + ",";
     payload += "\"turbidity\":" + String(turbSensorConnected ? turbidityNTU : -999, 2) + ",";
     payload += "\"ph\":" + String(phSensorConnected ? phValue : -999, 2) + ",";
-    payload += "\"device_ip\":\"" + WiFi.localIP().toString() + "\"";
+    payload += "\"device_ip\":\"" + WiFi.localIP().toString() + "\",";
+    if (gpsIsValid()) {
+      payload += "\"latitude\":" + String(getLatitude(), 6) + ",";
+      payload += "\"longitude\":" + String(getLongitude(), 6);
+    } else {
+      payload += "\"latitude\":null,\"longitude\":null";
+    }
     payload += "}";
     int httpResponseCode = http.POST(payload);
     Serial.print("POST /api/sensors: ");
