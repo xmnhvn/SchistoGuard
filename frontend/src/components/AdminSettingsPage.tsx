@@ -220,7 +220,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       paddingLeft: pad,
       paddingRight: pad,
       paddingBottom: 0,
-      scrollbarWidth: "none",
+      maxHeight: "100%",
       display: "flex",
       flexDirection: "column",
       alignItems: "stretch",

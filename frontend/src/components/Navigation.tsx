@@ -507,7 +507,7 @@ export function NavigationProvider({
           transition: "transform 0.6s cubic-bezier(0.4,0,0.2,1)",
         }}
       >
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 10px 10px", display: "flex", flexDirection: "column", gap: 6, scrollbarWidth: "none" } as React.CSSProperties}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 10px 10px", display: "flex", flexDirection: "column", gap: 6 } as React.CSSProperties}>
           {navItems.map((item) => {
             const isActive = currentView === item.view;
             return (

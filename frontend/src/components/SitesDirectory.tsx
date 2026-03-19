@@ -397,7 +397,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div 
-          onClick={() => isMobile && setShowMobileViewAll(true)}
+          onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
           style={{
             padding: isMobile ? "12px 14px" : "20px 24px 16px",
             background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
@@ -442,7 +442,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               )}
             </div>
           </div>
-          {isMobile && (
+          {(isMobile || isTablet) && (
             <div style={{
               background: "#f0f8f9",
               padding: "6px 12px",
@@ -457,14 +457,14 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   cursor: "pointer", fontFamily: POPPINS,
                 }}
               >
-                View All
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86" }}>View Details</span>
               </span>
-              <ChevronRight size={14} color="#357D86" strokeWidth={3} />
+              <ChevronRight size={16} color="#357D86" strokeWidth={2.5} />
             </div>
           )}
         </div>
 
-        {!isMobile && (
+        {!(isMobile || isTablet) && (
           <div style={{
             flex: 1,
             minHeight: 0,
@@ -544,18 +544,20 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         )}
       </div>
       {/* ── Mobile View All List Modal ── */}
-      {isMobile && showMobileViewAll && (
+      {(isMobile || isTablet) && showMobileViewAll && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 10001,
-          background: "rgba(0,0,0,0.3)",
-          display: "flex", alignItems: "flex-start", justifyContent: "center",
-          padding: "92px 20px 20px",
+          background: "rgba(0,0,0,0.6)",
+          display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+          padding: isMobile ? "92px 20px 20px" : "40px 20px",
+          animation: "fadeIn 0.2s ease-out both"
         }} onClick={() => setShowMobileViewAll(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
               width: "100%",
-              maxHeight: "calc(100vh - 108px)",
+              maxWidth: 540,
+              maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
               background: "#fff",
               borderRadius: 16,
               display: "flex",
@@ -591,7 +593,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div style={{
               flex: 1, minHeight: 0, overflowY: "auto",
               padding: 20,
-              scrollbarWidth: "none",
+              position: "relative",
             } as React.CSSProperties}>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {filteredReadings.map((reading) => {

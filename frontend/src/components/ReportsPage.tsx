@@ -340,20 +340,11 @@ export const ReportsPage: React.FC = () => {
 
   const filteredReports = reports.filter((report) => selectedType === 'all' || report.type === selectedType);
 
-  const getRiskBadge = (risk: string) => {
-    switch (risk.toLowerCase()) {
-      case 'low':
-      case 'safe':
-        return <Badge style={{ backgroundColor: "#E9FBF3", color: "#23B67E", border: "none", fontWeight: 600 }}>Low Risk</Badge>;
-      case 'moderate':
-      case 'warning':
-        return <Badge style={{ backgroundColor: "#FFF9E6", color: "#F1A11A", border: "none", fontWeight: 600 }}>Moderate Risk</Badge>;
-      case 'high':
-      case 'critical':
-        return <Badge style={{ backgroundColor: "#FFF1F1", color: "#D14343", border: "none", fontWeight: 600 }}>High Risk</Badge>;
-      default:
-        return <Badge>{risk}</Badge>;
-    }
+   const getRiskBadge = (risk: string) => {
+    const r = risk.toLowerCase();
+    const bg = r === 'high' ? "#FFF1F0" : r === 'moderate' ? "#FFF8ED" : "#E6F7EF";
+    const color = r === 'high' ? "#EB5757" : r === 'moderate' ? "#F2994A" : "#27AE60";
+    return <Badge style={{ backgroundColor: bg, color: color, border: "none", fontWeight: 700 }}>{risk.charAt(0).toUpperCase() + risk.slice(1)} Risk</Badge>;
   };
 
   const getTurbidityRemark = (value: number) => {
@@ -530,75 +521,109 @@ export const ReportsPage: React.FC = () => {
                   ) : filteredReports.length === 0 ? (
                     <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">No reports available.</div>
                   ) : (
-                    filteredReports.map((report) => (
-                      <div
-                        key={report.id}
-                        style={{
-                          marginBottom: 16,
-                          borderRadius: 15,
-                          position: "relative"
-                        }}
-                      >
+                    filteredReports.map((report) => {
+                      const riskLevel = report.summary?.riskLevel || 'low';
+                      const riskColors: Record<string, { bg: string; color: string; border: string }> = {
+                        low: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                        moderate: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                        high: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                      };
+                      const rc = riskColors[riskLevel.toLowerCase()] || riskColors.low;
+
+                      return (
                         <div
-                          className={`group cursor-pointer transition-all ${selectedReport?.id === report.id ? 'bg-[#F5FBFB]' : 'bg-white'
-                            }`}
-                          onClick={() => handleViewReport(report)}
+                          key={report.id}
                           style={{
-                            display: "flex",
-                            overflow: "hidden",
-                            position: "relative",
-                            minHeight: 100,
+                            marginBottom: 16,
                             borderRadius: 15,
-                            border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9"
+                            position: "relative"
                           }}
                         >
-                          {/* Premium Folder-Style Side Accent */}
-                          <div style={{
-                            width: 6,
-                            backgroundColor: "#357D86",
-                            flexShrink: 0
-                          }} />
+                          <div
+                            className={`group cursor-pointer transition-all ${selectedReport?.id === report.id ? 'bg-[#F5FBFB]' : 'bg-white'
+                              }`}
+                            onClick={() => handleViewReport(report)}
+                            style={{
+                              display: "flex",
+                              overflow: "hidden",
+                              position: "relative",
+                              minHeight: 110,
+                              borderRadius: 15,
+                              border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9",
+                              boxShadow: selectedReport?.id === report.id ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
+                            }}
+                          >
+                            {/* Premium Folder-Style Side Accent — color based on report risk level */}
+                            <div style={{
+                              width: 6,
+                              backgroundColor: "#357D86",
+                              flexShrink: 0
+                            }} />
 
-                          <div className="flex w-full items-center justify-between px-6 py-5">
-                            <div className="flex flex-1 flex-col justify-center overflow-hidden">
-                              <h4
-                                className="truncate text-[15.5px]"
-                                style={{
-                                  fontFamily: POPPINS,
-                                  fontWeight: selectedReport?.id === report.id ? 700 : 500,
-                                  color: "#357D86",
-                                  letterSpacing: "-0.01em",
-                                  lineHeight: "1.4"
-                                }}
-                              >
-                                {report.title}
-                              </h4>
-                              <div
-                                className="mt-2"
-                                style={{
-                                  fontFamily: POPPINS,
-                                  fontWeight: 500,
-                                  color: "#64748b",
-                                  fontSize: "12px",
-                                  letterSpacing: "0.01em"
-                                }}
-                              >
-                                {report.period} · {new Date(report.generatedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                            <div className="flex w-full items-center justify-between px-6 py-5">
+                              <div className="flex flex-1 flex-col justify-center overflow-hidden">
+                                <div className="mb-2 flex items-center justify-between">
+                                  <span style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    padding: "4px 10px",
+                                    borderRadius: 6,
+                                    background: rc.bg,
+                                    color: rc.color,
+                                    textTransform: "uppercase",
+                                    fontFamily: POPPINS,
+                                    letterSpacing: "0.05em"
+                                  }}>
+                                    {riskLevel} Risk
+                                  </span>
+                                  <span style={{
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: "#1a2a3a",
+                                    fontFamily: POPPINS
+                                  }}>
+                                    {report.period.split(' ')[0]} {report.period.split(' ')[1]}
+                                  </span>
+                                </div>
+                                <h4
+                                  className="truncate text-[15.5px]"
+                                  style={{
+                                    fontFamily: POPPINS,
+                                    fontWeight: selectedReport?.id === report.id ? 700 : 500,
+                                    color: "#1a2a3a",
+                                    letterSpacing: "-0.01em",
+                                    lineHeight: "1.4"
+                                  }}
+                                >
+                                  {report.title}
+                                </h4>
+                                <div
+                                  className="mt-2"
+                                  style={{
+                                    fontFamily: POPPINS,
+                                    fontWeight: 500,
+                                    color: "#64748b",
+                                    fontSize: "12px",
+                                    letterSpacing: "0.01em"
+                                  }}
+                                >
+                                  Generated on {new Date(report.generatedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                                </div>
                               </div>
-                            </div>
 
-                            <div className="flex items-center pl-4">
-                              <ChevronRight
-                                size={18}
-                                strokeWidth={2.5}
-                                style={{ color: "#357D86" }}
-                                className="shrink-0 transition-transform group-hover:translate-x-1"
-                              />
+                              <div className="flex items-center pl-4">
+                                <ChevronRight
+                                  size={18}
+                                  strokeWidth={2.5}
+                                    style={{ color: "#94a3b8" }}
+                                  className="shrink-0 transition-transform group-hover:translate-x-1"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </CardContent>
@@ -606,7 +631,7 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           {/* Column 2: Preview Panel (Desktop/Tablet Only) */}
-          {!isMobile && (
+          {!(isMobile || isTablet) && (
             <div className="flex h-full min-h-0 flex-col lg:flex">
               {!selectedReport ? (
                 <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-white p-12 text-center" style={{ borderRadius: 28 }}>
@@ -717,10 +742,10 @@ export const ReportsPage: React.FC = () => {
                               </td>
                               <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
                               <td className="border border-slate-300 px-2 py-1 capitalize" style={{ 
-                                color: selectedReport.summary.riskLevel === 'high' ? "#D14343" :
-                                       selectedReport.summary.riskLevel === 'moderate' ? "#F1A11A" : "#23B67E",
-                                fontWeight: 700
-                              }}>
+                                 color: selectedReport.summary.riskLevel === 'high' ? "#EB5757" :
+                                        selectedReport.summary.riskLevel === 'moderate' ? "#F2994A" : "#27AE60",
+                                 fontWeight: 700
+                               }}>
                                 {selectedReport.summary.riskLevel}
                               </td>
                             </tr>
@@ -945,13 +970,14 @@ export const ReportsPage: React.FC = () => {
       </Dialog >
       {/* Mobile Report Details Modal */}
       {
-        isMobile && showViewReport && selectedReport && (
+        (isMobile || isTablet) && showViewReport && selectedReport && (
           <div
             style={{
               position: "fixed", inset: 0, zIndex: 10001,
-              background: "rgba(0,0,0,0.3)",
-              display: "flex", alignItems: "flex-start", justifyContent: "center",
-              padding: "92px 20px 20px",
+              background: "rgba(0,0,0,0.6)",
+              display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+              padding: isMobile ? "92px 20px 20px" : "40px 20px",
+              animation: "fadeIn 0.2s ease-out both"
             }}
             onClick={() => { setShowViewReport(false); setSelectedReport(null); }}
           >
@@ -959,9 +985,10 @@ export const ReportsPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               style={{
                 width: "100%",
-                maxHeight: "calc(100vh - 108px)",
+                maxWidth: 800,
+                maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
                 background: "#fff",
-                borderRadius: 16,
+                borderRadius: isMobile ? 16 : 24,
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
@@ -996,30 +1023,56 @@ export const ReportsPage: React.FC = () => {
               <div style={{
                 flex: 1, minHeight: 0, overflowY: "auto",
                 padding: 20,
-                scrollbarWidth: "none",
+                maxHeight: "max-content",
               } as React.CSSProperties}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {/* Title & Status Card */}
                   <div style={{
                     background: "#fff",
-                    padding: "16px",
-                    borderRadius: 12,
+                    borderRadius: 15,
                     border: "1px solid #f0f1f3",
-                    borderLeft: `4px solid ${selectedReport.summary.riskLevel === 'high' ? '#ef4444' : selectedReport.summary.riskLevel === 'moderate' ? '#eab308' : '#22c55e'}`,
                     display: "flex",
-                    flexDirection: "column",
-                    gap: 8
+                    overflow: "hidden",
+                    position: "relative",
+                    minHeight: 110
                   }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
-                        background: selectedReport.summary.riskLevel === 'high' ? '#fef2f2' : selectedReport.summary.riskLevel === 'moderate' ? '#fefce8' : '#f0fdf4',
-                        color: selectedReport.summary.riskLevel === 'high' ? '#dc2626' : selectedReport.summary.riskLevel === 'moderate' ? '#a16207' : '#22c55e',
-                        textTransform: "capitalize", fontFamily: POPPINS,
-                      }}>{selectedReport.summary.riskLevel} Risk</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{selectedReport.period}</span>
+                    {/* Premium Folder-Style Side Accent */}
+                    <div style={{
+                      width: 6,
+                      backgroundColor: "#357D86",
+                      flexShrink: 0
+                    }} />
+
+                    <div style={{ 
+                      flex: 1, 
+                      padding: "16px", 
+                      display: "flex", 
+                      flexDirection: "column", 
+                      gap: 8 
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          {(() => {
+                            const r = selectedReport.summary.riskLevel.toLowerCase();
+                            const bg = r === 'high' ? "#FFF1F0" : r === 'moderate' ? "#FFF8ED" : "#E6F7EF";
+                            const color = r === 'high' ? "#EB5757" : r === 'moderate' ? "#F2994A" : "#27AE60";
+                            return (
+                              <span style={{
+                                fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
+                                background: bg,
+                                color: color,
+                                textTransform: "uppercase", fontFamily: POPPINS,
+                                letterSpacing: "0.05em"
+                              }}>{selectedReport.summary.riskLevel} Risk</span>
+                            );
+                          })()}
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>
+                          {selectedReport.period}
+                        </span>
+                      </div>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS, lineHeight: "1.4" }}>
+                        {selectedReport.title}
+                      </h3>
                     </div>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>{selectedReport.title}</h3>
                   </div>
 
                   {/* Metrics Grid */}

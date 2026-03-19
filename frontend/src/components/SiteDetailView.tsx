@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { AlertItem } from "./AlertItem";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { ArrowLeft, Download, Settings, Bell, Calendar, Info } from "lucide-react";
+import { ArrowLeft, Download, Settings, Bell, Calendar, Info, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
@@ -61,6 +61,7 @@ export function SiteDetailView({
 
   // Ref for chart container
   const chartRef = useRef<HTMLDivElement>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
@@ -392,7 +393,7 @@ export function SiteDetailView({
                   whiteSpace: "nowrap",
                   width: isMobile ? "100%" : undefined
                 }}
-                onClick={handleExportChartPDF}
+                onClick={() => setShowExportModal(true)}
               >
                 <Download size={15} /> Export
               </button>
@@ -518,168 +519,176 @@ export function SiteDetailView({
                         />
                       </AreaChart>
                     </ResponsiveContainer>
-                    {/* PDF-only explanation, always rendered but hidden in UI */}
-                    <div
-                      className="sg-pdf-only"
-                      style={{
-                        marginTop: 8,
-                        color: '#475569',
-                        background: '#f1f5f9',
-                        borderRadius: 8,
-                        padding: '10px 18px',
-                        fontSize: 13,
-                        fontFamily: POPPINS,
-                        maxWidth: 600,
-                        textAlign: 'center',
-                        display: 'none',
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        margin: 'auto',
-                        zIndex: 10,
-                      }}
-                    >
-                      <b>Graph Summary:</b> This chart visualizes the time series trends for Temperature, pH Level, and Turbidity based on the selected time range. Use this summary as a quick reference for water quality monitoring and risk assessment.<br /><br />
-                      <b>How to interpret the graph:</b><br />
-                      <ul style={{textAlign: 'left', margin: '8px auto', maxWidth: 540, paddingLeft: 18}}>
-                        <li><b>Temperature (°C):</b> Indicates the water temperature. Sudden spikes or drops may signal environmental changes or sensor issues. Critical range: 25–30°C.</li>
-                        <li><b>pH Level:</b> Shows the acidity or alkalinity of the water. Values outside the safe range (6.5–9.0) may affect aquatic life and water safety.</li>
-                        <li><b>Turbidity (NTU):</b> Measures water clarity. Higher turbidity can indicate contamination or sediment disturbance. Critical if below 5 NTU.</li>
-                      </ul>
-                      <b>Understanding Graph Trends:</b><br />
-                      <ul style={{textAlign: 'left', margin: '8px auto', maxWidth: 540, paddingLeft: 18}}>
-                        <li><b>Rising Trend:</b> A steady increase in temperature, pH, or turbidity may indicate warming weather, chemical changes, or increased sediment in the water. Monitor for values approaching or exceeding critical thresholds.</li>
-                        <li><b>Falling Trend:</b> A consistent decrease could mean cooling, dilution, or improved water clarity. Sudden drops may also signal sensor malfunction or external intervention.</li>
-                        <li><b>Flat/Stable Trend:</b> Stable readings within safe ranges suggest normal conditions. Extended flat lines at extreme values may indicate sensor issues.</li>
-                        <li><b>Sudden Spikes/Dips:</b> Abrupt changes often signal events like contamination, rainfall, or equipment error. Investigate the cause if these occur.</li>
-                      </ul>
-                      Observing these trends helps in early detection of water quality issues and supports timely decision-making for site management.
-                    </div>
+                    {/* PDF-only explanation removed from absolute position to avoid clipping */}
                   </div>
                 )}
                 <div className="flex flex-col items-center gap-2 mt-3">
                   <span className="flex-shrink-0 text-sm text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS, alignSelf: 'center' }}>
                     All parameters shown per {getIntervalString()} interval (from time series table)
                   </span>
-                  <div
-                    className="sg-pdf-only"
-                    style={{
-                      marginTop: 8,
-                      color: '#475569',
-                      background: '#f1f5f9',
-                      borderRadius: 8,
-                      padding: '10px 18px',
-                      fontSize: 13,
-                      fontFamily: POPPINS,
-                      maxWidth: 600,
-                      textAlign: 'center',
-                      display: 'none', // Hide in UI, show in PDF
-                    }}
-                  >
-                    <b>Graph Summary:</b> This chart visualizes the time series trends for Temperature, pH Level, and Turbidity based on the selected time range. Use this summary as a quick reference for water quality monitoring and risk assessment.<br /><br />
-                    <b>How to interpret the graph:</b><br />
-                    <ul style={{textAlign: 'left', margin: '8px auto', maxWidth: 540, paddingLeft: 18}}>
-                      <li><b>Temperature (°C):</b> Indicates the water temperature. Sudden spikes or drops may signal environmental changes or sensor issues. Critical range: 25–30°C.</li>
-                      <li><b>pH Level:</b> Shows the acidity or alkalinity of the water. Values outside the safe range (6.5–9.0) may affect aquatic life and water safety.</li>
-                      <li><b>Turbidity (NTU):</b> Measures water clarity. Higher turbidity can indicate contamination or sediment disturbance. Critical if below 5 NTU.</li>
-                    </ul>
-                    <b>Understanding Graph Trends:</b><br />
-                    <ul style={{textAlign: 'left', margin: '8px auto', maxWidth: 540, paddingLeft: 18}}>
-                      <li><b>Rising Trend:</b> A steady increase in temperature, pH, or turbidity may indicate warming weather, chemical changes, or increased sediment in the water. Monitor for values approaching or exceeding critical thresholds.</li>
-                      <li><b>Falling Trend:</b> A consistent decrease could mean cooling, dilution, or improved water clarity. Sudden drops may also signal sensor malfunction or external intervention.</li>
-                      <li><b>Flat/Stable Trend:</b> Stable readings within safe ranges suggest normal conditions. Extended flat lines at extreme values may indicate sensor issues.</li>
-                      <li><b>Sudden Spikes/Dips:</b> Abrupt changes often signal events like contamination, rainfall, or equipment error. Investigate the cause if these occur.</li>
-                    </ul>
-                    Observing these trends helps in early detection of water quality issues and supports timely decision-making for site management.
-                  </div>
+                  
+                  {/* Export Info Modal */}
+                  {showExportModal && (
+                    <div
+                      style={{
+                        position: "fixed", inset: 0, zIndex: 10002,
+                        background: "rgba(0,0,0,0.6)",
+                        display: "flex", 
+                        alignItems: isMobile ? "flex-start" : "center", 
+                        justifyContent: "center",
+                        padding: isMobile ? "92px 20px 20px" : "40px 20px",
+                        animation: "fadeIn 0.2s ease-out both"
+                      }}
+                      onClick={() => setShowExportModal(false)}
+                    >
                       <style>{`
-                        .sg-pdf-only { display: none; }
-                        @media print {
-                          .sg-pdf-only { display: block !important; }
+                        @keyframes modalPopIn {
+                          from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                          to { opacity: 1; transform: scale(1) translateY(0); }
                         }
+                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                       `}</style>
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          width: "100%",
+                          maxWidth: 540,
+                          maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
+                          background: "#fff",
+                          borderRadius: isMobile ? 16 : 24,
+                          display: "flex",
+                          flexDirection: "column",
+                          overflow: "hidden",
+                          boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
+                          animation: "modalPopIn 0.3s cubic-bezier(0.22,1,0.36,1) both",
+                        }}
+                      >
+                        <div style={{ 
+                          padding: isMobile ? "16px 20px" : "20px 24px", 
+                          borderBottom: "1px solid #f1f5f9", 
+                          display: "flex", 
+                          justifyContent: "space-between", 
+                          alignItems: "center",
+                          flexShrink: 0
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Download size={18} color="#1a2a3a" />
+                            </div>
+                            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>Export Report</h2>
+                          </div>
+                          <button onClick={() => setShowExportModal(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                            <X size={18} color="#64748b" />
+                          </button>
+                        </div>
+                        <div style={{ 
+                          padding: isMobile ? "20px" : "24px", 
+                          display: "flex", 
+                          flexDirection: "column", 
+                          gap: 20,
+                          flex: 1,
+                          overflowY: "auto",
+                          minHeight: 0
+                        }}>
+                          <div style={{ 
+                            background: "#f8fafc", 
+                            borderRadius: 16, 
+                            padding: "16px 18px", 
+                            border: "1px solid #f1f5f9", 
+                            position: "relative",
+                            height: "auto",
+                            display: "block"
+                          }}>
+                            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "#1a2a3a" }} />
+                            <h4 style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", margin: "0 0 6px 0", display: "flex", alignItems: "center", gap: 6 }}>
+                              <Info size={14} color="#1a2a3a" /> Graph Summary
+                            </h4>
+                            <p style={{ fontSize: 12.5, color: "#475569", margin: 0, lineHeight: "1.5" }}>
+                              This chart visualizes the time series trends for Temperature, pH Level, and Turbidity based on the selected time range.
+                            </p>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+                            <div style={{ background: "#fff", borderRadius: 16, padding: "16px", border: "1px solid #f1f5f9" }}>
+                              <h5 style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px 0" }}>How to interpret the graph</h5>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>Temperature</span><span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>25 – 30 °C</span></div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>pH Level</span><span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>6.5 – 9.0</span></div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>Turbidity (NTU)</span><span style={{ fontSize: 12, fontWeight: 700, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>Risk if &lt; 5</span></div>
+                              </div>
+                            </div>
+                            <div style={{ background: "#fff", borderRadius: 16, padding: "16px", border: "1px solid #f1f5f9" }}>
+                              <h5 style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px 0" }}>Understanding Trends</h5>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>Rising/Falling</span><span style={{ fontSize: 11, color: "#64748b" }}>Steady conditions</span></div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>Sudden Spikes</span><span style={{ fontSize: 11, color: "#64748b" }}>Sensor error/Issue</span></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ 
+                          padding: isMobile ? "16px 20px" : "20px 24px", 
+                          background: "#f8fafc", 
+                          borderTop: "1px solid #f1f5f9", 
+                          display: "flex", 
+                          gap: 12,
+                          flexShrink: 0
+                        }}>
+                          <button onClick={() => setShowExportModal(false)} style={{ flex: 1, height: 44, borderRadius: 12, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: POPPINS }}>Cancel</button>
+                          <button onClick={() => { setShowExportModal(false); handleExportChartPDF(); }} style={{ flex: 2, height: 44, borderRadius: 12, border: "none", background: "#357D86", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: POPPINS, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 12px rgba(53,125,134,0.25)" }}>
+                            <Download size={18} /> Confirm & Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <style>{`
+                  @media print {
+                    .sg-print-only { display: block !important; }
+                  }
+                `}</style>
+              </div>
+            </div>
+
+            <div style={{ background: "#ffffffc5", border: "1px solid #f1f5f9", borderRadius: 16, padding: "24px", marginTop: 12, fontFamily: POPPINS, width: "100%" }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
+                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>25 – 30</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 24.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 32</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
+                  </div>
+                </div>
+                <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
+                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>7.0 – 8.5</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.5 – 6.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.51 – 9.0</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
+                  </div>
+                </div>
+                <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
+                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-        <div style={{
-          background: "#ffffffc5",
-          border: "1px solid #f1f5f9",
-          borderRadius: 16,
-          padding: "24px",
-          marginTop: 12,
-          fontFamily: POPPINS,
-          width: "100%"
-        }}>
-          <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>
-            Threshold Classification Guide
-          </h4>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-
-            <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
-                <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
-                  <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>25 – 30</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span>
-                  <span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 24.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 32</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span>
-                  <span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
-                <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
-                  <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>7.0 – 8.5</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span>
-                  <span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.5 – 6.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.51 – 9.0</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span>
-                  <span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
-                <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
-                  <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span>
-                  <span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span>
-                  <span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>

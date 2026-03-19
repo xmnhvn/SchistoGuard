@@ -161,12 +161,14 @@ export function Dashboard({
     const check = () => {
       const w = window.innerWidth;
       setIsMobile(w < 600);
-      setIsTablet(w >= 600 && w < 1100); // tablets, iPads, Nest Hub, iPad Pro
+      setIsTablet(w >= 600 && w < 1100); 
     };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  const dPad = isMobile ? 16 : isTablet ? 24 : 32;
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -498,7 +500,7 @@ export function Dashboard({
           </span>
         </div>
         {/* Body — height capped so panel never leaves the viewport */}
-        <div style={{ maxHeight: bodyMaxH, overflowY: "auto", scrollbarWidth: "none" } as React.CSSProperties}>
+        <div style={{ maxHeight: bodyMaxH, overflowY: "auto" } as React.CSSProperties}>
           {alerts.filter((a) => !a.isAcknowledged).length > 0 ? (
             alerts.filter((a) => !a.isAcknowledged).map((alert) => {
               const level: "critical" | "warning" = alert.level === "critical" ? "critical" : "warning";
@@ -576,13 +578,11 @@ export function Dashboard({
             zIndex: 2,
             width: compactCards ? "100%" : "46%",
             height: "100%",
-            padding: compactCards ? "18px 14px 18px" : "30px 30px 30px",
+            padding: `${isMobile ? 18 : 30}px ${dPad}px ${isMobile ? 18 : 30}px`,
             display: "flex",
             flexDirection: "column",
             gap: 16,
             overflowY: "auto",
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
             pointerEvents: "none",
           } as React.CSSProperties}
         >
@@ -596,7 +596,7 @@ export function Dashboard({
                 fontSize: compactCards ? 28 : 34,
                 lineHeight: 1.15,
                 textShadow: "0 1px 6px rgba(0,0,0,0.18)",
-                paddingLeft: isMobile ? 40 : 0,
+                paddingLeft: isMobile ? 0 : 0, 
               }}
             >
               Water Quality Information
@@ -722,11 +722,8 @@ export function Dashboard({
             0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
             60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
           }
-          @keyframes cardDataFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          *::-webkit-scrollbar { display: none; }
         `}</style>
       </div>
     );
@@ -760,16 +757,14 @@ export function Dashboard({
           zIndex: 2,
           display: "flex",
           flexDirection: "column",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
           pointerEvents: isTab ? "none" : "auto",
         } as React.CSSProperties}>
 
-          {/* ── HERO SECTION: site info ── transparent so map shows through */}
-          <div style={{ padding: isTab ? "28px 28px 0" : "22px 18px 0 18px", flexShrink: 0, pointerEvents: "auto", animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+          {/* Dashboard Site Info Header (Site Name, Barangay) */}
+          <div style={{ padding: `${dPad}px ${dPad}px 0`, display: "flex", flexDirection: "column", pointerEvents: "auto", animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
             {/* Site name */}
             <h1 style={{
-              fontSize: isTab ? 32 : 24, fontWeight: 700, color: "#fff", margin: 0,
+              fontSize: isTab ? 32 : 36, fontWeight: 700, color: "#fff", margin: 0,
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)"
             }}>
@@ -820,7 +815,7 @@ export function Dashboard({
           <div style={{ flex: 1, minHeight: isTab ? 40 : 80 }} />
 
           {/* ── CARDS — anchored to bottom, no solid section bg ── */}
-          <div style={{ padding: isTab ? "0 28px 28px" : "0 14px 20px", display: "flex", flexDirection: "column", gap: isTab ? 16 : 16, pointerEvents: "auto" }}>
+          <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : 20}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
             <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
@@ -1156,7 +1151,7 @@ export function Dashboard({
   // Shared card height so ALL dashboard cards are uniform
   const cardH = isNarrowDesktop ? 140 : 190;
   const panelWidth = isNarrowDesktop ? "46%" : "44%";
-  const panelPadding = isNarrowDesktop ? "20px 22px 20px 22px" : "40px 44px 40px 44px";
+  const panelPadding = `${isNarrowDesktop ? dPad : 40}px ${dPad}px ${isNarrowDesktop ? dPad : 40}px ${dPad}px`;
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
 
@@ -1185,15 +1180,13 @@ export function Dashboard({
           flexDirection: "column",
           padding: panelPadding,
           overflowY: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
           zIndex: 2,
         } as React.CSSProperties}
       >
         {/* Site header */}
-        <div style={{ marginBottom: isNarrowDesktop ? 10 : 20, animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ marginBottom: isNarrowDesktop ? 12 : 20, animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           <h1 style={{
-            fontSize: isNarrowDesktop ? 24 : 34,
+            fontSize: isNarrowDesktop ? 30 : 36,
             fontWeight: 700,
             color: "#fff",
             margin: 0,
@@ -1403,8 +1396,8 @@ export function Dashboard({
       <div
         style={{
           position: "absolute",
-          top: 16,
-          right: 16,
+          top: dPad,
+          right: dPad,
           background: "rgba(255,255,255,0.9)",
           borderRadius: 999,
           padding: "6px 14px",
@@ -1439,8 +1432,8 @@ export function Dashboard({
         onClick={() => mapRef.current?.resetView()}
         style={{
           position: "absolute",
-          top: 54,
-          right: 16,
+          top: dPad + 38,
+          right: dPad,
           width: 34,
           height: 34,
           borderRadius: "50%",

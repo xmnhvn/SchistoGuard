@@ -135,7 +135,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
             overflow: "auto",
             background: "#f5f7f9",
             padding: pad,
-            scrollbarWidth: "none",
+            position: "relative",
             display: "flex",
             flexDirection: "column",
             alignItems: "stretch",
@@ -236,7 +236,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                         : "none",
                 }}>
                     <div className="glass-card premium-shadow" style={{
-                        maxWidth: 500,
+                        maxWidth: 440,
                         width: "100%",
                         borderRadius: 32,
                         overflow: "hidden",
@@ -244,7 +244,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                     }}>
                         {/* Mesh banner */}
                         <div className="mesh-banner" style={{
-                            height: 140,
+                            height: 120,
                             position: "relative",
                         }} />
 
@@ -253,22 +253,22 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
-                            marginTop: -60,
-                            padding: "0 32px 32px",
+                            marginTop: -50,
+                            padding: "0 28px 28px",
                             position: "relative",
                         }}>
                             {/* Avatar with luxury border */}
                             <div
                                 style={{
                                     position: "relative",
-                                    width: 120, height: 120,
+                                    width: 100, height: 100,
                                     borderRadius: "50%",
-                                    border: hasUnsavedChanges ? "5px solid #357D86" : "5px solid #fff",
+                                    border: hasUnsavedChanges ? "4px solid #357D86" : "4px solid #fff",
                                     boxShadow: hasUnsavedChanges
                                         ? "0 0 0 4px rgba(53, 125, 134, 0.15), 0 12px 24px -8px rgba(0,0,0,0.2)"
                                         : "0 12px 24px -8px rgba(0,0,0,0.2)",
                                     cursor: "pointer",
-                                    overflow: "visible", // Changed to visible to let badges overlap
+                                    overflow: "visible", 
                                     background: "linear-gradient(135deg, #357D86 0%, #05a5a9 100%)",
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                     transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -297,7 +297,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                         />
                                     ) : (
                                         <span style={{
-                                            fontSize: 42, fontWeight: 800, color: "#fff",
+                                            fontSize: 34, fontWeight: 800, color: "#fff",
                                             fontFamily: POPPINS, userSelect: "none",
                                             letterSpacing: "0.05em"
                                         }}>
@@ -419,8 +419,8 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
 
                             {/* Name & Role — Enhanced typography */}
                             <h2 style={{
-                                fontSize: 24, fontWeight: 800, color: "#0f172a",
-                                margin: hasUnsavedChanges ? "16px 0 4px" : "24px 0 4px",
+                                fontSize: 21, fontWeight: 800, color: "#0f172a",
+                                margin: hasUnsavedChanges ? "14px 0 4px" : "18px 0 4px",
                                 fontFamily: POPPINS, textAlign: "center",
                                 letterSpacing: "-0.01em"
                             }}>
@@ -446,13 +446,13 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                         <div style={{ height: 1, background: "rgba(0,0,0,0.04)", margin: "0 32px" }} />
 
                         {/* Premium Info Items Grid */}
-                        <div style={{ padding: "32px", display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+                        <div style={{ padding: "0 28px 28px", display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
                             {infoItems.map((item, i) => (
                                 <div key={item.label} style={{
                                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                                    padding: "16px 20px",
+                                    padding: "14px 18px",
                                     background: "rgba(0,0,0,0.02)",
-                                    borderRadius: 20,
+                                    borderRadius: 18,
                                     border: "1px solid rgba(0,0,0,0.03)",
                                     transition: "all 0.3s ease",
                                     animation: animate ? `contentSlideIn 0.8s ${0.3 + i * 0.12}s cubic-bezier(0.16, 1, 0.3, 1) both` : "none",
