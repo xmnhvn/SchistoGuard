@@ -37,8 +37,14 @@ export function Dashboard({
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
-    // Device connection state
-    const [deviceConnected, setDeviceConnected] = useState(true);
+  const [siteData, setSiteData] = useState<any>({
+    siteName: "Mang Jose's Fish Pond",
+    barangay: "San Miguel",
+    municipality: "Tacloban City",
+    area: "100 square meters",
+  });
+  // Device connection state
+  const [deviceConnected, setDeviceConnected] = useState(true);
   // Interval config state
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
@@ -54,6 +60,18 @@ export function Dashboard({
       return () => clearTimeout(t);
     }
   }, [visible, mapReady]);
+
+
+
+  // Prepare GPS site for map
+  const gpsSites = latestReading && typeof latestReading.latitude === 'number' && typeof latestReading.longitude === 'number' && latestReading.latitude !== null && latestReading.longitude !== null
+    ? [{
+        id: 'device-gps',
+        name: siteData.siteName || 'Device Location',
+        lat: latestReading.latitude,
+        lng: latestReading.longitude,
+      }]
+    : undefined;
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [alertsClosing, setAlertsClosing] = useState(false);
   const alertsOpenRef = useRef(false);
@@ -82,12 +100,7 @@ export function Dashboard({
     window.addEventListener("sidebarDrawerChanged", handler);
     return () => window.removeEventListener("sidebarDrawerChanged", handler);
   }, []);
-  const [siteData, setSiteData] = useState<any>({
-    siteName: "Mang Jose's Fish Pond",
-    barangay: "San Miguel",
-    municipality: "Tacloban City",
-    area: "100 square meters",
-  });
+  // (removed duplicate declaration)
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
   const alertsPanelRef = useRef<HTMLDivElement>(null);
@@ -465,9 +478,9 @@ export function Dashboard({
       >
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           {compactCards ? (
-            <DashboardMap mobileMode={true} interactive={isTablet} />
+            <DashboardMap mobileMode={true} interactive={isTablet} sites={gpsSites} />
           ) : (
-            <DashboardMap />
+            <DashboardMap sites={gpsSites} />
           )}
         </div>
 
@@ -653,7 +666,7 @@ export function Dashboard({
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.8s ease" }}>
-          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} />
+          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={gpsSites} />
         </div>
 
         {/* ── GRADIENT OVERLAY — matches desktop: upper-left teal fading to transparent ── */}
@@ -1277,7 +1290,7 @@ export function Dashboard({
           transition: "opacity 0.8s ease",
         }}
       >
-        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={gpsSites} />
       </div>
 
       {/* System Operational badge — top right, above gradient */}
