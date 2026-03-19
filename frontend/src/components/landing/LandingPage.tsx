@@ -686,7 +686,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <SensorMiniCard
                 label="Temperature"
                 iconSrc="/icons/icon-temperature.svg"
-                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.temperature}` : '—'}
+                value={!deviceConnected ? "—" : latestReading ? `${latestReading.temperature}` : '—'}
                 unit="°C"
                 sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('temperature', latestReading.temperature).label : ''}
                 dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af'}
@@ -697,7 +697,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <SensorMiniCard
                 label="Turbidity"
                 iconSrc="/icons/icon-turbidity.svg"
-                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.turbidity}` : '—'}
+                value={!deviceConnected ? "—" : latestReading ? `${latestReading.turbidity}` : '—'}
                 unit="NTU"
                 sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('turbidity', latestReading.turbidity).label : ''}
                 dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af'}
@@ -708,7 +708,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <SensorMiniCard
                 label="pH Level"
                 iconSrc="/icons/icon-ph.svg"
-                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.ph}` : '—'}
+                value={!deviceConnected ? "—" : latestReading ? `${latestReading.ph}` : '—'}
                 unit=""
                 sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('ph', latestReading.ph).label : ''}
                 dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af'}
