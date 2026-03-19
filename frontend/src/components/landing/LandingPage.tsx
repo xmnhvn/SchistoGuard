@@ -77,6 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [latestReading, setLatestReading] = useState<any>(null);
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
+  const [deviceConnected, setDeviceConnected] = useState(true);
   const [siteData, setSiteData] = useState<any>({
     siteName: "Mang Jose's Fish Pond",
     barangay: "San Miguel",
@@ -101,9 +102,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
         .then((data) => {
+          if (data && data.deviceConnected === false) {
+            setDeviceConnected(false);
+            setLatestReading(null);
+            setBackendOk(true);
+            setDataOk(false);
+            return;
+          }
           setLatestReading(data);
           setBackendOk(true);
           setDataOk(true);
+          setDeviceConnected(true);
           if (data && data.siteName) {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
           }
@@ -111,6 +120,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         .catch(() => {
           setBackendOk(false);
           setDataOk(false);
+          setDeviceConnected(false);
         });
     };
     fetchLatest();
@@ -625,7 +635,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   padding: '5px 14px',
                   fontSize: 12,
                   fontWeight: 600,
-                  color: (backendOk && dataOk) ? '#15803d' : '#6b7280',
+                  color: (deviceConnected && backendOk && dataOk) ? '#15803d' : '#6b7280',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                   backdropFilter: 'blur(4px)',
                   fontFamily: "'Poppins', sans-serif",
@@ -634,11 +644,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     width: 7,
                     height: 7,
                     borderRadius: '50%',
-                    background: (backendOk && dataOk) ? '#22c55e' : '#9ca3af',
+                    background: (deviceConnected && backendOk && dataOk) ? '#22c55e' : '#9ca3af',
                     display: 'inline-block',
-                    animation: (backendOk && dataOk) ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                    animation: (deviceConnected && backendOk && dataOk) ? 'dotPulse 3s ease-in-out infinite' : 'none',
                   }} />
-                  {(backendOk && dataOk) ? 'System Operational' : 'Device Not Connected'}
+                  {(deviceConnected && backendOk && dataOk) ? 'System Operational' : 'Device Not Connected'}
                 </div>
                 <button
                   onClick={() => mapRef.current?.resetView()}
@@ -676,33 +686,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <SensorMiniCard
                 label="Temperature"
                 iconSrc="/icons/icon-temperature.svg"
-                value={latestReading ? `${latestReading.temperature}` : '—'}
+                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.temperature}` : '—'}
                 unit="°C"
-                sub={latestReading ? getSensorStatus('temperature', latestReading.temperature).label : ''}
-                dot={latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af'}
-                active={!!latestReading}
+                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('temperature', latestReading.temperature).label : ''}
+                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af'}
+                active={deviceConnected && !!latestReading}
                 compact={screenWidth < 600}
                 fadeIn
               />
               <SensorMiniCard
                 label="Turbidity"
                 iconSrc="/icons/icon-turbidity.svg"
-                value={latestReading ? `${latestReading.turbidity}` : '—'}
+                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.turbidity}` : '—'}
                 unit="NTU"
-                sub={latestReading ? getSensorStatus('turbidity', latestReading.turbidity).label : ''}
-                dot={latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af'}
-                active={!!latestReading}
+                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('turbidity', latestReading.turbidity).label : ''}
+                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af'}
+                active={deviceConnected && !!latestReading}
                 compact={screenWidth < 600}
                 fadeIn
               />
               <SensorMiniCard
                 label="pH Level"
                 iconSrc="/icons/icon-ph.svg"
-                value={latestReading ? `${latestReading.ph}` : '—'}
+                value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.ph}` : '—'}
                 unit=""
-                sub={latestReading ? getSensorStatus('ph', latestReading.ph).label : ''}
-                dot={latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af'}
-                active={!!latestReading}
+                sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus('ph', latestReading.ph).label : ''}
+                dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af'}
+                active={deviceConnected && !!latestReading}
                 compact={screenWidth < 600}
                 fadeIn
               />
