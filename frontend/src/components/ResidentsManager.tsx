@@ -501,111 +501,99 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           background: "#fff",
           borderRadius: 20,
           overflow: "hidden",
-          flex: 1,
+          flex: isMobile ? "0 0 auto" : 1,
           minHeight: 0,
           display: "flex",
           flexDirection: "column",
           animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
-          <div style={{
-            padding: isMobile ? "16px 16px 12px" : "20px 24px 16px",
-            borderBottom: "1px solid #f0f1f3",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}>
-            <h2 style={{ fontSize: 17, fontWeight: 600, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
-              Recipients Directory
-            </h2>
+          <div 
+            onClick={() => isMobile && setShowMobileViewAll(true)}
+            style={{
+              padding: isMobile ? "12px 14px" : "20px 24px 16px",
+              background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
+              borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: isMobile ? "pointer" : "default",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {isMobile && (
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  background: "#f0f8f9",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Users size={18} color="#357D86" strokeWidth={2.5} />
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <h2 style={{
+                  fontSize: 15, fontWeight: 700, color: "#1a2a3a",
+                  margin: 0,
+                  fontFamily: POPPINS,
+                }}>
+                  {isMobile ? "Recipients Directory" : "Recipient List"}
+                </h2>
+                {isMobile && (
+                  <span style={{ 
+                    fontSize: 11, 
+                    color: "#7b8a9a", 
+                    fontWeight: 500, 
+                    fontFamily: POPPINS 
+                }}>
+                    Manage alert recipients
+                  </span>
+                )}
+              </div>
+            </div>
             {isMobile && (
-              <button
-                onClick={() => setShowMobileViewAll(true)}
-                style={{
-                  background: "none", border: "none", color: "#357D86", fontSize: 13,
-                  fontWeight: 600, fontFamily: POPPINS, display: "flex", alignItems: "center",
-                  gap: 2, padding: 0, cursor: "pointer"
-                }}
-              >
-                View All <ChevronRight size={14} />
-              </button>
+              <div style={{
+                background: "#f0f8f9",
+                padding: "6px 12px",
+                borderRadius: 20,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}>
+                <span
+                  style={{
+                    fontSize: 12, fontWeight: 600, color: "#357D86",
+                    cursor: "pointer", fontFamily: POPPINS,
+                  }}
+                >
+                  View All
+                </span>
+                <ChevronRight size={14} color="#357D86" strokeWidth={3} />
+              </div>
             )}
           </div>
-          <div style={{
-            flex: 1,
-            minHeight: 0,
-            overflowX: "auto",
-            overflowY: "auto",
-            padding: isMobile ? 12 : 0,
-          }}>
-            {loading ? (
-              <div style={{ padding: "48px 20px", textAlign: "center", color: "#7b8a9a", fontFamily: POPPINS }}>Loading recipients...</div>
-            ) : filteredResidents.length === 0 ? (
-              <div style={{ padding: "48px 20px", textAlign: "center" }}>
-                <Users style={{ width: 48, height: 48, color: "#d1d9e0", margin: "0 auto 16px" }} />
-                <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a2a3a", marginBottom: 6, fontFamily: POPPINS }}>No recipients found</h3>
-                <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>
-                  {residents.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
-                </p>
-              </div>
-            ) : isMobile ? (
-              /* Mobile List */
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {filteredResidents.slice(0, 5).map((resident, idx) => (
-                  <div key={resident.id} style={{
-                    padding: "12px 16px",
-                    borderRadius: 16,
-                    border: "1px solid #f0f0f0",
-                    background: "#fff",
-                    animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.05}s both`,
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{resident.name}</span>
-                        <span style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>{resident.phone}</span>
-                      </div>
-                      <span style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: "3px 10px",
-                        borderRadius: 20,
-                        background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
-                        color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
-                        fontFamily: POPPINS,
-                      }}>
-                        {roleLabels[resident.role]}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        {resident.verified ? (
-                          <CheckCircle2 style={{ width: 14, height: 14, color: "#16a34a" }} />
-                        ) : (
-                          <Circle style={{ width: 14, height: 14, color: "#9ca3af" }} />
-                        )}
-                        <span style={{ fontSize: 12, color: resident.verified ? "#16a34a" : "#9ca3af", fontWeight: 500, fontFamily: POPPINS }}>
-                          {resident.verified ? "Verified" : "Unverified"}
-                        </span>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "#64748b" }}>
-                            <MoreHorizontal size={20} />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" style={{ fontFamily: POPPINS }}>
-                          <DropdownMenuItem onClick={() => openEditDialog(resident)} className="cursor-pointer">
-                            <Edit size={14} className="mr-2" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(resident)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
-                            <Trash2 size={14} className="mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
+
+          {!isMobile && (
+            <div style={{
+              flex: 1,
+              minHeight: 0,
+              overflowX: "auto",
+              overflowY: "auto",
+              padding: 0,
+            }}>
+              {loading ? (
+                <div style={{ padding: "48px 20px", textAlign: "center", color: "#7b8a9a", fontFamily: POPPINS }}>Loading recipients...</div>
+              ) : filteredResidents.length === 0 ? (
+                <div style={{ padding: "48px 20px", textAlign: "center" }}>
+                  <Users style={{ width: 48, height: 48, color: "#d1d9e0", margin: "0 auto 16px" }} />
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a2a3a", marginBottom: 6, fontFamily: POPPINS }}>No recipients found</h3>
+                  <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>
+                    {residents.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
+                  </p>
+                </div>
+              ) : (
               /* Desktop Table */
               <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
                 <thead>
@@ -698,8 +686,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </table>
             )}
           </div>
-        </div>
+        )}
       </div>
+    </div>
 
       {/* ── Mobile View All List Modal ── */}
       {isMobile && showMobileViewAll && (

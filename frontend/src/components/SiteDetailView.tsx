@@ -438,23 +438,24 @@ export function SiteDetailView({
                     display: "flex",
                     flexDirection: "row",
                     flexWrap: "wrap",
-                    gap: 18,
-                    fontSize: 13,
+                    gap: isMobile ? 12 : 18,
+                    justifyContent: isMobile ? "center" : "flex-start",
+                    fontSize: isMobile ? 12 : 13,
                     fontWeight: 500,
                     color: "#7b8a9a",
                     fontFamily: POPPINS,
-                    marginTop: isMobile ? 4 : 0,
-                    marginLeft: isMobile ? 2 : 0,
+                    marginTop: isMobile ? 12 : 0,
+                    width: isMobile ? "100%" : "auto",
                   }}
                 >
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#43c6b6", flexShrink: 0 }} /> Temperature
+                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6", flexShrink: 0 }} /> Temperature
                   </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#4187d6", flexShrink: 0 }} /> pH Level
+                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6", flexShrink: 0 }} /> pH Level
                   </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2c5282", flexShrink: 0 }} /> Turbidity
+                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282", flexShrink: 0 }} /> Turbidity
                   </span>
                 </div>
               </div>
@@ -616,12 +617,12 @@ export function SiteDetailView({
           </h4>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
 
-            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
+            <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
+                <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
                   <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>25 – 30</span>
@@ -637,12 +638,12 @@ export function SiteDetailView({
               </div>
             </div>
 
-            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#4187d6" }} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
+            <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
+                <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
                   <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>7.0 – 8.5</span>
@@ -658,12 +659,12 @@ export function SiteDetailView({
               </div>
             </div>
 
-            <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2c5282" }} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
+            <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
+                <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span>
                   <span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span>

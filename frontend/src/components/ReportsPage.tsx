@@ -341,13 +341,16 @@ export const ReportsPage: React.FC = () => {
   const filteredReports = reports.filter((report) => selectedType === 'all' || report.type === selectedType);
 
   const getRiskBadge = (risk: string) => {
-    switch (risk) {
+    switch (risk.toLowerCase()) {
       case 'low':
-        return <Badge className="bg-green-100 text-green-800">Low Risk</Badge>;
+      case 'safe':
+        return <Badge style={{ backgroundColor: "#E9FBF3", color: "#23B67E", border: "none", fontWeight: 600 }}>Low Risk</Badge>;
       case 'moderate':
-        return <Badge className="bg-yellow-100 text-yellow-800">Moderate Risk</Badge>;
+      case 'warning':
+        return <Badge style={{ backgroundColor: "#FFF9E6", color: "#F1A11A", border: "none", fontWeight: 600 }}>Moderate Risk</Badge>;
       case 'high':
-        return <Badge variant="destructive">High Risk</Badge>;
+      case 'critical':
+        return <Badge style={{ backgroundColor: "#FFF1F1", color: "#D14343", border: "none", fontWeight: 600 }}>High Risk</Badge>;
       default:
         return <Badge>{risk}</Badge>;
     }
@@ -369,13 +372,15 @@ export const ReportsPage: React.FC = () => {
   };
 
   const getRiskHeaderTheme = (risk: string) => {
-    switch (risk) {
+    switch (risk.toLowerCase()) {
       case 'high':
-        return 'from-red-50 to-rose-50';
+      case 'critical':
+        return 'from-[#FFF1F1] to-[#FFF5F5]';
       case 'moderate':
-        return 'from-amber-50 to-yellow-50';
+      case 'warning':
+        return 'from-[#FFF9E6] to-[#FFFEF0]';
       default:
-        return 'from-emerald-50 to-teal-50';
+        return 'from-[#E9FBF3] to-[#F2FDF9]';
     }
   };
 
@@ -542,23 +547,19 @@ export const ReportsPage: React.FC = () => {
                             display: "flex",
                             overflow: "hidden",
                             position: "relative",
-                            minHeight: 92,
+                            minHeight: 100,
                             borderRadius: 15,
                             border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9"
                           }}
                         >
-                          {/* Wrapped Teal Accent Left - Clipped by parent overflow:hidden */}
+                          {/* Premium Folder-Style Side Accent */}
                           <div style={{
-                            position: "absolute",
-                            left: 0,
-                            top: 0,
-                            bottom: 0,
-                            width: 8,
-                            backgroundColor: selectedReport?.id === report.id ? "#357D86" : "#357D86",
-                            zIndex: 1
+                            width: 6,
+                            backgroundColor: "#357D86",
+                            flexShrink: 0
                           }} />
 
-                          <div className="flex w-full items-center justify-between px-8 py-5">
+                          <div className="flex w-full items-center justify-between px-6 py-5">
                             <div className="flex flex-1 flex-col justify-center overflow-hidden">
                               <h4
                                 className="truncate text-[15.5px]"
@@ -567,13 +568,13 @@ export const ReportsPage: React.FC = () => {
                                   fontWeight: selectedReport?.id === report.id ? 700 : 500,
                                   color: "#357D86",
                                   letterSpacing: "-0.01em",
-                                  lineHeight: "1.2"
+                                  lineHeight: "1.4"
                                 }}
                               >
                                 {report.title}
                               </h4>
                               <div
-                                className="mt-1"
+                                className="mt-2"
                                 style={{
                                   fontFamily: POPPINS,
                                   fontWeight: 500,
@@ -715,7 +716,13 @@ export const ReportsPage: React.FC = () => {
                                   .replaceAll('/', '-')}
                               </td>
                               <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
-                              <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.summary.riskLevel}</td>
+                              <td className="border border-slate-300 px-2 py-1 capitalize" style={{ 
+                                color: selectedReport.summary.riskLevel === 'high' ? "#D14343" :
+                                       selectedReport.summary.riskLevel === 'moderate' ? "#F1A11A" : "#23B67E",
+                                fontWeight: 700
+                              }}>
+                                {selectedReport.summary.riskLevel}
+                              </td>
                             </tr>
                             <tr>
                               <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
@@ -776,7 +783,10 @@ export const ReportsPage: React.FC = () => {
                           Findings And Observations
                         </h4>
                         <p className="mt-2 text-xs text-slate-700">
-                          Overall risk classification for this reporting period is <span className="font-semibold capitalize">{selectedReport.summary.riskLevel}</span>.
+                          Overall risk classification for this reporting period is <span className="font-semibold capitalize" style={{ 
+                            color: selectedReport.summary.riskLevel === 'high' ? "#D14343" :
+                                   selectedReport.summary.riskLevel === 'moderate' ? "#F1A11A" : "#23B67E"
+                          }}>{selectedReport.summary.riskLevel}</span>.
                           {selectedReport.summary.alertsGenerated > 0
                             ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
                             : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
