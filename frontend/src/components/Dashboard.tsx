@@ -9,7 +9,9 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+
 import { apiGet, apiPut } from "../utils/api";
+import { reverseGeocode } from "../utils/reverseGeocode";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -45,6 +47,10 @@ export function Dashboard({
   });
   // Device connection state
   const [deviceConnected, setDeviceConnected] = useState(true);
+  // Address from reverse geocoding
+  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
+  // Cache last lat/lng to avoid unnecessary API calls
+  const lastLatLngRef = useRef<{lat: number, lng: number} | null>(null);
   // Interval config state
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
@@ -72,6 +78,31 @@ export function Dashboard({
         lng: latestReading.longitude,
       }]
     : undefined;
+
+  // Reverse geocode when GPS changes
+  useEffect(() => {
+    if (
+      latestReading &&
+      typeof latestReading.latitude === 'number' &&
+      typeof latestReading.longitude === 'number' &&
+      latestReading.latitude !== null &&
+      latestReading.longitude !== null
+    ) {
+      const lat = latestReading.latitude;
+      const lng = latestReading.longitude;
+      // Only fetch if changed
+      if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
+        lastLatLngRef.current = { lat, lng };
+        setGpsAddress(null); // reset while loading
+        reverseGeocode(lat, lng).then(addr => {
+          setGpsAddress(addr);
+        });
+      }
+    } else {
+      setGpsAddress(null);
+      lastLatLngRef.current = null;
+    }
+  }, [latestReading && latestReading.latitude, latestReading && latestReading.longitude]);
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [alertsClosing, setAlertsClosing] = useState(false);
   const alertsOpenRef = useRef(false);
@@ -1121,7 +1152,11 @@ export function Dashboard({
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 400,
           }}>
-            {siteData.area} • {siteData.barangay}, {siteData.municipality}
+            {latestReading && typeof latestReading.latitude === 'number' && typeof latestReading.longitude === 'number' && latestReading.latitude !== null && latestReading.longitude !== null
+              ? gpsAddress
+                ? gpsAddress
+                : `Lat: ${latestReading.latitude.toFixed(6)}, Lng: ${latestReading.longitude.toFixed(6)}`
+              : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
           </p>
         </div>
 
