@@ -639,7 +639,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     display: 'inline-block',
                     animation: (backendOk && dataOk) ? 'dotPulse 3s ease-in-out infinite' : 'none',
                   }} />
-                  {(backendOk && dataOk) ? 'System Operational' : 'System Down'}
+                  {(backendOk && dataOk) ? 'System Operational' : 'Device Not Connected'}
                 </div>
                 
                 {/* Location/Recenter Button */}

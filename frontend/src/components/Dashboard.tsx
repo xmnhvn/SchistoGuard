@@ -556,7 +556,7 @@ export function Dashboard({
                   animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
                   "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
                 } as any} />
-                {(backendOk && dataOk) ? "System Operational" : "System Down"}
+                {(backendOk && dataOk) ? "System Operational" : "Device Not Connected"}
               </div>
               
               <button
@@ -709,7 +709,7 @@ export function Dashboard({
                   animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
                   "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
                 } as React.CSSProperties} />
-                {(backendOk && dataOk) ? "System Operational" : "System Down"}
+                {(backendOk && dataOk) ? "System Operational" : "Device Not Connected"}
               </div>
               {isTab && (
                 <button
@@ -1312,7 +1312,7 @@ export function Dashboard({
             "--dot-glow": (backendOk && dataOk) ? hexToRgba("#22c55e", 0.5) : "transparent",
           } as React.CSSProperties}
         />
-        {(backendOk && dataOk) ? "System Operational" : "System Down"}
+        {(backendOk && dataOk) ? "System Operational" : "Device Not Connected"}
       </div>
 
       {/* Reset map position button — below System Operational badge */}
