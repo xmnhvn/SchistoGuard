@@ -420,13 +420,15 @@ function checkAndAlertImmediate(data) {
 
 
 router.post("/", (req, res) => {
-  const { turbidity, temperature, ph, device_ip } = req.body;
+  const { turbidity, temperature, ph, device_ip, latitude, longitude } = req.body;
   const status = classifyWater(temperature, ph, turbidity);
   latestData = {
     turbidity,
     temperature,
     ph,
     device_ip,
+    latitude,
+    longitude,
     status,
     timestamp: new Date()
   };

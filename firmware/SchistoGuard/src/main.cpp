@@ -7,12 +7,10 @@
 #include <ArduinoOTA.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
-// Cloud backend URL for real-time sensor sync
-#define CLOUD_BACKEND_URL "https://schistoguard-production.up.railway.app/api/sensors"
 #include <ESPmDNS.h>
 #include <math.h>
-
-#include "gps_module.h" // Neo-6M GPS integration
+#include "gps_module.h"
+#define CLOUD_BACKEND_URL "https://schistoguard-production.up.railway.app/api/sensors"
 
 // Pins (ESP32 GPIO numbers)
 const int LCD_SDA = 33; // D33
