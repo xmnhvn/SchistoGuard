@@ -58,6 +58,7 @@ if (DB_TYPE === 'postgres') {
         )
       `);
 
+
       await db.query(`
         CREATE TABLE IF NOT EXISTS raw_readings (
           id SERIAL PRIMARY KEY,
@@ -69,6 +70,24 @@ if (DB_TYPE === 'postgres') {
           longitude REAL,
           "timestamp" TEXT
         )
+      `);
+      // Add latitude column if missing
+      await db.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='raw_readings' AND column_name='latitude') THEN
+            ALTER TABLE raw_readings ADD COLUMN latitude REAL;
+          END IF;
+        END $$;
+      `);
+      // Add longitude column if missing
+      await db.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='raw_readings' AND column_name='longitude') THEN
+            ALTER TABLE raw_readings ADD COLUMN longitude REAL;
+          END IF;
+        END $$;
       `);
       
       await db.query(`
