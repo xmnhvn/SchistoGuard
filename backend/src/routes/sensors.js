@@ -147,9 +147,14 @@ try {
 } catch (e) { /* ignore */ }
 
 let firstLogged = false;
+
 setInterval(() => {
   if (!latestData) return;
   const now = new Date();
+  const dataTimestamp = new Date(latestData.timestamp).getTime();
+  const nowMs = now.getTime();
+  // Only proceed if data is fresh (device connected, <10s old)
+  if (Math.abs(nowMs - dataTimestamp) >= 10000) return;
 
   // --- Auto-reload interval config every cycle ---
   let intervalMs = 5 * 60 * 1000; // default 5min
