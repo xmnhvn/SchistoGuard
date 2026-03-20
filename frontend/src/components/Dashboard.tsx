@@ -123,8 +123,10 @@ export function Dashboard({
     }
   }
 
-  // Reverse geocode when GPS changes
+  // Reverse geocode the location shown on the map (latestReading or lastSavedLocation)
   useEffect(() => {
+    let lat: number | null = null;
+    let lng: number | null = null;
     if (
       latestReading &&
       typeof latestReading.latitude === 'number' &&
@@ -132,9 +134,13 @@ export function Dashboard({
       latestReading.latitude !== null &&
       latestReading.longitude !== null
     ) {
-      const lat = latestReading.latitude;
-      const lng = latestReading.longitude;
-      // Only fetch if changed
+      lat = latestReading.latitude;
+      lng = latestReading.longitude;
+    } else if (lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
+      lat = lastSavedLocation.lat;
+      lng = lastSavedLocation.lng;
+    }
+    if (lat !== null && lng !== null) {
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
         setGpsAddress(null); // reset while loading
@@ -146,7 +152,7 @@ export function Dashboard({
       setGpsAddress(null);
       lastLatLngRef.current = null;
     }
-  }, [latestReading && latestReading.latitude, latestReading && latestReading.longitude]);
+  }, [latestReading, lastSavedLocation]);
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [alertsClosing, setAlertsClosing] = useState(false);
   const alertsOpenRef = useRef(false);
@@ -770,12 +776,16 @@ export function Dashboard({
             }}>
               {siteData.siteName}
             </h1>
-            {/* Address */}
+            {/* Address (sync with LandingPage logic) */}
             <p style={{
               fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", margin: "5px 0 10px",
               fontFamily: POPPINS
             }}>
-              {siteData.area} • {siteData.barangay}, {siteData.municipality}
+              {gpsAddress
+                ? gpsAddress
+                : lastSavedLocation && lastSavedLocation.siteName
+                  ? lastSavedLocation.siteName
+                  : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
             </p>
             {/* System Operational badge — left-aligned, under address */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1202,13 +1212,9 @@ export function Dashboard({
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 400,
           }}>
-            {latestReading && typeof latestReading.latitude === 'number' && typeof latestReading.longitude === 'number' && latestReading.latitude !== null && latestReading.longitude !== null
+            {gpsAddress
               ? gpsAddress
-                ? gpsAddress
-                : `Lat: ${latestReading.latitude.toFixed(6)}, Lng: ${latestReading.longitude.toFixed(6)}`
-              : lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number'
-                ? `Last location: Lat: ${lastSavedLocation.lat.toFixed(6)}, Lng: ${lastSavedLocation.lng.toFixed(6)}`
-                : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
+              : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
           </p>
         </div>
 

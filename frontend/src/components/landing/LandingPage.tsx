@@ -18,6 +18,7 @@ import {
 } from "./LandingComponents";
 import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
+import { reverseGeocode } from "../../utils/reverseGeocode";
 
 interface LandingPageProps {
   onViewMap?: () => void;
@@ -85,6 +86,69 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     municipality: "Tacloban City",
     area: "100 square meters",
   });
+  // Address from reverse geocoding
+  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
+  // Cache last lat/lng to avoid unnecessary API calls
+  const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
+    // Fallback logic for marker and address (sync with dashboard)
+    const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
+    const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string } | null>(null);
+
+    useEffect(() => {
+      let sites: Array<{ id: string; name: string; lat: number; lng: number }> | undefined = undefined;
+      let lastLoc: { lat: number; lng: number; siteName?: string } | null = null;
+      if (
+        latestReading &&
+        typeof latestReading.latitude === 'number' &&
+        typeof latestReading.longitude === 'number' &&
+        latestReading.latitude !== null &&
+        latestReading.longitude !== null
+      ) {
+        sites = [{
+          id: 'device-gps',
+          name: siteData.siteName || 'Device Location',
+          lat: latestReading.latitude,
+          lng: latestReading.longitude,
+        }];
+        lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
+      } else {
+        // Try to load from localStorage
+        const last = localStorage.getItem('lastGpsLocation');
+        if (last) {
+          try {
+            const parsed = JSON.parse(last);
+            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+              sites = [{
+                id: 'device-gps',
+                name: parsed.siteName || 'Last Known Location',
+                lat: parsed.lat,
+                lng: parsed.lng,
+              }];
+              lastLoc = parsed;
+            }
+          } catch {}
+        }
+      }
+      setGpsSites(sites);
+      setLastSavedLocation(lastLoc);
+    }, [latestReading, siteData.siteName]);
+
+    // Reverse geocode when GPS changes (sync with dashboard logic)
+    useEffect(() => {
+      if (gpsSites && gpsSites.length > 0) {
+        const { lat, lng } = gpsSites[0];
+        if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
+          lastLatLngRef.current = { lat, lng };
+          setGpsAddress(null); // reset while loading
+          reverseGeocode(lat, lng).then(addr => {
+            setGpsAddress(addr);
+          });
+        }
+      } else {
+        setGpsAddress(null);
+        lastLatLngRef.current = null;
+      }
+    }, [gpsSites]);
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
 
@@ -150,7 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         });
     };
     fetchLatest();
-    const interval = setInterval(fetchLatest, 5000);
+    const interval = setInterval(fetchLatest, 1000); // Match dashboard interval for real-time sync
     return () => clearInterval(interval);
   }, []);
 
@@ -271,6 +335,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ref={mapRef}
               interactive={showLiveUpdates}
               mobileMode={isMobileOrTablet}
+              sites={gpsSites}
               onMapReady={() => {
                 // Shorter delay - just wait for initial render
                 setTimeout(() => setMapLoaded(true), 300);
@@ -688,7 +753,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   animation: 'slideInFromRight 0.6s 0.3s ease-out both',
                 }}
               >
-                {siteData.area} • {siteData.barangay}, {siteData.municipality}
+                {/* Show live address if available, else fallback to static info */}
+                {gpsAddress
+                  ? gpsAddress
+                  : lastSavedLocation && lastSavedLocation.siteName
+                    ? lastSavedLocation.siteName
+                    : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
               </p>
               
               {/* System Status Capsule (Dashboard style) + Location Button */}
