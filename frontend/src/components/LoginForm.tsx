@@ -65,8 +65,8 @@ export function LoginForm({ onLogin, onForgotPassword }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-schistoguard-teal to-schistoguard-navy flex items-center justify-center p-4">
-      <Card className="w-full max-w-md min-h-[540px] flex flex-col justify-center">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}>
+      <Card className="w-full max-w-md min-h-[540px] flex flex-col justify-center shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
@@ -219,8 +219,8 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-schistoguard-teal to-schistoguard-navy flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}>
+      <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />

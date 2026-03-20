@@ -225,14 +225,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (screenWidth < 480) return '30px'; // Small mobile
     if (screenWidth < 768) return '40px'; // Large mobile
     if (screenWidth < 1024) return '55px'; // Tablet
-    return '55px'; // Desktop (as requested)
+    return '44px'; // Desktop (refined for better scaling)
   };
 
   const getHeroParagraphFontSize = () => {
     if (screenWidth < 480) return '14px'; // Small mobile
     if (screenWidth < 768) return '16px'; // Large mobile
     if (screenWidth < 1024) return '18px'; // Tablet
-    return '20px'; // Desktop
+    return '17px'; // Desktop (refined)
   };
 
   // Sample data
@@ -380,7 +380,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="hidden lg:block w-full py-8">
           <div className="w-full" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
             <div className="grid lg:grid-cols-2 gap-10 items-center">
-              <div className="space-y-6 max-w-4xl py-8 animate-fade-up" style={{ position: 'relative', top: '-20px' }}>
+              <div className="space-y-6 max-w-4xl py-8 animate-fade-up">
                 <div className="space-y-4">
                   <h2
                     className="animate-fade-up animate-delay-50"
@@ -412,28 +412,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div 
                   className="flex flex-wrap animate-fade-up animate-delay-150"
-                  style={{ gap: '24px' }}
+                  style={{ gap: '12px' }}
                 >
                   <TrustBadge
                     icon={
-                      <Shield className="w-4 h-4 text-schistoguard-green" />
+                      <Shield className="w-3.5 h-3.5 text-schistoguard-green" />
                     }
                     label="Real-time monitoring"
+                    small
                   />
                   <TrustBadge
                     icon={
-                      <SensorIcon className="w-4 h-4 text-schistoguard-teal" />
+                      <SensorIcon className="w-3.5 h-3.5 text-schistoguard-teal" />
                     }
                     label="Multiple locations"
+                    small
                   />
                   <TrustBadge
                     icon={
-                      <Users className="w-4 h-4 text-schistoguard-coral" />
+                      <Users className="w-3.5 h-3.5 text-schistoguard-coral" />
                     }
                     label="Public health focus"
+                    small
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 animate-fade-up animate-delay-200" style={{ marginTop: '100px' }}>
+                <div className="flex flex-col sm:flex-row gap-3 animate-fade-up animate-delay-200" style={{ marginTop: '70px' }}>
                   <CTAButton
                     variant="primary"
                     size="md"
@@ -446,7 +449,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       WebkitBackdropFilter: 'blur(10px)',
                       color: '#ffffffff',
                       borderRadius: '9999px',
-                      padding: '16px 48px',
+                      padding: '12px 36px',
                       boxShadow: `
                         inset 0 0 0 1px rgba(255, 255, 255, 0.10),
                         inset 0 1px 2px rgba(255, 255, 255, 0.1), 
@@ -455,7 +458,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         0 0 30px rgba(53, 125, 134, 0.2)
                       `,
                       fontWeight: 600,
-                      fontSize: '16px',
+                      fontSize: '15px',
                       fontFamily: 'Poppins, sans-serif',
                       letterSpacing: '0.05em',
                       textShadow: '0 1px 2px rgba(28, 28, 28, 0.60)',
@@ -749,13 +752,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ref={cardsGridRef}
               style={{
                 display: 'grid',
-                gridTemplateColumns: screenWidth < 600 ? '1fr 1fr' : '1fr',
+                gridTemplateColumns: screenWidth < 600 ? '1fr 1fr' : screenWidth >= 1100 ? '1fr 1fr' : '1fr',
                 gap: 16,
                 pointerEvents: 'auto',
                 marginTop: 16,
-                // Desktop & Tablet: Wider for more square appearance
-                // Mobile: Full width with smaller margins
-                maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 340 : 340,
+                maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 340 : 400,
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
@@ -766,7 +767,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: screenWidth < 600 ? '1 / -1' : 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -789,13 +790,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('temperature', latestReading.temperature).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>Temperature</p>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>Temperature</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.temperature : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : 20, color: '#6b7280' }}> °C</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> °C</span>}
                 </p>
                 {latestReading && (
                   <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
@@ -809,7 +810,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 style={{
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -832,13 +833,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('turbidity', latestReading.turbidity).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>Turbidity</p>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>Turbidity</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.turbidity : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : 20, color: '#6b7280' }}> NTU</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> NTU</span>}
                 </p>
                 {latestReading && (
                   <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
@@ -850,9 +851,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* pH Card */}
               <div
                 style={{
+                  // Span both columns on mobile AND desktop
+                  gridColumn: (screenWidth < 600 || screenWidth >= 1100) ? '1 / -1' : 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : '20px 26px 20px 26px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -875,10 +878,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('ph', latestReading.ph).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: screenWidth < 600 ? 32 : 44, height: screenWidth < 600 ? 32 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 12 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : 15, color: '#77ABB2' }}>pH Level</p>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>pH Level</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : 30, color: '#6b7280' }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.ph : '—'}
                   </span>
                 </p>
