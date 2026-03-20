@@ -68,6 +68,7 @@ if (DB_TYPE === 'postgres') {
           status TEXT,
           latitude REAL,
           longitude REAL,
+          address TEXT,
           "timestamp" TEXT
         )
       `);
@@ -106,6 +107,9 @@ if (DB_TYPE === 'postgres') {
           temperature REAL,
           ph REAL,
           status TEXT,
+          latitude REAL,
+          longitude REAL,
+          address TEXT,
           "timestamp" TEXT
         )
       `);
@@ -248,6 +252,9 @@ if (DB_TYPE === 'postgres') {
       temperature REAL,
       ph REAL,
       status TEXT,
+      latitude REAL,
+      longitude REAL,
+      address TEXT,
       timestamp TEXT
     )`);
 
@@ -257,6 +264,9 @@ if (DB_TYPE === 'postgres') {
       temperature REAL,
       ph REAL,
       status TEXT,
+      latitude REAL,
+      longitude REAL,
+      address TEXT,
       timestamp TEXT
     )`);
 

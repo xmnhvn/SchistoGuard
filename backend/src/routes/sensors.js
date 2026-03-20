@@ -5,6 +5,7 @@ const classifyWater = require("../utils/classifyWater");
 const { validatePhoneNumber, formatPhoneNumber } = require("../utils/validatePhone");
 const db = require("../db");
 const axios = require("axios");
+const reverseGeocode = require("../utils/reverseGeocode");
 
 // API: Get current interval config
 router.get('/interval-config', (req, res) => {
@@ -168,7 +169,7 @@ setInterval(() => {
 
   // Always log to raw_readings (per event/second), now with GPS
   db.run(
-    "INSERT INTO raw_readings (turbidity, temperature, ph, status, latitude, longitude, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO raw_readings (turbidity, temperature, ph, status, latitude, longitude, address, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [
       latestData.turbidity,
       latestData.temperature,
@@ -176,9 +177,12 @@ setInterval(() => {
       latestData.status,
       typeof latestData.latitude === 'number' ? latestData.latitude : null,
       typeof latestData.longitude === 'number' ? latestData.longitude : null,
+      latestData.address || null,
       now.toISOString()
     ],
-    (err) => { if (err) console.error('raw_readings insert error:', err); }
+    function (err) {
+      if (!err) generateAlertsFromData(latestData, now);
+    }
   );
   // Aggregate/copy to readings table based on interval
   db.get("SELECT timestamp FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
@@ -195,18 +199,22 @@ setInterval(() => {
     }
     if (shouldLog) {
       db.run(
-        "INSERT INTO readings (turbidity, temperature, ph, status, timestamp) VALUES (?, ?, ?, ?, ?)",
-        [latestData.turbidity, latestData.temperature, latestData.ph, latestData.status, now.toISOString()],
+        "INSERT INTO readings (turbidity, temperature, ph, status, latitude, longitude, address, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          latestData.turbidity,
+          latestData.temperature,
+          latestData.ph,
+          latestData.status,
+          typeof latestData.latitude === 'number' ? latestData.latitude : null,
+          typeof latestData.longitude === 'number' ? latestData.longitude : null,
+          latestData.address || null,
+          now.toISOString()
+        ],
         function (err) {
           if (!err) generateAlertsFromData(latestData, now);
         }
       );
-      db.all("SELECT id FROM readings ORDER BY timestamp", [], (err, rows) => {
-        if (!err && rows.length > 288) {
-          const toDelete = rows.slice(0, rows.length - 288);
-          toDelete.forEach(r => db.run("DELETE FROM readings WHERE id = ?", [r.id], (err) => { if (err) console.error('readings delete error:', err); }));
-        }
-      });
+      // ...existing code...
     }
   });
 }, 1000);
@@ -427,9 +435,13 @@ function checkAndAlertImmediate(data) {
 }
 
 
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   const { turbidity, temperature, ph, device_ip, latitude, longitude } = req.body;
   const status = classifyWater(temperature, ph, turbidity);
+  let address = null;
+  if (typeof latitude === 'number' && typeof longitude === 'number' && latitude !== null && longitude !== null) {
+    address = await reverseGeocode(latitude, longitude);
+  }
   latestData = {
     turbidity,
     temperature,
@@ -437,6 +449,7 @@ router.post("/", (req, res) => {
     device_ip,
     latitude,
     longitude,
+    address,
     status,
     timestamp: new Date()
   };
@@ -449,7 +462,8 @@ router.post("/", (req, res) => {
   
   res.json({
     success: true,
-    status
+    status,
+    address
   });
 });
 
@@ -462,7 +476,8 @@ router.get("/latest", (req, res) => {
       res.json({
         ...latestData,
         deviceConnected: true,
-        timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp
+        timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
+        address: latestData.address || null
       });
     } else {
       res.json({ deviceConnected: false });
