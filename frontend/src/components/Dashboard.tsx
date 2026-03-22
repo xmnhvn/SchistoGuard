@@ -119,7 +119,7 @@ export function Dashboard({
           }];
           lastSavedLocation = parsed;
         }
-      } catch {}
+      } catch { }
     }
   }
 
@@ -167,7 +167,7 @@ export function Dashboard({
     const check = () => {
       const w = window.innerWidth;
       setIsMobile(w < 600);
-      setIsTablet(w >= 600 && w < 1100); 
+      setIsTablet(w >= 600 && w < 1100);
     };
     check();
     window.addEventListener("resize", check);
@@ -602,7 +602,7 @@ export function Dashboard({
                 fontSize: compactCards ? 28 : 34,
                 lineHeight: 1.15,
                 textShadow: "0 1px 6px rgba(0,0,0,0.18)",
-                paddingLeft: isMobile ? 0 : 0, 
+                paddingLeft: isMobile ? 0 : 0,
               }}
             >
               Water Quality Information
@@ -744,7 +744,7 @@ export function Dashboard({
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.8s ease" }}>
-          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={gpsSites} />
+          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={gpsSites} latOffset={-0.00099} />
         </div>
 
         {/* ── GRADIENT OVERLAY — matches desktop: upper-left teal fading to transparent ── */}
@@ -770,7 +770,7 @@ export function Dashboard({
           <div style={{ padding: `${dPad}px ${dPad}px 0`, display: "flex", flexDirection: "column", pointerEvents: "auto", animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
             {/* Site name */}
             <h1 style={{
-              fontSize: isTab ? 32 : 36, fontWeight: 700, color: "#fff", margin: 0,
+              fontSize: isTab ? 30 : 26, fontWeight: 700, color: "#fff", margin: 0,
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)"
             }}>
@@ -1395,7 +1395,7 @@ export function Dashboard({
           transition: "opacity 0.8s ease",
         }}
       >
-        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={gpsSites} />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={gpsSites} lngOffset={-0.0015} />
       </div>
 
       {/* System Operational badge — top right, above gradient */}

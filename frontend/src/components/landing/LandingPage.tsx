@@ -220,64 +220,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const handleLiveUpdatesClick = () => {
     setShowLiveUpdates(true);
-    // Desktop: subtle horizontal shift (unchanged)
-    if (!isMobileOrTablet) {
-      setTimeout(() => {
-        mapRef.current?.resetView({ lat: 11.2447, lng: 124.9741 });
-      }, 100);
-    }
-    // Mobile/tablet: pin positioned by the useEffect below after DOM renders
+    // Trigger resetView to animate to the new offset point
+    setTimeout(() => {
+      mapRef.current?.resize();
+      mapRef.current?.resetView();
+    }, 100);
   };
 
-  // Position map pin in the vacant space (right side on tablet, lower area on mobile)
-  useEffect(() => {
-    if (!showLiveUpdates || !isMobileOrTablet) return;
-
-    const positionPin = () => {
-      const grid = cardsGridRef.current;
-      if (!grid) return;
-
-      const screenH = window.innerHeight;
-      const screenW = window.innerWidth;
-      const SITE_LAT = 11.2447;
-      const SITE_LNG = 125.0041;
-
-      // Pixel scale at MapLibre zoom 13 for this latitude
-      const mPerPx = (156543.03392 * Math.cos(SITE_LAT * Math.PI / 180)) / 8192;
-      const latPerPx = mPerPx / 111000;
-      const lngPerPx = mPerPx / (111000 * Math.cos(SITE_LAT * Math.PI / 180));
-
-      const rect = grid.getBoundingClientRect();
-
-      if (screenW >= 600) {
-        // Tablet: center pin horizontally in the right vacant space, vertically at screen center
-        const vacantCenterX = rect.right + (screenW - rect.right) / 2;
-        const lngOffset = (vacantCenterX - screenW / 2) * lngPerPx;
-        mapRef.current?.resetView({ lat: SITE_LAT, lng: SITE_LNG - lngOffset });
-      } else {
-        // Mobile: center pin vertically in the blank space below the cards
-        const vacantCenterY = rect.bottom + (screenH - rect.bottom) / 2;
-        const latOffset = (vacantCenterY - screenH / 2) * latPerPx;
-        mapRef.current?.resetView({ lat: SITE_LAT + latOffset, lng: SITE_LNG });
-      }
-    };
-
-    // Wait for the overlay DOM to finish rendering before measuring
-    const timer = setTimeout(positionPin, 200);
-    return () => clearTimeout(timer);
-  }, [showLiveUpdates, isMobileOrTablet]);
+  // Removed manual pixel measurement (positionPin). 
+  // DasboardMap handles the map offsets natively.
 
   const handleBackFromLiveUpdates = () => {
     setIsExitingLiveUpdates(true);
-    
-    // Start ALL animations simultaneously for synchronized exit
-    // Map, overlay, header, and content all animate together over 0.5s
-    // Start map after a tiny delay to ensure React state update propagates
+
+    // Animate map back to its natural centered position (0 offset)
     setTimeout(() => {
-      // Return to exact original dashboard position (reverse of opening)
+      mapRef.current?.resize();
       mapRef.current?.resetView();
-    }, 100); // Small delay to ensure state is set
-    
+    }, 50);
+
     // Hide component after all animations complete
     setTimeout(() => {
       setShowLiveUpdates(false);
@@ -323,11 +284,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     "Community safety starts with clean water — Track schistosomiasis risk together",
   ];
 
+  // Upstream implementation uses state for gpsSites, procedural logic removed.
+
+  const isPreviewActive = showLiveUpdates && !isExitingLiveUpdates;
+
   return (
     <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden bg-white">
       {/* Solid White Background container */}
       <div className="fixed inset-0 z-0" style={{ backgroundColor: '#e8eff1' }}>
-        
+
         {/* Map loads behind gradient, fades in when ready - Dashboard style */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
           {shouldRenderMap && (
@@ -336,6 +301,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               interactive={showLiveUpdates}
               mobileMode={isMobileOrTablet}
               sites={gpsSites}
+              // On desktop preview, shift pin right (-0.0030) to center it in the empty right half of the screen
+              lngOffset={!isMobileOrTablet ? (isPreviewActive ? -0.0010 : -0.0015) : undefined}
+              latOffset={
+                isMobileOrTablet
+                  ? isPreviewActive
+                    ? screenWidth >= 800
+                      ? 0.0018
+                      : 0.0012
+                    : -0.00099 // Dashboard default for mobile/tablet
+                  : undefined
+              }
               onMapReady={() => {
                 // Shorter delay - just wait for initial render
                 setTimeout(() => setMapLoaded(true), 300);
@@ -361,12 +337,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       <header
         className="relative z-50 border-b border-gray-100"
-        style={{ 
+        style={{
           backgroundColor: '#FFFFFF',
           transform: showLiveUpdates ? 'translateY(-100%)' : 'translateY(0)',
           opacity: showLiveUpdates ? 0 : 1,
-          transition: isExitingLiveUpdates 
-            ? 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out' 
+          transition: isExitingLiveUpdates
+            ? 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out'
             : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
           pointerEvents: showLiveUpdates ? 'none' : 'auto',
         }}
@@ -434,11 +410,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 flex flex-col justify-center" style={{ 
+      <main className="relative z-10 flex-1 flex flex-col justify-center" style={{
         transform: showLiveUpdates ? 'translateX(-100%)' : 'translateX(0)',
         opacity: showLiveUpdates ? 0 : 1,
-        transition: isExitingLiveUpdates 
-          ? 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out' 
+        transition: isExitingLiveUpdates
+          ? 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out'
           : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
         pointerEvents: showLiveUpdates ? 'none' : 'auto',
       }}>
@@ -475,7 +451,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div 
+                <div
                   className="flex flex-wrap animate-fade-up animate-delay-150"
                   style={{ gap: '12px' }}
                 >
@@ -681,11 +657,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               left: 0,
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
-              padding: isMobileOrTablet 
+              padding: isMobileOrTablet
                 ? (screenWidth < 400 ? '70px 16px 16px' : // Very small phones
-                   screenWidth < 600 ? '80px 20px 20px' : // Small phones
-                   screenWidth < 800 ? '90px 24px 24px' : // Large phones
-                   '100px 28px 28px') // Tablets
+                  screenWidth < 600 ? '80px 20px 20px' : // Small phones
+                    screenWidth < 800 ? '90px 24px 24px' : // Large phones
+                      '100px 28px 28px') // Tablets
                 : '100px 50px 50px', // Desktop
               display: 'flex',
               flexDirection: 'column',
@@ -695,7 +671,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               msOverflowStyle: 'none' as const,
               animation: 'contentSlideIn 0.7s 0.1s cubic-bezier(0.22,1,0.36,1) both',
               zIndex: 2,
-              pointerEvents: 'auto',
+              pointerEvents: 'none', // Changed from 'auto' so clicks pass through to map
             }}
           >
             {/* Back button */}
@@ -703,7 +679,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onClick={handleBackFromLiveUpdates}
               style={{
                 position: 'absolute',
-              top: isMobileOrTablet
+                top: isMobileOrTablet
                   ? (screenWidth < 400 ? 18 : screenWidth < 600 ? 20 : screenWidth < 800 ? 22 : 26)
                   : 32,
                 left: isMobileOrTablet
@@ -722,6 +698,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 zIndex: 10,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                 backdropFilter: 'blur(4px)',
+                pointerEvents: 'auto', // Back button should be clickable
               }}
               aria-label="Back to Home"
             >
@@ -760,7 +737,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     ? lastSavedLocation.siteName
                     : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
               </p>
-              
+
               {/* System Status Capsule (Dashboard style) + Location Button */}
               <div style={{
                 display: 'flex',
@@ -817,24 +794,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Sensor Cards - Dashboard style, using SensorMiniCard */}
             <div
               ref={cardsGridRef}
               style={{
                 display: 'grid',
-                gridTemplateColumns: screenWidth < 600 ? '1fr 1fr' : screenWidth >= 1100 ? '1fr 1fr' : '1fr',
+                gridTemplateColumns: '1fr 1fr',
                 gap: 16,
                 pointerEvents: 'auto',
                 marginTop: 16,
-                maxWidth: screenWidth < 600 ? '100%' : screenWidth < 1100 ? 340 : 400,
+                maxWidth: screenWidth < 1100 ? '100%' : 400,
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
               <div
                 style={{
-                  // Mobile: Span full width (both columns)
-                  // Tablet & Desktop: Normal width
-                  gridColumn: screenWidth < 600 ? '1 / -1' : 'auto',
+                  gridColumn: 'auto',
                   background: '#fff',
                   borderRadius: 20,
                   padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
@@ -921,8 +895,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* pH Card */}
               <div
                 style={{
-                  // Span both columns on mobile AND desktop
-                  gridColumn: (screenWidth < 600 || screenWidth >= 1100) ? '1 / -1' : 'auto',
+                  // Span both columns to fill bottom row
+                  gridColumn: '1 / -1',
                   background: '#fff',
                   borderRadius: 20,
                   padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',

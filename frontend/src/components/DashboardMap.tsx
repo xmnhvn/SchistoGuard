@@ -16,6 +16,10 @@ interface DashboardMapProps {
   interactive?: boolean;
   /** Called once the map tiles have loaded */
   onMapReady?: () => void;
+  /** Longitude offset to shift the map center (negative = pin moves right on screen) */
+  lngOffset?: number;
+  /** Latitude offset to shift the map center (negative = pin moves up on screen) */
+  latOffset?: number;
 }
 
 export interface DashboardMapHandle {
@@ -24,21 +28,22 @@ export interface DashboardMapHandle {
   returnToDashboard: () => void;
 }
 
-export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, mobileMode = false, interactive, onMapReady }, ref) {
+export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, mobileMode = false, interactive, onMapReady, lngOffset = 0, latOffset = 0 }, ref) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const previousSitesJson = useRef<string>('');
 
   useImperativeHandle(ref, () => ({
     resetView: (center?: { lat: number; lng: number }) => {
       if (map.current) {
         // If centering to preview, use provided coordinates
-        // If returning to dashboard, ALWAYS use the saved original position
+        // If returning to dashboard, rely on the defaultView.current.center which updates natively via props
         const targetCenter: [number, number] = center 
           ? [center.lng, center.lat]
-          : (originalDashboardView.current?.center || defaultView.current.center);
+          : defaultView.current.center;
         
         console.log('resetView called:', { 
           hasCenter: !!center, 
@@ -74,6 +79,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     },
   }));
 
+  // Use JSON stringify to prevent infinite unneeded re-renders when parent passes a new array reference
+  const sitesJson = sites ? JSON.stringify(sites) : '';
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -88,10 +96,10 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       let mapCenter: [number, number];
       let mapZoom: number;
       if (sitesToShow.length === 1) {
-        mapCenter = [center.lng, center.lat];
+        mapCenter = [center.lng + lngOffset, center.lat + latOffset];
         mapZoom = 17;
       } else if (sitesToShow.length > 1) {
-        mapCenter = [center.lng, center.lat];
+        mapCenter = [center.lng + lngOffset, center.lat + latOffset];
         mapZoom = 13;
       } else {
         mapCenter = [121.7740, 12.8797];
@@ -101,6 +109,8 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       if (!originalDashboardView.current && !mobileMode) {
         originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
       }
+      const isInteractive = interactive !== undefined ? interactive : !mobileMode;
+
       if (!map.current) {
         map.current = new maplibregl.Map({
           container: mapContainer.current!,
@@ -110,13 +120,15 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
           minZoom: 0, // allow zooming out to entire world
           maxZoom: 19, // allow zooming in to street level
           attributionControl: false,
-          interactive: true, // Always allow user interaction (zoom, pan)
+          // Always initialize as true so MapLibre attaches root DOM listeners (crucial for touch events like mobile/tablet).
+          // We will dynamically enable/disable the actual handlers right after creation instead.
+          interactive: true, 
         });
       } else if (sitesToShow.length !== markers.current.length) {
         // Only reset view if number of markers/sites changed
         map.current.jumpTo({ center: mapCenter, zoom: mapZoom });
       }
-      // Always enable interactivity
+      // Dynamically enable/disable interactivity based on prop
       const handlers = [
         map.current!.dragPan,
         map.current!.scrollZoom,
@@ -126,41 +138,54 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         map.current!.doubleClickZoom,
         map.current!.touchZoomRotate,
       ] as Array<{ enable: () => void; disable: () => void }>;
-      handlers.forEach(h => h.enable());
+      
+      handlers.forEach(h => {
+        if (isInteractive) h.enable();
+        else h.disable();
+      });
+
+      // Update cursor
+      if (map.current.getCanvas()) {
+        map.current.getCanvas().style.cursor = isInteractive ? '' : 'default';
+      }
     };
 
     updateMapCenter();
 
-    // Remove old markers
-    markers.current.forEach(m => m.remove());
-    markers.current = [];
+    // Only touch markers if the actual site data changed
+    if (previousSitesJson.current !== sitesJson) {
+      // Remove old markers
+      markers.current.forEach(m => m.remove());
+      markers.current = [];
 
-    // Only add markers if sitesToShow is not empty
-    if (sitesToShow.length > 0) {
-      const addMarkers = () => {
-        if (!map.current) return;
-        sitesToShow.forEach((site) => {
-          const el = document.createElement('div');
-          el.className = 'site-marker-container';
-          el.innerHTML = `
-            <div class="site-marker">
-              <div class="site-marker__pulse"></div>
-              <div class="site-marker__ring"></div>
-              <div class="site-marker__dot"></div>
-            </div>`;
-          const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-            .setLngLat([site.lng, site.lat])
-            .addTo(map.current!);
-          markers.current.push(marker);
-        });
-      };
-      if (map.current!.isStyleLoaded()) {
-        addMarkers();
-      } else {
-        map.current!.once('load', () => {
+      // Only add markers if sitesToShow is not empty
+      if (sitesToShow.length > 0) {
+        const addMarkers = () => {
+          if (!map.current) return;
+          sitesToShow.forEach((site) => {
+            const el = document.createElement('div');
+            el.className = 'site-marker-container';
+            el.innerHTML = `
+              <div class="site-marker">
+                <div class="site-marker__pulse"></div>
+                <div class="site-marker__ring"></div>
+                <div class="site-marker__dot"></div>
+              </div>`;
+            const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+              .setLngLat([site.lng, site.lat])
+              .addTo(map.current!);
+            markers.current.push(marker);
+          });
+        };
+        if (map.current!.isStyleLoaded()) {
           addMarkers();
-        });
+        } else {
+          map.current!.once('load', () => {
+            addMarkers();
+          });
+        }
       }
+      previousSitesJson.current = sitesJson;
     }
 
     // Wait for the map to become completely idle (all tiles loaded and painted)
@@ -172,11 +197,10 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       });
     }
 
-    // Performance optimization: resize listener with throttle/debounce equivalent or simple re-calc
     const handleResize = () => {
       if (map.current) {
         map.current.resize();
-        if (mobileMode) updateMapCenter();
+        // Removed `if (mobileMode) updateMapCenter()` to prevent snapping back and interrupting panning on browser chrome changes
       }
     };
 
@@ -184,10 +208,8 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      markers.current.forEach(m => m.remove());
-      markers.current = [];
     };
-  }, [sites, mobileMode, interactive]);
+  }, [sitesJson, mobileMode, interactive, lngOffset, latOffset]);
 
 
   // Destroy map on unmount
@@ -196,6 +218,8 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       if (map.current) {
         map.current.remove();
         map.current = null;
+        markers.current = [];
+        previousSitesJson.current = '';
       }
     };
   }, []);
