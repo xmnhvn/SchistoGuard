@@ -90,65 +90,65 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [gpsAddress, setGpsAddress] = useState<string | null>(null);
   // Cache last lat/lng to avoid unnecessary API calls
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
-    // Fallback logic for marker and address (sync with dashboard)
-    const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
-    const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string } | null>(null);
+  // Fallback logic for marker and address (sync with dashboard)
+  const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
+  const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string } | null>(null);
 
-    useEffect(() => {
-      let sites: Array<{ id: string; name: string; lat: number; lng: number }> | undefined = undefined;
-      let lastLoc: { lat: number; lng: number; siteName?: string } | null = null;
-      if (
-        latestReading &&
-        typeof latestReading.latitude === 'number' &&
-        typeof latestReading.longitude === 'number' &&
-        latestReading.latitude !== null &&
-        latestReading.longitude !== null
-      ) {
-        sites = [{
-          id: 'device-gps',
-          name: siteData.siteName || 'Device Location',
-          lat: latestReading.latitude,
-          lng: latestReading.longitude,
-        }];
-        lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
-      } else {
-        // Try to load from localStorage
-        const last = localStorage.getItem('lastGpsLocation');
-        if (last) {
-          try {
-            const parsed = JSON.parse(last);
-            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
-              sites = [{
-                id: 'device-gps',
-                name: parsed.siteName || 'Last Known Location',
-                lat: parsed.lat,
-                lng: parsed.lng,
-              }];
-              lastLoc = parsed;
-            }
-          } catch {}
-        }
+  useEffect(() => {
+    let sites: Array<{ id: string; name: string; lat: number; lng: number }> | undefined = undefined;
+    let lastLoc: { lat: number; lng: number; siteName?: string } | null = null;
+    if (
+      latestReading &&
+      typeof latestReading.latitude === 'number' &&
+      typeof latestReading.longitude === 'number' &&
+      latestReading.latitude !== null &&
+      latestReading.longitude !== null
+    ) {
+      sites = [{
+        id: 'device-gps',
+        name: siteData.siteName || 'Device Location',
+        lat: latestReading.latitude,
+        lng: latestReading.longitude,
+      }];
+      lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
+    } else {
+      // Try to load from localStorage
+      const last = localStorage.getItem('lastGpsLocation');
+      if (last) {
+        try {
+          const parsed = JSON.parse(last);
+          if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+            sites = [{
+              id: 'device-gps',
+              name: parsed.siteName || 'Last Known Location',
+              lat: parsed.lat,
+              lng: parsed.lng,
+            }];
+            lastLoc = parsed;
+          }
+        } catch { }
       }
-      setGpsSites(sites);
-      setLastSavedLocation(lastLoc);
-    }, [latestReading, siteData.siteName]);
+    }
+    setGpsSites(sites);
+    setLastSavedLocation(lastLoc);
+  }, [latestReading, siteData.siteName]);
 
-    // Reverse geocode when GPS changes (sync with dashboard logic)
-    useEffect(() => {
-      if (gpsSites && gpsSites.length > 0) {
-        const { lat, lng } = gpsSites[0];
-        if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
-          lastLatLngRef.current = { lat, lng };
-          setGpsAddress(null); // reset while loading
-          reverseGeocode(lat, lng).then(addr => {
-            setGpsAddress(addr);
-          });
-        }
-      } else {
-        setGpsAddress(null);
-        lastLatLngRef.current = null;
+  // Reverse geocode when GPS changes (sync with dashboard logic)
+  useEffect(() => {
+    if (gpsSites && gpsSites.length > 0) {
+      const { lat, lng } = gpsSites[0];
+      if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
+        lastLatLngRef.current = { lat, lng };
+        setGpsAddress(null); // reset while loading
+        reverseGeocode(lat, lng).then(addr => {
+          setGpsAddress(addr);
+        });
       }
-    }, [gpsSites]);
+    } else {
+      setGpsAddress(null);
+      lastLatLngRef.current = null;
+    }
+  }, [gpsSites]);
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
 
@@ -643,7 +643,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             style={{
               position: 'absolute',
               inset: 0,
-              background: "linear-gradient(to bottom right, #357D86 0%, rgba(53,125,134,0.6) 10%, rgba(152,244,255,0) 55%)",
+              background: isMobileOrTablet
+                ? "linear-gradient(to bottom, #357D86 0%, rgba(53,125,134,0.85) 5%, rgba(53,125,134,0.3) 35%, rgba(152,244,255,0) 55%)"
+                : "linear-gradient(to right, #357D86 0%, rgba(53,125,134,0.9) 5%, rgba(53,125,134,0.4) 30%, rgba(152,244,255,0) 50%)",
               zIndex: 1,
               pointerEvents: 'none',
             }}
@@ -658,10 +660,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
               padding: isMobileOrTablet
-                ? (screenWidth < 400 ? '70px 16px 16px' : // Very small phones
-                  screenWidth < 600 ? '80px 20px 20px' : // Small phones
-                    screenWidth < 800 ? '90px 24px 24px' : // Large phones
-                      '100px 28px 28px') // Tablets
+                ? (screenWidth < 400 ? '72px 16px 16px' : // Very small phones
+                  screenWidth < 600 ? '76px 20px 20px' : // Small phones
+                    screenWidth < 800 ? '80px 24px 24px' : // Large phones
+                      '88px 28px 28px') // Tablets
                 : '100px 50px 50px', // Desktop
               display: 'flex',
               flexDirection: 'column',
@@ -677,6 +679,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Back button */}
             <button
               onClick={handleBackFromLiveUpdates}
+              className="hover:scale-105 active:scale-95 transition-transform duration-200"
               style={{
                 position: 'absolute',
                 top: isMobileOrTablet
@@ -706,7 +709,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
 
             {/* Header */}
-            <div style={{ pointerEvents: 'none', marginTop: isMobileOrTablet ? 20 : 0 }}>
+            <div style={{ pointerEvents: 'none', marginTop: 0 }}>
               <h1
                 style={{
                   margin: 0,
