@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3, ChevronRight, X } from 'lucide-react';
+import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3, ChevronRight, X, Trash2, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { Card, CardContent } from './ui/card';
@@ -62,18 +62,58 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [filterTimeRange, setFilterTimeRange] = useState<string>('all');
   const [readings, setReadings] = useState<any[]>([]);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hiddenReadings, setHiddenReadings] = useState<string[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [showMobileViewAll, setShowMobileViewAll] = useState(false);
   const animate = !_sitesFirstLoadDone;
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    try {
+      const stored = localStorage.getItem("sg_hidden_readings");
+      if (stored) setHiddenReadings(JSON.parse(stored));
+    } catch (e) {}
   }, []);
 
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const toggleSelection = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!deleteMode) return;
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredReadings.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredReadings.map(r => r.id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    const ids = Array.from(selectedIds);
+    setHiddenReadings(prev => {
+      const updated = [...prev, ...ids];
+      localStorage.setItem("sg_hidden_readings", JSON.stringify(updated));
+      return updated;
+    });
+    setDeleteMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteMode(false);
+    setSelectedIds(new Set());
+  };
+
   // PDF Export handler
   const handleExportPDF = async () => {
     if (!filteredReadings.length) return;
@@ -111,7 +151,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     });
     // Filename: schistoguard_timeseries_[risk]_[timerange]_YYYYMMDD-HHmm.pdf
     const now = new Date();
-    const pad = (n) => n.toString().padStart(2, '0');
+    const pad = (n: number) => n.toString().padStart(2, '0');
     const dmy = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
     // Capitalize risk and time range for filename
     const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
@@ -126,6 +166,16 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     const filename = `SchistoGuard_Timeseries_${risk}_${time}_${dmy}.pdf`;
     doc.save(filename);
   };
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
+
   useEffect(() => {
     if (visible && !_sitesFirstLoadDone) {
       setTimeout(() => { _sitesFirstLoadDone = true; }, 50);
@@ -144,6 +194,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   }, []);
 
   const filteredReadings = readings.filter(reading => {
+    if (hiddenReadings.includes(reading.id)) return false;
     const timestamp = new Date(reading.timestamp);
     const searchMatch = timestamp.toLocaleString().toLowerCase().includes(searchQuery.toLowerCase()) ||
       reading.turbidity?.toString().includes(searchQuery) ||
@@ -347,8 +398,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       {/* Stat Cards */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
-        gap: 16,
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+        gap: isMobile ? 12 : 16,
         marginBottom: 24,
         animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
@@ -397,7 +448,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div 
-          onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
+          onClick={() => (isMobile) && setShowMobileViewAll(true)}
           style={{
             padding: isMobile ? "12px 14px" : "20px 24px 16px",
             background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
@@ -442,7 +493,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               )}
             </div>
           </div>
-          {(isMobile || isTablet) && (
+          {(isMobile) && (
             <div style={{
               background: "#f0f8f9",
               padding: "6px 12px",
@@ -451,20 +502,40 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               alignItems: "center",
               gap: 4,
             }}>
-              <span
-                style={{
-                  fontSize: 12, fontWeight: 600, color: "#357D86",
-                  cursor: "pointer", fontFamily: POPPINS,
-                }}
-              >
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86" }}>View Details</span>
-              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86" }}>View Details</span>
               <ChevronRight size={16} color="#357D86" strokeWidth={2.5} />
+            </div>
+          )}
+          {(!isMobile) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {deleteMode ? (
+                <>
+                  <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    Select All
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    Cancel
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Trash2 size={14} /> Delete ({selectedIds.size})
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDeleteMode(true); }}
+                  style={{
+                    background: "transparent", border: "none", padding: "4px", cursor: "pointer", color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center"
+                  }}
+                  title="Select Data to Delete"
+                >
+                  <Trash2 size={20} />
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {!(isMobile || isTablet) && (
+        {!isMobile && (
           <div style={{
             flex: 1,
             minHeight: 0,
@@ -475,6 +546,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+                  {deleteMode && (
+                    <th style={{
+                      padding: "10px 14px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 1
+                    }}></th>
+                  )}
                   {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map(h => (
                     <th key={h} style={{
                       padding: "10px 14px",
@@ -504,23 +580,40 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                     <tr key={reading.id} style={{
                       borderBottom: "1px solid #f5f5f5",
                       animation: animate ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both` : "none",
-                    }}>
-                      <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#1a2a3a" }}>{time.time}</td>
-                      <td style={{ padding: "10px 14px", fontSize: 13, color: "#7b8a9a" }}>{time.date}</td>
-                      <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                      background: selectedIds.has(reading.id) ? "#fff1f1" : "transparent",
+                      transition: "background 0.2s ease"
+                    }}
+                    onClick={() => deleteMode && toggleSelection(reading.id)}
+                    >
+                      {deleteMode && (
+                        <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                          <div style={{
+                            width: 20, height: 20, borderRadius: 6,
+                            border: `2px solid ${selectedIds.has(reading.id) ? "#ef4444" : "#d1d5db"}`,
+                            background: selectedIds.has(reading.id) ? "#ef4444" : "#fff",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            cursor: "pointer", transition: "all 0.15s ease"
+                          }}>
+                            {selectedIds.has(reading.id) && <Check size={12} color="#fff" strokeWidth={3} />}
+                          </div>
+                        </td>
+                      )}
+                      <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
+                      <td style={{ padding: "10px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                           <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
                         </span>
                       </td>
-                      <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                      <td style={{ padding: "10px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                           <Thermometer style={{ width: 14, height: 14, color: "#357D86" }} />
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
                         </span>
                       </td>
-                      <td style={{ padding: "10px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.ph}</td>
-                      <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                      <td style={{ padding: "10px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
+                      <td style={{ padding: "10px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         <span style={{
                           fontSize: 11,
                           fontWeight: 600,
@@ -532,7 +625,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                           fontFamily: POPPINS,
                         }}>{reading.riskLevel}</span>
                       </td>
-                      <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 12, color: "#7b8a9a" }}>
+                      <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         {formatRelativeTime(reading.timestamp)}
                       </td>
                     </tr>
@@ -544,7 +637,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         )}
       </div>
       {/* ── Mobile View All List Modal ── */}
-      {(isMobile || isTablet) && showMobileViewAll && (
+      {(isMobile) && showMobileViewAll && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 10001,
           background: "rgba(0,0,0,0.6)",

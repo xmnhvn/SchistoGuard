@@ -1049,7 +1049,7 @@ export function Dashboard({
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                    <span style={{ fontSize: 36, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                    <span style={{ fontSize: 26, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
                       {readings.length}
                     </span>
                     <img src="/icons/icon-readings.svg" alt="readings"

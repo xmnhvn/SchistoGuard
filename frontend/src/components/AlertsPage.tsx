@@ -5,12 +5,13 @@ import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import {
-  Download,
   CheckCircle2,
   AlertTriangle,
   Bell,
   X,
   ChevronRight,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { apiGet, apiPost } from "../utils/api";
 
@@ -35,7 +36,55 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     });
   }
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hiddenAlerts, setHiddenAlerts] = useState<string[]>([]);
   const animate = !_alertsFirstLoadDone;
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("sg_hidden_alerts");
+      if (stored) setHiddenAlerts(JSON.parse(stored));
+    } catch (e) {}
+  }, []);
+
+  const toggleSelection = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!deleteMode) return;
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredAlerts.length) {
+      setSelectedIds(new Set()); // deselect all
+    } else {
+      setSelectedIds(new Set(filteredAlerts.map(a => a.id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    const ids = Array.from(selectedIds);
+    setHiddenAlerts(prev => {
+      const updated = [...prev, ...ids];
+      localStorage.setItem("sg_hidden_alerts", JSON.stringify(updated));
+      return updated;
+    });
+    setDeleteMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteMode(false);
+    setSelectedIds(new Set());
+  };
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -78,48 +127,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   const [filterBarangay, setFilterBarangay] = useState("all");
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const [showMobileAlertList, setShowMobileAlertList] = useState(false);
-  // Export alerts as PDF
-  // Export alerts as PDF table
-  const handleExport = async () => {
-    if (!filteredAlerts.length) return;
-    const { jsPDF } = await import("jspdf");
-    const autoTable = (await import("jspdf-autotable")).default;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const columns = [
-      { header: 'ID', dataKey: 'id' },
-      { header: 'Level', dataKey: 'level' },
-      { header: 'Parameter', dataKey: 'parameter' },
-      { header: 'Value', dataKey: 'value' },
-      { header: 'Site', dataKey: 'siteName' },
-      { header: 'Barangay', dataKey: 'barangay' },
-      { header: 'Timestamp', dataKey: 'timestamp' },
-      { header: 'Status', dataKey: 'isAcknowledged' },
-      { header: 'Message', dataKey: 'message' }
-    ];
-    const rows = filteredAlerts.map(alert => ({
-      id: alert.id,
-      level: alert.level,
-      parameter: alert.parameter,
-      value: alert.value,
-      siteName: alert.siteName,
-      barangay: alert.barangay,
-      timestamp: alert.timestamp,
-      isAcknowledged: alert.isAcknowledged ? 'Acknowledged' : 'Pending',
-      message: alert.message
-    }));
-    autoTable(pdf, {
-      columns,
-      body: rows,
-      styles: { fontSize: 10, cellPadding: 4 },
-      headStyles: { fillColor: '#357D86', textColor: '#fff' },
-      margin: { top: 40 },
-      didDrawPage: (data) => {
-        pdf.setFontSize(16);
-        pdf.text('SchistoGuard Alerts Export', 40, 24);
-      }
-    });
-    pdf.save('alerts_export.pdf');
-  };
+
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert =>
@@ -144,6 +152,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
 
 
   const filteredAlerts = alerts.filter(alert => {
+    if (hiddenAlerts.includes(alert.id)) return false;
     const matchesSearch = alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
       alert.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       alert.parameter.toLowerCase().includes(searchTerm.toLowerCase());
@@ -190,7 +199,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         flexDirection: (isMobile || isTablet) ? "column" : "row",
         justifyContent: "space-between",
         alignItems: (isMobile || isTablet) ? "flex-start" : "center",
-        gap: 16,
+        gap: (isMobile || isTablet) ? 12 : 16,
         marginBottom: 24,
         animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
@@ -233,7 +242,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           display: "flex",
           alignItems: "center",
           gap: isMobile ? 8 : 10,
-          flexWrap: isMobile ? "nowrap" as const : "wrap",
+          flexWrap: "nowrap" as const,
           ...(isMobile ? { width: "100%" } : {}),
         }}>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -264,61 +273,49 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
               <SelectItem value="warning">Warning</SelectItem>
             </SelectContent>
           </Select>
-          <button
-            onClick={handleExport}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              padding: "0 16px", height: 38, borderRadius: 12,
-              border: "1px solid #e2e5ea",
-              background: "#fff", cursor: "pointer", fontSize: 13,
-              fontFamily: POPPINS, fontWeight: 500, color: "#374151",
-              ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
-            }}
-          >
-            <Download size={15} /> Export
-          </button>
+
         </div>
       </div>
 
       {/* ── Stat Cards ── */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: (isMobile || isTablet) ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-        gap: (isMobile || isTablet) ? 12 : 16,
+        gridTemplateColumns: (isMobile) ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+        gap: (isMobile) ? 12 : 16,
         marginBottom: 24,
         animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <StatCard 
-          icon={<Bell size={(isMobile || isTablet) ? 18 : 22} color="#357D86" />} 
+          icon={<Bell size={(isMobile) ? 18 : 22} color="#357D86" />} 
           label="Total Alerts" 
           value={String(alerts.length)} 
           valueColor="#357D86" 
           sub="All alerts (history)" 
-          isCompact={isMobile || isTablet}
+          isCompact={isMobile}
         />
         <StatCard 
-          icon={<AlertTriangle size={(isMobile || isTablet) ? 18 : 22} color="#eab308" />} 
+          icon={<AlertTriangle size={(isMobile) ? 18 : 22} color="#eab308" />} 
           label="Unacknowledged" 
           value={String(unacknowledgedCount)} 
           valueColor="#eab308" 
           sub="Require attention" 
-          isCompact={isMobile || isTablet}
+          isCompact={isMobile}
         />
         <StatCard 
-          icon={<AlertTriangle size={(isMobile || isTablet) ? 18 : 22} color="#ef4444" />} 
+          icon={<AlertTriangle size={(isMobile) ? 18 : 22} color="#ef4444" />} 
           label="Critical Alerts" 
           value={String(criticalCount)} 
           valueColor="#dc2626" 
           sub="High priority" 
-          isCompact={isMobile || isTablet}
+          isCompact={isMobile}
         />
         <StatCard 
-          icon={<CheckCircle2 size={(isMobile || isTablet) ? 18 : 22} color="#22c55e" />} 
+          icon={<CheckCircle2 size={(isMobile) ? 18 : 22} color="#22c55e" />} 
           label="Response Time" 
           value={avgResponseTime} 
           valueColor="#22c55e" 
           sub="Avg response" 
-          isCompact={isMobile || isTablet}
+          isCompact={isMobile}
         />
       </div>
 
@@ -334,7 +331,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div 
-          onClick={() => (isMobile || isTablet) && setShowMobileAlertList(true)}
+          onClick={() => (isMobile) && setShowMobileAlertList(true)}
           style={{
             padding: isMobile ? "12px 14px" : "20px 24px 16px",
             background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
@@ -372,11 +369,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                 )}
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <h2 style={{
                 fontSize: 15, fontWeight: 700, color: "#1a2a3a",
                 margin: 0,
                 fontFamily: POPPINS,
+                lineHeight: 1.2,
               }}>
                 {isMobile ? "Alert Summary" : "Alert List"}
               </h2>
@@ -385,28 +383,59 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                   fontSize: 11, 
                   color: "#7b8a9a", 
                   fontWeight: 500, 
-                  fontFamily: POPPINS 
+                  fontFamily: POPPINS,
+                  lineHeight: 1.2,
+                  marginTop: 2,
                 }}>
                   Monitor and manage alerts
                 </span>
               )}
             </div>
           </div>
-          {(isMobile || isTablet) && (
+          {(isMobile) && (
             <div style={{
               background: "#f0f8f9",
-              padding: "6px 12px",
+              padding: "7px 14px",
               borderRadius: 20,
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: 4,
+              flexShrink: 0,
             }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86" }}>View Details</span>
-              <ChevronRight size={16} color="#357D86" strokeWidth={2.5} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86", lineHeight: 1 }}>View Details</span>
+              <ChevronRight size={14} color="#357D86" strokeWidth={3} />
+            </div>
+          )}
+          {(!isMobile) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {deleteMode ? (
+                <>
+                  <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    Select All
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    Cancel
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Trash2 size={14} /> Delete ({selectedIds.size})
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDeleteMode(true); }}
+                  style={{
+                    background: "transparent", border: "none", padding: "4px", cursor: "pointer", color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center"
+                  }}
+                  title="Select Alerts to Delete"
+                >
+                  <Trash2 size={20} />
+                </button>
+              )}
             </div>
           )}
         </div>
-        {(isMobile || isTablet) ? null : (
+        {(isMobile) ? null : (
           <div style={{
             padding: 20,
             flex: 1,
@@ -418,13 +447,38 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                 filteredAlerts.map((alert, index) => (
                   <div key={alert.id} style={{
                     animation: animate ? `cardDataFadeIn 0.6s ${0.35 + index * 0.07}s cubic-bezier(0.22,1,0.36,1) both` : "none",
+                    display: "flex", alignItems: "center", gap: deleteMode ? 16 : 0, transition: "gap 0.2s ease"
                   }}>
-                    <Dialog onOpenChange={(open) => { if (!open) setSelectedAlert(null); }}>
-                      <DialogTrigger asChild>
-                        <div onClick={() => setSelectedAlert(alert)}>
-                          <AlertItem
-                            {...alert}
-                            isSelected={selectedAlert?.id === alert.id}
+                    {deleteMode && (
+                      <div 
+                        onClick={(e) => toggleSelection(alert.id, e)}
+                        style={{ cursor: "pointer", paddingLeft: 4, flexShrink: 0 }}
+                      >
+                        <div style={{
+                          width: 22, height: 22, borderRadius: 6, 
+                          border: `2px solid ${selectedIds.has(alert.id) ? "#ef4444" : "#d1d5db"}`, 
+                          background: selectedIds.has(alert.id) ? "#ef4444" : "#fff", 
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "all 0.15s ease"
+                        }}>
+                          {selectedIds.has(alert.id) && <Check size={14} color="#fff" strokeWidth={3} />}
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0, opacity: deleteMode && !selectedIds.has(alert.id) ? 0.7 : 1, transition: "opacity 0.2s ease" }}>
+                      <Dialog onOpenChange={(open) => { if (!open) setSelectedAlert(null); }}>
+                        <DialogTrigger asChild>
+                          <div onClick={(e) => {
+                            if (deleteMode) {
+                              e.preventDefault();
+                              toggleSelection(alert.id, e as unknown as React.MouseEvent);
+                            } else {
+                              setSelectedAlert(alert);
+                            }
+                          }}>
+                            <AlertItem
+                              {...alert}
+                              isSelected={deleteMode ? selectedIds.has(alert.id) : selectedAlert?.id === alert.id}
                             onAcknowledge={handleAcknowledgeAlert}
                             DetailsButtonComponent={() => (
                               <ChevronRight
@@ -545,6 +599,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                         )}
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -576,7 +631,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       `}</style>
 
       {/* ── Mobile Alert List Modal ── */}
-      {(isMobile || isTablet) && showMobileAlertList && (
+      {(isMobile) && showMobileAlertList && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 10001,
           background: "rgba(0,0,0,0.6)",
