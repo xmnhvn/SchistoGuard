@@ -198,7 +198,11 @@ setInterval(() => {
       now.toISOString()
     ],
     function (err) {
-      if (!err) generateAlertsFromData(latestData, now);
+      if (err) {
+        console.error('[raw_readings insert error]', err.message, { latestData });
+      } else {
+        generateAlertsFromData(latestData, now);
+      }
     }
   );
   // Aggregate/copy to readings table based on interval
