@@ -110,11 +110,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     const fetchAlerts = () => {
       apiGet("/api/sensors/alerts")
         .then((data) => {
+          console.log('Fetched alerts:', data); // DEBUG LOG
           if (Array.isArray(data)) {
             setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));
           }
         })
-        .catch(() => { });
+        .catch((err) => { console.error('Error fetching alerts:', err); });
     };
     fetchAlerts();
     // Check for new alerts every 10 seconds
