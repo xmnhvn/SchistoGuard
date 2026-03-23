@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { AlertItem } from "./AlertItem";
+import { AlertDetailsModal } from "./AlertDetailsModal";
 import { DashboardMap } from "./DashboardMap";
 import type { DashboardMapHandle } from "./DashboardMap";
 import {
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 
-import { apiGet, apiPut } from "../utils/api";
+import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
@@ -39,6 +40,7 @@ export function Dashboard({
   user?: any;
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
   const [siteData, setSiteData] = useState<any>({
@@ -434,31 +436,28 @@ export function Dashboard({
       window.removeEventListener("sg_closeAlerts", closeHandler);
     };
   }, []);
-
   // Use logged-in user for acknowledge (same as AlertsPage)
-  const userName = user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown";
-  const handleAcknowledgeAlert = (alertId: string) => {
+  const [userName] = useState(() => user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown");
+
+  const handleAcknowledgeAlert = (alertId: string, fullAlert?: Alert) => {
+    if (fullAlert) setSelectedAlert(fullAlert);
     setAlerts((prev) =>
       prev.map((alert) =>
         alert.id === alertId ? { ...alert, isAcknowledged: true, acknowledgedBy: userName } : alert
       )
     );
-    // Use apiPost to match AlertsPage
-    import("../utils/api").then(({ apiPost }) => {
-      apiPost(`/api/sensors/alerts/${alertId}/acknowledge`, {
-        acknowledgedBy: userName,
-      })
-        .then((data) => {
-          if (data.success && data.alert) {
-            setAlerts((prev) =>
-              prev.map((alert) =>
-                alert.id === alertId ? { ...alert, ...data.alert } : alert
-              )
-            );
+    apiPost(`/api/sensors/alerts/${alertId}/acknowledge`, {
+      acknowledgedBy: userName,
+    })
+      .then((data) => {
+        if (data.success && data.alert) {
+          setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, ...data.alert } : a));
+          if (selectedAlert && selectedAlert.id === alertId) {
+            setSelectedAlert({ ...selectedAlert, ...data.alert });
           }
-        })
-        .catch(() => { });
-    });
+        }
+      })
+      .catch(() => { });
   };
 
   const unacknowledgedAlerts = alerts.filter(
@@ -524,12 +523,12 @@ export function Dashboard({
     // On mobile: left-align with cards (sidebar + card padding), span the same content width
     // On wider screens: right-aligned, capped at 500 px
     const isMobilePanel = vw < 600;
-    const panelLeft = isMobilePanel
-      ? SIDEBAR_W + CARD_PAD
-      : vw - Math.min(500, vw - 80) - 16;
     const panelW = isMobilePanel
-      ? vw - SIDEBAR_W - CARD_PAD * 2
+      ? vw - 32 // 16px margin on each side for mobile
       : Math.min(500, vw - 80);
+    const panelLeft = isMobilePanel
+      ? 16      // Left margin for mobile
+      : vw - panelW - 16;
     const bodyMaxH = Math.max(120, vh - panelTop - BOTTOM_GAP - 60);
     const sm = vw < 480;
     return createPortal(
@@ -578,10 +577,12 @@ export function Dashboard({
             alerts.filter((a) => !a.isAcknowledged).map((alert) => {
               const level: "critical" | "warning" = alert.level === "critical" ? "critical" : "warning";
               return (
-                <div key={alert.id} style={{ padding: sm ? "10px 14px" : "14px 22px", borderBottom: "1px solid #f5f5f5" }}>
+                <div key={alert.id} style={{ padding: sm ? "4px 14px" : "6px 22px", borderBottom: "1px solid #f5f5f5" }}>
                   <AlertItem
                     {...alert} level={level}
-                    onAcknowledge={handleAcknowledgeAlert}
+                    compact={true}
+                    onClick={() => setSelectedAlert({ ...alert, siteName: siteData.siteName, barangay: siteData.barangay })}
+                    onAcknowledge={(id) => handleAcknowledgeAlert(id, { ...alert, siteName: siteData.siteName, barangay: siteData.barangay })}
                     siteName={siteData.siteName}
                     value={alert.value} timestamp={alert.timestamp}
                     message={alert.message ?? ""}

@@ -12,8 +12,10 @@ interface AlertItemProps {
   timestamp: string;
   isAcknowledged: boolean;
   isSelected?: boolean;
+  compact?: boolean;
   onAcknowledge?: (id: string) => void;
   onExpand?: (id: string) => void;
+  onClick?: (e: React.MouseEvent) => void;
   DetailsButtonComponent?: React.FC<{ onClick?: (e: React.MouseEvent) => void }>;
 }
 
@@ -37,8 +39,10 @@ export function AlertItem({
   timestamp,
   isAcknowledged,
   isSelected,
+  compact = false,
   onAcknowledge,
   onExpand,
+  onClick,
   DetailsButtonComponent
 }: AlertItemProps) {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -49,10 +53,10 @@ export function AlertItem({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isMobile = windowWidth < 640;
+  const isMobile = windowWidth < 768;
+  const useColumnLayout = isMobile || compact;
 
   const handleAcknowledge = (e: React.MouseEvent) => {
-    e.stopPropagation();
     onAcknowledge?.(id);
   };
 
@@ -69,13 +73,14 @@ export function AlertItem({
     >
       <div
         className="group cursor-pointer transition-all"
+        onClick={onClick}
         style={{
           display: "flex",
           overflow: "hidden",
           position: "relative",
-          minHeight: 110,
+          minHeight: useColumnLayout ? 0 : 110,
           borderRadius: 15,
-          border: isSelected ? `1px solid ${accentColor}` : "1px solid #f1f5f9",
+          border: isSelected ? `1px solid ${accentColor}` : "none",
           background: isSelected
             ? (accentColor === "#D14343" ? "#FFF1F1" : accentColor === "#F1A11A" ? "#FFF9E6" : "#F5FBFB")
             : "#fff",
@@ -92,14 +97,14 @@ export function AlertItem({
         <div 
           className="flex flex-1" 
           style={{ 
-            flexDirection: isMobile ? "column" : "row",
-            alignItems: isMobile ? "flex-start" : "center",
+            flexDirection: useColumnLayout ? "column" : "row",
+            alignItems: useColumnLayout ? "flex-start" : "center",
             justifyContent: "space-between",
-            paddingLeft: isMobile ? 18 : 24, 
-            paddingRight: isMobile ? 18 : 24, 
-            paddingTop: isMobile ? 20 : 24, 
-            paddingBottom: isMobile ? 20 : 24, 
-            gap: isMobile ? 16 : 24 
+            paddingLeft: compact ? 14 : (useColumnLayout ? 18 : 24), 
+            paddingRight: compact ? 14 : (useColumnLayout ? 18 : 24), 
+            paddingTop: compact ? 16 : (useColumnLayout ? 20 : 24), 
+            paddingBottom: compact ? 16 : (useColumnLayout ? 20 : 24), 
+            gap: compact ? 12 : (useColumnLayout ? 16 : 24) 
           }}
         >
           <div className="flex flex-1 flex-col justify-center overflow-hidden w-full">
@@ -112,9 +117,9 @@ export function AlertItem({
                 letterSpacing: "-0.01em",
                 lineHeight: "1.4",
                 margin: 0,
-                fontSize: isMobile ? "14.5px" : "15.5px",
+                fontSize: compact ? "14px" : (isMobile ? "14.5px" : "15.5px"),
                 display: "-webkit-box",
-                WebkitLineClamp: isMobile ? 3 : 2,
+                WebkitLineClamp: useColumnLayout ? 3 : 2,
                 WebkitBoxOrient: "vertical",
                 overflow: "hidden",
                 whiteSpace: "normal",
@@ -129,7 +134,7 @@ export function AlertItem({
                 fontFamily: POPPINS,
                 fontWeight: 500,
                 color: "#64748b",
-                fontSize: "12px",
+                fontSize: compact ? "11px" : "12px",
                 letterSpacing: "0.01em"
               }}
             >
@@ -152,12 +157,12 @@ export function AlertItem({
           <div 
             className="flex shrink-0 w-full md:w-auto" 
             style={{ 
-              flexDirection: isMobile ? "row" : "row",
+              flexDirection: "row",
               alignItems: "center",
-              justifyContent: isMobile ? "space-between" : "flex-end",
-              gap: isMobile ? 12 : 32,
-              marginTop: isMobile ? 8 : 0,
-              width: isMobile ? "100%" : "auto"
+              justifyContent: useColumnLayout ? "space-between" : "flex-end",
+              gap: compact ? 8 : (isMobile ? 12 : 32),
+              marginTop: useColumnLayout ? 8 : 0,
+              width: useColumnLayout ? "100%" : "auto"
             }}
           >
             {/* Status Icon & Badges together */}
@@ -167,9 +172,9 @@ export function AlertItem({
                   <span style={{
                     backgroundColor: "#FFF1F1",
                     color: "#D14343",
-                    padding: "4px 10px",
+                    padding: compact ? "3px 8px" : "4px 10px",
                     borderRadius: "6px",
-                    fontSize: "10px",
+                    fontSize: compact ? "9px" : "10px",
                     fontWeight: 700,
                     fontFamily: POPPINS,
                     textTransform: 'uppercase',
@@ -179,9 +184,9 @@ export function AlertItem({
                   <span style={{
                     backgroundColor: "#FFF9E6",
                     color: "#F1A11A",
-                    padding: "4px 10px",
+                    padding: compact ? "3px 8px" : "4px 10px",
                     borderRadius: "6px",
-                    fontSize: "10px",
+                    fontSize: compact ? "9px" : "10px",
                     fontWeight: 700,
                     fontFamily: POPPINS,
                     textTransform: 'uppercase',
@@ -192,9 +197,9 @@ export function AlertItem({
                   <span style={{
                     backgroundColor: "#E9FBF3",
                     color: "#23B67E",
-                    padding: "4px 10px",
+                    padding: compact ? "3px 8px" : "4px 10px",
                     borderRadius: "6px",
-                    fontSize: "10px",
+                    fontSize: compact ? "9px" : "10px",
                     fontWeight: 700,
                     fontFamily: POPPINS,
                     textTransform: 'uppercase',
@@ -212,7 +217,7 @@ export function AlertItem({
                 <Button
                   size="sm"
                   onClick={handleAcknowledge}
-                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 py-1.5 px-4 text-xs h-8 rounded-lg font-semibold shadow-sm"
+                  className={`${compact ? "h-7 px-3 text-[10px]" : "h-8 px-4 text-xs"} bg-schistoguard-teal hover:bg-schistoguard-teal/90 rounded-lg font-semibold shadow-sm`}
                 >
                   Acknowledge
                 </Button>

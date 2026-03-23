@@ -548,16 +548,16 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
                   {deleteMode && (
                     <th style={{
-                      padding: "10px 14px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 1
+                      padding: "10px 14px 10px 24px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 1
                     }}></th>
                   )}
-                  {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map(h => (
+                  {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
                     <th key={h} style={{
-                      padding: "10px 14px",
+                      padding: h === "Time" && !deleteMode ? "10px 14px 10px 24px" : h === "" ? "10px 24px 10px 14px" : "10px 14px",
                       fontSize: 12,
                       fontWeight: 600,
                       color: "#7b8a9a",
-                      textAlign: h === "" ? "right" : h === "Time" || h === "Date" ? "left" : "center",
+                      textAlign: h === "" ? "right" : (h === "Time" || h === "Date") ? "left" : "center",
                       position: "sticky",
                       top: 0,
                       background: "#fff",
@@ -581,12 +581,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                       borderBottom: "1px solid #f5f5f5",
                       animation: animate ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both` : "none",
                       background: selectedIds.has(reading.id) ? "#fff1f1" : "transparent",
-                      transition: "background 0.2s ease"
+                      transition: "background 0.2s ease",
+                      cursor: deleteMode ? "pointer" : "default"
                     }}
                     onClick={() => deleteMode && toggleSelection(reading.id)}
                     >
                       {deleteMode && (
-                        <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                        <td style={{ padding: "12px 14px 12px 24px", textAlign: "center" }}>
                           <div style={{
                             width: 20, height: 20, borderRadius: 6,
                             border: `2px solid ${selectedIds.has(reading.id) ? "#ef4444" : "#d1d5db"}`,
@@ -598,22 +599,22 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                           </div>
                         </td>
                       )}
-                      <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
-                      <td style={{ padding: "10px 14px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
-                      <td style={{ padding: "10px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                      <td style={{ padding: deleteMode ? "12px 14px" : "12px 14px 12px 24px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
+                      <td style={{ padding: "12px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                           <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
                         </span>
                       </td>
-                      <td style={{ padding: "10px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                      <td style={{ padding: "12px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                           <Thermometer style={{ width: 14, height: 14, color: "#357D86" }} />
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
                         </span>
                       </td>
-                      <td style={{ padding: "10px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
-                      <td style={{ padding: "10px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                      <td style={{ padding: "12px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
+                      <td style={{ padding: "12px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         <span style={{
                           fontSize: 11,
                           fontWeight: 600,
@@ -625,7 +626,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                           fontFamily: POPPINS,
                         }}>{reading.riskLevel}</span>
                       </td>
-                      <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                      <td style={{ padding: "12px 24px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         {formatRelativeTime(reading.timestamp)}
                       </td>
                     </tr>

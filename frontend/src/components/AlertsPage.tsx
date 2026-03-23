@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AlertItem } from "./AlertItem";
+import { AlertDetailsModal } from "./AlertDetailsModal";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -130,7 +131,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   const [showMobileAlertList, setShowMobileAlertList] = useState(false);
 
 
-  const handleAcknowledgeAlert = (alertId: string) => {
+  const handleAcknowledgeAlert = (alertId: string, fullAlert?: any) => {
+    if (fullAlert) setSelectedAlert(fullAlert);
     setAlerts(prev => prev.map(alert =>
       alert.id === alertId ? {
         ...alert,
@@ -147,6 +149,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             if (alert.id !== alertId) return alert;
             return { ...alert, ...data.alert };
           }));
+          if (selectedAlert?.id === alertId) {
+            setSelectedAlert({ ...selectedAlert, ...data.alert });
+          }
         }
       });
   };
@@ -467,139 +472,47 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                       </div>
                     )}
                     <div style={{ flex: 1, minWidth: 0, opacity: deleteMode && !selectedIds.has(alert.id) ? 0.7 : 1, transition: "opacity 0.2s ease" }}>
-                      <Dialog onOpenChange={(open) => { if (!open) setSelectedAlert(null); }}>
-                        <DialogTrigger asChild>
-                          <div onClick={(e) => {
-                            if (deleteMode) {
-                              e.preventDefault();
-                              toggleSelection(alert.id, e as unknown as React.MouseEvent);
-                            } else {
-                              setSelectedAlert(alert);
-                            }
-                          }}>
-                            <AlertItem
-                              {...alert}
-                              isSelected={deleteMode ? selectedIds.has(alert.id) : selectedAlert?.id === alert.id}
-                            onAcknowledge={handleAcknowledgeAlert}
-                            DetailsButtonComponent={() => (
-                              <ChevronRight
-                                size={22}
-                                strokeWidth={2.5}
-                                className="text-schistoguard-teal transition-transform group-hover:translate-x-1"
-                              />
-                            )}
-                          />
-                        </div>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
-                        <DialogHeader>
-                          <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
-                            Alert Details
-                          </DialogTitle>
-                        </DialogHeader>
-                        {selectedAlert && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                            <div style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 1fr",
-                              gap: 28,
-                            }}>
-                              <div>
-                                <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
-                                  Alert Information
-                                </h4>
-                                <table style={{ width: "100%", fontSize: 13 }}>
-                                  <tbody>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
-                                      <td style={{ fontFamily: "monospace", fontWeight: 600, fontSize: 14 }}>{selectedAlert.id}</td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
-                                      <td>
-                                        <Badge
-                                          variant={selectedAlert.level === "critical" ? "destructive" : "secondary"}
-                                          className={selectedAlert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
-                                        >
-                                          {selectedAlert.level.charAt(0).toUpperCase() + selectedAlert.level.slice(1)}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
-                                      <td style={{ fontWeight: 600 }}>{selectedAlert.parameter}</td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
-                                      <td style={{ fontWeight: 600 }}>{selectedAlert.value} <span style={{ fontWeight: 400, fontSize: 11 }}>NTU</span></td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
-                                      <td>{selectedAlert.duration || '-'}</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                              <div>
-                                <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
-                                  Site Information
-                                </h4>
-                                <table style={{ width: "100%", fontSize: 13 }}>
-                                  <tbody>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
-                                      <td style={{ fontWeight: 600 }}>{selectedAlert.siteName}</td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
-                                      <td>{selectedAlert.barangay}</td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
-                                      <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(selectedAlert.timestamp)}</td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Status:</td>
-                                      <td>
-                                        <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
-                                          {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                            <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 16 }}>
-                              <h4 style={{ fontWeight: 500, marginBottom: 12, fontSize: 14 }}>Alert Message</h4>
-                              <p style={{
-                                fontSize: 13, color: "#8E8B8B", background: "#f9fafb",
-                                borderRadius: 10, padding: 14, marginBottom: 20,
-                              }}>
-                                {selectedAlert.message}
-                              </p>
-                              {selectedAlert.acknowledgedBy && (
-                                <div style={{ textAlign: "center", paddingTop: 8 }}>
-                                  <span style={{ fontSize: 12, color: "#8E8B8B", display: "block" }}>Acknowledged by</span>
-                                  <span style={{ fontWeight: 500, fontSize: 13 }}>{selectedAlert.acknowledgedBy}</span>
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ display: "flex", gap: 8, paddingTop: 8 }}>
-                              {!selectedAlert.isAcknowledged && (
-                                <Button
-                                  onClick={() => handleAcknowledgeAlert(selectedAlert.id)}
-                                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
-                                >
-                                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                                  Acknowledge Alert
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
+                      <div onClick={(e) => {
+
+                        if (deleteMode) {
+
+                          e.preventDefault();
+
+                          toggleSelection(alert.id, e as unknown as React.MouseEvent);
+
+                        } else {
+
+                          setSelectedAlert(alert);
+
+                        }
+
+                      }} style={{ cursor: "pointer" }}>
+
+                        <AlertItem
+
+                          {...alert}
+
+                          isSelected={deleteMode ? selectedIds.has(alert.id) : selectedAlert?.id === alert.id}
+
+                          onAcknowledge={(id) => handleAcknowledgeAlert(id, alert)}
+
+                          DetailsButtonComponent={() => (
+
+                            <ChevronRight
+
+                              size={22}
+
+                              strokeWidth={2.5}
+
+                              className="text-schistoguard-teal transition-transform group-hover:translate-x-1"
+
+                            />
+
+                          )}
+
+                        />
+
+                      </div>
                     </div>
                   </div>
                 ))
@@ -620,6 +533,10 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         @keyframes contentSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
+         @keyframes scaleIn {
+           from { opacity: 0; transform: scale(0.9); }
+           to { opacity: 1; transform: scale(1); }
+         }
         }
         @keyframes cardDataFadeIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -630,6 +547,13 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+      <AlertDetailsModal 
+        alert={selectedAlert}
+        isOpen={!!selectedAlert}
+        onOpenChange={(open) => !open && setSelectedAlert(null)}
+        onAcknowledge={handleAcknowledgeAlert}
+      />
+
 
       {/* ── Mobile Alert List Modal ── */}
       {(isMobile) && showMobileAlertList && (
@@ -692,7 +616,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                           <AlertItem
                             {...alert}
                             isSelected={selectedAlert?.id === alert.id}
-                            onAcknowledge={handleAcknowledgeAlert}
+                            onAcknowledge={(id) => handleAcknowledgeAlert(id, alert)}
                             DetailsButtonComponent={() => (
                               <ChevronRight
                                 size={20}
@@ -736,14 +660,6 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                                     <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
                                     <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(selectedAlert.timestamp)}</td>
                                   </tr>
-                                  <tr>
-                                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Status:</td>
-                                    <td>
-                                      <Badge variant={selectedAlert.isAcknowledged ? "default" : "outline"} className={selectedAlert.isAcknowledged ? "bg-schistoguard-teal text-white" : ""}>
-                                        {selectedAlert.isAcknowledged ? "Acknowledged" : "Pending"}
-                                      </Badge>
-                                    </td>
-                                  </tr>
                                 </tbody>
                               </table>
                             </div>
@@ -756,16 +672,48 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                                 {selectedAlert.message}
                               </p>
                             </div>
-                            <div style={{ display: "flex", gap: 8, paddingTop: 8 }}>
-                              {!selectedAlert.isAcknowledged && (
+                            <div style={{ display: "flex", justifyContent: "center", paddingTop: 16 }}>
+
+                              {!selectedAlert.isAcknowledged ? (
+
                                 <Button
+
                                   onClick={() => handleAcknowledgeAlert(selectedAlert.id)}
-                                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+
+                                  className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 px-8 py-6 rounded-xl flex items-center gap-3 shadow-md transition-all active:scale-95"
+
                                 >
-                                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                                  Acknowledge Alert
+
+                                  <CheckCircle2 className="w-5 h-5" />
+
+                                  <span style={{ fontSize: 15, fontWeight: 600 }}>Acknowledge Alert</span>
+
                                 </Button>
+
+                              ) : (
+
+                                <div style={{ 
+
+                                  display: "flex", 
+
+                                  alignItems: "center", 
+
+                                  gap: 10, 
+
+                                  color: "#23B67E",
+
+                                  animation: "scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both"
+
+                                }}>
+
+                                  <CheckCircle2 className="w-6 h-6" />
+
+                                  <span style={{ fontSize: 16, fontWeight: 700 }}>Acknowledged</span>
+
+                                </div>
+
                               )}
+
                             </div>
                           </div>
                         )}
