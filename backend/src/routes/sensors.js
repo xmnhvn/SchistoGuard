@@ -7,14 +7,21 @@ const db = require("../db");
 const axios = require("axios");
 const reverseGeocode = require("../utils/reverseGeocode");
 
+// Generalized memory interval and global trackers
+let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
+let GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
+
 // API: Get current interval config
 router.get('/interval-config', (req, res) => {
   try {
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      res.json({ intervalMs: config.intervalMs });
+      res.json({ 
+        intervalMs: config.intervalMs,
+        deviceName: config.deviceName || "SchistoGuard Device 1" 
+      });
     } else {
-      res.json({ intervalMs: 5 * 60 * 1000 }); // default 5 min
+      res.json({ intervalMs: 5 * 60 * 1000, deviceName: "SchistoGuard Device 1" }); 
     }
   } catch (e) {
     res.status(500).json({ error: 'Failed to read interval config' });
@@ -23,13 +30,22 @@ router.get('/interval-config', (req, res) => {
 
 // API: Update interval config
 router.post('/interval-config', (req, res) => {
-  const { intervalMs } = req.body;
+  const { intervalMs, deviceName } = req.body;
   if (!intervalMs || typeof intervalMs !== 'number' || intervalMs < 1000) {
     return res.status(400).json({ error: 'Invalid intervalMs' });
   }
   try {
-    fs.writeFileSync(configPath, JSON.stringify({ intervalMs }, null, 2), 'utf8');
-    res.json({ success: true, intervalMs });
+    const newConfig = { intervalMs };
+    if (deviceName) {
+      newConfig.deviceName = deviceName;
+      GLOBAL_DEVICE_NAME = deviceName;
+    } else {
+      newConfig.deviceName = "SchistoGuard Device 1";
+      GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
+    }
+    AGGREGATE_INTERVAL_MS = intervalMs;
+    fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf8');
+    res.json({ success: true, ...newConfig });
   } catch (e) {
     console.error('Failed to write interval config:', e);
     res.status(500).json({ error: 'Failed to write interval config', details: e.message });
@@ -136,14 +152,14 @@ router.post("/alerts/:id/acknowledge", (req, res) => {
 
 let latestData = null;
 
-// Generalized interval for aggregation (default 5 min, can be loaded from config/db)
-let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
+// (Variables hoisted upwards)
 try {
   const fs = require('fs');
   const configPath = require('path').resolve(__dirname, '../../interval-config.json');
   if (fs.existsSync(configPath)) {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     if (config && config.intervalMs) AGGREGATE_INTERVAL_MS = config.intervalMs;
+    if (config && config.deviceName) GLOBAL_DEVICE_NAME = config.deviceName;
   }
 } catch (e) { /* ignore */ }
 
@@ -164,6 +180,7 @@ setInterval(() => {
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       if (config && config.intervalMs) intervalMs = config.intervalMs;
+      if (config && config.deviceName) GLOBAL_DEVICE_NAME = config.deviceName;
     }
   } catch (e) { /* ignore */ }
 
@@ -252,7 +269,7 @@ function generateAlertsFromData(data, now = new Date()) {
           value,
           now.toISOString(),
           0,
-          data.siteName || "Mang Jose's Fishpond",
+          data.siteName || GLOBAL_DEVICE_NAME,
           data.barangay || "Unknown",
           "-",
           null
@@ -276,7 +293,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.turbidity + " NTU",
         now.toISOString(),
         0,
-        data.siteName || "Mang Jose's Fishpond",
+        data.siteName || GLOBAL_DEVICE_NAME,
         data.barangay || "Unknown",
         "-",
         null
@@ -295,7 +312,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.turbidity + " NTU",
         now.toISOString(),
         0,
-        data.siteName || "Mang Jose's Fishpond",
+        data.siteName || GLOBAL_DEVICE_NAME,
         data.barangay || "Unknown",
         "-",
         null
@@ -317,7 +334,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.ph,
         now.toISOString(),
         0,
-        data.siteName || "Mang Jose's Fishpond",
+        data.siteName || GLOBAL_DEVICE_NAME,
         data.barangay || "Unknown",
         "-",
         null
@@ -336,7 +353,7 @@ function generateAlertsFromData(data, now = new Date()) {
         data.ph,
         now.toISOString(),
         0,
-        data.siteName || "Mang Jose's Fishpond",
+        data.siteName || GLOBAL_DEVICE_NAME,
         data.barangay || "Unknown",
         "-",
         null
@@ -400,14 +417,14 @@ function checkAndAlertImmediate(data) {
     const now = Date.now();
     const ts = new Date(data.timestamp).getTime();
     if (Math.abs(now - ts) < 10000) {
-      console.log('🔍 Alert detected, looking for residents for site:', data.siteName || "Mang Jose's Fishpond");
+      console.log('🔍 Alert detected, looking for residents for site:', data.siteName || GLOBAL_DEVICE_NAME);
       const nowDate = new Date();
       const dateStr = nowDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
       const timeStr = nowDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const timestamp = `${dateStr}, ${timeStr}`;
       const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
       // Get resident phone numbers for this site - prioritize BHWs and LGUs
-      const siteName = data.siteName || "Mang Jose's Fishpond";
+      const siteName = data.siteName || GLOBAL_DEVICE_NAME;
       db.all(
         "SELECT phone, role FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
         [siteName],
@@ -475,15 +492,16 @@ router.get("/latest", (req, res) => {
     if (Math.abs(now - ts) < 10000) {
       res.json({
         ...latestData,
+        siteName: GLOBAL_DEVICE_NAME,
         deviceConnected: true,
         timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
         address: latestData.address || null
       });
     } else {
-      res.json({ deviceConnected: false });
+      res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
     }
   } else {
-    res.json({ deviceConnected: false });
+    res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
   }
 });
 

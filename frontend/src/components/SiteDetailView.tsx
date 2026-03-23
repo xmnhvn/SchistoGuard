@@ -30,7 +30,7 @@ export interface SiteDetailViewProps {
 
 export function SiteDetailView({
   siteId,
-  siteName = "Mang Jose's Fishpond",
+  siteName = "SchistoGuard Device 1",
   barangay = "Riverside",
   currentRisk,
   onBack,

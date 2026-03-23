@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -46,12 +46,16 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [intervalMsg, setIntervalMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [deviceName, setDeviceName] = useState("SchistoGuard Device 1");
   // Load interval from backend
   useEffect(() => {
     (async () => {
       try {
         const data = await apiGet("/api/sensors/interval-config");
         let ms = data.intervalMs || 300000;
+        if (data.deviceName) {
+          setDeviceName(data.deviceName);
+        }
         if (ms % 3600000 === 0) {
           setIntervalValue(ms / 3600000);
           setIntervalUnit("hr");
@@ -80,7 +84,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     setIntervalMsg("");
     try {
       const ms = getIntervalMs();
-      await apiPost("/api/sensors/interval-config", { intervalMs: ms });
+      await apiPost("/api/sensors/interval-config", { intervalMs: ms, deviceName });
 
       // Trigger success animation
       setShowSuccess(true);
@@ -202,13 +206,61 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     return role === "bhw" ? "Barangay Health Worker" : "LGU Officer";
   };
 
-  const filteredUsers = users.filter(u =>
-    `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.organization.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const POPPINS = "'Poppins', sans-serif";
+
+  const filteredUsers = useMemo(() => {
+    return users.filter(u =>
+      `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.organization.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [users, searchQuery]);
+
+  const styleBlock = useMemo(() => (
+    <style>{`
+      @keyframes contentSlideIn {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .premium-shadow {
+        box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05), 0 2px 10px -2px rgba(0,0,0,0.02);
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+      .custom-input {
+        background: rgba(0,0,0,0.02) !important;
+        border: 1px solid rgba(0,0,0,0.03) !important;
+        border-radius: 14px !important;
+        padding: 12px 16px !important;
+        height: 48px !important;
+        font-family: ${POPPINS} !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
+      }
+      .custom-input:focus {
+        background: #fff !important;
+        border-color: #357D86 !important;
+        box-shadow: 0 0 0 4px rgba(53, 125, 134, 0.1) !important;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.1);
+        border-radius: 10px;
+      }
+      .user-card-item {
+        transition: all 0.2s ease !important;
+      }
+    `}</style>
+  ), [POPPINS]);
 
   return (
     <div style={{
@@ -225,49 +277,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       flexDirection: "column",
       alignItems: "stretch",
     }}>
-      <style>{`
-        @keyframes contentSlideIn {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .premium-shadow {
-          box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05), 0 2px 10px -2px rgba(0,0,0,0.02);
-        }
-        .glass-card {
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.4);
-        }
-        .custom-input {
-          background: rgba(0,0,0,0.02) !important;
-          border: 1px solid rgba(0,0,0,0.03) !important;
-          border-radius: 14px !important;
-          padding: 12px 16px !important;
-          height: 48px !important;
-          font-family: ${POPPINS} !important;
-          font-size: 14px !important;
-          transition: all 0.2s ease !important;
-        }
-        .custom-input:focus {
-          background: #fff !important;
-          border-color: #357D86 !important;
-          box-shadow: 0 0 0 4px rgba(53, 125, 134, 0.1) !important;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 5px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(0,0,0,0.1);
-          border-radius: 10px;
-        }
-        .user-card-item {
-          transition: all 0.2s ease !important;
-        }
-      `}</style>
+      {styleBlock}
 
       <div className={`mx-auto flex h-full min-h-0 flex-col ${isMobile ? 'w-full' : 'w-full max-w-[1700px]'}`}>
         {/* Synchronized Header Section */}
@@ -617,10 +627,23 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           border: "1px solid rgba(0,0,0,0.03)",
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
         }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Interval Setting</h2>
-          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the interval for sensor logging, reporting, alert stream, and SMS sending. All related processes will follow this interval.</p>
-          <div style={{ marginTop: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86" }}>General Interval:</label>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Settings</h2>
+          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the active device name and the broadcast interval for sensor logging and SMS reporting. All related processes will track this globally.</p>
+          
+          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86", width: 115 }}>Device Name:</label>
+            <input
+              type="text"
+              value={deviceName}
+              onChange={e => setDeviceName(e.target.value)}
+              placeholder="e.g. Mang Jose's Fish Pond"
+              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", flex: 1, maxWidth: 260, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, outline: "none" }}
+              className="focus:ring-2 focus:ring-[#357D86]/10 focus:border-[#357D86]/40 transition-all duration-200"
+            />
+          </div>
+
+          <div style={{ marginTop: 14, marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86", width: 115 }}>General Interval:</label>
             <input
               type="number"
               min={1}
@@ -643,7 +666,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             onClick={handleSaveInterval}
             style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
           >
-            Save Interval
+            Save Settings
           </button>
           {intervalMsg && <div style={{ marginTop: 12, color: intervalMsg.includes("success") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
 

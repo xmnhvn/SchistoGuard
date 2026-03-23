@@ -40,7 +40,7 @@ export function Dashboard({
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
   const [siteData, setSiteData] = useState<any>({
-    siteName: "Mang Jose's Fish Pond",
+    siteName: "SchistoGuard Device 1",
     barangay: "San Miguel",
     municipality: "Tacloban City",
     area: "100 square meters",
@@ -230,6 +230,7 @@ export function Dashboard({
         .then((data) => {
           // If backend says deviceConnected: false, treat as disconnected
           if (data && data.deviceConnected === false) {
+            if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             setDeviceConnected(false);
             setLatestReading(null);
             setBackendOk(true);
@@ -267,6 +268,9 @@ export function Dashboard({
       try {
         const data = await apiGet("/api/sensors/interval-config");
         let ms = data.intervalMs || 300000;
+        if (data.deviceName) {
+          setSiteData((prev: any) => ({ ...prev, siteName: data.deviceName }));
+        }
         if (ms !== lastIntervalMs) {
           lastIntervalMs = ms;
           if (ms % 3600000 === 0) {
@@ -443,6 +447,13 @@ export function Dashboard({
       : overallRisk === "warning"
         ? "#f59e0b"
         : "#22c55e";
+
+  const riskGradient =
+    overallRisk === "critical"
+      ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
+      : overallRisk === "warning"
+        ? "linear-gradient(135deg, #fbbf24 0%, #d97706 100%)"
+        : "linear-gradient(135deg, #4ade80 0%, #16a34a 100%)";
 
   // ─── Alerts portal — rendered in ALL layout branches ─────────────────────
   const alertsPortal = (() => {
@@ -1050,7 +1061,8 @@ export function Dashboard({
                       <img src="/icons/icon-risk.svg" alt="risk"
                         style={{ width: 38, height: 38, objectFit: "contain" }} />
                       <span style={{
-                        background: "#3d3d3d", color: "#fff", borderRadius: 999,
+                        background: "transparent", color: riskColor, borderRadius: 999,
+                        border: `1.5px solid ${riskColor}`,
                         padding: "6px 20px",
                         fontWeight: 700, fontSize: 15,
                         fontFamily: POPPINS, textTransform: "capitalize" as const,
@@ -1096,7 +1108,8 @@ export function Dashboard({
                     <img src="/icons/icon-risk.svg" alt="risk"
                       style={{ width: 32, height: 32, objectFit: "contain" }} />
                     <span style={{
-                      background: "#3d3d3d", color: "#fff", borderRadius: 999,
+                      background: "transparent", color: riskColor, borderRadius: 999,
+                      border: `1.5px solid ${riskColor}`,
                       padding: "5px 16px", fontWeight: 700, fontSize: 13,
                       fontFamily: POPPINS, textTransform: "capitalize" as const,
                     }}>
@@ -1325,8 +1338,9 @@ export function Dashboard({
               <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain" }} />
               <span
                 style={{
-                  background: "#3d3d3d",
-                  color: "#fff",
+                  background: "transparent",
+                  color: riskColor,
+                  border: `1.5px solid ${riskColor}`,
                   borderRadius: 999,
                   padding: isNarrowDesktop ? "5px 18px" : "8px 26px",
                   fontWeight: 700,

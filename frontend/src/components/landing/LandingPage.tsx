@@ -81,11 +81,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [dataOk, setDataOk] = useState(true);
   const [deviceConnected, setDeviceConnected] = useState(true);
   const [siteData, setSiteData] = useState<any>({
-    siteName: "Mang Jose's Fish Pond",
+    siteName: "SchistoGuard Device 1",
     barangay: "San Miguel",
     municipality: "Tacloban City",
     area: "100 square meters",
   });
+
+  // Fetch device name from global config
+  useEffect(() => {
+    apiGet("/api/sensors/interval-config")
+      .then((data: any) => {
+        if (data && data.deviceName) {
+          setSiteData((prev: any) => ({ ...prev, siteName: data.deviceName }));
+        }
+      })
+      .catch(console.error);
+  }, []);
   // Address from reverse geocoding
   const [gpsAddress, setGpsAddress] = useState<string | null>(null);
   // Cache last lat/lng to avoid unnecessary API calls
@@ -142,7 +153,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       if (!cached) {
         sites = [{
           id: 'device-gps',
-          name: siteData.siteName || "Mang Jose's Fish Pond",
+          name: siteData.siteName || "SchistoGuard Device 1",
           lat: 11.2447, // Default coordinate structure
           lng: 125.0041,
         }];
@@ -213,6 +224,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       apiGet("/api/sensors/latest")
         .then((data) => {
           if (data && data.deviceConnected === false) {
+            if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             setDeviceConnected(false);
             setLatestReading(null);
             setBackendOk(true);
