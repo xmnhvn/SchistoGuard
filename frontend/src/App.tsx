@@ -262,7 +262,7 @@ export default function App() {
       >
         {/* Dashboard stays mounted (preserves map), hidden via CSS when not active */}
         <div style={{ display: currentView === 'dashboard' ? 'contents' : 'none' }}>
-          <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} />
+          <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} user={user} />
         </div>
         <div style={{ display: currentView === 'alerts' ? 'contents' : 'none' }}>
           <AlertsPage onNavigate={handleNavigate} visible={currentView === 'alerts'} user={user} />

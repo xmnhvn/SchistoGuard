@@ -30,11 +30,13 @@ export function Dashboard({
   setSystemStatus,
   viewMode = "full",
   visible = true,
+  user,
 }: {
   onNavigate?: (view: string) => void;
   setSystemStatus?: (status: "operational" | "down") => void;
   viewMode?: "full" | "sensors-only";
   visible?: boolean;
+  user?: any;
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [latestReading, setLatestReading] = useState<any>(null);
@@ -433,25 +435,30 @@ export function Dashboard({
     };
   }, []);
 
+  // Use logged-in user for acknowledge (same as AlertsPage)
+  const userName = user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown";
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts((prev) =>
       prev.map((alert) =>
-        alert.id === alertId ? { ...alert, isAcknowledged: true } : alert
+        alert.id === alertId ? { ...alert, isAcknowledged: true, acknowledgedBy: userName } : alert
       )
     );
-    apiPut(`/api/sensors/alerts/${alertId}/acknowledge`, {
-      acknowledgedBy: "Current User (LGU)",
-    })
-      .then((data) => {
-        if (data.success && data.alert) {
-          setAlerts((prev) =>
-            prev.map((alert) =>
-              alert.id === alertId ? { ...alert, ...data.alert } : alert
-            )
-          );
-        }
+    // Use apiPost to match AlertsPage
+    import("../utils/api").then(({ apiPost }) => {
+      apiPost(`/api/sensors/alerts/${alertId}/acknowledge`, {
+        acknowledgedBy: userName,
       })
-      .catch(() => { });
+        .then((data) => {
+          if (data.success && data.alert) {
+            setAlerts((prev) =>
+              prev.map((alert) =>
+                alert.id === alertId ? { ...alert, ...data.alert } : alert
+              )
+            );
+          }
+        })
+        .catch(() => { });
+    });
   };
 
   const unacknowledgedAlerts = alerts.filter(
