@@ -1,6 +1,5 @@
 const router = require("express").Router();
 const fs = require('fs');
-const configPath = require('path').resolve(__dirname, '../../interval-config.json');
 const classifyWater = require("../utils/classifyWater");
 const { validatePhoneNumber, formatPhoneNumber } = require("../utils/validatePhone");
 const db = require("../db");
@@ -11,21 +10,33 @@ const reverseGeocode = require("../utils/reverseGeocode");
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
 
+// Helper to load interval from DB settings
+async function loadIntervalFromDB() {
+  return new Promise((resolve) => {
+    db.getSetting('aggregate_interval_ms', (err, value) => {
+      if (!err && value) {
+        AGGREGATE_INTERVAL_MS = parseInt(value, 10);
+      }
+      resolve(AGGREGATE_INTERVAL_MS);
+    });
+  });
+}
+
+// Helper to set interval in DB settings
+async function saveIntervalToDB(ms) {
+  return new Promise((resolve, reject) => {
+    db.setSetting('aggregate_interval_ms', String(ms), (err) => {
+      if (err) reject(err); else resolve();
+    });
+  });
+}
+
 // API: Get current interval config
 router.get('/interval-config', (req, res) => {
-  try {
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      res.json({ 
-        intervalMs: config.intervalMs,
-        deviceName: config.deviceName || "SchistoGuard Device 1" 
-      });
-    } else {
-      res.json({ intervalMs: 5 * 60 * 1000, deviceName: "SchistoGuard Device 1" }); 
-    }
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to read interval config' });
-  }
+  db.getSetting('aggregate_interval_ms', (err, value) => {
+    let ms = value ? parseInt(value, 10) : 5 * 60 * 1000;
+    res.json({ intervalMs: ms, deviceName: GLOBAL_DEVICE_NAME });
+  });
 });
 
 // API: Update interval config
@@ -34,22 +45,19 @@ router.post('/interval-config', (req, res) => {
   if (!intervalMs || typeof intervalMs !== 'number' || intervalMs < 1000) {
     return res.status(400).json({ error: 'Invalid intervalMs' });
   }
-  try {
-    const newConfig = { intervalMs };
-    if (deviceName) {
-      newConfig.deviceName = deviceName;
-      GLOBAL_DEVICE_NAME = deviceName;
-    } else {
-      newConfig.deviceName = "SchistoGuard Device 1";
-      GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
-    }
-    AGGREGATE_INTERVAL_MS = intervalMs;
-    fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf8');
-    res.json({ success: true, ...newConfig });
-  } catch (e) {
-    console.error('Failed to write interval config:', e);
-    res.status(500).json({ error: 'Failed to write interval config', details: e.message });
-  }
+  AGGREGATE_INTERVAL_MS = intervalMs;
+  saveIntervalToDB(intervalMs)
+    .then(() => {
+      if (deviceName) {
+        GLOBAL_DEVICE_NAME = deviceName;
+      } else {
+        GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
+      }
+      res.json({ success: true, intervalMs, deviceName: GLOBAL_DEVICE_NAME });
+    })
+    .catch((e) => {
+      res.status(500).json({ error: 'Failed to write interval config', details: e.message });
+    });
 });
 
 // ESP32 connection for SMS
@@ -173,16 +181,11 @@ setInterval(() => {
   // Only proceed if data is fresh (device connected, <10s old)
   if (Math.abs(nowMs - dataTimestamp) >= 10000) return;
 
-  // --- Auto-reload interval config every cycle ---
-  let intervalMs = 5 * 60 * 1000; // default 5min
-  try {
-    const configPath = require('path').resolve(__dirname, '../../interval-config.json');
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (config && config.intervalMs) intervalMs = config.intervalMs;
-      if (config && config.deviceName) GLOBAL_DEVICE_NAME = config.deviceName;
-    }
-  } catch (e) { /* ignore */ }
+  // --- Auto-reload interval config from DB every cycle ---
+  let intervalMs = AGGREGATE_INTERVAL_MS;
+  db.getSetting('aggregate_interval_ms', (err, value) => {
+    if (!err && value) intervalMs = parseInt(value, 10);
+  });
 
   // Always log to raw_readings (per event/second), now with GPS
   db.run(

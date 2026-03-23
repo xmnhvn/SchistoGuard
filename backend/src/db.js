@@ -46,6 +46,12 @@ const initPostgresTables = async () => {
       )
     `);
     await db.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `);
+    await db.query(`
       CREATE TABLE IF NOT EXISTS raw_readings (
         id SERIAL PRIMARY KEY,
         turbidity REAL,
@@ -171,3 +177,14 @@ const wrappedDb = {
 };
 
 module.exports = wrappedDb;
+// --- Settings helpers ---
+wrappedDb.getSetting = function(key, callback) {
+  this.get('SELECT value FROM settings WHERE key = ?', [key], (err, row) => {
+    if (err) return callback(err);
+    callback(null, row ? row.value : null);
+  });
+};
+
+wrappedDb.setSetting = function(key, value, callback) {
+  this.run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value', [key, value], callback);
+};
