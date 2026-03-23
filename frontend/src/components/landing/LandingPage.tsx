@@ -111,22 +111,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         lng: latestReading.longitude,
       }];
       lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
+      
+      // Save to localStorage as a robust fallback for offline "System Down" states
+      if (typeof window !== "undefined") {
+        localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
+      }
     } else {
+      let cached = false;
       // Try to load from localStorage
-      const last = localStorage.getItem('lastGpsLocation');
-      if (last) {
-        try {
-          const parsed = JSON.parse(last);
-          if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
-            sites = [{
-              id: 'device-gps',
-              name: parsed.siteName || 'Last Known Location',
-              lat: parsed.lat,
-              lng: parsed.lng,
-            }];
-            lastLoc = parsed;
-          }
-        } catch { }
+      if (typeof window !== "undefined") {
+        const last = localStorage.getItem('lastGpsLocation');
+        if (last) {
+          try {
+            const parsed = JSON.parse(last);
+            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+              sites = [{
+                id: 'device-gps',
+                name: parsed.siteName || 'Last Known Location',
+                lat: parsed.lat,
+                lng: parsed.lng,
+              }];
+              lastLoc = parsed;
+              cached = true;
+            }
+          } catch { }
+        }
+      }
+      
+      // Ultimate hardcoded fallback if absolutely no layout cache exists (prevents map from disappearing perfectly)
+      if (!cached) {
+        sites = [{
+          id: 'device-gps',
+          name: siteData.siteName || "Mang Jose's Fish Pond",
+          lat: 11.2447, // Default coordinate structure
+          lng: 125.0041,
+        }];
+        lastLoc = { lat: 11.2447, lng: 125.0041, siteName: siteData.siteName };
       }
     }
     setGpsSites(sites);
