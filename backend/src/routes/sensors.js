@@ -179,7 +179,10 @@ setInterval(() => {
   const dataTimestamp = new Date(latestData.timestamp).getTime();
   const nowMs = now.getTime();
   // Only proceed if data is fresh (device connected, <10s old)
-  if (Math.abs(nowMs - dataTimestamp) >= 10000) return;
+  if (Math.abs(nowMs - dataTimestamp) >= 10000) {
+    console.warn('[readings] Skipped: data too old or device not connected', { now: now.toISOString(), dataTimestamp, latestData });
+    return;
+  }
 
   // --- Auto-reload interval config from DB every cycle ---
   let intervalMs = AGGREGATE_INTERVAL_MS;
@@ -203,6 +206,8 @@ setInterval(() => {
     function (err) {
       if (err) {
         console.error('[raw_readings insert error]', err.message, { latestData });
+      } else {
+        console.log('[raw_readings] Inserted:', latestData);
       }
       // No alert generation here!
     }
@@ -234,7 +239,12 @@ setInterval(() => {
           now.toISOString()
         ],
         function (err) {
-          if (!err) generateAlertsFromData(latestData, now);
+          if (err) {
+            console.error('[readings insert error]', err.message, { latestData });
+          } else {
+            console.log('[readings] Inserted:', latestData);
+            generateAlertsFromData(latestData, now);
+          }
         }
       );
       // ...existing code...
