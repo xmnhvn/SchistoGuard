@@ -200,9 +200,8 @@ setInterval(() => {
     function (err) {
       if (err) {
         console.error('[raw_readings insert error]', err.message, { latestData });
-      } else {
-        generateAlertsFromData(latestData, now);
       }
+      // No alert generation here!
     }
   );
   // Aggregate/copy to readings table based on interval
