@@ -40,14 +40,14 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
     >
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 backdrop-blur-md"
+        className="absolute inset-0 backdrop-blur-md animate-fade-in"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)' }}
         onClick={onClose}
       />
       
       {/* Modal Content */}
       <div 
-        className="relative w-full max-w-md bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 flex flex-col"
+        className="relative w-full max-w-md bg-white shadow-2xl overflow-hidden animate-slide-up flex flex-col"
         style={{ zIndex: 1000000, backgroundColor: '#ffffff', borderRadius: '28px', maxHeight: '90vh' }}
       >
         {/* Close Button */}
@@ -88,76 +88,91 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
         </div>
 
         {/* Instructions */}
-        <div className="p-6 sm:p-8 space-y-6 sm:space-y-8 max-h-[50vh] overflow-y-auto custom-scrollbar">
+        <div 
+          className="p-6 sm:p-8 space-y-8 overflow-y-auto custom-scrollbar"
+          style={{ height: '440px', maxHeight: '50vh' }}
+        >
           {osType === 'ios' && (
             <div className="space-y-8">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg">1</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold mb-1">Open Safari</p>
-                  <p className="text-gray-600 text-sm">Make sure you are viewing this page in the <span className="font-semibold">Safari</span> browser.</p>
+              {[
+                {
+                  id: 1,
+                  title: 'Open Safari',
+                  desc: <span>Make sure you are viewing this page in the <span className="font-bold">Safari</span> browser.</span>
+                },
+                {
+                  id: 2,
+                  title: 'Tap the Share Icon',
+                  desc: <span>Look for the <span className="inline-flex items-center p-1 bg-gray-100 mx-1" style={{ borderRadius: '6px' }}><Share className="w-4 h-4 text-schistoguard-teal" /></span> <span className="font-bold">Share</span> button at the bottom center of your screen.</span>
+                },
+                {
+                  id: 3,
+                  title: 'Scroll & Select',
+                  desc: <span>Scroll up through the options and tap on <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 mx-1" style={{ borderRadius: '6px' }}><PlusSquare className="w-4 h-4 mr-1 text-gray-700" /> <span className="font-bold">Add to Home Screen</span></span>.</span>
+                },
+                {
+                  id: 4,
+                  title: 'Confirm Installation',
+                  desc: <span>Ensure the name is <span className="font-bold">SchistoGuard</span> and tap <span className="text-blue-500 font-bold font-poppins">Add</span> in the top right corner.</span>
+                }
+              ].map((step) => (
+                <div key={step.id} className="flex items-start gap-4">
+                  <div 
+                    className="flex-shrink-0 w-8 h-8 bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-sm" 
+                    style={{ borderRadius: '10px' }}
+                  >
+                    {step.id}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center h-8">
+                      <p className="text-gray-900 font-bold text-base" style={{ fontFamily: "'Poppins', sans-serif" }}>{step.title}</p>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-snug" style={{ fontFamily: "'Poppins', sans-serif" }}>{step.desc}</p>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg">2</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-bold mb-1">Tap the Share Icon</p>
-                  <p className="text-gray-800 text-sm">Look for the <span className="inline-flex items-center p-1 bg-gray-100 rounded mx-1"><Share className="w-4 h-4 text-schistoguard-teal" /></span> <span className="font-bold">Share</span> button at the bottom center of your screen.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg" style={{ borderRadius: '12px' }}>3</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold mb-1">Scroll & Select</p>
-                  <p className="text-gray-600 text-sm">Scroll up through the options and tap on <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 mx-1" style={{ borderRadius: '6px' }}><PlusSquare className="w-4 h-4 mr-1 text-gray-700" /> <span className="font-semibold">Add to Home Screen</span></span>.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg">4</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold mb-1">Confirm Installation</p>
-                  <p className="text-gray-600 text-sm">Ensure the name is <span className="font-semibold">SchistoGuard</span> and tap <span className="text-blue-500 font-bold">Add</span> in the top right corner.</p>
-                </div>
-              </div>
+              ))}
             </div>
           )}
 
           {osType === 'android' && (
             <div className="space-y-8">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg">1</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold mb-1">Open Chrome</p>
-                  <p className="text-gray-600 text-sm">This works best in the <span className="font-semibold">Google Chrome</span> browser.</p>
+              {[
+                {
+                  id: 1,
+                  title: 'Open Chrome',
+                  desc: <span>This works best in the <span className="font-bold">Google Chrome</span> browser.</span>
+                },
+                {
+                  id: 2,
+                  title: 'Tap the Menu',
+                  desc: <span>Tap the <span className="inline-flex items-center p-1 bg-gray-100 mx-1" style={{ borderRadius: '6px' }}><MoreVertical className="w-4 h-4 text-gray-700" /></span> menu icon in the top right corner.</span>
+                },
+                {
+                  id: 3,
+                  title: 'Install App',
+                  desc: <span>Select <span className="font-bold text-schistoguard-teal">Install app</span> or <span className="font-bold text-schistoguard-teal">Add to Home screen</span> from the list.</span>
+                },
+                {
+                  id: 4,
+                  title: 'Confirm',
+                  desc: <span>Tap <span className="font-bold text-schistoguard-teal">Install</span> in the confirmation pop-up.</span>
+                }
+              ].map((step) => (
+                <div key={step.id} className="flex items-start gap-4">
+                  <div 
+                    className="flex-shrink-0 w-8 h-8 bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-sm" 
+                    style={{ borderRadius: '10px' }}
+                  >
+                    {step.id}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center h-8">
+                      <p className="text-gray-900 font-bold text-base" style={{ fontFamily: "'Poppins', sans-serif" }}>{step.title}</p>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-snug" style={{ fontFamily: "'Poppins', sans-serif" }}>{step.desc}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg">2</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold mb-1">Tap the Menu</p>
-                  <p className="text-gray-600 text-sm">Tap the <span className="inline-flex items-center p-1 bg-gray-100 rounded mx-1"><MoreVertical className="w-4 h-4 text-gray-700" /></span> menu icon in the top right corner.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg">3</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold mb-1">Install App</p>
-                  <p className="text-gray-600 text-sm">Select <span className="font-semibold text-schistoguard-teal">Install app</span> or <span className="font-semibold text-schistoguard-teal">Add to Home screen</span> from the list.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-schistoguard-teal/10 flex items-center justify-center text-schistoguard-teal font-bold text-lg">4</div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold mb-1">Confirm</p>
-                  <p className="text-gray-600 text-sm">Tap <span className="font-semibold text-schistoguard-teal">Install</span> in the confirmation pop-up.</p>
-                </div>
-              </div>
+              ))}
             </div>
           )}
         </div>
@@ -173,6 +188,20 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
           </button>
         </div>
         <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+          .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+          }
+          .animate-slide-up {
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
           .custom-scrollbar::-webkit-scrollbar {
             width: 5px;
           }
