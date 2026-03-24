@@ -108,87 +108,70 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string } | null>(null);
 
-  // Prefer real device location if available, else fallback to sensor/last known
+  // Strictly follow real sensor device location (from GSM/GPS data)
+  // Fallback to last known location in localStorage if sensor is not yet available
   useEffect(() => {
-    let didSet = false;
-    if (typeof window !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const sites = [{
-            id: 'user-device',
-            name: 'Your Location',
-            lat: latitude,
-            lng: longitude,
-          }];
-          const lastLoc = { lat: latitude, lng: longitude, siteName: 'Your Location' };
-          setGpsSites(sites);
-          setLastSavedLocation(lastLoc);
-          localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
-          didSet = true;
-        },
-        (error) => {
-          // If denied or error, fallback to sensor/last known
-          fallbackGps();
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    } else {
-      fallbackGps();
-    }
-
-    function fallbackGps() {
-      let sites;
-      let lastLoc;
-      if (
-        latestReading &&
-        typeof latestReading.latitude === 'number' &&
-        typeof latestReading.longitude === 'number' &&
-        latestReading.latitude !== null &&
-        latestReading.longitude !== null
-      ) {
-        sites = [{
-          id: 'device-gps',
-          name: siteData.siteName || 'Device Location',
-          lat: latestReading.latitude,
-          lng: latestReading.longitude,
-        }];
-        lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
-        localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
-      } else {
-        let cached = false;
-        if (typeof window !== "undefined") {
-          const last = localStorage.getItem('lastGpsLocation');
-          if (last) {
-            try {
-              const parsed = JSON.parse(last);
-              if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
-                sites = [{
-                  id: 'device-gps',
-                  name: parsed.siteName || 'Last Known Location',
-                  lat: parsed.lat,
-                  lng: parsed.lng,
-                }];
-                lastLoc = parsed;
-                cached = true;
-              }
-            } catch { }
-          }
-        }
-        if (!cached) {
-          sites = [{
-            id: 'device-gps',
-            name: siteData.siteName || "SchistoGuard Device 1",
-            lat: 11.2447,
-            lng: 125.0041,
-          }];
-          lastLoc = { lat: 11.2447, lng: 125.0041, siteName: siteData.siteName };
-        }
-      }
+    let sites;
+    let lastLoc;
+    
+    // 1. Prioritize real-time data from latestReading
+    if (
+      latestReading &&
+      typeof latestReading.latitude === 'number' &&
+      typeof latestReading.longitude === 'number' &&
+      latestReading.latitude !== null &&
+      latestReading.longitude !== null
+    ) {
+      sites = [{
+        id: 'device-gps',
+        name: siteData.siteName || 'Device Location',
+        lat: latestReading.latitude,
+        lng: latestReading.longitude,
+      }];
+      lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
+      
+      // Persist to localStorage for immediate loading on next visit
+      localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
+    } 
+    // 2. Fallback to cached location if no live reading yet
+    else {
+      let cachedSet = false;
+      if (typeof window !== "undefined") {
+        const last = localStorage.getItem('lastGpsLocation');
+        if (last) {
+          try {
+            const parsed = JSON.parse(last);
+            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+              sites = [{
+                id: 'device-gps',
+                name: parsed.siteName || 'Last Known Location',
+                lat: parsed.lat,
+                lng: parsed.lng,
+              }];
+              lastLoc = parsed;
+              setGpsSites(sites);
+              setLastSavedLocation(lastLoc);
+              cachedSet = true;
+            }
+          } catch { }
+        }
+      }
+      
+      // 3. Absolute fallback to Philippines center if nothing else exists
+      if (!cachedSet && !gpsSites) {
+        sites = [{
+          id: 'device-gps',
+          name: siteData.siteName || "SchistoGuard Device 1",
+          lat: 11.2447,
+          lng: 125.0041,
+        }];
+        lastLoc = { lat: 11.2447, lng: 125.0041, siteName: siteData.siteName };
+        setGpsSites(sites);
+        setLastSavedLocation(lastLoc);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestReading, siteData.siteName]);
 
   // Reverse geocode when GPS changes (sync with dashboard logic)
