@@ -100,6 +100,7 @@ export const ReportsPage: React.FC = () => {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showMobileReportList, setShowMobileReportList] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   React.useEffect(() => {
@@ -430,12 +431,27 @@ export const ReportsPage: React.FC = () => {
         )}
       </div>
 
-      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col p-6" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+      <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col" style={{ 
+        animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none',
+        padding: "24px" 
+      }}>
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Reports List Column */}
           <div className="flex h-full min-h-0 flex-col">
-            <Card className="flex h-full min-h-0 flex-col overflow-hidden" style={{ borderRadius: 28 }}>
-              <div className="flex-shrink-0 bg-white p-6">
+            <Card 
+              className="flex h-full min-h-0 flex-col overflow-hidden" 
+              style={{ 
+                borderRadius: isMobile ? 0 : 28,
+                border: isMobile ? "none" : "1px solid #eef0f2",
+                background: isMobile ? "transparent" : "#fff",
+                boxShadow: isMobile ? "none" : "0 4px 20px rgba(0,0,0,0.03)"
+              }}
+            >
+              <div className="flex-shrink-0 bg-white p-6" style={{ 
+                borderRadius: isMobile ? 24 : 0,
+                border: isMobile ? "1px solid #f1f5f9" : "none",
+                marginBottom: isMobile ? 12 : 0
+              }}>
                 <div className="flex items-center justify-between gap-3">
                   <div
                     className={
@@ -444,57 +460,59 @@ export const ReportsPage: React.FC = () => {
                         : 'grid grid-cols-3 gap-4 w-full items-center'
                     }
                   >
-                    <div className={isMobile ? 'w-full' : 'col-span-1'}>
-                      <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                        <SelectTrigger
-                          className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
-                          style={{
-                            height: 38,
-                            borderRadius: 12,
-                            fontFamily: POPPINS,
-                            fontSize: 13,
-                            fontWeight: 500,
-                            border: "1px solid #e2e5ea",
-                            background: "#fff",
-                            flexShrink: 0
-                          }}
-                        >
-                          <SelectValue placeholder="Period" />
-                        </SelectTrigger>
-                        <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
-                          <SelectItem value="current-month">Current Month</SelectItem>
-                          <SelectItem value="last-month">Last Month</SelectItem>
-                          <SelectItem value="current-quarter">Current Quarter</SelectItem>
-                          <SelectItem value="last-quarter">Last Quarter</SelectItem>
-                          <SelectItem value="current-year">Current Year</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className={isMobile ? 'w-full' : 'col-span-1'}>
-                      <Select value={selectedType} onValueChange={setSelectedType}>
-                        <SelectTrigger
-                          className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
-                          style={{
-                            height: 38,
-                            borderRadius: 12,
-                            fontFamily: POPPINS,
-                            fontSize: 13,
-                            fontWeight: 500,
-                            border: "1px solid #e2e5ea",
-                            background: "#fff",
-                            flexShrink: 0
-                          }}
-                        >
-                          <SelectValue placeholder="Type" />
-                        </SelectTrigger>
-                        <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                          <SelectItem value="annual">Annual</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className={isMobile ? 'flex gap-3 w-full' : 'grid grid-cols-2 gap-4 col-span-2'}>
+                      <div className="flex-1">
+                        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                          <SelectTrigger
+                            className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
+                            style={{
+                              height: 38,
+                              borderRadius: 12,
+                              fontFamily: POPPINS,
+                              fontSize: 13,
+                              fontWeight: 500,
+                              border: "1px solid #e2e5ea",
+                              background: "#fff",
+                              flexShrink: 0
+                            }}
+                          >
+                            <SelectValue placeholder="Period" />
+                          </SelectTrigger>
+                          <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
+                            <SelectItem value="current-month">Current Month</SelectItem>
+                            <SelectItem value="last-month">Last Month</SelectItem>
+                            <SelectItem value="current-quarter">Current Quarter</SelectItem>
+                            <SelectItem value="last-quarter">Last Quarter</SelectItem>
+                            <SelectItem value="current-year">Current Year</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex-1">
+                        <Select value={selectedType} onValueChange={setSelectedType}>
+                          <SelectTrigger
+                            className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
+                            style={{
+                              height: 38,
+                              borderRadius: 12,
+                              fontFamily: POPPINS,
+                              fontSize: 13,
+                              fontWeight: 500,
+                              border: "1px solid #e2e5ea",
+                              background: "#fff",
+                              flexShrink: 0
+                            }}
+                          >
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="annual">Annual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className={isMobile ? 'w-full' : 'col-span-1'}>
                       <Button
@@ -520,121 +538,202 @@ export const ReportsPage: React.FC = () => {
                 </div>
               </div>
 
-              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6">
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-2">
-                  {loading ? (
-                    <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">
-                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                      Loading reports...
+              {isMobile && (
+                <div 
+                  onClick={() => setShowMobileReportList(true)}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 20,
+                    border: "1px solid #f1f5f9",
+                    display: "flex",
+                    overflow: "hidden",
+                    cursor: "pointer",
+                    marginBottom: 12,
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.02)"
+                  }}
+                >
+                  <div style={{ width: 6, backgroundColor: "#357D86", flexShrink: 0 }} />
+                  <div style={{ 
+                    flex: 1,
+                    padding: "16px 14px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 12,
+                        background: "#f0f8f9",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}>
+                        <FileText size={18} color="#357D86" strokeWidth={2.5} />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <h2 style={{
+                          fontSize: 15, fontWeight: 700, color: "#1a2a3a",
+                          margin: 0,
+                          fontFamily: POPPINS,
+                          lineHeight: "1.2"
+                        }}>
+                          Reports Directory
+                        </h2>
+                        <span style={{ 
+                          fontSize: 11, 
+                          color: "#7b8a9a", 
+                          fontWeight: 500, 
+                          fontFamily: POPPINS,
+                          marginTop: 2
+                        }}>
+                          View and manage water quality reports
+                        </span>
+                      </div>
                     </div>
-                  ) : filteredReports.length === 0 ? (
-                    <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">No reports available.</div>
-                  ) : (
-                    filteredReports.map((report) => {
-                      const riskLevel = report.summary?.riskLevel || 'low';
-                      const riskColors: Record<string, { bg: string; color: string; border: string }> = {
-                        low: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
-                        moderate: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
-                        high: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
-                      };
-                      const rc = riskColors[riskLevel.toLowerCase()] || riskColors.low;
+                    <div style={{
+                      background: "rgba(53, 125, 134, 0.08)",
+                      padding: "8px 14px",
+                      borderRadius: 24,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 0,
+                      marginLeft: 8
+                    }}>
+                    <span
+                      style={{
+                        fontSize: 12, fontWeight: 700, color: "#357D86",
+                        fontFamily: POPPINS,
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      View All
+                    </span>
+                    <ChevronRight size={14} color="#357D86" strokeWidth={3} />
+                  </div>
+                </div>
+              </div>
+            )}
 
-                      return (
-                        <div
-                          key={report.id}
-                          style={{
-                            marginBottom: 16,
-                            position: "relative"
-                          }}
-                        >
+              {!isMobile && (
+                <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6">
+                  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-2">
+                    {loading ? (
+                      <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                        Loading reports...
+                      </div>
+                    ) : filteredReports.length === 0 ? (
+                      <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">No reports available.</div>
+                    ) : (
+                      filteredReports.map((report) => {
+                        const riskLevel = report.summary?.riskLevel || 'low';
+                        const riskColors: Record<string, { bg: string; color: string; border: string }> = {
+                          low: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                          moderate: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                          high: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                        };
+                        const rc = riskColors[riskLevel.toLowerCase()] || riskColors.low;
+
+                        return (
                           <div
-                            className={`group cursor-pointer transition-all ${selectedReport?.id === report.id ? 'bg-[#F5FBFB]' : 'bg-white'
-                              }`}
-                            onClick={() => handleViewReport(report)}
+                            key={report.id}
                             style={{
-                              display: "flex",
-                              overflow: "hidden",
-                              position: "relative",
-                              minHeight: 110,
-                              borderRadius: 15,
-                              border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9",
-                              boxShadow: selectedReport?.id === report.id ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
+                              marginBottom: 16,
+                              position: "relative"
                             }}
                           >
-                            {/* Premium Folder-Style Side Accent — color based on report risk level */}
-                            <div style={{
-                              width: 6,
-                              backgroundColor: "#357D86",
-                              flexShrink: 0
-                            }} />
+                            <div
+                              className={`group cursor-pointer transition-all ${selectedReport?.id === report.id ? 'bg-[#F5FBFB]' : 'bg-white'
+                                }`}
+                              onClick={() => handleViewReport(report)}
+                              style={{
+                                display: "flex",
+                                overflow: "hidden",
+                                position: "relative",
+                                minHeight: 110,
+                                borderRadius: 15,
+                                border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9",
+                                boxShadow: selectedReport?.id === report.id ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
+                              }}
+                            >
+                              {/* Premium Folder-Style Side Accent — color based on report risk level */}
+                              <div style={{
+                                width: 6,
+                                backgroundColor: "#357D86",
+                                flexShrink: 0
+                              }} />
 
-                            <div className="flex w-full items-center justify-between px-6 py-5">
-                              <div className="flex flex-1 flex-col justify-center overflow-hidden">
-                                <div className="mb-2 flex items-center justify-between">
-                                  <span style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    padding: "4px 10px",
-                                    borderRadius: 6,
-                                    background: rc.bg,
-                                    color: rc.color,
-                                    textTransform: "uppercase",
-                                    fontFamily: POPPINS,
-                                    letterSpacing: "0.05em"
-                                  }}>
-                                    {riskLevel} Risk
-                                  </span>
-                                  <span style={{
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    color: "#1a2a3a",
-                                    fontFamily: POPPINS
-                                  }}>
-                                    {report.period.split(' ')[0]} {report.period.split(' ')[1]}
-                                  </span>
+                              <div className="flex w-full items-center justify-between px-6 py-5">
+                                <div className="flex flex-1 flex-col justify-center overflow-hidden">
+                                  <div className="mb-2 flex items-center justify-between">
+                                    <span style={{
+                                      fontSize: 10,
+                                      fontWeight: 700,
+                                      padding: "4px 10px",
+                                      borderRadius: 6,
+                                      background: rc.bg,
+                                      color: rc.color,
+                                      textTransform: "uppercase",
+                                      fontFamily: POPPINS,
+                                      letterSpacing: "0.05em"
+                                    }}>
+                                      {riskLevel} Risk
+                                    </span>
+                                    <span style={{
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      color: "#1a2a3a",
+                                      fontFamily: POPPINS
+                                    }}>
+                                      {report.period.split(' ')[0]} {report.period.split(' ')[1]}
+                                    </span>
+                                  </div>
+                                  <h4
+                                    className="truncate text-[15.5px]"
+                                    style={{
+                                      fontFamily: POPPINS,
+                                      fontWeight: selectedReport?.id === report.id ? 700 : 500,
+                                      color: "#1a2a3a",
+                                      letterSpacing: "-0.01em",
+                                      lineHeight: "1.4"
+                                    }}
+                                  >
+                                    {report.title}
+                                  </h4>
+                                  <div
+                                    className="mt-2"
+                                    style={{
+                                      fontFamily: POPPINS,
+                                      fontWeight: 500,
+                                      color: "#64748b",
+                                      fontSize: "12px",
+                                      letterSpacing: "0.01em"
+                                    }}
+                                  >
+                                    Generated on {new Date(report.generatedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                                  </div>
                                 </div>
-                                <h4
-                                  className="truncate text-[15.5px]"
-                                  style={{
-                                    fontFamily: POPPINS,
-                                    fontWeight: selectedReport?.id === report.id ? 700 : 500,
-                                    color: "#1a2a3a",
-                                    letterSpacing: "-0.01em",
-                                    lineHeight: "1.4"
-                                  }}
-                                >
-                                  {report.title}
-                                </h4>
-                                <div
-                                  className="mt-2"
-                                  style={{
-                                    fontFamily: POPPINS,
-                                    fontWeight: 500,
-                                    color: "#64748b",
-                                    fontSize: "12px",
-                                    letterSpacing: "0.01em"
-                                  }}
-                                >
-                                  Generated on {new Date(report.generatedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                                </div>
-                              </div>
 
-                              <div className="flex items-center pl-4">
-                                <ChevronRight
-                                  size={18}
-                                  strokeWidth={2.5}
-                                    style={{ color: "#94a3b8" }}
-                                  className="shrink-0 transition-transform group-hover:translate-x-1"
-                                />
+                                <div className="flex items-center pl-4">
+                                  <ChevronRight
+                                    size={18}
+                                    strokeWidth={2.5}
+                                      style={{ color: "#94a3b8" }}
+                                    className="shrink-0 transition-transform group-hover:translate-x-1"
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </CardContent>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           </div>
 
@@ -976,34 +1075,21 @@ export const ReportsPage: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog >
-      {/* Mobile Report Details Modal */}
-      {
-        (isMobile || isTablet) && showViewReport && selectedReport && (
-          <div
-            style={{
-              position: "fixed", inset: 0, zIndex: 10001,
-              background: "rgba(0,0,0,0.6)",
-              display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
-              padding: isMobile ? "92px 20px 20px" : "40px 20px",
-              animation: "fadeIn 0.2s ease-out both"
-            }}
-            onClick={() => { setShowViewReport(false); setSelectedReport(null); }}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "100%",
-                maxWidth: 800,
-                maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
-                background: "#fff",
-                borderRadius: isMobile ? 16 : 24,
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
-                animation: "contentSlideIn 0.25s cubic-bezier(0.22,1,0.36,1) both",
-              }}
-            >
+      {/* Mobile/Tablet Report Details Modal */}
+      <Dialog open={(isMobile || isTablet) && showViewReport && !!selectedReport} onOpenChange={(open) => { if (!open) { setShowViewReport(false); setSelectedReport(null); } }}>
+        <DialogContent 
+           style={{ 
+             fontFamily: POPPINS,
+             maxWidth: isMobile ? "90vw" : 540,
+             padding: 0,
+             overflow: "hidden",
+             borderRadius: 24,
+             border: "none"
+           }}
+           className="p-0"
+        >
+          {selectedReport && (
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", maxHeight: "85vh" }}>
               {/* Modal Header */}
               <div style={{
                 padding: "16px 20px",
@@ -1014,8 +1100,150 @@ export const ReportsPage: React.FC = () => {
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
                   Report Details
                 </h2>
+                <DialogClose asChild>
+                  <button 
+                    style={{ 
+                      width: 32, height: 32, borderRadius: "50%", 
+                      border: "none", background: "#f3f4f6", 
+                      color: "#64748b",
+                      display: "flex", alignItems: "center", justifyContent: "center", 
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+                  >
+                    <X size={18} />
+                  </button>
+                </DialogClose>
+              </div>
+
+              {/* Modal Content */}
+              <div style={{
+                flex: 1, overflowY: "auto",
+                padding: "20px",
+                display: "flex", flexDirection: "column", gap: 16
+              }}>
+                {/* Title & Status Card */}
+                <div style={{
+                  background: "#fff",
+                  borderRadius: 15,
+                  border: "1px solid #f0f1f3",
+                  display: "flex",
+                  overflow: "hidden",
+                  position: "relative",
+                  minHeight: 110
+                }}>
+                  <div style={{ width: 6, backgroundColor: "#357D86", flexShrink: 0 }} />
+                  <div style={{ flex: 1, padding: "16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      {(() => {
+                        const r = selectedReport.summary.riskLevel.toLowerCase();
+                        const bg = r === 'high' ? "#FFF1F0" : r === 'moderate' ? "#FFF8ED" : "#E6F7EF";
+                        const color = r === 'high' ? "#EB5757" : r === 'moderate' ? "#F2994A" : "#27AE60";
+                        return (
+                          <span style={{
+                            fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 6,
+                            background: bg, color: color,
+                            textTransform: "uppercase", fontFamily: POPPINS, letterSpacing: "0.05em"
+                          }}>{selectedReport.summary.riskLevel} Risk</span>
+                        );
+                      })()}
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>
+                        {selectedReport.period}
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS, lineHeight: "1.4" }}>
+                      {selectedReport.title}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Metrics Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div style={{ padding: "16px 14px", borderRadius: 16, background: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                    <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px 0", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.02em" }}>Total Sites</p>
+                    <p style={{ fontSize: 24, color: "#1a2a3a", margin: 0, fontWeight: 800, fontFamily: POPPINS }}>{selectedReport.summary.totalSites}</p>
+                  </div>
+                  <div style={{ padding: "16px 14px", borderRadius: 16, background: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                    <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px 0", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.02em" }}>Alerts Logged</p>
+                    <p style={{ fontSize: 24, color: "#1a2a3a", margin: 0, fontWeight: 800, fontFamily: POPPINS }}>{selectedReport.summary.alertsGenerated}</p>
+                  </div>
+                </div>
+
+                {/* Parameters Section */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <h4 style={{ fontSize: 12, fontWeight: 700, color: "#64748b", margin: 0, textTransform: "uppercase" }}>Key Parameters</h4>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Droplet size={14} color="#357D86" />
+                      <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>Turbidity</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgTurbidity)} NTU</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Thermometer size={14} color="#357D86" />
+                      <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>Temperature</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgTemperature)} °C</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <FlaskConical size={14} color="#357D86" />
+                      <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>pH Level</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgPh)} pH</span>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 8 }}>
+                  <Button
+                    className="w-full"
+                    style={{ backgroundColor: "#357D86", color: "#fff", borderRadius: 12, height: 44, fontSize: 14, fontWeight: 600 }}
+                    onClick={() => handleDownloadReport()}
+                  >
+                    <Download className="mr-2 h-4 w-4" /> Download PDF
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Mobile/Tablet Report List Modal */}
+      <Dialog open={(isMobile || isTablet) && showMobileReportList} onOpenChange={setShowMobileReportList}>
+        <DialogContent 
+           style={{ 
+             fontFamily: POPPINS,
+             maxWidth: isMobile ? "90vw" : 480,
+             padding: 0,
+             overflow: "hidden",
+             borderRadius: 24,
+             border: "none"
+           }}
+           className="p-0"
+        >
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", maxHeight: "85vh" }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: "16px 20px",
+              borderBottom: "1px solid #eef0f2",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              flexShrink: 0,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 10, background: "#f0f8f9",
+                  display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  <FileText size={16} color="#357D86" />
+                </div>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+                  All Reports
+                </h2>
+              </div>
+              <DialogClose asChild>
                 <button 
-                  onClick={() => { setShowViewReport(false); setSelectedReport(null); }} 
                   style={{ 
                     width: 32, height: 32, borderRadius: "50%", 
                     border: "none", background: "#f3f4f6", 
@@ -1028,121 +1256,110 @@ export const ReportsPage: React.FC = () => {
                 >
                   <X size={18} />
                 </button>
-              </div>
+              </DialogClose>
+            </div>
 
-              {/* Modal Content - Inheriting Spacing from All Data Readings */}
-              <div style={{
-                flex: 1, minHeight: 0, overflowY: "auto",
-                padding: 20,
-                maxHeight: "max-content",
-              } as React.CSSProperties}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* Title & Status Card */}
-                  <div style={{
-                    background: "#fff",
-                    borderRadius: 15,
-                    border: "1px solid #f0f1f3",
-                    display: "flex",
-                    overflow: "hidden",
-                    position: "relative",
-                    minHeight: 110
-                  }}>
-                    {/* Premium Folder-Style Side Accent */}
-                    <div style={{
-                      width: 6,
-                      backgroundColor: "#357D86",
-                      flexShrink: 0
-                    }} />
-
-                    <div style={{ 
-                      flex: 1, 
-                      padding: "16px", 
-                      display: "flex", 
-                      flexDirection: "column", 
-                      gap: 8 
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          {(() => {
-                            const r = selectedReport.summary.riskLevel.toLowerCase();
-                            const bg = r === 'high' ? "#FFF1F0" : r === 'moderate' ? "#FFF8ED" : "#E6F7EF";
-                            const color = r === 'high' ? "#EB5757" : r === 'moderate' ? "#F2994A" : "#27AE60";
-                            return (
-                              <span style={{
-                                fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
-                                background: bg,
-                                color: color,
-                                textTransform: "uppercase", fontFamily: POPPINS,
-                                letterSpacing: "0.05em"
-                              }}>{selectedReport.summary.riskLevel} Risk</span>
-                            );
-                          })()}
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>
-                          {selectedReport.period}
-                        </span>
-                      </div>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS, lineHeight: "1.4" }}>
-                        {selectedReport.title}
-                      </h3>
-                    </div>
-                  </div>
-
-                  {/* Metrics Grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div style={{ padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #f1f5f9" }}>
-                      <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 4px 0", textTransform: "uppercase", fontWeight: 700 }}>Total Sites</p>
-                      <p style={{ fontSize: 18, color: "#1a2a3a", margin: 0, fontWeight: 800 }}>{selectedReport.summary.totalSites}</p>
-                    </div>
-                    <div style={{ padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #f1f5f9" }}>
-                      <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 4px 0", textTransform: "uppercase", fontWeight: 700 }}>Alerts Logged</p>
-                      <p style={{ fontSize: 18, color: "#1a2a3a", margin: 0, fontWeight: 800 }}>{selectedReport.summary.alertsGenerated}</p>
-                    </div>
-                  </div>
-
-                  {/* Parameters Section */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "#64748b", margin: 0, textTransform: "uppercase" }}>Key Parameters</h4>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <Droplet size={14} color="#357D86" />
-                        <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>Turbidity</span>
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgTurbidity)} NTU</span>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <Thermometer size={14} color="#357D86" />
-                        <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>Temperature</span>
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgTemperature)} °C</span>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#ffffff", border: "1px solid #f0f1f3", borderRadius: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <FlaskConical size={14} color="#357D86" />
-                        <span style={{ fontSize: 13, color: "#1a2a3a", fontWeight: 600 }}>pH Level</span>
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#357D86" }}>{formatMetric(selectedReport.summary.avgPh)} pH</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
-                    <Button
-                      className="flex-1"
-                      style={{ backgroundColor: "#357D86", color: "#fff", borderRadius: 10 }}
-                      onClick={() => handleDownloadReport()}
-                    >
-                      <Download className="mr-2 h-4 w-4" /> Download PDF
-                    </Button>
-                  </div>
+            {/* Modal Content */}
+            <div style={{
+              flex: 1, overflowY: "auto",
+              padding: "20px 0",
+              display: "flex", flexDirection: "column"
+            }}>
+              {loading ? (
+                <div className="flex h-full items-center justify-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-schistoguard-teal" />
                 </div>
-              </div>
+              ) : filteredReports.length === 0 ? (
+                <div className="flex h-full items-center justify-center py-20 text-gray-500 font-medium">No reports found.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {filteredReports.map((report) => {
+                    const riskLevel = report.summary?.riskLevel || 'low';
+                    const riskColors: Record<string, { bg: string; color: string; border: string }> = {
+                      low: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                      moderate: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
+                      high: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" }
+                    };
+                    const rc = riskColors[riskLevel.toLowerCase()] || riskColors.low;
+                    
+                    return (
+                      <div
+                        key={report.id}
+                        onClick={() => {
+                          handleViewReport(report);
+                          setShowMobileReportList(false);
+                        }}
+                        style={{
+                          margin: "0 16px 16px",
+                          position: "relative"
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            overflow: "hidden",
+                            position: "relative",
+                            minHeight: 100,
+                            borderRadius: 15,
+                            background: "#fff",
+                            border: "1px solid #f1f5f9",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                          }}
+                          className="hover:border-schistoguard-teal/30 hover:shadow-md transition-all active:scale-[0.98]"
+                        >
+                          {/* Premium Folder-Style Side Accent */}
+                          <div style={{
+                            width: 6,
+                            backgroundColor: "#357D86",
+                            flexShrink: 0
+                          }} />
+                          
+                          <div style={{ flex: 1, padding: "16px", display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{
+                                fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 6,
+                                background: riskLevel.toLowerCase() === 'high' ? "#FEE2E2" : riskLevel.toLowerCase() === 'moderate' ? "#FEF3C7" : "#D1FAE5",
+                                color: riskLevel.toLowerCase() === 'high' ? "#EF4444" : riskLevel.toLowerCase() === 'moderate' ? "#B45309" : "#059669",
+                                textTransform: "uppercase",
+                                fontFamily: POPPINS, letterSpacing: "0.03em"
+                              }}>{riskLevel} Risk</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>
+                                {report.period}
+                              </span>
+                            </div>
+                            
+                            <h4 style={{ 
+                              fontSize: 14, fontWeight: 700, color: "#1a2a3a", margin: "2px 0", 
+                              fontFamily: POPPINS, lineHeight: "1.3",
+                            }}>
+                              {report.title}
+                            </h4>
+                            
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#94a3b8", fontSize: 11, fontFamily: POPPINS }}>
+                              <FileText size={10} />
+                              <span>Generated on {new Date(report.generatedDate).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          
+                          <div style={{ padding: "0 12px", display: "flex", alignItems: "center" }}>
+                            <div style={{
+                              width: 28, height: 28, borderRadius: "50%", background: "#f8fafc",
+                              display: "flex", alignItems: "center", justifyContent: "center"
+                            }}>
+                              <ChevronRight size={14} color="#94a3b8" strokeWidth={3} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
-        )
-      }
+        </DialogContent>
+      </Dialog>
     </div >
   );
 };
