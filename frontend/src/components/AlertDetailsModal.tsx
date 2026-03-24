@@ -49,43 +49,39 @@ export function AlertDetailsModal({
           </DialogTitle>
         </DialogHeader>
         
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 28,
-          }}>
+        <div className="flex flex-col gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7">
             <div>
-              <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
+              <h4 className="font-semibold text-[14px] sm:text-[15px] mb-2 sm:mb-3 color-[#1a2a3a]">
                 Alert Information
               </h4>
               <table style={{ width: "100%", fontSize: 13 }}>
                 <tbody>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
-                    <td style={{ fontFamily: "monospace", fontWeight: 600, fontSize: 14 }}>{alert.id}</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
+                    <td style={{ fontFamily: "monospace", fontWeight: 600, fontSize: 13 }}>{alert.id}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
                     <td>
                       <Badge
                         variant={alert.level === "critical" ? "destructive" : "secondary"}
-                        className={alert.level === "critical" ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600 text-black"}
+                        className={alert.level === "critical" ? "bg-red-500 hover:bg-red-600 h-6 px-2 text-[11px]" : "bg-yellow-500 hover:bg-yellow-600 text-black h-6 px-2 text-[11px]"}
                       >
                         {alert.level.charAt(0).toUpperCase() + alert.level.slice(1)}
                       </Badge>
                     </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
                     <td style={{ fontWeight: 600 }}>{alert.parameter}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
                     <td style={{ fontWeight: 600 }}>{alert.value} <span style={{ fontWeight: 400, fontSize: 11 }}>NTU</span></td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
                     <td>{alert.duration || '-'}</td>
                   </tr>
                 </tbody>
@@ -93,52 +89,54 @@ export function AlertDetailsModal({
             </div>
 
             <div>
-              <h4 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: "#1a2a3a" }}>
+              <h4 className="font-semibold text-[14px] sm:text-[15px] mb-2 sm:mb-3 color-[#1a2a3a]">
                 Site Information
               </h4>
               <table style={{ width: "100%", fontSize: 13 }}>
                 <tbody>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
                     <td style={{ fontWeight: 600 }}>{alert.siteName}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
-                    <td>{alert.barangay}</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
+                    <td style={{ wordBreak: "break-word" }}>{alert.barangay}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "6px 8px 6px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
-                    <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(alert.timestamp)}</td>
+                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
+                    <td style={{ wordBreak: "break-all", fontSize: 12 }}>{formatDateTime(alert.timestamp)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 16 }}>
-            <h4 style={{ fontWeight: 500, marginBottom: 12, fontSize: 14 }}>Alert Message</h4>
+          <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 12 }}>
+            <h4 style={{ fontWeight: 500, marginBottom: 8, fontSize: 13.5 }}>Alert Message</h4>
             <p style={{
-              fontSize: 13, color: "#8E8B8B", background: "#f9fafb",
-              borderRadius: 10, padding: 14, marginBottom: 20,
+              fontSize: 12.5, color: "#64748b", background: "#f9fafb",
+              borderRadius: 10, padding: 12, marginBottom: 16,
+              lineHeight: "1.5",
+              wordBreak: "break-word"
             }}>
               {alert.message}
             </p>
             {alert.acknowledgedBy && (
-              <div style={{ textAlign: "center", paddingTop: 8 }}>
-                <span style={{ fontSize: 12, color: "#8E8B8B", display: "block" }}>Acknowledged by</span>
-                <span style={{ fontWeight: 500, fontSize: 13 }}>{alert.acknowledgedBy}</span>
+              <div style={{ textAlign: "center", paddingTop: 4 }}>
+                <span style={{ fontSize: 11, color: "#94a3b8", display: "block", marginBottom: 2 }}>Acknowledged by</span>
+                <span style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{alert.acknowledgedBy}</span>
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", paddingTop: 16 }}>
+          <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}>
             {!alert.isAcknowledged ? (
               <Button
                 onClick={() => onAcknowledge(alert.id, alert)}
-                className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 px-8 py-6 rounded-xl flex items-center gap-3 shadow-md transition-all active:scale-95"
+                className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 px-6 py-5 sm:px-8 sm:py-6 rounded-xl flex items-center gap-3 shadow-md transition-all active:scale-95 text-sm sm:text-base font-semibold"
               >
                 <CheckCircle2 className="w-5 h-5" />
-                <span style={{ fontSize: 15, fontWeight: 600 }}>Acknowledge Alert</span>
+                <span>Acknowledge Alert</span>
               </Button>
             ) : (
               <div style={{ 

@@ -257,10 +257,18 @@ export const AlertsQuickviewModal: React.FC<AlertsModalProps> = ({
           <h3 className="font-medium">Recent Alerts</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            style={{ 
+              width: 32, height: 32, borderRadius: "50%", 
+              border: "none", background: "#f3f4f6", 
+              color: "#64748b",
+              display: "flex", alignItems: "center", justifyContent: "center", 
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+            className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
             aria-label="Close alerts modal"
           >
-            <X className="w-5 h-5" />
+            <X size={18} />
           </button>
         </div>
 

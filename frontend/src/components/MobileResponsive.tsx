@@ -43,7 +43,15 @@ export function MobileNavigation() {
             <h2 className="font-semibold text-schistoguard-navy">Menu</h2>
             <button 
               onClick={() => setIsOpen(false)}
-              className="w-8 h-8 rounded-full bg-[#f3f4f6] flex items-center justify-center text-slate-500 hover:bg-[#e5e7eb] hover:text-slate-700 transition-all active:scale-95 outline-none"
+              style={{ 
+                width: 32, height: 32, borderRadius: "50%", 
+                border: "none", background: "#f3f4f6", 
+                color: "#64748b",
+                display: "flex", alignItems: "center", justifyContent: "center", 
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+              className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
             >
               <X size={18} />
             </button>

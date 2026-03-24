@@ -1014,17 +1014,17 @@ export const ReportsPage: React.FC = () => {
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
                   Report Details
                 </h2>
-                <button
-                  onClick={() => { setShowViewReport(false); setSelectedReport(null); }}
-                  style={{
-                    width: 32, height: 32, borderRadius: "50%",
-                    border: "none", background: "#f3f4f6",
+                <button 
+                  onClick={() => { setShowViewReport(false); setSelectedReport(null); }} 
+                  style={{ 
+                    width: 32, height: 32, borderRadius: "50%", 
+                    border: "none", background: "#f3f4f6", 
                     color: "#64748b",
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    display: "flex", alignItems: "center", justifyContent: "center", 
                     cursor: "pointer",
-                    transition: "all 0.2s",
+                    transition: "all 0.2s"
                   }}
-                  className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all"
+                  className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
                 >
                   <X size={18} />
                 </button>
