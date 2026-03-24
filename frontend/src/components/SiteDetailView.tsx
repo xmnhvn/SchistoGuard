@@ -577,8 +577,19 @@ export function SiteDetailView({
                             </div>
                             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>Export Report</h2>
                           </div>
-                          <button onClick={() => setShowExportModal(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                            <X size={18} color="#64748b" />
+                          <button 
+                            onClick={() => setShowExportModal(false)} 
+                            style={{ 
+                              width: 32, height: 32, borderRadius: "50%", 
+                              border: "none", background: "#f3f4f6", 
+                              color: "#64748b",
+                              display: "flex", alignItems: "center", justifyContent: "center", 
+                              cursor: "pointer",
+                              transition: "all 0.2s"
+                            }}
+                            className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+                          >
+                            <X size={18} />
                           </button>
                         </div>
                         <div style={{ 

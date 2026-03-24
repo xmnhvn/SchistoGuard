@@ -344,7 +344,16 @@ export const ReportsPage: React.FC = () => {
     const r = risk.toLowerCase();
     const bg = r === 'high' ? "#FFF1F0" : r === 'moderate' ? "#FFF8ED" : "#E6F7EF";
     const color = r === 'high' ? "#EB5757" : r === 'moderate' ? "#F2994A" : "#27AE60";
-    return <Badge style={{ backgroundColor: bg, color: color, border: "none", fontWeight: 700 }}>{risk.charAt(0).toUpperCase() + risk.slice(1)} Risk</Badge>;
+    return <Badge style={{ 
+      backgroundColor: bg, 
+      color: color, 
+      border: "none", 
+      fontWeight: 700,
+      borderRadius: 6,
+      padding: "5px 12px",
+      fontSize: "11px",
+      fontFamily: POPPINS
+    }}>{risk.charAt(0).toUpperCase() + risk.slice(1)} Risk</Badge>;
   };
 
   const getTurbidityRemark = (value: number) => {
@@ -535,7 +544,6 @@ export const ReportsPage: React.FC = () => {
                           key={report.id}
                           style={{
                             marginBottom: 16,
-                            borderRadius: 15,
                             position: "relative"
                           }}
                         >
@@ -634,7 +642,7 @@ export const ReportsPage: React.FC = () => {
           {!(isMobile || isTablet) && (
             <div className="flex h-full min-h-0 flex-col lg:flex">
               {!selectedReport ? (
-                <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-white p-12 text-center" style={{ borderRadius: 28 }}>
+                <Card className="flex h-full min-h-0 flex-col items-center justify-center bg-white p-12 text-center" style={{ borderRadius: 28, border: "1px solid #e2e5ea" }}>
                   <FileText className="mb-4 h-16 w-16 text-slate-300" />
                   <h3 className="mb-2 text-lg font-semibold text-slate-700">No Report Selected</h3>
                   <p className="text-sm text-slate-500">Select a report from the list to view its details</p>
@@ -1009,13 +1017,16 @@ export const ReportsPage: React.FC = () => {
                 <button
                   onClick={() => { setShowViewReport(false); setSelectedReport(null); }}
                   style={{
-                    width: 30, height: 30, borderRadius: "50%",
+                    width: 32, height: 32, borderRadius: "50%",
                     border: "none", background: "#f3f4f6",
+                    color: "#64748b",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     cursor: "pointer",
+                    transition: "all 0.2s",
                   }}
+                  className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all"
                 >
-                  <X size={16} color="#6b7280" />
+                  <X size={18} />
                 </button>
               </div>
 

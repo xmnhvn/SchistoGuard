@@ -718,8 +718,19 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               padding: "18px 20px 12px 20px", borderBottom: "1px solid #f0f1f3"
             }}>
               <span style={{ fontSize: 17, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>All Recipients</span>
-              <button onClick={() => setShowMobileViewAll(false)} style={{ background: "none", border: "none", padding: 2, cursor: "pointer" }}>
-                <X size={22} color="#7b8a9a" />
+              <button 
+                onClick={() => setShowMobileViewAll(false)} 
+                style={{ 
+                  width: 32, height: 32, borderRadius: "50%", 
+                  border: "none", background: "#f3f4f6", 
+                  color: "#64748b",
+                  display: "flex", alignItems: "center", justifyContent: "center", 
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+              >
+                <X size={18} />
               </button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "10px 0 10px 0" }}>

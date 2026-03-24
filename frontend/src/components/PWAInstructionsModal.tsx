@@ -53,10 +53,10 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 z-50 p-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors text-gray-500 border border-gray-100 shadow-sm"
+          className="absolute top-4 right-4 z-50 w-8 h-8 rounded-full bg-[#f3f4f6] flex items-center justify-center text-slate-500 hover:bg-[#e5e7eb] hover:text-slate-700 transition-all active:scale-95 outline-none focus:ring-2 focus:ring-schistoguard-teal/20"
           aria-label="Close"
         >
-          <X className="w-5 h-5" />
+          <X size={18} />
         </button>
         {/* Header */}
         <div className="p-6 sm:p-8 text-center relative border-b border-gray-100">

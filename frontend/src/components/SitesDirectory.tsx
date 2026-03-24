@@ -674,13 +674,16 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <button
                 onClick={() => setShowMobileViewAll(false)}
                 style={{
-                  width: 30, height: 30, borderRadius: "50%",
+                  width: 32, height: 32, borderRadius: "50%",
                   border: "none", background: "#f3f4f6",
+                  color: "#64748b",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer",
+                  transition: "all 0.2s"
                 }}
+                className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
-                <X size={16} color="#6b7280" />
+                <X size={18} />
               </button>
             </div>
             {/* Modal Scrollable List */}

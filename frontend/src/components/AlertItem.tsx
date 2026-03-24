@@ -80,7 +80,7 @@ export function AlertItem({
           position: "relative",
           minHeight: useColumnLayout ? 0 : 110,
           borderRadius: 15,
-          border: isSelected ? `1px solid ${accentColor}` : "none",
+          border: isSelected ? `1px solid ${accentColor}` : "1px solid #f1f5f9",
           background: isSelected
             ? (accentColor === "#D14343" ? "#FFF1F1" : accentColor === "#F1A11A" ? "#FFF9E6" : "#F5FBFB")
             : "#fff",

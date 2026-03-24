@@ -58,9 +58,9 @@ export function PWAInstallPrompt() {
         </div>
         <button
           onClick={() => setShowPrompt(false)}
-          className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+          className="flex-shrink-0 w-8 h-8 rounded-full bg-[#f3f4f6] flex items-center justify-center text-slate-500 hover:bg-[#e5e7eb] hover:text-slate-700 transition-all active:scale-95 outline-none"
         >
-          <X className="w-5 h-5" />
+          <X size={18} />
         </button>
       </div>
     </div>
