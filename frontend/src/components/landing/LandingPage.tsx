@@ -7,6 +7,7 @@ import {
   Activity,
   ChevronLeft,
   LocateFixed,
+  Download,
 } from "lucide-react";
 import { DashboardMap } from "../DashboardMap";
 import type { DashboardMapHandle } from "../DashboardMap";
@@ -16,6 +17,7 @@ import {
   AlertsQuickviewModal,
   SensorIcon,
 } from "./LandingComponents";
+import { PWAInstructionsModal } from "../PWAInstructionsModal";
 import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
 import { reverseGeocode } from "../../utils/reverseGeocode";
@@ -71,6 +73,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     typeof window !== "undefined" ? window.innerWidth < 1100 : false
   );
   const [showAlertsModal, setShowAlertsModal] = useState(false);
+  const [showPWAInstructions, setShowPWAInstructions] = useState(false);
   const [isMonitoringHovered, setIsMonitoringHovered] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [shouldRenderMap, setShouldRenderMap] = useState(false);
@@ -424,44 +427,61 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Full button on tablet/desktop, icon-only on mobile */}
-            {screenWidth >= 640 ? (
-              <CTAButton
-                variant="primary"
-                size="sm"
-                onClick={onEnterApp}
-                ariaLabel="Start monitoring"
-                className="flex rounded-full px-5 py-2 border-2 transition-all duration-300 shadow-lg"
-                style={{
-                  fontFamily: 'Poppins, sans-serif',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  backgroundColor: isMonitoringHovered ? '#FFFFFF' : '#357D86',
-                  color: isMonitoringHovered ? '#357D86' : '#FFFFFF',
-                  borderColor: '#357D86',
-                  boxShadow: isMonitoringHovered ? '0 10px 25px -5px rgba(53, 125, 134, 0.3)' : '0 10px 15px -3px rgba(53, 125, 134, 0.2)',
-                  transform: isMonitoringHovered ? 'translateY(-2px)' : 'translateY(0)'
-                }}
-                onMouseEnter={() => setIsMonitoringHovered(true)}
-                onMouseLeave={() => setIsMonitoringHovered(false)}
-              >
-                Start monitoring
-              </CTAButton>
-            ) : (
-              <button
-                onClick={onEnterApp}
-                aria-label="Start monitoring"
-                className="flex items-center justify-center rounded-full border-2 transition-all duration-300 shadow-lg"
-                style={{
-                  width: 40,
-                  height: 40,
-                  backgroundColor: '#357D86',
-                  borderColor: '#357D86',
-                  color: '#FFFFFF'
-                }}
-              >
-                <Activity className="w-4 h-4" />
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {screenWidth >= 640 ? (
+                <CTAButton
+                  variant="primary"
+                  size="sm"
+                  onClick={onEnterApp}
+                  ariaLabel="Start monitoring"
+                  className="flex rounded-full px-5 py-2 border-2 transition-all duration-300 shadow-lg"
+                  style={{
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    backgroundColor: isMonitoringHovered ? '#FFFFFF' : '#357D86',
+                    color: isMonitoringHovered ? '#357D86' : '#FFFFFF',
+                    borderColor: '#357D86',
+                    boxShadow: isMonitoringHovered ? '0 10px 25px -5px rgba(53, 125, 134, 0.3)' : '0 10px 15px -3px rgba(53, 125, 134, 0.2)',
+                    transform: isMonitoringHovered ? 'translateY(-2px)' : 'translateY(0)'
+                  }}
+                  onMouseEnter={() => setIsMonitoringHovered(true)}
+                  onMouseLeave={() => setIsMonitoringHovered(false)}
+                >
+                  Start monitoring
+                </CTAButton>
+              ) : (
+                <button
+                  onClick={onEnterApp}
+                  aria-label="Start monitoring"
+                  className="flex items-center justify-center rounded-full border-2 transition-all duration-300 shadow-lg"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    backgroundColor: '#357D86',
+                    borderColor: '#357D86',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  <Activity className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* PWA Install Button - visible only on mobile/tablet */}
+              {isMobileOrTablet && (
+                <button
+                  onClick={() => setShowPWAInstructions(true)}
+                  aria-label="Install App"
+                  className="flex items-center justify-center rounded-full border-2 border-schistoguard-teal bg-white text-schistoguard-teal transition-all duration-300 shadow-lg hover:bg-schistoguard-teal hover:text-white"
+                  style={{
+                    width: 40,
+                    height: 40,
+                  }}
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1043,6 +1063,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         onViewSite={(id) =>
           console.log(`View site for alert ${id}`)
         }
+      />
+      {/* PWA Instructions Modal */}
+      <PWAInstructionsModal 
+        isOpen={showPWAInstructions} 
+        onClose={() => setShowPWAInstructions(false)} 
       />
     </div>
   );
