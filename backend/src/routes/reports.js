@@ -92,7 +92,7 @@ router.post("/", async (req, res) => {
         title, type, period, startDate, endDate, generatedDate, 
         generatedBy, totalSites, alertsGenerated, 
         avgTurbidity, avgTemperature, avgPh, riskLevel
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [
         reportData.title,
         reportData.type,
@@ -108,18 +108,26 @@ router.post("/", async (req, res) => {
         reportData.avgPh,
         reportData.riskLevel
       ],
-      function (err) {
+      function (err, result) {
         if (err) {
           return res.status(500).json({ success: false, message: err.message });
+        }
+
+        const newReportId = result?.lastID;
+        if (!newReportId) {
+          return res.status(500).json({ success: false, message: "Report saved but failed to resolve new report ID" });
         }
         
         // Get the newly created report
         db.get(
           "SELECT * FROM reports WHERE id = ?",
-          [this.lastID],
+          [newReportId],
           (err, row) => {
             if (err) {
               return res.status(500).json({ success: false, message: err.message });
+            }
+            if (!row) {
+              return res.status(404).json({ success: false, message: "Newly created report not found" });
             }
             
             const report = {
@@ -157,11 +165,11 @@ router.delete("/:id", (req, res) => {
   db.run(
     "DELETE FROM reports WHERE id = ?",
     [id],
-    function (err) {
+    function (err, result) {
       if (err) {
         return res.status(500).json({ success: false, message: err.message });
       }
-      if (this.changes === 0) {
+      if (!result || result.changes === 0) {
         return res.status(404).json({ success: false, message: "Report not found" });
       }
       
