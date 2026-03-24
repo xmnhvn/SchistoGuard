@@ -505,6 +505,7 @@ router.get("/latest", (req, res) => {
     // Consider device disconnected if last data is older than 10 seconds
     const now = Date.now();
     const ts = new Date(latestData.timestamp).getTime();
+    console.log('[API /latest] now:', new Date(now).toISOString(), 'latestData.timestamp:', latestData.timestamp, 'diff(ms):', Math.abs(now - ts), 'latestData:', latestData);
     if (Math.abs(now - ts) < 10000) {
       res.json({
         ...latestData,
@@ -514,9 +515,11 @@ router.get("/latest", (req, res) => {
         address: latestData.address || null
       });
     } else {
+      console.warn('[API /latest] Device considered disconnected: data too old');
       res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
     }
   } else {
+    console.warn('[API /latest] No latestData available, device considered disconnected');
     res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
   }
 });
