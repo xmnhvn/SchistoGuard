@@ -248,7 +248,7 @@ export default function App() {
   }
 
   if (currentView === 'login') {
-    return <LoginForm onLogin={handleLogin} />;
+    return <LoginForm onLogin={handleLogin} onCancel={() => setCurrentView('landing')} />;
   }
 
   if (isAuthenticated) {

@@ -12,6 +12,7 @@ import { apiPost } from "../utils/api";
 interface LoginFormProps {
   onLogin?: (user: { id: number; email: string; firstName: string; lastName: string; role: string }) => void;
   onForgotPassword?: () => void;
+  onCancel?: () => void;
 }
 
 interface SignupFormProps {
@@ -35,7 +36,7 @@ interface OnboardingModalProps {
   onClose: () => void;
 }
 
-export function LoginForm({ onLogin, onForgotPassword }: LoginFormProps) {
+export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProps) {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -43,6 +44,7 @@ export function LoginForm({ onLogin, onForgotPassword }: LoginFormProps) {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,19 +56,36 @@ export function LoginForm({ onLogin, onForgotPassword }: LoginFormProps) {
       
       // Call parent callback on success with authenticated user info
       if (data?.user) {
-        onLogin?.(data.user);
+        setIsExiting(true);
+        setTimeout(() => {
+          onLogin?.(data.user);
+        }, 400);
       }
     } catch (err: any) {
       setError(err.message || "Login failed");
       console.error("Login error:", err);
     } finally {
-      setLoading(false);
+      if (!isExiting) setLoading(false);
     }
   };
 
+  const handleCancel = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      if (onCancel) {
+        onCancel();
+      } else {
+        window.location.replace('/');
+      }
+    }, 400);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}>
-      <Card className="w-full max-w-md min-h-[540px] flex flex-col justify-center shadow-2xl">
+    <div 
+      className={`min-h-screen flex items-center justify-center p-4 ${isExiting ? 'animate-fade-out' : 'animate-fade-in'}`} 
+      style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}
+    >
+      <Card className={`w-full max-w-md min-h-[540px] flex flex-col justify-center shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
@@ -136,7 +155,7 @@ export function LoginForm({ onLogin, onForgotPassword }: LoginFormProps) {
               <Button
                 type="button"
                 className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
-                onClick={() => window.location.replace('/')}
+                onClick={handleCancel}
                 disabled={loading}
               >
                 Cancel
@@ -163,6 +182,22 @@ export function LoginForm({ onLogin, onForgotPassword }: LoginFormProps) {
           </form>
         </CardContent>
       </Card>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+        .animate-fade-out {
+          animation: fadeOut 0.5s ease-in forwards;
+        }
+      `}</style>
     </div>
   );
 }
@@ -180,6 +215,14 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleSwitchToLogin = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onShowLogin?.();
+    }, 400);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,18 +252,24 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
       });
 
       // Call parent callback on success
-      onSignup?.(formData);
+      setIsExiting(true);
+      setTimeout(() => {
+        onSignup?.(formData);
+      }, 400);
     } catch (err: any) {
       setError(err.message || "Signup failed");
       console.error("Signup error:", err);
     } finally {
-      setLoading(false);
+      if (!isExiting) setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}>
-      <Card className="w-full max-w-md shadow-2xl">
+    <div 
+      className={`min-h-screen flex items-center justify-center p-4 ${isExiting ? 'animate-fade-out' : 'animate-fade-in'}`} 
+      style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}
+    >
+      <Card className={`w-full max-w-md shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
@@ -351,7 +400,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
                   type="button" 
                   variant="link" 
                   size="sm" 
-                  onClick={onShowLogin}
+                  onClick={handleSwitchToLogin}
                   className="p-0 h-auto text-schistoguard-teal"
                 >
                   Sign in here
@@ -361,6 +410,22 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
           </form>
         </CardContent>
       </Card>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+        .animate-fade-out {
+          animation: fadeOut 0.5s ease-in forwards;
+        }
+      `}</style>
     </div>
   );
 }

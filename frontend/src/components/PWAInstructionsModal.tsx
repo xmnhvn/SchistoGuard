@@ -18,9 +18,13 @@ interface PWAInstructionsModalProps {
 
 export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOpen, onClose }) => {
   const [osType, setOsType] = React.useState<'ios' | 'android' | 'desktop'>('ios');
+  const [isClosing, setIsClosing] = React.useState(false);
+  const [shouldRender, setShouldRender] = React.useState(isOpen);
 
   React.useEffect(() => {
     if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
       const getOS = () => {
         if (typeof window === 'undefined') return 'ios';
         const ua = window.navigator.userAgent.toLowerCase();
@@ -28,10 +32,27 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
         return 'ios';
       };
       setOsType(getOS());
+    } else {
+      // Trigger closing animation if it was previously open
+      if (shouldRender) {
+        setIsClosing(true);
+        const timer = setTimeout(() => {
+          setShouldRender(false);
+          setIsClosing(false);
+        }, 400); // Match animation duration
+        return () => clearTimeout(timer);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, shouldRender]);
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 400);
+  };
+
+  if (!shouldRender) return null;
 
   return (
     <div 
@@ -40,19 +61,19 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
     >
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 backdrop-blur-md animate-fade-in"
+        className={`absolute inset-0 backdrop-blur-md ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)' }}
-        onClick={onClose}
+        onClick={handleClose}
       />
       
       {/* Modal Content */}
       <div 
-        className="relative w-full max-w-md bg-white shadow-2xl overflow-hidden animate-slide-up flex flex-col"
+        className={`relative w-full max-w-md bg-white shadow-2xl overflow-hidden flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{ zIndex: 1000000, backgroundColor: '#ffffff', borderRadius: '28px', maxHeight: '90vh' }}
       >
         {/* Close Button */}
         <button 
-          onClick={onClose} 
+          onClick={handleClose} 
           style={{ 
             width: 32, height: 32, borderRadius: "50%", 
             border: "none", background: "#f3f4f6", 
@@ -188,7 +209,7 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
         {/* Footer */}
         <div className="p-6 sm:p-8 bg-gray-50 border-t border-gray-100 mt-auto">
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             className="w-full py-4 bg-schistoguard-teal text-white font-bold font-poppins shadow-lg shadow-schistoguard-teal/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
             style={{ fontFamily: "'Poppins', sans-serif", borderRadius: '16px' }}
           >
@@ -204,11 +225,25 @@ export const PWAInstructionsModal: React.FC<PWAInstructionsModalProps> = ({ isOp
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
           }
+          @keyframes slideDown {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(20px); opacity: 0; }
+          }
+          @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+          }
           .animate-fade-in {
             animation: fadeIn 0.4s ease-out forwards;
           }
+          .animate-fade-out {
+            animation: fadeOut 0.4s ease-in forwards;
+          }
           .animate-slide-up {
             animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          .animate-slide-down {
+            animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
           .custom-scrollbar::-webkit-scrollbar {
             width: 5px;
