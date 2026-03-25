@@ -500,6 +500,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         <div style={{
           background: "#fff",
           borderRadius: 20,
+          border: "1px solid #e2e5ea",
           overflow: "hidden",
           flex: isMobile ? "0 0 auto" : 1,
           minHeight: 0,
@@ -508,19 +509,19 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div 
-            onClick={() => isMobile && setShowMobileViewAll(true)}
+            onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
             style={{
-              padding: isMobile ? "12px 14px" : "20px 24px 16px",
-              background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
-              borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
+              padding: (isMobile || isTablet) ? "12px 14px" : "20px 24px 16px",
+              background: (isMobile || isTablet) ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
+              borderBottom: (isMobile || isTablet) ? "none" : "1px solid #f0f1f3",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              cursor: isMobile ? "pointer" : "default",
+              cursor: (isMobile || isTablet) ? "pointer" : "default",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {isMobile && (
+              {(isMobile || isTablet) && (
                 <div style={{
                   width: 38,
                   height: 38,
@@ -539,9 +540,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   margin: 0,
                   fontFamily: POPPINS,
                 }}>
-                  {isMobile ? "Recipients Directory" : "Recipient List"}
+                  {(isMobile || isTablet) ? "Recipients Directory" : "Recipient List"}
                 </h2>
-                {isMobile && (
+                {(isMobile || isTablet) && (
                   <span style={{ 
                     fontSize: 11, 
                     color: "#7b8a9a", 
@@ -553,19 +554,20 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 )}
               </div>
             </div>
-            {isMobile && (
+            {(isMobile || isTablet) && (
               <div style={{
                 background: "#f0f8f9",
-                padding: "6px 12px",
+                padding: "7px 14px",
                 borderRadius: 20,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 4,
               }}>
                 <span
                   style={{
-                    fontSize: 12, fontWeight: 600, color: "#357D86",
-                    cursor: "pointer", fontFamily: POPPINS,
+                    fontSize: 12, fontWeight: 700, color: "#357D86",
+                    cursor: "pointer", fontFamily: POPPINS, lineHeight: 1,
                   }}
                 >
                   View All
@@ -721,12 +723,21 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               <button 
                 onClick={() => setShowMobileViewAll(false)} 
                 style={{ 
-                  width: 32, height: 32, borderRadius: "50%", 
+                  width: "32px", height: "32px", 
+                  minWidth: "32px", minHeight: "32px",
+                  padding: "0px", margin: "0px",
+                  borderRadius: "1000px", 
                   border: "none", background: "#f3f4f6", 
                   color: "#64748b",
                   display: "flex", alignItems: "center", justifyContent: "center", 
                   cursor: "pointer",
-                  transition: "all 0.2s"
+                  transition: "all 0.2s",
+                  flexShrink: 0,
+                  lineHeight: 0,
+                  overflow: "hidden",
+                  appearance: "none",
+                  outline: "none",
+                  boxSizing: "border-box",
                 }}
                 className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >

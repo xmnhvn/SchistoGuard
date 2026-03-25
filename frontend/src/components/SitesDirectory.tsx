@@ -440,6 +440,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       <div style={{
         background: "#fff",
         borderRadius: 20,
+        border: "1px solid #e2e5ea",
         overflow: "hidden",
         flex: isMobile ? "0 0 auto" : 1,
         minHeight: 0,
@@ -448,15 +449,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div 
-          onClick={() => (isMobile) && setShowMobileViewAll(true)}
+          onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
           style={{
-            padding: isMobile ? "12px 14px" : "20px 24px 16px",
-            background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
-            borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
+            padding: (isMobile || isTablet) ? "12px 14px" : "20px 24px 16px",
+            background: (isMobile || isTablet) ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
+            borderBottom: (isMobile || isTablet) ? "none" : "1px solid #f0f1f3",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            cursor: isMobile ? "pointer" : "default",
+            cursor: (isMobile || isTablet) ? "pointer" : "default",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -496,14 +497,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           {(isMobile) && (
             <div style={{
               background: "#f0f8f9",
-              padding: "6px 12px",
+              padding: "7px 14px",
               borderRadius: 20,
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: 4,
             }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86" }}>View Details</span>
-              <ChevronRight size={16} color="#357D86" strokeWidth={2.5} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86", lineHeight: 1 }}>View Details</span>
+              <ChevronRight size={14} color="#357D86" strokeWidth={3} />
             </div>
           )}
           {(!isMobile) && (
@@ -674,12 +676,21 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <button
                 onClick={() => setShowMobileViewAll(false)}
                 style={{
-                  width: 32, height: 32, borderRadius: "50%",
+                  width: "32px", height: "32px", 
+                  minWidth: "32px", minHeight: "32px",
+                  padding: "0px", margin: "0px",
+                  borderRadius: "1000px", 
                   border: "none", background: "#f3f4f6",
                   color: "#64748b",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer",
-                  transition: "all 0.2s"
+                  transition: "all 0.2s",
+                  flexShrink: 0,
+                  lineHeight: 0,
+                  overflow: "hidden",
+                  appearance: "none",
+                  outline: "none",
+                  boxSizing: "border-box",
                 }}
                 className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >

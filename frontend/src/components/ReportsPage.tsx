@@ -447,7 +447,8 @@ export const ReportsPage: React.FC = () => {
                 boxShadow: isMobile ? "none" : "0 4px 20px rgba(0,0,0,0.03)"
               }}
             >
-              <div className="flex-shrink-0 bg-white p-6" style={{ 
+              <div className="flex-shrink-0 bg-white" style={{ 
+                padding: isMobile ? "24px" : "24px 24px 4px",
                 borderRadius: isMobile ? 24 : 0,
                 border: isMobile ? "1px solid #f1f5f9" : "none",
                 marginBottom: isMobile ? 12 : 0
@@ -457,11 +458,11 @@ export const ReportsPage: React.FC = () => {
                     className={
                       isMobile
                         ? 'flex flex-col w-full gap-3'
-                        : 'grid grid-cols-3 gap-4 w-full items-center'
+                        : 'flex items-center gap-4 w-full'
                     }
                   >
-                    <div className={isMobile ? 'flex gap-3 w-full' : 'grid grid-cols-2 gap-4 col-span-2'}>
-                      <div className="flex-1">
+                    <div className={isMobile ? 'flex gap-3 w-full' : 'flex flex-1 items-center gap-3'}>
+                      <div className="flex-1 min-w-0">
                         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
@@ -487,7 +488,7 @@ export const ReportsPage: React.FC = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <Select value={selectedType} onValueChange={setSelectedType}>
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
@@ -514,7 +515,7 @@ export const ReportsPage: React.FC = () => {
                         </Select>
                       </div>
                     </div>
-                    <div className={isMobile ? 'w-full' : 'col-span-1'}>
+                    <div className={isMobile ? 'w-full' : 'flex-shrink-0'}>
                       <Button
                         className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
                         style={{
@@ -542,71 +543,68 @@ export const ReportsPage: React.FC = () => {
                 <div 
                   onClick={() => setShowMobileReportList(true)}
                   style={{
-                    background: "#fff",
+                    padding: "12px 14px",
+                    background: "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)",
                     borderRadius: 20,
-                    border: "1px solid #f1f5f9",
+                    border: "1px solid #e2e5ea",
                     display: "flex",
                     overflow: "hidden",
                     cursor: "pointer",
                     marginBottom: 12,
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.02)"
-                  }}
-                >
-                  <div style={{ width: 6, backgroundColor: "#357D86", flexShrink: 0 }} />
-                  <div style={{ 
-                    flex: 1,
-                    padding: "16px 14px",
-                    display: "flex",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
                     justifyContent: "space-between",
                     alignItems: "center"
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 12,
-                        background: "#f0f8f9",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}>
-                        <FileText size={18} color="#357D86" strokeWidth={2.5} />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <h2 style={{
-                          fontSize: 15, fontWeight: 700, color: "#1a2a3a",
-                          margin: 0,
-                          fontFamily: POPPINS,
-                          lineHeight: "1.2"
-                        }}>
-                          Reports Directory
-                        </h2>
-                        <span style={{ 
-                          fontSize: 11, 
-                          color: "#7b8a9a", 
-                          fontWeight: 500, 
-                          fontFamily: POPPINS,
-                          marginTop: 2
-                        }}>
-                          View and manage water quality reports
-                        </span>
-                      </div>
-                    </div>
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{
-                      background: "rgba(53, 125, 134, 0.08)",
-                      padding: "8px 14px",
-                      borderRadius: 24,
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      background: "#f0f8f9",
                       display: "flex",
                       alignItems: "center",
-                      gap: 6,
-                      flexShrink: 0,
-                      marginLeft: 8
+                      justifyContent: "center",
                     }}>
+                      <FileText size={18} color="#357D86" strokeWidth={2.5} />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <h2 style={{
+                        fontSize: 15, fontWeight: 700, color: "#1a2a3a",
+                        margin: 0,
+                        fontFamily: POPPINS,
+                        lineHeight: "1.2"
+                      }}>
+                        Reports Directory
+                      </h2>
+                      <span style={{ 
+                        fontSize: 11, 
+                        color: "#7b8a9a", 
+                        fontWeight: 500, 
+                        fontFamily: POPPINS,
+                        marginTop: 2
+                      }}>
+                        View and manage water quality reports
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{
+                    background: "#f0f8f9",
+                    padding: "7px 14px",
+                    borderRadius: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    flexShrink: 0,
+                    marginLeft: 8
+                  }}>
                     <span
                       style={{
                         fontSize: 12, fontWeight: 700, color: "#357D86",
                         fontFamily: POPPINS,
-                        whiteSpace: "nowrap"
+                        whiteSpace: "nowrap",
+                        lineHeight: 1
                       }}
                     >
                       View All
@@ -614,12 +612,11 @@ export const ReportsPage: React.FC = () => {
                     <ChevronRight size={14} color="#357D86" strokeWidth={3} />
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
               {!isMobile && (
-                <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-6">
-                  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-2">
+                <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-0">
+                  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pt-1 pb-2">
                     {loading ? (
                       <div className="flex h-full items-center justify-center py-8 text-center text-gray-500">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin" />
@@ -653,7 +650,7 @@ export const ReportsPage: React.FC = () => {
                                 display: "flex",
                                 overflow: "hidden",
                                 position: "relative",
-                                minHeight: 110,
+                                minHeight: 100,
                                 borderRadius: 15,
                                 border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9",
                                 boxShadow: selectedReport?.id === report.id ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
@@ -666,9 +663,9 @@ export const ReportsPage: React.FC = () => {
                                 flexShrink: 0
                               }} />
 
-                              <div className="flex w-full items-center justify-between px-6 py-5">
+                              <div className="flex w-full items-center justify-between px-6 py-4">
                                 <div className="flex flex-1 flex-col justify-center overflow-hidden">
-                                  <div className="mb-2 flex items-center justify-between">
+                                  <div className="mb-1 flex items-center justify-between">
                                     <span style={{
                                       fontSize: 10,
                                       fontWeight: 700,
@@ -704,7 +701,7 @@ export const ReportsPage: React.FC = () => {
                                     {report.title}
                                   </h4>
                                   <div
-                                    className="mt-2"
+                                    className="mt-1"
                                     style={{
                                       fontFamily: POPPINS,
                                       fontWeight: 500,
@@ -938,88 +935,149 @@ export const ReportsPage: React.FC = () => {
       < Dialog open={showCreateReport} onOpenChange={setShowCreateReport} >
         <DialogContent
           style={{
-            width: 420,
-            maxWidth: 420,
-            minWidth: 420,
-            borderRadius: 20,
-            padding: 32,
-            boxSizing: 'border-box',
+            width: isMobile ? "90vw" : 420,
+            maxWidth: isMobile ? "90vw" : 420,
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            border: "none",
+            fontFamily: POPPINS,
           }}
+          className="p-0"
         >
-          <DialogHeader>
-            <DialogTitle className="mb-1 text-center text-2xl font-bold">Create New Report</DialogTitle>
-            <p className="mb-2 text-center text-sm text-muted-foreground">
+          {/* Modal Header */}
+          <div style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #eef0f2",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            flexShrink: 0,
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Create New Report
+            </h2>
+            <DialogClose asChild>
+              <button 
+                style={{ 
+                  width: "32px", height: "32px", 
+                  minWidth: "32px", minHeight: "32px",
+                  padding: "0px", margin: "0px",
+                  borderRadius: "1000px", 
+                  border: "none", background: "#f3f4f6", 
+                  color: "#64748b",
+                  display: "flex", alignItems: "center", justifyContent: "center", 
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  flexShrink: 0,
+                  lineHeight: 0,
+                  overflow: "hidden",
+                  appearance: "none",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+                className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+              >
+                <X size={18} />
+              </button>
+            </DialogClose>
+          </div>
+
+          <div style={{ padding: "20px", overflowY: "auto", maxHeight: "80vh" }}>
+            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24, fontFamily: POPPINS }}>
               Select the type of report you want to generate.
             </p>
-          </DialogHeader>
 
-          <form className="space-y-6" onSubmit={handleCreateReport}>
-            <fieldset disabled={creating}>
-              <legend className="mb-6 block font-medium">Report Type</legend>
-              <div className="flex flex-wrap gap-3">
+            <form className="space-y-6" onSubmit={handleCreateReport}>
+              <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Type</div>
+              <div className="flex flex-wrap gap-2">
                 {['weekly', 'monthly', 'quarterly', 'annual'].map((type) => (
                   <button
                     key={type}
                     type="button"
-                    className={`cursor-pointer rounded-full border px-6 py-1 font-medium transition-colors ${reportType === type
-                      ? 'border-schistoguard-teal bg-schistoguard-teal text-white'
-                      : 'border-gray-200 bg-gray-50 hover:border-schistoguard-teal'
-                      }`}
+                    style={{
+                      height: 32,
+                      padding: "0 16px",
+                      borderRadius: 16,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      fontFamily: POPPINS,
+                      transition: "all 0.2s",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: reportType === type ? "none" : "1px solid #e2e5ea",
+                      background: reportType === type ? "#357D86" : "#f9fafb",
+                      color: reportType === type ? "#fff" : "#64748b",
+                    }}
                     onClick={() => setReportType(type)}
                     disabled={creating}
+                    className="active:scale-95 outline-none hover:border-schistoguard-teal hover:text-schistoguard-teal"
                   >
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </button>
                 ))}
               </div>
-            </fieldset>
 
-            <fieldset disabled={creating} className="space-y-3">
-              <legend className="block font-medium">Report Period</legend>
+              <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Period</div>
 
               {reportType === 'weekly' && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1 text-sm text-gray-700">
-                    Start Date
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
+                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Start Date</label>
                     <input
                       type="date"
-                      className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                      style={{
+                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                      }}
+                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
                       value={weeklyStartDate}
                       onChange={(e) => setWeeklyStartDate(e.target.value)}
                       max={weeklyEndDate}
                     />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm text-gray-700">
-                    End Date
+                  </div>
+                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
+                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>End Date</label>
                     <input
                       type="date"
-                      className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                      style={{
+                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                      }}
+                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
                       value={weeklyEndDate}
                       onChange={(e) => setWeeklyEndDate(e.target.value)}
                       min={weeklyStartDate}
                     />
-                  </label>
+                  </div>
                 </div>
               )}
 
               {reportType === 'monthly' && (
-                <label className="flex flex-col gap-1 text-sm text-gray-700">
-                  Month
+                <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Month</label>
                   <input
                     type="month"
-                    className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                    style={{
+                      height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
+                      padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                    }}
+                    className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
                     value={monthlyPeriod}
                     onChange={(e) => setMonthlyPeriod(e.target.value)}
                   />
-                </label>
+                </div>
               )}
 
               {reportType === 'quarterly' && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1 text-sm text-gray-700">
-                    Year
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
+                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Year</label>
                     <select
-                      className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                      style={{
+                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                      }}
+                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
                       value={quarterlyYear}
                       onChange={(e) => setQuarterlyYear(e.target.value)}
                     >
@@ -1029,11 +1087,15 @@ export const ReportsPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm text-gray-700">
-                    Quarter
+                  </div>
+                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
+                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Quarter</label>
                     <select
-                      className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                      style={{
+                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                      }}
+                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
                       value={quarterlyQuarter}
                       onChange={(e) => setQuarterlyQuarter(e.target.value)}
                     >
@@ -1042,24 +1104,37 @@ export const ReportsPage: React.FC = () => {
                       <option value="3">Q3 (Jul-Sep)</option>
                       <option value="4">Q4 (Oct-Dec)</option>
                     </select>
-                  </label>
+                  </div>
                 </div>
               )}
 
               {reportType === 'annual' && (
-                <p className="text-sm text-gray-600">Annual report uses the current calendar year range.</p>
+                <p style={{ fontSize: 12, color: "#7b8a9a", fontFamily: POPPINS }}>Annual report uses the current calendar year range.</p>
               )}
-            </fieldset>
 
-            <div className="flex justify-center gap-3 pt-6">
+            <div className="flex justify-end gap-3 pt-4">
               <DialogClose asChild>
-                <button type="button" className="rounded border px-8 py-2 hover:bg-gray-100" disabled={creating}>
+                <button 
+                  type="button" 
+                  style={{
+                    height: 38, padding: "0 24px", borderRadius: 19,
+                    fontSize: 13, fontWeight: 600, fontFamily: POPPINS,
+                    background: "#f3f4f6", color: "#64748b", border: "none"
+                  }}
+                  className="hover:bg-gray-200 transition-colors active:scale-95"
+                  disabled={creating}
+                >
                   Cancel
                 </button>
               </DialogClose>
               <button
                 type="submit"
-                className="flex items-center gap-2 rounded bg-schistoguard-teal px-8 py-2 font-semibold text-white hover:bg-schistoguard-teal/90"
+                style={{
+                  height: 38, padding: "0 24px", borderRadius: 19,
+                  fontSize: 13, fontWeight: 600, fontFamily: POPPINS,
+                  background: "#357D86", color: "#fff", border: "none"
+                }}
+                className="hover:opacity-90 transition-opacity active:scale-95 flex items-center gap-2"
                 disabled={creating}
               >
                 {creating ? (
@@ -1073,6 +1148,7 @@ export const ReportsPage: React.FC = () => {
               </button>
             </div>
           </form>
+          </div>
         </DialogContent>
       </Dialog >
       {/* Mobile/Tablet Report Details Modal */}
@@ -1084,7 +1160,8 @@ export const ReportsPage: React.FC = () => {
              padding: 0,
              overflow: "hidden",
              borderRadius: 24,
-             border: "none"
+             border: "none",
+             zIndex: 10100
            }}
            className="p-0"
         >
@@ -1103,12 +1180,21 @@ export const ReportsPage: React.FC = () => {
                 <DialogClose asChild>
                   <button 
                     style={{ 
-                      width: 32, height: 32, borderRadius: "50%", 
+                      width: "32px", height: "32px", 
+                      minWidth: "32px", minHeight: "32px",
+                      padding: "0px", margin: "0px",
+                      borderRadius: "1000px", 
                       border: "none", background: "#f3f4f6", 
                       color: "#64748b",
                       display: "flex", alignItems: "center", justifyContent: "center", 
                       cursor: "pointer",
-                      transition: "all 0.2s"
+                      transition: "all 0.2s",
+                      flexShrink: 0,
+                      lineHeight: 0,
+                      overflow: "hidden",
+                      appearance: "none",
+                      outline: "none",
+                      boxSizing: "border-box",
                     }}
                     className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
                   >
@@ -1210,20 +1296,30 @@ export const ReportsPage: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
-      {/* Mobile/Tablet Report List Modal */}
-      <Dialog open={(isMobile || isTablet) && showMobileReportList} onOpenChange={setShowMobileReportList}>
-        <DialogContent 
-           style={{ 
-             fontFamily: POPPINS,
-             maxWidth: isMobile ? "90vw" : 480,
-             padding: 0,
-             overflow: "hidden",
-             borderRadius: 24,
-             border: "none"
-           }}
-           className="p-0"
-        >
-          <div style={{ display: "flex", flexDirection: "column", height: "100%", maxHeight: "85vh" }}>
+      {/* ── Mobile/Tablet Report List Modal ── */}
+      {(isMobile || isTablet) && showMobileReportList && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10001,
+          background: "rgba(0,0,0,0.6)",
+          display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+          padding: isMobile ? "92px 20px 20px" : "40px 20px",
+          animation: "fadeIn 0.2s ease-out both"
+        }} onClick={() => setShowMobileReportList(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 540,
+              maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
+              background: "#fff",
+              borderRadius: 16,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+              animation: "contentSlideIn 0.25s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
             {/* Modal Header */}
             <div style={{
               padding: "16px 20px",
@@ -1242,27 +1338,26 @@ export const ReportsPage: React.FC = () => {
                   All Reports
                 </h2>
               </div>
-              <DialogClose asChild>
-                <button 
-                  style={{ 
-                    width: 32, height: 32, borderRadius: "50%", 
-                    border: "none", background: "#f3f4f6", 
-                    color: "#64748b",
-                    display: "flex", alignItems: "center", justifyContent: "center", 
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
-                >
-                  <X size={18} />
-                </button>
-              </DialogClose>
+              <button 
+                onClick={() => setShowMobileReportList(false)}
+                style={{ 
+                  width: 32, height: 32, borderRadius: "50%", 
+                  border: "none", background: "#f3f4f6", 
+                  color: "#64748b",
+                  display: "flex", alignItems: "center", justifyContent: "center", 
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Modal Content */}
             <div style={{
-              flex: 1, overflowY: "auto",
-              padding: "20px 0",
+              flex: 1, minHeight: 0, overflowY: "auto",
+              padding: "20px",
               display: "flex", flexDirection: "column"
             }}>
               {loading ? (
@@ -1270,43 +1365,39 @@ export const ReportsPage: React.FC = () => {
                   <Loader2 className="h-8 w-8 animate-spin text-schistoguard-teal" />
                 </div>
               ) : filteredReports.length === 0 ? (
-                <div className="flex h-full items-center justify-center py-20 text-gray-500 font-medium">No reports found.</div>
+                <div className="flex h-full items-center justify-center py-20 text-gray-500 font-medium text-center">No reports found.</div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {filteredReports.map((report) => {
                     const riskLevel = report.summary?.riskLevel || 'low';
                     const riskColors: Record<string, { bg: string; color: string; border: string }> = {
                       low: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
                       moderate: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
-                      high: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" }
+                      high: { bg: "#f1f5f9", color: "#64748b", border: "#f1f5f9" },
                     };
                     const rc = riskColors[riskLevel.toLowerCase()] || riskColors.low;
-                    
+
                     return (
                       <div
                         key={report.id}
                         onClick={() => {
                           handleViewReport(report);
-                          setShowMobileReportList(false);
                         }}
-                        style={{
-                          margin: "0 16px 16px",
-                          position: "relative"
-                        }}
+                        style={{ position: "relative" }}
                       >
                         <div
                           style={{
                             display: "flex",
                             overflow: "hidden",
                             position: "relative",
-                            minHeight: 100,
+                            minHeight: 110,
                             borderRadius: 15,
-                            background: "#fff",
-                            border: "1px solid #f1f5f9",
+                            background: selectedReport?.id === report.id ? "#F5FBFB" : "#fff",
+                            border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9",
                             cursor: "pointer",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                            boxShadow: selectedReport?.id === report.id ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
                           }}
-                          className="hover:border-schistoguard-teal/30 hover:shadow-md transition-all active:scale-[0.98]"
+                          className={`${selectedReport?.id === report.id ? '' : 'hover:border-schistoguard-teal/30'} transition-all active:scale-[0.98] group`}
                         >
                           {/* Premium Folder-Style Side Accent */}
                           <div style={{
@@ -1314,40 +1405,70 @@ export const ReportsPage: React.FC = () => {
                             backgroundColor: "#357D86",
                             flexShrink: 0
                           }} />
-                          
-                          <div style={{ flex: 1, padding: "16px", display: "flex", flexDirection: "column", gap: 6 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{
-                                fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 6,
-                                background: riskLevel.toLowerCase() === 'high' ? "#FEE2E2" : riskLevel.toLowerCase() === 'moderate' ? "#FEF3C7" : "#D1FAE5",
-                                color: riskLevel.toLowerCase() === 'high' ? "#EF4444" : riskLevel.toLowerCase() === 'moderate' ? "#B45309" : "#059669",
-                                textTransform: "uppercase",
-                                fontFamily: POPPINS, letterSpacing: "0.03em"
-                              }}>{riskLevel} Risk</span>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>
-                                {report.period}
-                              </span>
+
+                          <div className="flex w-full items-center justify-between px-4 py-4">
+                            <div className="flex flex-1 flex-col justify-center overflow-hidden pr-2">
+                              <div className="mb-2 flex items-center justify-between gap-1">
+                                <span style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  padding: "4px 8px",
+                                  borderRadius: 6,
+                                  background: rc.bg,
+                                  color: rc.color,
+                                  textTransform: "uppercase",
+                                  fontFamily: POPPINS,
+                                  letterSpacing: "0.05em",
+                                  flexShrink: 0
+                                }}>
+                                  {riskLevel} Risk
+                                </span>
+                                <span style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: "#1a2a3a",
+                                  fontFamily: POPPINS,
+                                  textAlign: "right",
+                                  marginLeft: 4,
+                                  flexShrink: 0
+                                }}>
+                                  {report.period.split(' ')[0]} {report.period.split(' ')[1]}
+                                </span>
+                              </div>
+                              <h4
+                                style={{
+                                  fontFamily: POPPINS,
+                                  fontWeight: selectedReport?.id === report.id ? 700 : 500,
+                                  color: "#1a2a3a",
+                                  letterSpacing: "-0.01em",
+                                  lineHeight: "1.3",
+                                  fontSize: "14.5px"
+                                }}
+                                className="line-clamp-2"
+                              >
+                                {report.title}
+                              </h4>
+                              <div
+                                className="mt-2"
+                                style={{
+                                  fontFamily: POPPINS,
+                                  fontWeight: 500,
+                                  color: "#64748b",
+                                  fontSize: "11px",
+                                  letterSpacing: "0.01em"
+                                }}
+                              >
+                                Generated on {new Date(report.generatedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                              </div>
                             </div>
-                            
-                            <h4 style={{ 
-                              fontSize: 14, fontWeight: 700, color: "#1a2a3a", margin: "2px 0", 
-                              fontFamily: POPPINS, lineHeight: "1.3",
-                            }}>
-                              {report.title}
-                            </h4>
-                            
-                            <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#94a3b8", fontSize: 11, fontFamily: POPPINS }}>
-                              <FileText size={10} />
-                              <span>Generated on {new Date(report.generatedDate).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                          
-                          <div style={{ padding: "0 12px", display: "flex", alignItems: "center" }}>
-                            <div style={{
-                              width: 28, height: 28, borderRadius: "50%", background: "#f8fafc",
-                              display: "flex", alignItems: "center", justifyContent: "center"
-                            }}>
-                              <ChevronRight size={14} color="#94a3b8" strokeWidth={3} />
+
+                            <div className="flex items-center">
+                              <ChevronRight
+                                size={16}
+                                strokeWidth={3}
+                                style={{ color: "#94a3b8" }}
+                                className="shrink-0"
+                              />
                             </div>
                           </div>
                         </div>
@@ -1358,8 +1479,8 @@ export const ReportsPage: React.FC = () => {
               )}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div >
   );
 };
