@@ -90,6 +90,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     area: "100 square meters",
   });
 
+  const [isPWAInstalled, setIsPWAInstalled] = useState(false);
+
+  // PWA Detection and Installation tracking
+  useEffect(() => {
+    const checkInstalled = () => {
+      // Check if running in standalone mode (installed)
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                          (window.navigator as any).standalone || 
+                          document.referrer.includes('android-app://');
+      setIsPWAInstalled(isStandalone);
+    };
+
+    checkInstalled();
+
+    // Listen for the appinstalled event
+    const handleAppInstalled = () => {
+      console.log('PWA was successfully installed');
+      setIsPWAInstalled(true);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Also handle dynamic changes (e.g. if the user installs while browsing)
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      setIsPWAInstalled(e.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaChange);
+    }
+
+    return () => {
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+      }
+    };
+  }, []);
+
   // Fetch device name from global config
   useEffect(() => {
     apiGet("/api/sensors/interval-config")
@@ -450,8 +490,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </button>
               )}
 
-              {/* PWA Install Button - visible only on mobile/tablet */}
-              {isMobileOrTablet && (
+              {/* PWA Install Button - visible only on mobile/tablet AND if not already installed */}
+              {isMobileOrTablet && !isPWAInstalled && (
                 <button
                   onClick={() => setShowPWAInstructions(true)}
                   aria-label="Install App"
