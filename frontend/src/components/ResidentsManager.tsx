@@ -100,10 +100,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isMobile = windowWidth < 768;
-  const isTablet = windowWidth >= 768 && windowWidth < 1100;
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
   const isCompact = windowWidth < 1100;
-  const pad = isMobile ? 16 : 32;
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
 
   // Fetch residents
   useEffect(() => {
@@ -366,7 +366,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             }}>
               Recipients
             </h1>
-            <p style={{ fontSize: 12.5, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
+            <p style={{ fontSize: isMobile ? 12.5 : 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
               Manage alert recipients and their designations
             </p>
           </div>
