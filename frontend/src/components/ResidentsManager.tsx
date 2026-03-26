@@ -100,9 +100,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1100;
+  const pad = isMobile ? 16 : 32;
 
   // Fetch residents
   useEffect(() => {
@@ -348,9 +348,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Header */}
         <div style={{
           display: "flex",
-          flexDirection: (isMobile || isTablet) ? "column" : "row",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
+          alignItems: isMobile ? "flex-start" : "center",
           gap: 16,
           marginBottom: 24,
           animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
@@ -374,9 +374,16 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             alignItems: "center",
             gap: isMobile ? 8 : 10,
             flexWrap: "wrap",
+            flex: isMobile ? "none" : 1,
+            justifyContent: isMobile ? "flex-start" : "flex-end",
             ...(isMobile ? { width: "100%" } : {}),
           }}>
-            <div style={{ position: "relative", flex: isMobile ? "1 1 calc(50% - 4px)" : undefined, minWidth: isMobile ? 0 : undefined }}>
+            <div style={{ 
+              position: "relative", 
+              flex: isMobile ? "1 1 calc(50% - 4px)" : "1", 
+              maxWidth: isMobile ? undefined : 420,
+              minWidth: isMobile ? 0 : 200 
+            }}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder="Search..."
@@ -507,19 +514,19 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div 
-            onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
+            onClick={() => isMobile && setShowMobileViewAll(true)}
             style={{
-              padding: (isMobile || isTablet) ? "12px 14px" : "20px 24px 16px",
-              background: (isMobile || isTablet) ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
-              borderBottom: (isMobile || isTablet) ? "none" : "1px solid #f0f1f3",
+              padding: isMobile ? "12px 14px" : "20px 24px 16px",
+              background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
+              borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              cursor: (isMobile || isTablet) ? "pointer" : "default",
+              cursor: isMobile ? "pointer" : "default",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {(isMobile || isTablet) && (
+              {isMobile && (
                 <div style={{
                   width: 38,
                   height: 38,
@@ -538,9 +545,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   margin: 0,
                   fontFamily: POPPINS,
                 }}>
-                  {(isMobile || isTablet) ? "Recipients Directory" : "Recipient List"}
+                  {isMobile ? "Recipients Directory" : "Recipient List"}
                 </h2>
-                {(isMobile || isTablet) && (
+                {isMobile && (
                   <span style={{ 
                     fontSize: 11, 
                     color: "#7b8a9a", 
@@ -552,7 +559,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 )}
               </div>
             </div>
-            {(isMobile || isTablet) && (
+            {isMobile && (
               <div style={{
                 background: "#f0f8f9",
                 padding: "7px 14px",
