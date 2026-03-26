@@ -932,8 +932,9 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Create Report Dialog */}
-      < Dialog open={showCreateReport} onOpenChange={setShowCreateReport} >
+      <Dialog open={showCreateReport} onOpenChange={setShowCreateReport}>
         <DialogContent
+          hideCloseButton={true}
           style={{
             width: isMobile ? "90vw" : 420,
             maxWidth: isMobile ? "90vw" : 420,
@@ -957,22 +958,26 @@ export const ReportsPage: React.FC = () => {
             </h2>
             <DialogClose asChild>
               <button 
+                onClick={() => setShowCreateReport(false)}
                 style={{ 
-                  width: "32px", height: "32px", 
-                  minWidth: "32px", minHeight: "32px",
-                  padding: "0px", margin: "0px",
-                  borderRadius: "1000px", 
-                  border: "none", background: "#f3f4f6", 
-                  color: "#64748b",
-                  display: "flex", alignItems: "center", justifyContent: "center", 
+                  width: 32, 
+                  height: 32, 
+                  minWidth: 32,
+                  minHeight: 32,
+                  borderRadius: "50%", 
+                  border: "none", 
+                  background: "#f3f4f6", 
+                  color: "#64748b",      
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
                   cursor: "pointer",
                   transition: "all 0.2s",
                   flexShrink: 0,
-                  lineHeight: 0,
-                  overflow: "hidden",
-                  appearance: "none",
-                  outline: "none",
+                  padding: 0,
+                  aspectRatio: "1/1",
                   boxSizing: "border-box",
+                  overflow: "hidden"
                 }}
                 className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
@@ -1154,6 +1159,7 @@ export const ReportsPage: React.FC = () => {
       {/* Mobile/Tablet Report Details Modal */}
       <Dialog open={(isMobile || isTablet) && showViewReport && !!selectedReport} onOpenChange={(open) => { if (!open) { setShowViewReport(false); setSelectedReport(null); } }}>
         <DialogContent 
+           hideCloseButton={true}
            style={{ 
              fontFamily: POPPINS,
              maxWidth: isMobile ? "90vw" : 540,
@@ -1179,22 +1185,26 @@ export const ReportsPage: React.FC = () => {
                 </h2>
                 <DialogClose asChild>
                   <button 
+                    onClick={() => setShowViewReport(false)}
                     style={{ 
-                      width: "32px", height: "32px", 
-                      minWidth: "32px", minHeight: "32px",
-                      padding: "0px", margin: "0px",
-                      borderRadius: "1000px", 
-                      border: "none", background: "#f3f4f6", 
-                      color: "#64748b",
-                      display: "flex", alignItems: "center", justifyContent: "center", 
+                      width: 32, 
+                      height: 32, 
+                      minWidth: 32,
+                      minHeight: 32,
+                      borderRadius: "50%", 
+                      border: "none", 
+                      background: "#f3f4f6", 
+                      color: "#64748b",      
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
                       cursor: "pointer",
                       transition: "all 0.2s",
                       flexShrink: 0,
-                      lineHeight: 0,
-                      overflow: "hidden",
-                      appearance: "none",
-                      outline: "none",
+                      padding: 0,
+                      aspectRatio: "1/1",
                       boxSizing: "border-box",
+                      overflow: "hidden"
                     }}
                     className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
                   >

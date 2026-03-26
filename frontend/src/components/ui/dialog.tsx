@@ -49,8 +49,9 @@ function DialogContent({
   className,
   children,
   style,
+  hideCloseButton = false,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & { hideCloseButton?: boolean }) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -73,24 +74,29 @@ function DialogContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close 
-          style={{ 
-            width: 32, height: 32, borderRadius: "50%", 
-            border: "none", background: "#f3f4f6", 
-            color: "#64748b",
-            display: "flex", alignItems: "center", justifyContent: "center", 
-            cursor: "pointer",
-            transition: "all 0.2s",
-            position: "absolute",
-            top: 16,
-            right: 16,
-            zIndex: 50
-          }}
-          className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
-        >
-          <X size={18} />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {!hideCloseButton && (
+          <DialogPrimitive.Close 
+            style={{ 
+              width: 32, height: 32, borderRadius: "50%", 
+              border: "none", background: "#f3f4f6", 
+              color: "#64748b",
+              display: "flex", alignItems: "center", justifyContent: "center", 
+              cursor: "pointer",
+              transition: "all 0.2s",
+              position: "absolute",
+              top: 16,
+              right: 16,
+              zIndex: 50,
+              flexShrink: 0,
+              aspectRatio: "1/1",
+              padding: 0
+            }}
+            className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+          >
+            <X size={18} />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   );
