@@ -102,6 +102,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
   const isMobile = windowWidth < 768;
   const isTablet = windowWidth >= 768 && windowWidth < 1100;
+  const isCompact = windowWidth < 1100;
   const pad = isMobile ? 16 : 32;
 
   // Fetch residents
@@ -348,9 +349,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Header */}
         <div style={{
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
+          flexDirection: isCompact ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: isMobile ? "flex-start" : "center",
+          alignItems: isCompact ? "flex-start" : "center",
           gap: 16,
           marginBottom: 24,
           animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
@@ -372,17 +373,17 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           <div style={{
             display: "flex",
             alignItems: "center",
-            gap: isMobile ? 8 : 10,
+            gap: isCompact ? 10 : 10,
             flexWrap: "wrap",
-            flex: isMobile ? "none" : 1,
-            justifyContent: isMobile ? "flex-start" : "flex-end",
-            ...(isMobile ? { width: "100%" } : {}),
+            flex: isCompact ? "none" : 1,
+            justifyContent: isCompact ? "flex-start" : "flex-end",
+            ...(isCompact ? { width: "100%" } : {}),
           }}>
             <div style={{ 
               position: "relative", 
-              flex: isMobile ? "1 1 calc(50% - 4px)" : "1", 
-              maxWidth: isMobile ? undefined : 420,
-              minWidth: isMobile ? 0 : 200 
+              flex: isCompact ? "1 1 calc(50% - 6px)" : "1", 
+              maxWidth: isCompact ? undefined : 420,
+              minWidth: isCompact ? 0 : 200 
             }}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
@@ -397,10 +398,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 }}
               />
             </div>
-            <div style={{ flex: isMobile ? "1 1 calc(50% - 4px)" : undefined, minWidth: isMobile ? 0 : undefined }}>
+            <div style={{ flex: isCompact ? "1 1 calc(50% - 6px)" : undefined, minWidth: isCompact ? 0 : undefined }}>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger style={{
-                  width: isMobile ? "100%" : 170,
+                  width: isCompact ? "100%" : 170,
                   minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
                   border: "1px solid #e2e5ea", background: "#fff", height: 38,
                   padding: "0 10px",
@@ -437,11 +438,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 background: "#fff", cursor: "pointer", fontSize: 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 margin: 0, flexShrink: 0,
-                ...(isMobile ? { padding: "0 10px", flex: "1 1 calc(50% - 4px)" } : {}),
+                ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
               }}
             >
               <Upload size={14} />
-              {isMobile ? "Import CSV" : (isUploadingCSV ? "Wait..." : "Import CSV")}
+              {isCompact ? "Import CSV" : (isUploadingCSV ? "Wait..." : "Import CSV")}
             </Label>
             <button
               onClick={() => setIsAddDialogOpen(true)}
@@ -451,11 +452,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 border: "none", flexShrink: 0,
                 background: "#357D86", cursor: "pointer", fontSize: 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
-                ...(isMobile ? { padding: "0 10px", flex: "1 1 calc(50% - 4px)" } : {}),
+                ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
               }}
             >
               <Plus size={15} />
-              {isMobile ? "Add" : "Add Recipient"}
+              {isCompact ? "Add" : "Add Recipient"}
             </button>
           </div>
         </div>
