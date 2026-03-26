@@ -992,17 +992,17 @@ export const ReportsPage: React.FC = () => {
             </p>
 
             <form className="space-y-6" onSubmit={handleCreateReport}>
-              <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Type</div>
+              <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Type</div>
               <div className="flex flex-wrap gap-2">
                 {['weekly', 'monthly', 'quarterly', 'annual'].map((type) => (
                   <button
                     key={type}
                     type="button"
                     style={{
-                      height: 32,
-                      padding: "0 16px",
-                      borderRadius: 16,
-                      fontSize: 12,
+                      height: 38,
+                      padding: "0 18px",
+                      borderRadius: 12,
+                      fontSize: 13,
                       fontWeight: 600,
                       fontFamily: POPPINS,
                       transition: "all 0.2s",
@@ -1010,45 +1010,48 @@ export const ReportsPage: React.FC = () => {
                       alignItems: "center",
                       justifyContent: "center",
                       border: reportType === type ? "none" : "1px solid #e2e5ea",
-                      background: reportType === type ? "#357D86" : "#f9fafb",
+                      background: reportType === type ? "#357D86" : "#f8fafb",
                       color: reportType === type ? "#fff" : "#64748b",
+                      boxShadow: reportType === type ? "0 4px 12px rgba(53, 125, 134, 0.25)" : "none"
                     }}
                     onClick={() => setReportType(type)}
                     disabled={creating}
-                    className="active:scale-95 outline-none hover:border-schistoguard-teal hover:text-schistoguard-teal"
+                    className="active:scale-95 outline-none hover:border-[#357D86] hover:text-[#357D86]"
                   >
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </button>
                 ))}
               </div>
 
-              <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Period</div>
+              <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS, marginTop: 24 }}>Report Period</div>
 
               {reportType === 'weekly' && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
-                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Start Date</label>
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Start Date</label>
                     <input
                       type="date"
                       style={{
-                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                        height: 42, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 14px", fontSize: 13, fontFamily: POPPINS, outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
-                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
+                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                       value={weeklyStartDate}
                       onChange={(e) => setWeeklyStartDate(e.target.value)}
                       max={weeklyEndDate}
                     />
                   </div>
-                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
-                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>End Date</label>
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>End Date</label>
                     <input
                       type="date"
                       style={{
-                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                        height: 42, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 14px", fontSize: 13, fontFamily: POPPINS, outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
-                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
+                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                       value={weeklyEndDate}
                       onChange={(e) => setWeeklyEndDate(e.target.value)}
                       min={weeklyStartDate}
@@ -1058,15 +1061,16 @@ export const ReportsPage: React.FC = () => {
               )}
 
               {reportType === 'monthly' && (
-                <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
-                  <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Month</label>
+                <div className="flex flex-col gap-2">
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Month</label>
                   <input
                     type="month"
                     style={{
-                      height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
-                      padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                      height: 42, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                      padding: "0 14px", fontSize: 13, fontFamily: POPPINS, outline: "none",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                     }}
-                    className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
+                    className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                     value={monthlyPeriod}
                     onChange={(e) => setMonthlyPeriod(e.target.value)}
                   />
@@ -1075,14 +1079,15 @@ export const ReportsPage: React.FC = () => {
 
               {reportType === 'quarterly' && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
-                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Year</label>
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Year</label>
                     <select
                       style={{
-                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                        height: 42, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 14px", fontSize: 13, fontFamily: POPPINS, outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
-                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
+                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                       value={quarterlyYear}
                       onChange={(e) => setQuarterlyYear(e.target.value)}
                     >
@@ -1093,14 +1098,15 @@ export const ReportsPage: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="flex flex-col gap-1.5 focus-within:text-schistoguard-teal">
-                    <label style={{ fontSize: 12, fontWeight: 500, color: "inherit", fontFamily: POPPINS }}>Quarter</label>
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Quarter</label>
                     <select
                       style={{
-                        height: 38, borderRadius: 10, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 12px", fontSize: 13, fontFamily: POPPINS, outline: "none"
+                        height: 42, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: "0 14px", fontSize: 13, fontFamily: POPPINS, outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
-                      className="focus:border-schistoguard-teal focus:ring-1 focus:ring-schistoguard-teal/20 transition-all"
+                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                       value={quarterlyQuarter}
                       onChange={(e) => setQuarterlyQuarter(e.target.value)}
                     >
@@ -1117,29 +1123,17 @@ export const ReportsPage: React.FC = () => {
                 <p style={{ fontSize: 12, color: "#7b8a9a", fontFamily: POPPINS }}>Annual report uses the current calendar year range.</p>
               )}
 
-            <div className="flex justify-end gap-3 pt-4">
-              <DialogClose asChild>
-                <button 
-                  type="button" 
-                  style={{
-                    height: 38, padding: "0 24px", borderRadius: 19,
-                    fontSize: 13, fontWeight: 600, fontFamily: POPPINS,
-                    background: "#f3f4f6", color: "#64748b", border: "none"
-                  }}
-                  className="hover:bg-gray-200 transition-colors active:scale-95"
-                  disabled={creating}
-                >
-                  Cancel
-                </button>
-              </DialogClose>
+            <div style={{ marginTop: 32, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
               <button
                 type="submit"
                 style={{
-                  height: 38, padding: "0 24px", borderRadius: 19,
-                  fontSize: 13, fontWeight: 600, fontFamily: POPPINS,
-                  background: "#357D86", color: "#fff", border: "none"
+                  height: 42, padding: "0 24px", borderRadius: 12,
+                  fontSize: 14, fontWeight: 700, fontFamily: POPPINS,
+                  background: "#357D86", color: "#fff", border: "none",
+                  flex: 1,
+                  boxShadow: "0 4px 12px rgba(53, 125, 134, 0.2)"
                 }}
-                className="hover:opacity-90 transition-opacity active:scale-95 flex items-center gap-2"
+                className="hover:opacity-95 transition-all active:scale-95 flex items-center justify-center gap-2"
                 disabled={creating}
               >
                 {creating ? (
@@ -1148,14 +1142,32 @@ export const ReportsPage: React.FC = () => {
                     Generating...
                   </>
                 ) : (
-                  'Create'
+                  <>
+                    <FileText className="h-4 w-4" />
+                    Create Report
+                  </>
                 )}
               </button>
+              <DialogClose asChild>
+                <button 
+                  type="button" 
+                  style={{
+                    height: 42, padding: "0 24px", borderRadius: 12,
+                    fontSize: 14, fontWeight: 600, fontFamily: POPPINS,
+                    background: "#f3f4f6", color: "#64748b", border: "none",
+                    flex: 1
+                  }}
+                  className="hover:bg-gray-200 transition-colors active:scale-95"
+                  disabled={creating}
+                >
+                  Cancel
+                </button>
+              </DialogClose>
             </div>
           </form>
-          </div>
-        </DialogContent>
-      </Dialog >
+        </div>
+      </DialogContent>
+    </Dialog>
       {/* Mobile/Tablet Report Details Modal */}
       <Dialog open={(isMobile || isTablet) && showViewReport && !!selectedReport} onOpenChange={(open) => { if (!open) { setShowViewReport(false); setSelectedReport(null); } }}>
         <DialogContent 
