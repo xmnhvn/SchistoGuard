@@ -18,15 +18,13 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "./ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+  DialogFooter,
+} from "./ui/dialog";
 import {
   Plus,
   Edit,
@@ -798,210 +796,498 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
       )}
 
       {/* Add Dialog */}
-      <AlertDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add Alert Recipient</AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name-add">Name</Label>
-              <Input
-                id="name-add"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="e.g., Maria Santos"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone-add">Phone Number</Label>
-              <Input
-                id="phone-add"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                placeholder="e.g., +639171234567"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Format: +639XXXXXXXXX / 09XXXXXXXXX
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="role-add">Designation</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent
+          hideCloseButton={true}
+          style={{
+            width: isMobile ? "90vw" : 420,
+            maxWidth: isMobile ? "90vw" : 420,
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            border: "none",
+            fontFamily: POPPINS,
+          }}
+          className="p-0"
+        >
+          {/* Modal Header */}
+          <div style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #eef0f2",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            flexShrink: 0,
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Add Alert Recipient
+            </h2>
+            <DialogClose asChild>
+              <button 
+                onClick={() => setIsAddDialogOpen(false)}
+                style={{ 
+                  width: 32, 
+                  height: 32, 
+                  minWidth: 32,
+                  minHeight: 32,
+                  borderRadius: "50%", 
+                  border: "none", 
+                  background: "#f3f4f6", 
+                  color: "#64748b",      
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  flexShrink: 0,
+                  padding: 0,
+                  aspectRatio: "1/1",
+                  boxSizing: "border-box",
+                  overflow: "hidden"
+                }}
+                className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
-                <SelectTrigger id="role-add">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="resident">Resident</SelectItem>
-                  <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                  <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
-                </SelectContent>
-              </Select>
+                <X size={18} />
+              </button>
+            </DialogClose>
+          </div>
+
+          <div style={{ padding: "20px", overflowY: "auto", maxHeight: "80vh" }}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Name</Label>
+                <Input
+                  id="name-add"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder="e.g., Maria Santos"
+                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Phone Number</Label>
+                <Input
+                  id="phone-add"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                  placeholder="e.g., +639171234567"
+                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                />
+                <p style={{ fontSize: 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
+                  Format: +639XXXXXXXXX / 09XXXXXXXXX
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="role-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Designation</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: any) =>
+                    setFormData((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger id="role-add" style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent style={{ fontFamily: POPPINS }}>
+                    <SelectItem value="resident">Resident</SelectItem>
+                    <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
+                    <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
+              <Button 
+                onClick={handleAddResident} 
+                style={{ 
+                  backgroundColor: "#357D86", 
+                  color: "#fff", 
+                  borderRadius: 12, 
+                  height: 42, 
+                  fontFamily: POPPINS, 
+                  fontWeight: 600,
+                  flex: 1
+                }}
+              >
+                Add Recipient
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAddDialogOpen(false)}
+                style={{ 
+                  borderRadius: 12, 
+                  height: 42, 
+                  fontFamily: POPPINS, 
+                  fontWeight: 600,
+                  flex: 1,
+                  border: "1px solid #e2e5ea",
+                  color: "#64748b"
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAddResident}>
-              Add Recipient
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog >
+        </DialogContent>
+      </Dialog >
 
       {/* Edit Dialog */}
-      < AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Edit Alert Recipient</AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name-edit">Name</Label>
-              <Input
-                id="name-edit"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="e.g., Maria Santos"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone-edit">Phone Number</Label>
-              <Input
-                id="phone-edit"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                placeholder="e.g., +639171234567"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Format: +639XXXXXXXXX
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="role-edit">Designation</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent
+          hideCloseButton={true}
+          style={{
+            width: isMobile ? "90vw" : 420,
+            maxWidth: isMobile ? "90vw" : 420,
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            border: "none",
+            fontFamily: POPPINS,
+          }}
+          className="p-0"
+        >
+          {/* Modal Header */}
+          <div style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #eef0f2",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            flexShrink: 0,
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Edit Alert Recipient
+            </h2>
+            <DialogClose asChild>
+              <button 
+                onClick={() => setIsEditDialogOpen(false)}
+                style={{ 
+                  width: 32, 
+                  height: 32, 
+                  minWidth: 32,
+                  minHeight: 32,
+                  borderRadius: "50%", 
+                  border: "none", 
+                  background: "#f3f4f6", 
+                  color: "#64748b",      
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  flexShrink: 0,
+                  padding: 0,
+                  aspectRatio: "1/1",
+                  boxSizing: "border-box",
+                  overflow: "hidden"
+                }}
+                className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
-                <SelectTrigger id="role-edit">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="resident">Resident</SelectItem>
-                  <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                  <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
-                </SelectContent>
-              </Select>
+                <X size={18} />
+              </button>
+            </DialogClose>
+          </div>
+
+          <div style={{ padding: "20px", overflowY: "auto", maxHeight: "80vh" }}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Name</Label>
+                <Input
+                  id="name-edit"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder="e.g., Maria Santos"
+                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Phone Number</Label>
+                <Input
+                  id="phone-edit"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                  placeholder="e.g., +639171234567"
+                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                />
+                <p style={{ fontSize: 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
+                  Format: +639XXXXXXXXX
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="role-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Designation</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: any) =>
+                    setFormData((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger id="role-edit" style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent style={{ fontFamily: POPPINS }}>
+                    <SelectItem value="resident">Resident</SelectItem>
+                    <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
+                    <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
+              <Button 
+                onClick={handleEditResident} 
+                style={{ 
+                  backgroundColor: "#357D86", 
+                  color: "#fff", 
+                  borderRadius: 12, 
+                  height: 42, 
+                  fontFamily: POPPINS, 
+                  fontWeight: 600,
+                  flex: 1
+                }}
+              >
+                Save Changes
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditDialogOpen(false)}
+                style={{ 
+                  borderRadius: 12, 
+                  height: 42, 
+                  fontFamily: POPPINS, 
+                  fontWeight: 600,
+                  flex: 1,
+                  border: "1px solid #e2e5ea",
+                  color: "#64748b"
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleEditResident}>
-              Save Changes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog >
+        </DialogContent>
+      </Dialog >
 
       {/* Delete Dialog */}
-      < AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Alert Recipient?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove {selectedResident?.name} from the alert list. This
-              action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-row justify-end gap-2 !flex-row !flex-nowrap">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteResident}
-              className={buttonVariants({ variant: "destructive" })}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog >
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent
+          hideCloseButton={true}
+          style={{
+            width: isMobile ? "90vw" : 420,
+            maxWidth: isMobile ? "90vw" : 420,
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            border: "none",
+            fontFamily: POPPINS,
+          }}
+          className="p-0"
+        >
+          {/* Modal Header */}
+          <div style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #eef0f2",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            flexShrink: 0,
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Delete Alert Recipient?
+            </h2>
+            <DialogClose asChild>
+              <button 
+                onClick={() => setIsDeleteDialogOpen(false)}
+                style={{ 
+                  width: 32, 
+                  height: 32, 
+                  minWidth: 32,
+                  minHeight: 32,
+                  borderRadius: "50%", 
+                  border: "none", 
+                  background: "#f3f4f6", 
+                  color: "#64748b",      
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  flexShrink: 0,
+                  padding: 0,
+                  aspectRatio: "1/1",
+                  boxSizing: "border-box",
+                  overflow: "hidden"
+                }}
+                className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+              >
+                <X size={18} />
+              </button>
+            </DialogClose>
+          </div>
+
+          <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <p style={{ fontSize: 14, color: "#64748b", lineHeight: "1.5", fontFamily: POPPINS }}>
+              This will remove <span style={{ fontWeight: 700, color: "#1a2a3a" }}>{selectedResident?.name}</span> from the alert list. This action cannot be undone.
+            </p>
+
+            <div style={{ marginTop: 8, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
+              <Button 
+                onClick={handleDeleteResident} 
+                style={{ 
+                  backgroundColor: "#eb5757", 
+                  color: "#fff", 
+                  borderRadius: 12, 
+                  height: 42, 
+                  fontFamily: POPPINS, 
+                  fontWeight: 600,
+                  flex: 1
+                }}
+              >
+                Delete Recipient
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDeleteDialogOpen(false)}
+                style={{ 
+                  borderRadius: 12, 
+                  height: 42, 
+                  fontFamily: POPPINS, 
+                  fontWeight: 600,
+                  flex: 1,
+                  border: "1px solid #e2e5ea",
+                  color: "#64748b"
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog >
 
       {/* Upload Result Modal */}
       {
         uploadResultOpen && uploadResult && (
-          <AlertDialog open={uploadResultOpen} onOpenChange={setUploadResultOpen}>
-            <AlertDialogContent className="max-w-md">
-              <AlertDialogHeader>
-                <div className="flex items-center gap-3 w-full">
+          <Dialog open={uploadResultOpen} onOpenChange={setUploadResultOpen}>
+            <DialogContent
+              hideCloseButton={true}
+              style={{
+                width: isMobile ? "90vw" : 420,
+                maxWidth: isMobile ? "90vw" : 420,
+                borderRadius: 24,
+                padding: 0,
+                overflow: "hidden",
+                border: "none",
+                fontFamily: POPPINS,
+              }}
+              className="p-0"
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #eef0f2",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                flexShrink: 0,
+              }}>
+                <div className="flex items-center gap-2">
                   {uploadResult.success ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
                   ) : (
-                    <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                    <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
                   )}
-                  <AlertDialogTitle>
+                  <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
                     {uploadResult.success ? "Upload Successful" : "Upload Failed"}
-                  </AlertDialogTitle>
+                  </h2>
                 </div>
-              </AlertDialogHeader>
+                <DialogClose asChild>
+                  <button 
+                    onClick={() => setUploadResultOpen(false)}
+                    style={{ 
+                      width: 32, 
+                      height: 32, 
+                      minWidth: 32,
+                      minHeight: 32,
+                      borderRadius: "50%", 
+                      border: "none", 
+                      background: "#f3f4f6", 
+                      color: "#64748b",      
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      flexShrink: 0,
+                      padding: 0,
+                      aspectRatio: "1/1",
+                      boxSizing: "border-box",
+                      overflow: "hidden"
+                    }}
+                    className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+                  >
+                    <X size={18} />
+                  </button>
+                </DialogClose>
+              </div>
 
-              {uploadResult.success ? (
-                <div className="space-y-3">
-                  {uploadResult.inserted > 0 && (
-                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <p className="text-sm text-green-800">
-                        <span className="font-bold">{uploadResult.inserted}</span> new recipients added
-                      </p>
-                    </div>
-                  )}
-                  {uploadResult.updated > 0 && (
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
-                      <p className="text-sm text-blue-800">
-                        <span className="font-bold">{uploadResult.updated}</span> recipients updated
-                      </p>
-                    </div>
-                  )}
-                  {uploadResult.failed > 0 && (
-                    <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
-                      <AlertCircle className="w-5 h-5 text-yellow-600" />
-                      <p className="text-sm text-yellow-800">
-                        <span className="font-bold">{uploadResult.failed}</span> recipients failed
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
-                    <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <AlertDialogDescription className="text-red-800 text-sm">
-                      {uploadResult.error || "An error occurred during upload"}
-                    </AlertDialogDescription>
+              <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
+                {uploadResult.success ? (
+                  <div className="space-y-3">
+                    {uploadResult.inserted > 0 && (
+                      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-100">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <p className="text-sm text-green-800 font-medium">
+                          <span className="font-bold text-lg leading-none">{uploadResult.inserted}</span> new recipients added
+                        </p>
+                      </div>
+                    )}
+                    {uploadResult.updated > 0 && (
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                        <CheckCircle className="w-5 h-5 text-blue-600" />
+                        <p className="text-sm text-blue-800 font-medium">
+                          <span className="font-bold text-lg leading-none">{uploadResult.updated}</span> recipients updated
+                        </p>
+                      </div>
+                    )}
+                    {uploadResult.failed > 0 && (
+                      <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-xl border border-yellow-100">
+                        <AlertCircle className="w-5 h-5 text-yellow-600" />
+                        <p className="text-sm text-yellow-800 font-medium">
+                          <span className="font-bold text-lg leading-none">{uploadResult.failed}</span> recipients failed
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+                    <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <p style={{ fontSize: 13, color: "#991b1b", lineHeight: "1.5", fontFamily: POPPINS }}>
+                      {uploadResult.error || "An error occurred during upload"}
+                    </p>
+                  </div>
+                )}
 
-              <AlertDialogFooter>
-                <AlertDialogAction className="bg-schistoguard-teal hover:bg-schistoguard-teal/90">
-                  Close
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                <div style={{ marginTop: 8 }}>
+                  <Button 
+                    onClick={() => setUploadResultOpen(false)}
+                    style={{ 
+                      backgroundColor: "#357D86", 
+                      color: "#fff", 
+                      borderRadius: 12, 
+                      height: 42, 
+                      fontFamily: POPPINS, 
+                      fontWeight: 600,
+                      width: "100%"
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         )
       }
 
