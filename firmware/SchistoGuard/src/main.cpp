@@ -10,25 +10,24 @@
 #include <ESPmDNS.h>
 #include <math.h>
 #include "gps_module.h"
+#include "config.h"
 #define CLOUD_BACKEND_URL "https://schistoguard-production.up.railway.app/api/sensors"
 
-// Pins (ESP32 GPIO numbers)
 const int LCD_SDA = 33; // D33
 const int LCD_SCL = 26; // D26
 const int ONE_WIRE_BUS = 4; // D4 (temperature)
 const int TURBIDITY_PIN = 35; // D35 (ADC)
 const int PH_PIN = 34; // D34 (ADC)
-const int GSM_TX = 23; // D23 (to SIM800L RX) - SWAPPED
-const int GSM_RX = 22; // D22 (from SIM800L TX) - SWAPPED
+const int GSM_TX = 23; // D23 (to SIM800L RX)
+const int GSM_RX = 22; // D22 (from SIM800L TX)
 
-// I2C LCD at 0x27
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
-// ADC reference for ESP32 (approx)
+// ADC reference for ESP32
 const float ADC_MAX = 4095.0; // 12-bit ADC default
-const float VREF = 3.3; // ESP32 Vcc
+const float VREF = 3.3;
 
 // WHO/DOH Schistosomiasis Risk Thresholds
 // Temperature: Optimal range for schistosome-transmitting snail activity and cercariae survival
@@ -58,30 +57,13 @@ const float TURB_FLOAT_STDDEV = 300.0; // ADC counts
 const int PH_SAMPLES = 12;
 const float PH_FLOAT_STDDEV = 300.0; // ADC counts
 
-// Wi-Fi settings for OTA - Multiple networks with fallback
-struct WiFiCredentials {
-  const char* ssid;
-  const char* password;
-};
-
-const WiFiCredentials WIFI_NETWORKS[] = {
-  {"M I K A T A 6 9", "xFbwzT65"},
-  {"Wifi", "xneamnhvn"},
-  {"beachamel", "samepassword"}
-};
-const int NUM_WIFI_NETWORKS = sizeof(WIFI_NETWORKS) / sizeof(WIFI_NETWORKS[0]);
-const int PREFERRED_WIFI_INDEX = 0; // force secondary Wi-Fi first for testing
 int currentWiFiIndex = -1;
-
-const char* OTA_HOSTNAME = "schistoguard-esp32";
-const char* OTA_PASSWORD = "";
 
 bool otaReady = false;
 bool otaInProgress = false;
 unsigned long lastWifiRetryMs = 0;
 const unsigned long WIFI_RETRY_INTERVAL_MS = 10000;
 
-// Web server on port 80
 WebServer server(80);
 
 HardwareSerial gsmSerial(2);
@@ -126,22 +108,18 @@ void initGSM() {
   while (gsmSerial.available()) gsmSerial.read();
   delay(500);
   
-  // Test AT command - try multiple times
   for (int attempt = 1; attempt <= 5; attempt++) {
     Serial.print("Attempt ");
     Serial.print(attempt);
     Serial.println(": Sending AT");
     
-    // Clear send buffer
     gsmSerial.flush();
     delay(200);
     
-    // Send AT command
     gsmSerial.write("AT\r\n", 4);
     delay(100);
     gsmSerial.flush();
     
-    // Wait for response
     delay(1000);
     
     char response[128] = {0};
@@ -152,10 +130,10 @@ void initGSM() {
         char c = gsmSerial.read();
         response[bytesRead++] = c;
         Serial.write(c);
-        timeout = millis() + 100; // Reset timeout if data received
+        timeout = millis() + 100;
       }
     }
-    response[bytesRead] = '\0'; // Null terminate
+    response[bytesRead] = '\0';
     
     Serial.print("\nResponse length: ");
     Serial.print(bytesRead);
@@ -170,7 +148,6 @@ void initGSM() {
       gsmSerial.flush();
       delay(200);
       
-      // Set SMS text mode
       Serial.println("Setting SMS text mode (AT+CMGF=1)...");
       gsmSerial.write("AT+CMGF=1\r\n", 11);
       delay(100);
@@ -193,7 +170,6 @@ void initGSM() {
   gsmReady = false;
 }
 
-// Decode JSON escape sequences in-place (using char buffer, no String objects)
 void decodeJSONString(char* buffer, size_t maxLen) {
   char decoded[512] = {0};
   size_t srcIdx = 0;
@@ -226,7 +202,6 @@ void decodeJSONString(char* buffer, size_t maxLen) {
   }
   decoded[dstIdx] = '\0';
   
-  // Copy back to original buffer
   strncpy(buffer, decoded, maxLen - 1);
   buffer[maxLen - 1] = '\0';
 }
@@ -242,7 +217,6 @@ void sendSMS(String message, const char* phoneNumber) {
     return;
   }
   
-  // Decode JSON escape sequences in-place using char buffer
   char msgBuffer[512] = {0};
   message.toCharArray(msgBuffer, sizeof(msgBuffer));
   decodeJSONString(msgBuffer, sizeof(msgBuffer));
@@ -252,32 +226,28 @@ void sendSMS(String message, const char* phoneNumber) {
   Serial.print(": ");
   Serial.println(msgBuffer);
   
-  // Clear serial buffer
   while (gsmSerial.available()) {
     gsmSerial.read();
   }
   
-  // Set phone number
   gsmSerial.print("AT+CMGS=\"");
   gsmSerial.print(phoneNumber);
   gsmSerial.println("\"");
   delay(1500);
   
-  // Send message (use decoded buffer)
   gsmSerial.print(msgBuffer);
   delay(200);
-  gsmSerial.write(26); // Ctrl+Z to send
+  gsmSerial.write(26);
   delay(5000);
   
-  // Read response - use char buffer instead of String to avoid stack overflow
   char response[256] = {0};
-  unsigned long timeout = millis() + 10000; // 10 second timeout
+  unsigned long timeout = millis() + 10000;
   int bytesRead = 0;
   while (gsmSerial.available() && millis() < timeout && bytesRead < 250) {
     response[bytesRead++] = (char)gsmSerial.read();
     delay(10);
   }
-  response[bytesRead] = '\0'; // Null terminate
+  response[bytesRead] = '\0';
   
   Serial.print("   Response: ");
   Serial.println(response);
@@ -297,7 +267,6 @@ void connectWiFiAndSetupOTA() {
   WiFi.setSleep(false);
   WiFi.setHostname(OTA_HOSTNAME);
   
-  // Try preferred WiFi first, then fallback across all configured networks
   bool connected = false;
   for (int attempt = 0; attempt < NUM_WIFI_NETWORKS && !connected; attempt++) {
     int i = (PREFERRED_WIFI_INDEX + attempt) % NUM_WIFI_NETWORKS;
@@ -325,8 +294,12 @@ void connectWiFiAndSetupOTA() {
 
   if (connected) {
     ArduinoOTA.setHostname(OTA_HOSTNAME);
+
     if (strlen(OTA_PASSWORD) > 0) {
       ArduinoOTA.setPassword(OTA_PASSWORD);
+      Serial.println("✓ OTA authentication enabled");
+    } else {
+      Serial.println("⚠️  WARNING: OTA updates without password protection!");
     }
 
     ArduinoOTA.onStart([]() {
@@ -344,17 +317,15 @@ void connectWiFiAndSetupOTA() {
 
     ArduinoOTA.begin();
     
-    // Setup mDNS responder for hostname-based access
     if (MDNS.begin(OTA_HOSTNAME)) {
       Serial.print("mDNS responder started: ");
       Serial.print(OTA_HOSTNAME);
       Serial.println(".local");
-      MDNS.addService("http", "tcp", 80);  // Advertise HTTP service
+      MDNS.addService("http", "tcp", 80);
     } else {
       Serial.println("Error setting up mDNS responder");
     }
     
-    // Setup HTTP server endpoints
     server.on("/api/sensors", HTTP_GET, []() {
       String json = "{";
       json += "\"temperature\":" + String(latestTempValid ? latestTempC : -999, 2) + ",";
@@ -367,12 +338,9 @@ void connectWiFiAndSetupOTA() {
       server.send(200, "application/json", json);
     });
     
-    // SMS sending endpoint (called by backend with JSON body)
-    // Expected JSON: {"message":"...", "phone":"+639053167929"}
     server.on("/api/sms", HTTP_POST, []() {
       Serial.println("🔔 /api/sms endpoint called");
       
-      // Get raw request body
       String body = "";
       if (server.hasArg("plain")) {
         body = server.arg("plain");
@@ -387,7 +355,6 @@ void connectWiFiAndSetupOTA() {
         return;
       }
       
-      // Parse message
       String message = "";
       int msgStart = body.indexOf("\"message\":\"") + 11;
       int msgEnd = body.indexOf("\"", msgStart);
@@ -398,7 +365,6 @@ void connectWiFiAndSetupOTA() {
       Serial.print("   Message: ");
       Serial.println(message);
       
-      // Try to parse single phone number first (format: "phone":"...")
       String phoneStr = "";
       int phoneStart = body.indexOf("\"phone\":\"") + 9;
       int phoneEnd = body.indexOf("\"", phoneStart);
@@ -408,8 +374,7 @@ void connectWiFiAndSetupOTA() {
       
       Serial.print("   Phone: ");
       Serial.println(phoneStr);
-      
-      // If single phone number found, send to it
+
       if (phoneStr.length() > 0 && message.length() > 0) {
         Serial.println("   Sending SMS...");
         char phoneBuffer[20];
@@ -438,26 +403,23 @@ void connectWiFiAndSetupOTA() {
 
 void setup() {
   Serial.begin(115200);
-  // Initialize I2C on specified pins for ESP32
   Wire.begin(LCD_SDA, LCD_SCL);
 
   lcd.init();
   lcd.backlight();
 
-  // Display startup screen
   lcd.setCursor(0, 0);
   lcd.print("- SchistoGuard -");
   lcd.setCursor(0, 1);
   lcd.print("   Starting...");
-  delay(3000); // Show startup message for 3 seconds
+  delay(3000);
 
   sensors.begin();
   connectWiFiAndSetupOTA();
-  initGSM(); // Initialize SIM800L GSM module
+  initGSM();
 
-  setupGPS(); // Initialize Neo-6M GPS
+  setupGPS();
 
-  // Display WiFi status on LCD
   lcd.clear();
   lcd.setCursor(0, 0);
   if (otaReady) {
@@ -469,19 +431,16 @@ void setup() {
     lcd.setCursor(0, 1);
     lcd.print("Check Config");
   }
-  delay(3000); // Show WiFi status for 3 seconds
+  delay(5000);
 
-  // ADC pins are input-only by default on ESP32, pinMode not required for analog read
   delay(100);
 
   Serial.println("ESP32 sensor firmware started");
   
-  // Clear LCD and prepare for sensor display
   lcd.clear();
 }
 
 void loop() {
-  // Read GPS data from Neo-6M
   readGPS();
 
   if (!otaReady && (millis() - lastWifiRetryMs >= WIFI_RETRY_INTERVAL_MS)) {
@@ -531,7 +490,6 @@ void loop() {
   latestTurbidity = turbidityNTU;
   latestTurbConnected = turbSensorConnected;
 
-  // --- Real-time POST to cloud backend every second ---
   if (otaReady && WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     http.begin(CLOUD_BACKEND_URL);
@@ -554,7 +512,6 @@ void loop() {
     http.end();
   }
   
-  // Debug: print pH stddev
   Serial.print("DEBUG pH_StdDev=");
   Serial.print(phStdDev, 1);
   Serial.print(" Turb_StdDev=");
@@ -589,7 +546,6 @@ void loop() {
     lcd.print("N/A");
   }
 
-  // Print to Serial with details and tags
   Serial.print("TEMP,");
   if (tempValid) Serial.print(tempC, 2); else Serial.print("NaN");
   Serial.print(",PH,");
@@ -599,14 +555,12 @@ void loop() {
   if (!phSensorConnected) Serial.print(",PH_SENSOR_DISCONNECTED");
   if (!turbSensorConnected) Serial.print(",TURB_SENSOR_DISCONNECTED");
 
-  // Print human-readable schistosomiasis risk alerts
   if (alertTemp) Serial.print(",ALERT_TEMP_HIGH_RISK");
   if (alertPH) Serial.print(",ALERT_PH_HIGH_RISK");
   if (alertTurbidity) Serial.print(",ALERT_CLEAR_WATER");
 
   Serial.println();
 
-  // Delay between readings (1 second total)
   for (int i = 0; i < 10; i++) {
     if (otaReady && WiFi.status() == WL_CONNECTED) {
       ArduinoOTA.handle();
