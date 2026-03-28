@@ -8,6 +8,8 @@ const isProduction = NODE_ENV === "production";
 const PROTECTED_ACCOUNT_EMAIL = (process.env.PROTECTED_ACCOUNT_EMAIL || "").trim().toLowerCase();
 const ENABLE_SELF_SIGNUP = String(process.env.ENABLE_SELF_SIGNUP || "false").toLowerCase() === "true";
 const ADMIN_UNLOCK_MINUTES = parseInt(process.env.ADMIN_UNLOCK_MINUTES || "10", 10);
+const LOGIN_MAX_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS || "5", 10);
+const LOGIN_LOCK_MINUTES = parseInt(process.env.LOGIN_LOCK_MINUTES || "15", 10);
 
 function debugLog(...args) {
   if (!isProduction) {
@@ -41,6 +43,20 @@ function ensureCsrfToken(req) {
     req.session.csrfToken = crypto.randomBytes(32).toString("hex");
   }
   return req.session.csrfToken;
+}
+
+function writeAuditLog(req, action, targetUserId = null, metadata = null) {
+  const actorUserId = req.session?.userId || null;
+  const ipAddress = req.ip || req.headers["x-forwarded-for"] || null;
+  const userAgent = req.headers["user-agent"] || null;
+  const metadataText = metadata ? JSON.stringify(metadata) : null;
+
+  db.run(
+    `INSERT INTO audit_logs (actorUserId, action, targetUserId, ipAddress, userAgent, metadata)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [actorUserId, action, targetUserId, ipAddress, userAgent, metadataText],
+    () => {}
+  );
 }
 
 router.get("/csrf-token", (req, res) => {
@@ -145,6 +161,11 @@ const handleAdminUnlock = (req, res) => {
             return res.status(500).json({ success: false, message: "Failed to save admin unlock session" });
           }
 
+          writeAuditLog(req, "admin_unlock", adminUser.id, {
+            unlockedUntil: unlockUntil,
+            unlockMinutes: Math.max(1, ADMIN_UNLOCK_MINUTES)
+          });
+
           return res.json({
             success: true,
             message: `Admin access unlocked for ${Math.max(1, ADMIN_UNLOCK_MINUTES)} minutes`,
@@ -174,10 +195,10 @@ router.post("/login", (req, res) => {
     });
   }
 
-  // Find user by email and role
+  // Find user by email for per-account lockout checks.
   db.get(
-    "SELECT * FROM users WHERE email = ? AND role = ?",
-    [email, role],
+    "SELECT * FROM users WHERE email = ?",
+    [email],
     async (err, user) => {
       if (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -190,15 +211,48 @@ router.post("/login", (req, res) => {
         });
       }
 
+      const lockUntil = Number(user.lockUntil || 0);
+      if (lockUntil > Date.now()) {
+        const remainingMinutes = Math.max(1, Math.ceil((lockUntil - Date.now()) / 60000));
+        return res.status(423).json({
+          success: false,
+          message: `Account temporarily locked. Try again in ${remainingMinutes} minute(s).`
+        });
+      }
+
       // Compare password
       try {
+        const roleMatch = user.role === role;
         const passwordMatch = await bcrypt.compare(password, user.password);
-        if (!passwordMatch) {
+        if (!roleMatch || !passwordMatch) {
+          const nextAttempts = Number(user.failedLoginAttempts || 0) + 1;
+          if (nextAttempts >= Math.max(1, LOGIN_MAX_ATTEMPTS)) {
+            const nextLockUntil = Date.now() + Math.max(1, LOGIN_LOCK_MINUTES) * 60 * 1000;
+            db.run(
+              "UPDATE users SET failedLoginAttempts = ?, lockUntil = ? WHERE id = ?",
+              [0, nextLockUntil, user.id],
+              () => {}
+            );
+          } else {
+            db.run(
+              "UPDATE users SET failedLoginAttempts = ?, lockUntil = ? WHERE id = ?",
+              [nextAttempts, 0, user.id],
+              () => {}
+            );
+          }
+
           return res.status(401).json({ 
             success: false, 
             message: "Invalid email or password" 
           });
         }
+
+        // Reset failed attempts on successful login.
+        db.run(
+          "UPDATE users SET failedLoginAttempts = ?, lockUntil = ? WHERE id = ?",
+          [0, 0, user.id],
+          () => {}
+        );
 
         // Set session
         req.session.userId = user.id;
@@ -413,6 +467,11 @@ router.post("/admin/create-user", isAdmin, (req, res) => {
           }
 
           const createdUserId = result?.lastID ?? this?.lastID;
+          writeAuditLog(req, "admin_create_user", createdUserId, {
+            email,
+            role,
+            organization
+          });
           return res.json({
             success: true,
             message: "User account created successfully",
@@ -474,6 +533,10 @@ router.post("/admin/users/:id/password", isAdmin, (req, res) => {
         if (updateErr) {
           return res.status(500).json({ success: false, message: updateErr.message });
         }
+
+        writeAuditLog(req, "admin_update_password", Number(userId), {
+          targetUserId: Number(userId)
+        });
 
         return res.json({
           success: true,
@@ -683,6 +746,10 @@ router.delete("/users/:id", isAdmin, (req, res) => {
           message: "User not found"
         });
       }
+
+      writeAuditLog(req, "admin_delete_user", Number(userId), {
+        deletedEmail: targetUser.email
+      });
 
       res.json({
         success: true,

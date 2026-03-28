@@ -47,6 +47,8 @@ const initPostgresTables = async () => {
         role TEXT NOT NULL CHECK(role IN ('admin', 'bhw', 'lgu')),
         organization TEXT NOT NULL,
         "isProtected" BOOLEAN DEFAULT FALSE,
+        "failedLoginAttempts" INTEGER DEFAULT 0,
+        "lockUntil" BIGINT DEFAULT 0,
         "lastView" TEXT DEFAULT 'dashboard',
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -54,8 +56,23 @@ const initPostgresTables = async () => {
     `);
 
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "isProtected" BOOLEAN DEFAULT FALSE');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "failedLoginAttempts" INTEGER DEFAULT 0');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "lockUntil" BIGINT DEFAULT 0');
     await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
     await db.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'bhw', 'lgu'))");
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id SERIAL PRIMARY KEY,
+        "actorUserId" INTEGER,
+        action TEXT NOT NULL,
+        "targetUserId" INTEGER,
+        "ipAddress" TEXT,
+        "userAgent" TEXT,
+        metadata TEXT,
+        "timestamp" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     await db.query(`
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
