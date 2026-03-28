@@ -1,8 +1,14 @@
 
 require('dotenv').config();
+const bcrypt = require('bcryptjs');
 
 const { Client } = require('pg');
 const connectionString = process.env.DATABASE_URL;
+const PROTECTED_ACCOUNT_EMAIL = (process.env.PROTECTED_ACCOUNT_EMAIL || '').trim().toLowerCase();
+const PROTECTED_ACCOUNT_PASSWORD = process.env.PROTECTED_ACCOUNT_PASSWORD || '';
+const PROTECTED_ACCOUNT_FIRST_NAME = process.env.PROTECTED_ACCOUNT_FIRST_NAME || 'Default';
+const PROTECTED_ACCOUNT_LAST_NAME = process.env.PROTECTED_ACCOUNT_LAST_NAME || 'Admin';
+const PROTECTED_ACCOUNT_ORGANIZATION = process.env.PROTECTED_ACCOUNT_ORGANIZATION || 'SchistoGuard';
 
 if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is required for Postgres mode');
@@ -38,13 +44,18 @@ const initPostgresTables = async () => {
         password TEXT NOT NULL,
         "firstName" TEXT NOT NULL,
         "lastName" TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('bhw', 'lgu')),
+        role TEXT NOT NULL CHECK(role IN ('admin', 'bhw', 'lgu')),
         organization TEXT NOT NULL,
+        "isProtected" BOOLEAN DEFAULT FALSE,
         "lastView" TEXT DEFAULT 'dashboard',
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "isProtected" BOOLEAN DEFAULT FALSE');
+    await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
+    await db.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'bhw', 'lgu'))");
     await db.query(`
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
@@ -123,11 +134,51 @@ const initPostgresTables = async () => {
         "downloadUrl" TEXT
       )
     `);
+
+    await ensureProtectedDefaultAccount();
     console.log('✓ PostgreSQL tables initialized');
   } catch (err) {
     console.error('Error initializing tables:', err);
   }
 };
+
+const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+async function ensureProtectedDefaultAccount() {
+  if (!PROTECTED_ACCOUNT_EMAIL || !PROTECTED_ACCOUNT_PASSWORD) {
+    console.warn('⚠ Protected default account is not configured. Set PROTECTED_ACCOUNT_EMAIL and PROTECTED_ACCOUNT_PASSWORD to enable it.');
+    return;
+  }
+
+  if (!strongPasswordRegex.test(PROTECTED_ACCOUNT_PASSWORD)) {
+    console.warn('⚠ PROTECTED_ACCOUNT_PASSWORD does not meet strong password policy. Skipping protected account auto-create.');
+    return;
+  }
+
+  const existing = await db.query('SELECT id FROM users WHERE email = $1', [PROTECTED_ACCOUNT_EMAIL]);
+  if (existing.rows.length > 0) {
+    await db.query('UPDATE users SET "isProtected" = TRUE, role = $2 WHERE email = $1', [PROTECTED_ACCOUNT_EMAIL, 'admin']);
+    console.log('✓ Protected default account already exists');
+    return;
+  }
+
+  const hashedPassword = await bcrypt.hash(PROTECTED_ACCOUNT_PASSWORD, 10);
+  await db.query(
+    `INSERT INTO users (email, password, "firstName", "lastName", role, organization, "isProtected")
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      PROTECTED_ACCOUNT_EMAIL,
+      hashedPassword,
+      PROTECTED_ACCOUNT_FIRST_NAME,
+      PROTECTED_ACCOUNT_LAST_NAME,
+      'admin',
+      PROTECTED_ACCOUNT_ORGANIZATION,
+      true
+    ]
+  );
+
+  console.log('✓ Protected default account created');
+}
 
 initPostgresTables();
 

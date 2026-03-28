@@ -50,6 +50,8 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
 
     const roleDisplay = user?.role === "bhw"
         ? "Barangay Health Worker"
+        : user?.role === "admin"
+            ? "System Admin"
         : user?.role === "lgu"
             ? "Local Government Unit Personnel"
             : user?.role?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "User";

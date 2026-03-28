@@ -1,15 +1,62 @@
 const router = require("express").Router();
 const db = require("../db");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
+
+const NODE_ENV = process.env.NODE_ENV || "development";
+const isProduction = NODE_ENV === "production";
+const PROTECTED_ACCOUNT_EMAIL = (process.env.PROTECTED_ACCOUNT_EMAIL || "").trim().toLowerCase();
+const ENABLE_SELF_SIGNUP = String(process.env.ENABLE_SELF_SIGNUP || "false").toLowerCase() === "true";
+
+function debugLog(...args) {
+  if (!isProduction) {
+    console.log(...args);
+  }
+}
+
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(String(email || "").toLowerCase());
+}
+
+function isStrongPassword(password) {
+  // Minimum 8 chars, at least 1 lowercase, 1 uppercase, 1 number, 1 special char.
+  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+  return strongPasswordRegex.test(password || "");
+}
+
+function isProtectedAccountEmail(email) {
+  if (!PROTECTED_ACCOUNT_EMAIL) return false;
+  return String(email || "").trim().toLowerCase() === PROTECTED_ACCOUNT_EMAIL;
+}
+
+function isProtectedUser(user) {
+  return !!(user && (user.isProtected === true || user.isProtected === 1 || isProtectedAccountEmail(user.email)));
+}
+
+function ensureCsrfToken(req) {
+  if (!req.session) return null;
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = crypto.randomBytes(32).toString("hex");
+  }
+  return req.session.csrfToken;
+}
+
+router.get("/csrf-token", (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ success: false, message: "Not authenticated" });
+  }
+
+  const csrfToken = ensureCsrfToken(req);
+  return res.json({ success: true, csrfToken });
+});
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
   const sessionValid = req.session && req.session.userId;
-  console.log("🔐 Auth Check:", {
+  debugLog("🔐 Auth Check:", {
     hasSession: !!req.session,
-    sessionID: req.sessionID,
-    userId: req.session?.userId,
-    email: req.session?.email,
+    userId: !!req.session?.userId,
     isValid: sessionValid,
     timestamp: new Date().toISOString()
   });
@@ -28,25 +75,23 @@ const isAuthenticated = (req, res, next) => {
 const isAdmin = (req, res, next) => {
   const hasSession = !!req.session;
   const hasUserId = req.session?.userId;
-  const isAuthorized = hasSession && hasUserId;
+  const isAuthorized = hasSession && hasUserId && req.session?.role === "admin";
   
-  console.log("👤 Admin Check:", {
-    sessionID: req.sessionID,
+  debugLog("👤 Admin Check:", {
     hasSession,
-    userId: hasUserId ? `user#${hasUserId}` : null,
-    role: req.session?.role,
+    userId: !!hasUserId,
+    hasRole: !!req.session?.role,
     isAuthorized,
-    cookieHeader: req.headers.cookie ? '√ present' : '✗ missing',
     timestamp: new Date().toISOString()
   });
   
   if (isAuthorized) {
     next();
   } else {
-    const reason = !hasSession ? 'no session' : !hasUserId ? 'no userId' : 'unknown';
+    const reason = !hasSession ? 'no session' : !hasUserId ? 'no userId' : req.session?.role !== 'admin' ? 'not admin role' : 'unknown';
     res.status(403).json({ 
       success: false, 
-      message: `Access required. Please log in with your account. (${reason})`
+      message: `Admin access required. (${reason})`
     });
   }
 };
@@ -55,11 +100,11 @@ const isAdmin = (req, res, next) => {
 router.post("/login", (req, res) => {
   const { email, password, role } = req.body;
 
-  // Validate role - only BHW and LGU allowed
-  if (!["bhw", "lgu"].includes(role)) {
+  // Validate role for login
+  if (!["admin", "bhw", "lgu"].includes(role)) {
     return res.status(403).json({ 
       success: false, 
-      message: "Only Barangay Health Workers and LGU Officers can login" 
+      message: "Invalid role. Allowed roles: admin, bhw, lgu" 
     });
   }
 
@@ -95,14 +140,9 @@ router.post("/login", (req, res) => {
         req.session.role = user.role;
         req.session.firstName = user.firstName;
         req.session.lastName = user.lastName;
+        ensureCsrfToken(req);
 
-        console.log("✅ Session created:", {
-          sessionID: req.sessionID,
-          userId: req.session.userId,
-          email: req.session.email,
-          role: req.session.role,
-          timestamp: new Date().toISOString()
-        });
+        debugLog("✅ Session created for authenticated user");
 
         // Save session before sending response
         req.session.save((saveErr) => {
@@ -133,6 +173,13 @@ router.post("/login", (req, res) => {
 
 // Signup endpoint
 router.post("/signup", (req, res) => {
+  if (!ENABLE_SELF_SIGNUP) {
+    return res.status(403).json({
+      success: false,
+      message: "Self-signup is disabled. Please contact an administrator to create your account."
+    });
+  }
+
   const { email, password, confirmPassword, role, firstName, lastName, organization } = req.body;
 
   // Validate role - only BHW and LGU allowed
@@ -151,6 +198,13 @@ router.post("/signup", (req, res) => {
     });
   }
 
+  if (!isValidEmail(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide a valid email address"
+    });
+  }
+
   if (password !== confirmPassword) {
     return res.status(400).json({ 
       success: false, 
@@ -158,10 +212,10 @@ router.post("/signup", (req, res) => {
     });
   }
 
-  if (password.length < 6) {
+  if (!isStrongPassword(password)) {
     return res.status(400).json({ 
       success: false, 
-      message: "Password must be at least 6 characters" 
+      message: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
     });
   }
 
@@ -200,6 +254,7 @@ router.post("/signup", (req, res) => {
           req.session.role = role;
           req.session.firstName = firstName;
           req.session.lastName = lastName;
+          ensureCsrfToken(req);
 
           // Save session before sending response
           req.session.save((saveErr) => {
@@ -246,6 +301,13 @@ router.post("/admin/create-user", isAdmin, (req, res) => {
     });
   }
 
+  if (!isValidEmail(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide a valid email address"
+    });
+  }
+
   if (password !== confirmPassword) {
     return res.status(400).json({
       success: false,
@@ -253,10 +315,10 @@ router.post("/admin/create-user", isAdmin, (req, res) => {
     });
   }
 
-  if (password.length < 6) {
+  if (!isStrongPassword(password)) {
     return res.status(400).json({
       success: false,
-      message: "Password must be at least 6 characters"
+      message: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
     });
   }
 
@@ -305,14 +367,65 @@ router.post("/admin/create-user", isAdmin, (req, res) => {
   });
 });
 
+// Admin update any user's password (including protected account)
+router.post("/admin/users/:id/password", isAdmin, (req, res) => {
+  const userId = req.params.id;
+  const { newPassword, confirmNewPassword } = req.body;
+
+  if (!newPassword || !confirmNewPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "New password and confirmation are required"
+    });
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "Passwords do not match"
+    });
+  }
+
+  if (!isStrongPassword(newPassword)) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+    });
+  }
+
+  db.get("SELECT id FROM users WHERE id = ?", [userId], async (findErr, user) => {
+    if (findErr) {
+      return res.status(500).json({ success: false, message: findErr.message });
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    try {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      db.run("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId], (updateErr) => {
+        if (updateErr) {
+          return res.status(500).json({ success: false, message: updateErr.message });
+        }
+
+        return res.json({
+          success: true,
+          message: "User password updated successfully"
+        });
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  });
+});
+
 // Session check endpoint
 // Session check endpoint
 router.get("/session", (req, res) => {
-  console.log("🔍 Session Check:", {
-    sessionID: req.sessionID,
+  debugLog("🔍 Session Check:", {
     hasSession: !!req.session,
-    userId: req.session?.userId,
-    cookieHeader: req.headers.cookie ? '√ present' : '✗ missing',
+    userId: !!req.session?.userId,
     timestamp: new Date().toISOString()
   });
   
@@ -323,11 +436,11 @@ router.get("/session", (req, res) => {
       [req.session.userId],
       (err, user) => {
         if (err || !user) {
-          console.log("⚠ Session check: user not found or DB error");
+          debugLog("⚠ Session check: user not found or DB error");
           return res.json({ loggedIn: false });
         }
         
-        console.log("✓ Session valid for user:", user.email);
+        debugLog("✓ Session valid");
         res.json({
           loggedIn: true,
           user: {
@@ -342,7 +455,7 @@ router.get("/session", (req, res) => {
       }
     );
   } else {
-    console.log("✗ No valid session found");
+    debugLog("✗ No valid session found");
     res.json({ loggedIn: false });
   }
 });
@@ -365,6 +478,54 @@ router.put("/lastview", isAuthenticated, (req, res) => {
       res.json({ success: true, lastView });
     }
   );
+});
+
+// Change current user's password
+router.post("/change-password", isAuthenticated, (req, res) => {
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
+
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    return res.status(400).json({ success: false, message: "All password fields are required" });
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    return res.status(400).json({ success: false, message: "New passwords do not match" });
+  }
+
+  if (!isStrongPassword(newPassword)) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+    });
+  }
+
+  db.get("SELECT id, password FROM users WHERE id = ?", [req.session.userId], async (err, user) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    try {
+      const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ success: false, message: "Current password is incorrect" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      db.run("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, user.id], (updateErr) => {
+        if (updateErr) {
+          return res.status(500).json({ success: false, message: updateErr.message });
+        }
+
+        return res.json({ success: true, message: "Password updated successfully" });
+      });
+    } catch (compareErr) {
+      return res.status(500).json({ success: false, message: compareErr.message });
+    }
+  });
 });
 
 // Logout endpoint
@@ -393,18 +554,23 @@ router.get("/me", isAuthenticated, (req, res) => {
 
 // Get all users (admin endpoint - both LGU and BHW)
 router.get("/users", isAdmin, (req, res) => {
-  console.log("GET /users endpoint hit by user:", req.session.userId, "role:", req.session.role);
+  debugLog("GET /users endpoint hit");
   
   db.all(
-    "SELECT id, email, firstName, lastName, role, organization, createdAt FROM users ORDER BY createdAt DESC",
+    "SELECT id, email, firstName, lastName, role, organization, isProtected, createdAt FROM users ORDER BY createdAt DESC",
     [],
     (err, users) => {
       if (err) {
         console.error("Error fetching users:", err);
         return res.status(500).json({ success: false, message: err.message });
       }
-      console.log("✓ Fetched users:", users?.length || 0);
-      res.json({ success: true, users: users || [] });
+      debugLog("✓ Fetched users:", users?.length || 0);
+      const usersWithProtectionFlag = (users || []).map((user) => ({
+        ...user,
+        isProtected: isProtectedUser(user)
+      }));
+
+      res.json({ success: true, users: usersWithProtectionFlag });
     }
   );
 });
@@ -421,21 +587,41 @@ router.delete("/users/:id", isAdmin, (req, res) => {
     });
   }
 
-  db.run("DELETE FROM users WHERE id = ?", [userId], function (err) {
-    if (err) {
-      return res.status(500).json({ success: false, message: err.message });
+  db.get("SELECT id, email, isProtected FROM users WHERE id = ?", [userId], (findErr, targetUser) => {
+    if (findErr) {
+      return res.status(500).json({ success: false, message: findErr.message });
     }
-    
-    if (this.changes === 0) {
+
+    if (!targetUser) {
       return res.status(404).json({
         success: false,
         message: "User not found"
       });
     }
 
-    res.json({
-      success: true,
-      message: "User deleted successfully"
+    if (isProtectedUser(targetUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Protected default account cannot be deleted"
+      });
+    }
+
+    db.run("DELETE FROM users WHERE id = ?", [userId], (deleteErr, result) => {
+      if (deleteErr) {
+        return res.status(500).json({ success: false, message: deleteErr.message });
+      }
+
+      if (!result || result.changes === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "User deleted successfully"
+      });
     });
   });
 });

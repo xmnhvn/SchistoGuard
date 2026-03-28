@@ -6,6 +6,57 @@
 // @ts-ignore - Vite env type handling
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
+let csrfTokenCache: string | null = null;
+let csrfTokenPromise: Promise<string | null> | null = null;
+
+const CSRF_EXEMPT_ENDPOINTS = new Set([
+  '/api/auth/login',
+  '/api/auth/signup',
+  '/api/auth/session',
+  '/api/auth/csrf-token'
+]);
+
+function shouldAttachCsrfToken(endpoint: string, method: string): boolean {
+  const normalizedMethod = method.toUpperCase();
+  const isStateChanging = normalizedMethod === 'POST' || normalizedMethod === 'PUT' || normalizedMethod === 'PATCH' || normalizedMethod === 'DELETE';
+  return isStateChanging && !CSRF_EXEMPT_ENDPOINTS.has(endpoint);
+}
+
+async function fetchCsrfToken(): Promise<string | null> {
+  if (csrfTokenCache) return csrfTokenCache;
+  if (csrfTokenPromise) return csrfTokenPromise;
+
+  csrfTokenPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/csrf-token`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      csrfTokenCache = data?.csrfToken || null;
+      return csrfTokenCache;
+    } catch {
+      return null;
+    } finally {
+      csrfTokenPromise = null;
+    }
+  })();
+
+  return csrfTokenPromise;
+}
+
+function clearCsrfTokenCache() {
+  csrfTokenCache = null;
+}
+
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
 }
@@ -18,16 +69,44 @@ interface FetchOptions extends RequestInit {
  */
 export async function apiCall(endpoint: string, options: FetchOptions = {}): Promise<any> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const method = (options.method || 'GET').toUpperCase();
+
+  let csrfHeader: Record<string, string> = {};
+  if (shouldAttachCsrfToken(endpoint, method)) {
+    const token = csrfTokenCache || await fetchCsrfToken();
+    if (token) {
+      csrfHeader = { 'x-csrf-token': token };
+    }
+  }
   
   try {
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       credentials: 'include', // Include cookies for session
       headers: {
         'Content-Type': 'application/json',
+        ...csrfHeader,
         ...(options.headers || {}),
       },
       ...options,
     });
+
+    // Retry once if CSRF token is stale.
+    if (response.status === 403 && shouldAttachCsrfToken(endpoint, method)) {
+      clearCsrfTokenCache();
+      const refreshedToken = await fetchCsrfToken();
+
+      if (refreshedToken) {
+        response = await fetch(url, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': refreshedToken,
+            ...(options.headers || {}),
+          },
+          ...options,
+        });
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ 

@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { apiPost, apiGet, apiCall } from "../utils/api";
 import { Trash2, MoreHorizontal, Search, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ interface User {
   lastName: string;
   role: string;
   organization: string;
+  isProtected?: boolean;
   createdAt?: string;
 }
 
@@ -101,6 +103,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordTargetUser, setPasswordTargetUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -202,7 +209,48 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     }
   };
 
+  const openUpdatePasswordModal = (target: User) => {
+    setPasswordTargetUser(target);
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPasswordModalOpen(true);
+  };
+
+  const handleAdminUpdatePassword = async () => {
+    setError("");
+    setSuccess("");
+
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    if (!strongPasswordRegex.test(newPassword)) {
+      setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (!passwordTargetUser) return;
+
+    try {
+      setPasswordUpdating(true);
+      const result = await apiPost(`/api/auth/admin/users/${passwordTargetUser.id}/password`, {
+        newPassword,
+        confirmNewPassword,
+      });
+      setSuccess(result?.message || "Password updated successfully");
+      setPasswordModalOpen(false);
+      setPasswordTargetUser(null);
+    } catch (err: any) {
+      setError(err?.message || "Failed to update password");
+    } finally {
+      setPasswordUpdating(false);
+    }
+  };
+
   const getRoleDisplay = (role: string) => {
+    if (role === "admin") return "System Admin";
     return role === "bhw" ? "Barangay Health Worker" : "LGU Officer";
   };
 
@@ -579,6 +627,22 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           <span style={{ fontSize: 11.5, fontWeight: 500, color: "#64748b", fontFamily: POPPINS, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {getRoleDisplay(item.role)} • {item.organization}
                           </span>
+                          {item.isProtected && (
+                            <span style={{
+                              marginTop: 4,
+                              display: "inline-flex",
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              color: "#92400e",
+                              background: "#fef3c7",
+                              border: "1px solid #fde68a",
+                              borderRadius: 999,
+                              padding: "2px 8px",
+                              width: "fit-content"
+                            }}>
+                              Protected
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -602,12 +666,20 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" style={{ fontFamily: POPPINS, borderRadius: 12 }}>
                           <DropdownMenuItem
+                            onClick={() => openUpdatePasswordModal(item)}
+                            className="cursor-pointer"
+                          >
+                            <span>Update Password</span>
+                          </DropdownMenuItem>
+                          {!item.isProtected && (
+                          <DropdownMenuItem
                             onClick={() => handleDeleteUser(item.id)}
                             className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             <span>Delete User</span>
                           </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -617,6 +689,45 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             </div>
           </div>
         </div>
+
+        <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
+          <DialogContent style={{ fontFamily: POPPINS }}>
+            <DialogHeader>
+              <DialogTitle>Update Password</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p style={{ fontSize: 13, color: "#64748b" }}>
+                Set a new password for {passwordTargetUser?.firstName} {passwordTargetUser?.lastName}.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="newPasswordAdmin">New Password</Label>
+                <Input
+                  id="newPasswordAdmin"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmNewPasswordAdmin">Confirm New Password</Label>
+                <Input
+                  id="confirmNewPasswordAdmin"
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setPasswordModalOpen(false)} disabled={passwordUpdating}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAdminUpdatePassword} disabled={passwordUpdating}>
+                  {passwordUpdating ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Generalized Interval Settings Section - Moved to bottom */}
         <div className="glass-card premium-shadow w-full" style={{

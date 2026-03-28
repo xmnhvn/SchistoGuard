@@ -40,7 +40,7 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "bhw"
+    role: "admin"
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -139,6 +139,7 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="admin">System Admin</SelectItem>
                   <SelectItem value="bhw">Barangay Health Worker</SelectItem>
                   <SelectItem value="lgu">LGU Officer</SelectItem>
                 </SelectContent>
@@ -217,6 +218,11 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
   const [loading, setLoading] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
+  const isStrongPassword = (password: string) => {
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    return strongPasswordRegex.test(password);
+  };
+
   const handleSwitchToLogin = () => {
     setIsExiting(true);
     setTimeout(() => {
@@ -233,8 +239,8 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (!isStrongPassword(formData.password)) {
+      setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character");
       return;
     }
 

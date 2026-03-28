@@ -21,7 +21,11 @@ export const UserProfileDetails: React.FC<UserProfileDetailsProps> = ({ user, on
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
     : 'JD';
 
-  const roleDisplay = user?.role === 'bhw' ? 'Barangay Health Worker' : 'LGU Officer';
+  const roleDisplay = user?.role === 'admin'
+    ? 'System Admin'
+    : user?.role === 'bhw'
+      ? 'Barangay Health Worker'
+      : 'LGU Officer';
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
