@@ -27,6 +27,17 @@ interface User {
   createdAt?: string;
 }
 
+interface AuditLog {
+  id: number;
+  actorUserId?: number | null;
+  action: string;
+  targetUserId?: number | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, any> | null;
+  timestamp?: string;
+}
+
 interface AdminSettingsPageProps {
   user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
 }
@@ -108,6 +119,9 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordUpdating, setPasswordUpdating] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(true);
+  const [auditLogsError, setAuditLogsError] = useState("");
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -151,8 +165,27 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     }
   };
 
+  const fetchAuditLogs = async () => {
+    try {
+      setLoadingAuditLogs(true);
+      setAuditLogsError("");
+      const result = await apiGet("/api/auth/admin/audit-logs?limit=50");
+      if (result?.logs) {
+        setAuditLogs(result.logs);
+      } else {
+        setAuditLogs([]);
+      }
+    } catch (err: any) {
+      setAuditLogsError(err?.message || "Failed to fetch audit logs");
+      setAuditLogs([]);
+    } finally {
+      setLoadingAuditLogs(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchAuditLogs();
     if (!_adminSettingsFirstLoadDone) {
       setTimeout(() => { _adminSettingsFirstLoadDone = true; }, 50);
     }
@@ -188,6 +221,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       });
       // Refresh user list
       fetchUsers();
+      fetchAuditLogs();
     } catch (err: any) {
       setError(err?.message || "Failed to create account");
     } finally {
@@ -242,6 +276,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setSuccess(result?.message || "Password updated successfully");
       setPasswordModalOpen(false);
       setPasswordTargetUser(null);
+      fetchAuditLogs();
     } catch (err: any) {
       setError(err?.message || "Failed to update password");
     } finally {
@@ -728,6 +763,56 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             </div>
           </DialogContent>
         </Dialog>
+
+        <div className="glass-card premium-shadow w-full" style={{
+          borderRadius: 28,
+          padding: 32,
+          marginTop: gap,
+          border: "1px solid rgba(0,0,0,0.03)",
+          animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
+        }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>Security Audit Logs</h2>
+          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>
+            Recent sensitive actions for accountability and incident tracing.
+          </p>
+
+          {auditLogsError && (
+            <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13 }}>
+              {auditLogsError}
+            </div>
+          )}
+
+          {loadingAuditLogs ? (
+            <div style={{ marginTop: 16, color: "#94a3b8", fontSize: 13 }}>Loading audit logs...</div>
+          ) : auditLogs.length === 0 ? (
+            <div style={{ marginTop: 16, color: "#94a3b8", fontSize: 13 }}>No audit events yet.</div>
+          ) : (
+            <div className="custom-scrollbar" style={{ marginTop: 16, maxHeight: 280, overflowY: "auto", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14 }}>
+              {auditLogs.map((log, idx) => (
+                <div
+                  key={log.id}
+                  style={{
+                    padding: "12px 14px",
+                    borderBottom: idx === auditLogs.length - 1 ? "none" : "1px solid rgba(0,0,0,0.05)",
+                    background: idx % 2 === 0 ? "rgba(0,0,0,0.01)" : "#fff"
+                  }}
+                >
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1e293b" }}>{log.action}</div>
+                  <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 2 }}>
+                    actor: {log.actorUserId || "n/a"} • target: {log.targetUserId || "n/a"}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+                    {log.timestamp ? new Date(log.timestamp).toLocaleString() : "no timestamp"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <Button type="button" variant="outline" onClick={fetchAuditLogs}>Refresh Logs</Button>
+          </div>
+        </div>
 
         {/* Generalized Interval Settings Section - Moved to bottom */}
         <div className="glass-card premium-shadow w-full" style={{

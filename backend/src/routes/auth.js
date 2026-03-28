@@ -759,4 +759,39 @@ router.delete("/users/:id", isAdmin, (req, res) => {
   });
 });
 
+// Get recent security audit logs (admin endpoint)
+router.get("/admin/audit-logs", isAdmin, (req, res) => {
+  const requestedLimit = parseInt(String(req.query.limit || "50"), 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 200) : 50;
+
+  db.all(
+    `SELECT id, actorUserId, action, targetUserId, ipAddress, userAgent, metadata, timestamp
+     FROM audit_logs
+     ORDER BY timestamp DESC
+     LIMIT ?`,
+    [limit],
+    (err, logs) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: err.message });
+      }
+
+      const safeLogs = (logs || []).map((log) => {
+        let parsedMetadata = null;
+        try {
+          parsedMetadata = log.metadata ? JSON.parse(log.metadata) : null;
+        } catch {
+          parsedMetadata = null;
+        }
+
+        return {
+          ...log,
+          metadata: parsedMetadata,
+        };
+      });
+
+      return res.json({ success: true, logs: safeLogs });
+    }
+  );
+});
+
 module.exports = router;
