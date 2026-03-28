@@ -7,6 +7,7 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 const isProduction = NODE_ENV === "production";
 const PROTECTED_ACCOUNT_EMAIL = (process.env.PROTECTED_ACCOUNT_EMAIL || "").trim().toLowerCase();
 const ENABLE_SELF_SIGNUP = String(process.env.ENABLE_SELF_SIGNUP || "false").toLowerCase() === "true";
+const ADMIN_UNLOCK_MINUTES = parseInt(process.env.ADMIN_UNLOCK_MINUTES || "10", 10);
 
 function debugLog(...args) {
   if (!isProduction) {
@@ -75,12 +76,16 @@ const isAuthenticated = (req, res, next) => {
 const isAdmin = (req, res, next) => {
   const hasSession = !!req.session;
   const hasUserId = req.session?.userId;
-  const isAuthorized = hasSession && hasUserId && req.session?.role === "admin";
+  const hasAdminRole = req.session?.role === "admin";
+  const adminUnlockedUntil = Number(req.session?.adminUnlockedUntil || 0);
+  const hasTemporaryAdminUnlock = adminUnlockedUntil > Date.now();
+  const isAuthorized = hasSession && hasUserId && (hasAdminRole || hasTemporaryAdminUnlock);
   
   debugLog("👤 Admin Check:", {
     hasSession,
     userId: !!hasUserId,
     hasRole: !!req.session?.role,
+    hasTemporaryAdminUnlock,
     isAuthorized,
     timestamp: new Date().toISOString()
   });
@@ -88,13 +93,74 @@ const isAdmin = (req, res, next) => {
   if (isAuthorized) {
     next();
   } else {
-    const reason = !hasSession ? 'no session' : !hasUserId ? 'no userId' : req.session?.role !== 'admin' ? 'not admin role' : 'unknown';
+    const reason = !hasSession
+      ? 'no session'
+      : !hasUserId
+        ? 'no userId'
+        : (!hasAdminRole && !hasTemporaryAdminUnlock)
+          ? 'not admin role and no admin unlock'
+          : 'unknown';
     res.status(403).json({ 
       success: false, 
       message: `Admin access required. (${reason})`
     });
   }
 };
+
+// Temporarily unlock admin actions for a non-admin authenticated user.
+const handleAdminUnlock = (req, res) => {
+  const { adminEmail, adminPassword } = req.body;
+
+  if (!adminEmail || !adminPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "Admin email and password are required"
+    });
+  }
+
+  db.get(
+    "SELECT id, email, password, role FROM users WHERE email = ? AND role = ?",
+    [adminEmail, "admin"],
+    async (err, adminUser) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: err.message });
+      }
+
+      if (!adminUser) {
+        return res.status(401).json({ success: false, message: "Invalid admin credentials" });
+      }
+
+      try {
+        const passwordMatch = await bcrypt.compare(adminPassword, adminUser.password);
+        if (!passwordMatch) {
+          return res.status(401).json({ success: false, message: "Invalid admin credentials" });
+        }
+
+        const unlockUntil = Date.now() + Math.max(1, ADMIN_UNLOCK_MINUTES) * 60 * 1000;
+        req.session.adminUnlockedUntil = unlockUntil;
+        req.session.adminUnlockedBy = adminUser.id;
+
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            return res.status(500).json({ success: false, message: "Failed to save admin unlock session" });
+          }
+
+          return res.json({
+            success: true,
+            message: `Admin access unlocked for ${Math.max(1, ADMIN_UNLOCK_MINUTES)} minutes`,
+            unlockedUntil: new Date(unlockUntil).toISOString()
+          });
+        });
+      } catch (compareErr) {
+        return res.status(500).json({ success: false, message: compareErr.message });
+      }
+    }
+  );
+};
+
+router.post("/admin/unlock", isAuthenticated, handleAdminUnlock);
+// Compatibility alias for older/newer frontend builds.
+router.post("/admin/verify", isAuthenticated, handleAdminUnlock);
 
 // Login endpoint
 router.post("/login", (req, res) => {

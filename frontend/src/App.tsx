@@ -11,6 +11,10 @@ import { AdminSettingsPage } from './components/AdminSettingsPage';
 import { UserProfilePage } from './components/UserProfilePage';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm } from './components/LoginForm';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Label } from './components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { apiGet, apiPost, apiPut } from './utils/api';
 
 type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings' | 'user-profile';
@@ -23,6 +27,12 @@ export default function App() {
   const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
   const [user, setUser] = useState<{ id: number; email: string; firstName: string; lastName: string; role: string; lastView?: string } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [adminUnlockOpen, setAdminUnlockOpen] = useState(false);
+  const [adminUnlockEmail, setAdminUnlockEmail] = useState('');
+  const [adminUnlockPassword, setAdminUnlockPassword] = useState('');
+  const [adminUnlockError, setAdminUnlockError] = useState('');
+  const [adminUnlockLoading, setAdminUnlockLoading] = useState(false);
+  const [pendingAdminView, setPendingAdminView] = useState<ViewType | null>(null);
 
   useEffect(() => {
     const check = () => {
@@ -87,10 +97,64 @@ export default function App() {
     setIsAuthenticated(false);
     setUser(null);
     setCurrentView('landing');
+    setAdminUnlockOpen(false);
+    setAdminUnlockEmail('');
+    setAdminUnlockPassword('');
+    setAdminUnlockError('');
+    setPendingAdminView(null);
   };
 
-  const handleNavigate = (view: string) => {
+  const closeAdminUnlockModal = () => {
+    if (adminUnlockLoading) return;
+    setAdminUnlockOpen(false);
+    setAdminUnlockEmail('');
+    setAdminUnlockPassword('');
+    setAdminUnlockError('');
+    setPendingAdminView(null);
+  };
+
+  const submitAdminUnlock = async () => {
+    setAdminUnlockError('');
+
+    if (!adminUnlockEmail || !adminUnlockPassword) {
+      setAdminUnlockError('Admin email and password are required.');
+      return;
+    }
+
+    try {
+      setAdminUnlockLoading(true);
+      await apiPost('/api/auth/admin/unlock', {
+        adminEmail: adminUnlockEmail,
+        adminPassword: adminUnlockPassword
+      });
+
+      const targetView = pendingAdminView || 'admin-settings';
+      setCurrentView(targetView);
+      if (isAuthenticated && user) {
+        apiPut('/api/auth/lastview', { lastView: targetView })
+          .catch(err => console.error('Failed to save lastView:', err));
+      }
+
+      setAdminUnlockOpen(false);
+      setAdminUnlockEmail('');
+      setAdminUnlockPassword('');
+      setAdminUnlockError('');
+      setPendingAdminView(null);
+    } catch (err: any) {
+      setAdminUnlockError(err?.message || 'Admin authentication failed.');
+    } finally {
+      setAdminUnlockLoading(false);
+    }
+  };
+
+  const handleNavigate = async (view: string) => {
     if (isViewType(view)) {
+      if (view === 'admin-settings' && user?.role !== 'admin') {
+        setPendingAdminView(view);
+        setAdminUnlockOpen(true);
+        return;
+      }
+
       setCurrentView(view);
 
       // Save to cloud backend if authenticated
@@ -281,6 +345,64 @@ export default function App() {
         )}
         {currentView === 'admin-settings' && <AdminSettingsPage user={user} />}
         {currentView === 'user-profile' && <UserProfilePage user={user} onBack={() => handleNavigate('dashboard')} onLogout={handleLogout} />}
+
+        <Dialog open={adminUnlockOpen} onOpenChange={(open) => { if (!open) closeAdminUnlockModal(); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Admin Authentication Required</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Enter admin credentials to continue to Admin Settings.
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="admin-unlock-email">Admin Email</Label>
+                <Input
+                  id="admin-unlock-email"
+                  type="email"
+                  value={adminUnlockEmail}
+                  onChange={(e) => setAdminUnlockEmail(e.target.value)}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="admin-unlock-password">Admin Password</Label>
+                <Input
+                  id="admin-unlock-password"
+                  type="password"
+                  value={adminUnlockPassword}
+                  onChange={(e) => setAdminUnlockPassword(e.target.value)}
+                  autoComplete="current-password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (!adminUnlockLoading) {
+                        submitAdminUnlock();
+                      }
+                    }
+                  }}
+                />
+              </div>
+
+              {adminUnlockError && (
+                <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+                  {adminUnlockError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeAdminUnlockModal} disabled={adminUnlockLoading}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={submitAdminUnlock} disabled={adminUnlockLoading}>
+                  {adminUnlockLoading ? 'Verifying...' : 'Verify Admin'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </NavigationProvider>
     );
   }
