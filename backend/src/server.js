@@ -106,7 +106,7 @@ const corsOptions = {
     FRONTEND_URL, 
     'http://localhost:5173',
     'http://localhost:3000', 
-    'https://schisto-guard.vercel.app'
+    'https://schistoguard.vercel.app'
   ],
   credentials: true,
   optionsSuccessStatus: 200
