@@ -19,7 +19,7 @@ import { apiCall } from "../utils/api";
 interface NavigationProps {
   currentView?: string;
   onNavigate?: (view: string) => void;
-  user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
+  user?: { id: number; email: string; firstName: string; lastName: string; role: string; profilePhoto?: string | null } | null;
 }
 
 const navItems = [
@@ -149,27 +149,15 @@ export function NavigationHeader({
   currentView?: string;
   onNavigateToAlerts?: () => void;
   systemStatus?: "operational" | "down";
-  user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
+  user?: { id: number; email: string; firstName: string; lastName: string; role: string; profilePhoto?: string | null } | null;
   onLogout?: () => void;
   onNavigate?: (view: string) => void;
   onToggleDrawer?: () => void;
 }) {
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  // Load profile photo from localStorage and listen for changes
-  useEffect(() => {
-    const saved = localStorage.getItem("sg_profilePhoto");
-    if (saved) setProfilePhoto(saved);
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      setProfilePhoto(detail?.photo || null);
-    };
-    window.addEventListener("profilePhotoChanged", handler);
-    return () => window.removeEventListener("profilePhotoChanged", handler);
-  }, []);
+  const profilePhoto = user?.profilePhoto || null;
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -459,7 +447,7 @@ export function NavigationProvider({
   onNavigate?: (view: string) => void;
   onLogout?: () => void;
   systemStatus?: "operational" | "down";
-  user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
+  user?: { id: number; email: string; firstName: string; lastName: string; role: string; profilePhoto?: string | null } | null;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isPhone, setIsPhone] = useState(false);

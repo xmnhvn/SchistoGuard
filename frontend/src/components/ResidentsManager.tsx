@@ -32,7 +32,6 @@ import {
   Users,
   Search,
   CheckCircle,
-  Circle,
   AlertCircle,
   Upload,
   CheckCircle2,
@@ -52,7 +51,6 @@ interface Resident {
   name: string;
   phone: string;
   role: "resident" | "bhw" | "lgu";
-  verified: number;
   createdAt?: string;
 }
 
@@ -606,7 +604,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    {["Name", "Phone Number", "Designation", "Status", "Actions"].map(h => (
+                    {["Name", "Phone Number", "Designation", "Actions"].map(h => (
                       <th key={h} style={{
                         padding: "14px 24px",
                         fontSize: 12,
@@ -646,18 +644,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                         }}>
                           {roleLabels[resident.role]}
                         </span>
-                      </td>
-                      <td style={{ padding: "14px 24px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {resident.verified ? (
-                            <CheckCircle2 style={{ width: 16, height: 16, color: "#16a34a" }} />
-                          ) : (
-                            <Circle style={{ width: 16, height: 16, color: "#9ca3af" }} />
-                          )}
-                          <span style={{ fontSize: 13, color: resident.verified ? "#16a34a" : "#64748b", fontWeight: 500 }}>
-                            {resident.verified ? "Verified" : "Unverified"}
-                          </span>
-                        </div>
                       </td>
                       <td style={{ padding: "14px 24px", textAlign: "right" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -775,16 +761,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                       fontFamily: POPPINS,
                     }}>
                       {roleLabels[resident.role]}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
-                    {resident.verified ? (
-                      <CheckCircle2 style={{ width: 14, height: 14, color: "#16a34a" }} />
-                    ) : (
-                      <Circle style={{ width: 14, height: 14, color: "#9ca3af" }} />
-                    )}
-                    <span style={{ fontSize: 12, color: resident.verified ? "#16a34a" : "#9ca3af", fontWeight: 500, fontFamily: POPPINS }}>
-                      {resident.verified ? "Verified" : "Unverified"}
                     </span>
                   </div>
                 </div>

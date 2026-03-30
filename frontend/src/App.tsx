@@ -25,7 +25,7 @@ export default function App() {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
-  const [user, setUser] = useState<{ id: number; email: string; firstName: string; lastName: string; role: string; lastView?: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; email: string; firstName: string; lastName: string; role: string; lastView?: string; profilePhoto?: string | null } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [adminUnlockOpen, setAdminUnlockOpen] = useState(false);
   const [adminUnlockEmail, setAdminUnlockEmail] = useState('');
@@ -58,7 +58,7 @@ export default function App() {
     );
   };
 
-  const handleLogin = (loggedInUser?: { id: number; email: string; firstName: string; lastName: string; role: string; lastView?: string }) => {
+  const handleLogin = (loggedInUser?: { id: number; email: string; firstName: string; lastName: string; role: string; lastView?: string; profilePhoto?: string | null }) => {
     setIsAuthenticated(true);
 
     if (loggedInUser) {
@@ -344,7 +344,19 @@ export default function App() {
           <SettingsPage siteName={selectedSiteId || "All Sites"} />
         )}
         {currentView === 'admin-settings' && <AdminSettingsPage user={user} />}
-        {currentView === 'user-profile' && <UserProfilePage user={user} onBack={() => handleNavigate('dashboard')} onLogout={handleLogout} />}
+        {currentView === 'user-profile' && (
+          <UserProfilePage
+            user={user}
+            onBack={() => handleNavigate('dashboard')}
+            onLogout={handleLogout}
+            onProfilePhotoChange={(profilePhoto) => {
+              setUser((prev) => {
+                if (!prev) return prev;
+                return { ...prev, profilePhoto };
+              });
+            }}
+          />
+        )}
 
         <Dialog open={adminUnlockOpen} onOpenChange={(open) => { if (!open) closeAdminUnlockModal(); }}>
           <DialogContent>

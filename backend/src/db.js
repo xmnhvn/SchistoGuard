@@ -44,6 +44,7 @@ const initPostgresTables = async () => {
         password TEXT NOT NULL,
         "firstName" TEXT NOT NULL,
         "lastName" TEXT NOT NULL,
+        "profilePhoto" TEXT,
         role TEXT NOT NULL CHECK(role IN ('admin', 'bhw', 'lgu')),
         organization TEXT NOT NULL,
         "isProtected" BOOLEAN DEFAULT FALSE,
@@ -58,6 +59,7 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "isProtected" BOOLEAN DEFAULT FALSE');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "failedLoginAttempts" INTEGER DEFAULT 0');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "lockUntil" BIGINT DEFAULT 0');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "profilePhoto" TEXT');
     await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
     await db.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'bhw', 'lgu'))");
 
@@ -128,10 +130,10 @@ const initPostgresTables = async () => {
         name TEXT,
         phone TEXT,
         role TEXT DEFAULT 'resident',
-        verified INTEGER DEFAULT 0,
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await db.query('ALTER TABLE residents DROP COLUMN IF EXISTS verified');
     await db.query(`
       CREATE TABLE IF NOT EXISTS reports (
         id SERIAL PRIMARY KEY,

@@ -640,7 +640,7 @@ router.post("/upload-csv", (req, res) => {
 router.get("/residents/:siteName", (req, res) => {
   const { siteName } = req.params;
   db.all(
-    "SELECT id, siteName, name, phone, role, verified, createdAt FROM residents WHERE siteName = ? ORDER BY role, name",
+    "SELECT id, siteName, name, phone, role, createdAt FROM residents WHERE siteName = ? ORDER BY role, name",
     [siteName],
     (err, rows) => {
       if (err) {
@@ -691,7 +691,6 @@ router.post("/residents", (req, res) => {
               name,
               phone: formattedPhone,
               role: finalRole,
-              verified: 0,
               message: "Resident updated (duplicate prevented)"
             });
           }
@@ -699,8 +698,8 @@ router.post("/residents", (req, res) => {
       } else {
         // Create new resident
         db.run(
-          "INSERT INTO residents (siteName, name, phone, role, verified) VALUES (?, ?, ?, ?, ?)",
-          [siteName, name, formattedPhone, finalRole, 0],
+          "INSERT INTO residents (siteName, name, phone, role) VALUES (?, ?, ?, ?)",
+          [siteName, name, formattedPhone, finalRole],
           function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.status(201).json({
@@ -709,7 +708,6 @@ router.post("/residents", (req, res) => {
               name,
               phone: formattedPhone,
               role: finalRole,
-              verified: 0,
               message: "Resident added"
             });
           }
@@ -722,9 +720,9 @@ router.post("/residents", (req, res) => {
 // PUT - Update a resident
 router.put("/residents/:id", (req, res) => {
   const { id } = req.params;
-  const { name, phone, role, verified } = req.body;
+  const { name, phone, role } = req.body;
   
-  if (!name && !phone && role === undefined && verified === undefined) {
+  if (!name && !phone && role === undefined) {
     return res.status(400).json({ error: "At least one field to update is required" });
   }
   
@@ -737,7 +735,6 @@ router.put("/residents/:id", (req, res) => {
     const newPhone = phone ? formatPhoneNumber(phone) : resident.phone;
     const validRoles = ["resident", "bhw", "lgu"];
     const newRole = role ? (validRoles.includes(role) ? role : resident.role) : resident.role;
-    const newVerified = verified !== undefined ? verified : resident.verified;
     
     // Validate phone if updated
     if (phone && !validatePhoneNumber(phone)) {
@@ -745,8 +742,8 @@ router.put("/residents/:id", (req, res) => {
     }
     
     db.run(
-      "UPDATE residents SET name = ?, phone = ?, role = ?, verified = ? WHERE id = ?",
-      [newName, newPhone, newRole, newVerified, id],
+      "UPDATE residents SET name = ?, phone = ?, role = ? WHERE id = ?",
+      [newName, newPhone, newRole, id],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({
@@ -754,7 +751,6 @@ router.put("/residents/:id", (req, res) => {
           name: newName,
           phone: newPhone,
           role: newRole,
-          verified: newVerified,
           message: "Resident updated successfully"
         });
       }
@@ -782,7 +778,7 @@ router.get("/residents-by-role/:role", (req, res) => {
     return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });
   }
   
-  db.all("SELECT id, siteName, name, phone, role, verified FROM residents WHERE role = ?", [role], (err, rows) => {
+  db.all("SELECT id, siteName, name, phone, role FROM residents WHERE role = ?", [role], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows || []);
   });
@@ -794,7 +790,7 @@ router.get("/residents", (req, res) => {
   
   console.log("GET /residents - siteName:", siteName, "role:", role);
   
-  let query = "SELECT id, siteName, name, phone, role, verified, createdAt FROM residents WHERE 1=1";
+  let query = "SELECT id, siteName, name, phone, role, createdAt FROM residents WHERE 1=1";
   const params = [];
   
   if (siteName) {

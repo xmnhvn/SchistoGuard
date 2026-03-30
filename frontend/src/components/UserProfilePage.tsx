@@ -7,15 +7,17 @@ const POPPINS = "'Poppins', sans-serif";
 let _profileFirstLoadDone = false;
 
 interface UserProfilePageProps {
-    user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
+    user?: { id: number; email: string; firstName: string; lastName: string; role: string; profilePhoto?: string | null } | null;
     onBack?: () => void;
     onLogout?: () => void;
+    onProfilePhotoChange?: (profilePhoto: string | null) => void;
 }
 
-export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps) {
+export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }: UserProfilePageProps) {
     const animate = !_profileFirstLoadDone;
     const [savedPhoto, setSavedPhoto] = useState<string | null>(null);
     const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+    const [savingPhoto, setSavingPhoto] = useState(false);
     const [showDeleteMenu, setShowDeleteMenu] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -38,11 +40,10 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
         }
     }, []);
 
-    // Load saved profile photo from localStorage
+    // Keep local page state synced with authenticated user data.
     useEffect(() => {
-        const saved = localStorage.getItem("sg_profilePhoto");
-        if (saved) setSavedPhoto(saved);
-    }, []);
+        setSavedPhoto(user?.profilePhoto || null);
+    }, [user?.profilePhoto]);
 
     const initials = user
         ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
@@ -88,20 +89,26 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
         e.target.value = "";
     };
 
-    const handleSavePhoto = () => {
-        if (pendingPhoto !== null) {
-            if (pendingPhoto === "") {
-                // Remove photo
-                localStorage.removeItem("sg_profilePhoto");
-                setSavedPhoto(null);
-                window.dispatchEvent(new CustomEvent("profilePhotoChanged", { detail: { photo: null } }));
-            } else {
-                // Update photo
-                localStorage.setItem("sg_profilePhoto", pendingPhoto);
-                setSavedPhoto(pendingPhoto);
-                window.dispatchEvent(new CustomEvent("profilePhotoChanged", { detail: { photo: pendingPhoto } }));
-            }
+    const handleSavePhoto = async () => {
+        if (pendingPhoto === null || savingPhoto) return;
+
+        setSavingPhoto(true);
+        try {
+            const nextProfilePhoto = pendingPhoto === "" ? null : pendingPhoto;
+            const response = await apiCall("/api/auth/profile-photo", {
+                method: "PUT",
+                body: JSON.stringify({ profilePhoto: nextProfilePhoto }),
+            });
+
+            const updatedPhoto = response?.profilePhoto ?? nextProfilePhoto;
+            setSavedPhoto(updatedPhoto);
+            onProfilePhotoChange?.(updatedPhoto);
             setPendingPhoto(null);
+        } catch (error) {
+            console.error("Failed to save profile photo:", error);
+            alert(error instanceof Error ? error.message : "Failed to save profile photo.");
+        } finally {
+            setSavingPhoto(false);
         }
     };
 
@@ -399,6 +406,7 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                     </button>
                                     <button
                                         onClick={handleSavePhoto}
+                                        disabled={savingPhoto}
                                         style={{
                                             padding: "10px 28px", borderRadius: 14,
                                             border: "none", background: isPendingRemoval ? "#dc2626" : "#357D86",
@@ -409,12 +417,13 @@ export function UserProfilePage({ user, onBack, onLogout }: UserProfilePageProps
                                                 ? "0 8px 20px -5px rgba(220, 38, 38, 0.4)"
                                                 : "0 8px 20px -5px rgba(53, 125, 134, 0.4)",
                                             transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                                            opacity: savingPhoto ? 0.7 : 1,
                                         }}
                                         onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.02)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
                                         onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0px) scale(1)"; e.currentTarget.style.filter = "brightness(1)"; }}
                                     >
                                         {isPendingRemoval ? <Trash2 size={16} /> : <Save size={16} />}
-                                        {isPendingRemoval ? "Confirm Removal" : "Save Changes"}
+                                        {savingPhoto ? "Saving..." : (isPendingRemoval ? "Confirm Removal" : "Save Changes")}
                                     </button>
                                 </div>
                             )}

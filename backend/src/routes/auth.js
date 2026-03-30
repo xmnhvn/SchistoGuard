@@ -10,6 +10,7 @@ const ENABLE_SELF_SIGNUP = String(process.env.ENABLE_SELF_SIGNUP || "false").toL
 const ADMIN_UNLOCK_MINUTES = parseInt(process.env.ADMIN_UNLOCK_MINUTES || "10", 10);
 const LOGIN_MAX_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS || "5", 10);
 const LOGIN_LOCK_MINUTES = parseInt(process.env.LOGIN_LOCK_MINUTES || "15", 10);
+const MAX_PROFILE_PHOTO_LENGTH = 2 * 1024 * 1024;
 
 function debugLog(...args) {
   if (!isProduction) {
@@ -280,7 +281,8 @@ router.post("/login", (req, res) => {
               lastName: user.lastName,
               role: user.role,
               organization: user.organization,
-              lastView: user.lastView || 'dashboard'
+              lastView: user.lastView || 'dashboard',
+              profilePhoto: user.profilePhoto || null
             }
           });
         });
@@ -561,7 +563,7 @@ router.get("/session", (req, res) => {
   if (req.session && req.session.userId) {
     // Fetch latest user data including lastView
     db.get(
-      "SELECT id, email, role, firstName, lastName, lastView FROM users WHERE id = ?",
+      "SELECT id, email, role, firstName, lastName, lastView, profilePhoto FROM users WHERE id = ?",
       [req.session.userId],
       (err, user) => {
         if (err || !user) {
@@ -578,7 +580,8 @@ router.get("/session", (req, res) => {
             role: user.role,
             firstName: user.firstName,
             lastName: user.lastName,
-            lastView: user.lastView || 'dashboard'
+            lastView: user.lastView || 'dashboard',
+            profilePhoto: user.profilePhoto || null
           }
         });
       }
@@ -670,13 +673,50 @@ router.post("/logout", (req, res) => {
 // Get current user (protected)
 router.get("/me", isAuthenticated, (req, res) => {
   db.get(
-    "SELECT id, email, firstName, lastName, role, organization FROM users WHERE id = ?",
+    "SELECT id, email, firstName, lastName, role, organization, profilePhoto FROM users WHERE id = ?",
     [req.session.userId],
     (err, user) => {
       if (err) {
         return res.status(500).json({ success: false, message: err.message });
       }
       res.json({ success: true, user });
+    }
+  );
+});
+
+// Save/update current user's profile photo
+router.put("/profile-photo", isAuthenticated, (req, res) => {
+  const { profilePhoto } = req.body || {};
+
+  if (profilePhoto !== null && profilePhoto !== undefined && typeof profilePhoto !== "string") {
+    return res.status(400).json({ success: false, message: "profilePhoto must be a string or null" });
+  }
+
+  if (typeof profilePhoto === "string") {
+    if (!profilePhoto.startsWith("data:image/")) {
+      return res.status(400).json({ success: false, message: "profilePhoto must be a valid image data URL" });
+    }
+
+    if (profilePhoto.length > MAX_PROFILE_PHOTO_LENGTH) {
+      return res.status(400).json({ success: false, message: "Profile photo is too large" });
+    }
+  }
+
+  const nextProfilePhoto = typeof profilePhoto === "string" ? profilePhoto : null;
+
+  db.run(
+    "UPDATE users SET profilePhoto = ? WHERE id = ?",
+    [nextProfilePhoto, req.session.userId],
+    (updateErr) => {
+      if (updateErr) {
+        return res.status(500).json({ success: false, message: updateErr.message });
+      }
+
+      return res.json({
+        success: true,
+        message: nextProfilePhoto ? "Profile photo updated successfully" : "Profile photo removed successfully",
+        profilePhoto: nextProfilePhoto,
+      });
     }
   );
 });
