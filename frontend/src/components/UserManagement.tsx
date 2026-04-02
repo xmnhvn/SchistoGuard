@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
-import { Users, UserPlus, Search, Filter, MoreVertical, Mail, Phone, Shield, MapPin, Calendar, Edit, Trash2, Eye } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import React, { useState, useEffect } from 'react';
+import { Users, UserPlus, Shield, Calendar, Mail, Phone, MapPin, Edit, X } from 'lucide-react';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Dialog, DialogContent, DialogClose } from './ui/dialog';
 
 let _userMgmtFirstLoadDone = false;
+
+const POPPINS = "'Poppins', sans-serif";
 
 interface User {
   id: string;
@@ -36,10 +33,18 @@ interface UserStats {
 
 export const UserManagement: React.FC = () => {
   const animate = !_userMgmtFirstLoadDone;
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterRole, setFilterRole] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 600;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
 
   React.useEffect(() => {
     if (!_userMgmtFirstLoadDone) {
@@ -104,30 +109,12 @@ export const UserManagement: React.FC = () => {
     }
   ];
 
-  const roleLabels = {
+  const roleLabels: Record<string, string> = {
     admin: 'System Admin',
     health_worker: 'Health Worker',
     resident: 'Community Resident',
     lgu_official: 'LGU Official'
   };
-
-  const roleColors = {
-    admin: 'destructive',
-    health_worker: 'default',
-    resident: 'secondary',
-    lgu_official: 'outline'
-  };
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.barangay?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-
-    return matchesSearch && matchesRole && matchesStatus;
-  });
 
   const stats: UserStats = {
     total: users.length,
@@ -146,17 +133,15 @@ export const UserManagement: React.FC = () => {
     }).length
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
-      case 'inactive':
-        return <Badge variant="secondary">Inactive</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-700">Pending</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
+  // Use the first user as the "profile" user for display
+  const profileUser = users[0];
+
+  const getUserInitials = (name: string) =>
+    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const formatLastLogin = (lastLogin?: string) => {
@@ -164,345 +149,543 @@ export const UserManagement: React.FC = () => {
     const date = new Date(lastLogin);
     const now = new Date();
     const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-
     if (diffHours < 1) return 'Just now';
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffHours < 168) return `${Math.floor(diffHours / 24)}d ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  const getUserInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
+  const statCards = [
+    { label: "Total Users", value: stats.total, color: "#357D86" },
+    { label: "Active", value: stats.active, color: "#22c55e" },
+    { label: "New This Week", value: stats.recentJoins, color: "#3b82f6" },
+    { label: "Health Workers", value: stats.byRole.health_worker, color: "#a855f7" },
+  ];
 
   return (
-    <div className="min-h-screen bg-schistoguard-light-bg">
+    <div style={{
+      fontFamily: POPPINS,
+      height: "100%",
+      overflow: "auto",
+      background: "#f5f7f9",
+    }}>
       <style>{`
         @keyframes pageSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes avatarPop {
+          0% { transform: scale(0.7); opacity: 0; }
+          60% { transform: scale(1.05); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        *::-webkit-scrollbar { display: none; }
       `}</style>
-      <div className="max-w-7xl mx-auto p-6" style={{ animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-schistoguard-navy mb-2">User Management</h1>
-            <p className="text-gray-600">Manage system users, designations, and permissions</p>
-          </div>
-          <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add User
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New User</DialogTitle>
-                <DialogDescription>
-                  Create a new user account for the SchistoGuard system.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
-                  <Input id="name" className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="email" className="text-right">Email</Label>
-                  <Input id="email" type="email" className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="role" className="text-right">Designation</Label>
-                  <Select>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a designation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="resident">Community Resident</SelectItem>
-                      <SelectItem value="health_worker">Health Worker</SelectItem>
-                      <SelectItem value="lgu_official">LGU Official</SelectItem>
-                      <SelectItem value="admin">System Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
+      <div style={{
+        maxWidth: 900,
+        margin: "0 auto",
+        padding: `0 ${pad}px ${pad}px`,
+        animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none',
+      }}>
+
+        {/* ── Banner Header ── */}
+        <div style={{
+          position: "relative",
+          width: `calc(100% + ${pad * 2}px)`,
+          marginLeft: -pad,
+          height: isMobile ? 140 : 180,
+          background: "linear-gradient(135deg, #357D86 0%, #4aa3ad 40%, #a8dce3 100%)",
+          borderRadius: isMobile ? 0 : "0 0 24px 24px",
+          marginBottom: isMobile ? 60 : 70,
+        }}>
+          {/* Edit Profile button on banner */}
+          <button
+            onClick={() => setIsEditOpen(true)}
+            style={{
+              position: "absolute",
+              top: isMobile ? 12 : 18,
+              right: isMobile ? 12 : 24,
+              background: "rgba(255,255,255,0.2)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              borderRadius: 12,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#fff",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontFamily: POPPINS,
+              transition: "all 0.2s",
+            }}
+          >
+            <Edit size={14} />
+            Edit Profile
+          </button>
+
+          {/* Avatar — overlapping the banner bottom */}
+          <div style={{
+            position: "absolute",
+            bottom: isMobile ? -48 : -56,
+            left: isMobile ? pad + 4 : pad + 8,
+          }}>
+            <div style={{
+              width: isMobile ? 96 : 112,
+              height: isMobile ? 96 : 112,
+              borderRadius: "50%",
+              background: "#fff",
+              padding: 4,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+              animation: animate ? "avatarPop 0.6s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
+            }}>
+              <div style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #357D86, #4aa3ad)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: isMobile ? 28 : 34,
+                fontWeight: 700,
+                color: "#fff",
+                fontFamily: POPPINS,
+                letterSpacing: 1,
+              }}>
+                {getUserInitials(profileUser.name)}
               </div>
-              <DialogFooter>
-                <Button type="submit">Create User</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </div>
+          </div>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users">All Users</TabsTrigger>
-            <TabsTrigger value="roles">Designations & Permissions</TabsTrigger>
-          </TabsList>
+        {/* ── Name & Info ── */}
+        <div style={{
+          padding: `0 ${isMobile ? 4 : 8}px`,
+          marginBottom: 28,
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 4,
+            flexWrap: "wrap",
+          }}>
+            <h1 style={{
+              fontSize: isMobile ? 22 : 28,
+              fontWeight: 700,
+              color: "#1a2a3a",
+              margin: 0,
+              fontFamily: POPPINS,
+              lineHeight: 1.3,
+            }}>
+              {profileUser.name}
+            </h1>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              background: profileUser.status === 'active' ? "#e6f7ef" : "#fef3cd",
+              color: profileUser.status === 'active' ? "#15803d" : "#92400e",
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "3px 10px",
+              borderRadius: 20,
+              fontFamily: POPPINS,
+              textTransform: "capitalize",
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: profileUser.status === 'active' ? "#22c55e" : "#f59e0b",
+                display: "inline-block",
+              }} />
+              {profileUser.status}
+            </span>
+          </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Users</p>
-                      <p className="text-2xl font-bold text-schistoguard-navy">{stats.total}</p>
-                    </div>
-                    <Users className="w-8 h-8 text-schistoguard-teal" />
-                  </div>
-                </CardContent>
-              </Card>
+          <p style={{
+            margin: "2px 0 8px",
+            fontSize: isMobile ? 13 : 14,
+            color: "#7b8a9a",
+            fontFamily: POPPINS,
+            fontWeight: 500,
+          }}>
+            {roleLabels[profileUser.role]}
+          </p>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Active Users</p>
-                      <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                    </div>
-                    <Shield className="w-8 h-8 text-green-500" />
-                  </div>
-                </CardContent>
-              </Card>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            color: "#64748b",
+            fontSize: 13,
+            fontFamily: POPPINS,
+          }}>
+            <Mail size={14} color="#9ca3af" />
+            {profileUser.email}
+          </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">New This Week</p>
-                      <p className="text-2xl font-bold text-blue-600">{stats.recentJoins}</p>
-                    </div>
-                    <Calendar className="w-8 h-8 text-blue-500" />
-                  </div>
-                </CardContent>
-              </Card>
+          {profileUser.phone && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              color: "#64748b",
+              fontSize: 13,
+              fontFamily: POPPINS,
+              marginTop: 4,
+            }}>
+              <Phone size={14} color="#9ca3af" />
+              {profileUser.phone}
+            </div>
+          )}
+        </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Health Workers</p>
-                      <p className="text-2xl font-bold text-purple-600">{stats.byRole.health_worker}</p>
-                    </div>
-                    <UserPlus className="w-8 h-8 text-purple-500" />
-                  </div>
-                </CardContent>
-              </Card>
+        {/* ── Stats Row ── */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+          gap: isMobile ? 10 : 14,
+          marginBottom: 28,
+          padding: `0 ${isMobile ? 4 : 8}px`,
+        }}>
+          {statCards.map((card, i) => (
+            <div key={card.label} style={{
+              display: "flex",
+              flexDirection: "column",
+              padding: isMobile ? "14px 12px" : "16px 18px",
+              borderBottom: `2px solid ${card.color}20`,
+            }}>
+              <span style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: "#9ca3af",
+                fontFamily: POPPINS,
+                marginBottom: 4,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+              }}>
+                {card.label}
+              </span>
+              <span style={{
+                fontSize: isMobile ? 22 : 26,
+                fontWeight: 700,
+                color: "#1a2a3a",
+                fontFamily: POPPINS,
+                lineHeight: 1.2,
+              }}>
+                {card.value}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Divider ── */}
+        <div style={{
+          height: 1,
+          background: "#e8ecf0",
+          margin: `0 ${isMobile ? 4 : 8}px 28px`,
+        }} />
+
+        {/* ── Profile Details Section ── */}
+        <div style={{ padding: `0 ${isMobile ? 4 : 8}px` }}>
+          <div style={{
+            display: isMobile ? "block" : "flex",
+            gap: 48,
+            marginBottom: 24,
+          }}>
+            {/* Left label */}
+            <div style={{
+              width: isMobile ? "100%" : 180,
+              flexShrink: 0,
+              marginBottom: isMobile ? 12 : 0,
+            }}>
+              <h3 style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#1a2a3a",
+                margin: 0,
+                fontFamily: POPPINS,
+              }}>
+                Profile Details
+              </h3>
+              <p style={{
+                fontSize: 12,
+                color: "#9ca3af",
+                margin: "4px 0 0",
+                fontFamily: POPPINS,
+                lineHeight: 1.4,
+              }}>
+                Personal information and account details
+              </p>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>User Distribution by Designation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(stats.byRole).map(([role, count]) => (
-                    <div key={role} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{roleLabels[role as keyof typeof roleLabels]}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">{count} users</span>
-                        <Badge variant={roleColors[role as keyof typeof roleColors] as any}>
-                          {((count / stats.total) * 100).toFixed(1)}%
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+            {/* Right fields */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
+              {/* Name */}
+              <div>
+                <label style={{
+                  fontSize: 12, fontWeight: 600, color: "#64748b",
+                  fontFamily: POPPINS, display: "block", marginBottom: 6,
+                }}>Full Name</label>
+                <div style={{
+                  padding: "10px 14px",
+                  background: "#f8f9fb",
+                  borderRadius: 10,
+                  border: "1px solid #e8ecf0",
+                  fontSize: 14,
+                  color: "#1a2a3a",
+                  fontFamily: POPPINS,
+                  fontWeight: 500,
+                }}>
+                  {profileUser.name}
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
 
-          <TabsContent value="users" className="space-y-6">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="flex flex-col lg:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Search users by name, email, or location..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
+              {/* Email */}
+              <div>
+                <label style={{
+                  fontSize: 12, fontWeight: 600, color: "#64748b",
+                  fontFamily: POPPINS, display: "block", marginBottom: 6,
+                }}>Email Address</label>
+                <div style={{
+                  padding: "10px 14px",
+                  background: "#f8f9fb",
+                  borderRadius: 10,
+                  border: "1px solid #e8ecf0",
+                  fontSize: 14,
+                  color: "#1a2a3a",
+                  fontFamily: POPPINS,
+                  fontWeight: 500,
+                }}>
+                  {profileUser.email}
+                </div>
+              </div>
+
+              {/* Phone */}
+              {profileUser.phone && (
+                <div>
+                  <label style={{
+                    fontSize: 12, fontWeight: 600, color: "#64748b",
+                    fontFamily: POPPINS, display: "block", marginBottom: 6,
+                  }}>Phone Number</label>
+                  <div style={{
+                    padding: "10px 14px",
+                    background: "#f8f9fb",
+                    borderRadius: 10,
+                    border: "1px solid #e8ecf0",
+                    fontSize: 14,
+                    color: "#1a2a3a",
+                    fontFamily: POPPINS,
+                    fontWeight: 500,
+                  }}>
+                    {profileUser.phone}
+                  </div>
+                </div>
+              )}
+
+              {/* Role */}
+              <div>
+                <label style={{
+                  fontSize: 12, fontWeight: 600, color: "#64748b",
+                  fontFamily: POPPINS, display: "block", marginBottom: 6,
+                }}>Designation</label>
+                <div style={{
+                  padding: "10px 14px",
+                  background: "#f8f9fb",
+                  borderRadius: 10,
+                  border: "1px solid #e8ecf0",
+                  fontSize: 14,
+                  color: "#1a2a3a",
+                  fontFamily: POPPINS,
+                  fontWeight: 500,
+                }}>
+                  {roleLabels[profileUser.role]}
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label style={{
+                  fontSize: 12, fontWeight: 600, color: "#64748b",
+                  fontFamily: POPPINS, display: "block", marginBottom: 6,
+                }}>Location</label>
+                <div style={{
+                  padding: "10px 14px",
+                  background: "#f8f9fb",
+                  borderRadius: 10,
+                  border: "1px solid #e8ecf0",
+                  fontSize: 14,
+                  color: "#1a2a3a",
+                  fontFamily: POPPINS,
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}>
+                  <MapPin size={14} color="#9ca3af" />
+                  {profileUser.barangay ? `Brgy. ${profileUser.barangay}, ` : ''}{profileUser.municipality}
+                </div>
+              </div>
+
+              {/* Join Date & Last Login in 2 columns */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                gap: 18,
+              }}>
+                <div>
+                  <label style={{
+                    fontSize: 12, fontWeight: 600, color: "#64748b",
+                    fontFamily: POPPINS, display: "block", marginBottom: 6,
+                  }}>Member Since</label>
+                  <div style={{
+                    padding: "10px 14px",
+                    background: "#f8f9fb",
+                    borderRadius: 10,
+                    border: "1px solid #e8ecf0",
+                    fontSize: 14,
+                    color: "#1a2a3a",
+                    fontFamily: POPPINS,
+                    fontWeight: 500,
+                  }}>
+                    {formatDate(profileUser.joinDate)}
                   </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <Select value={filterRole} onValueChange={setFilterRole}>
-                    <SelectTrigger className="w-48">
-                      <Filter className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="All Designations" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Designations</SelectItem>
-                      <SelectItem value="admin">System Admin</SelectItem>
-                      <SelectItem value="health_worker">Health Worker</SelectItem>
-                      <SelectItem value="lgu_official">LGU Official</SelectItem>
-                      <SelectItem value="resident">Resident</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <label style={{
+                    fontSize: 12, fontWeight: 600, color: "#64748b",
+                    fontFamily: POPPINS, display: "block", marginBottom: 6,
+                  }}>Last Login</label>
+                  <div style={{
+                    padding: "10px 14px",
+                    background: "#f8f9fb",
+                    borderRadius: 10,
+                    border: "1px solid #e8ecf0",
+                    fontSize: 14,
+                    color: "#1a2a3a",
+                    fontFamily: POPPINS,
+                    fontWeight: 500,
+                  }}>
+                    {formatLastLogin(profileUser.lastLogin)}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        <th className="text-left p-4 font-medium text-gray-600">User</th>
-                        <th className="text-left p-4 font-medium text-gray-600">Designation</th>
-                        <th className="text-left p-4 font-medium text-gray-600">Status</th>
-                        <th className="text-left p-4 font-medium text-gray-600">Location</th>
-                        <th className="text-left p-4 font-medium text-gray-600">Last Login</th>
-                        <th className="text-left p-4 font-medium text-gray-600">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.map((user) => (
-                        <tr key={user.id} className="border-b hover:bg-gray-50">
-                          <td className="p-4">
-                            <div className="flex items-center gap-3">
-                              <Avatar>
-                                <AvatarImage src={user.avatar} />
-                                <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium">{user.name}</div>
-                                <div className="text-sm text-gray-600 flex items-center gap-1">
-                                  <Mail className="w-3 h-3" />
-                                  {user.email}
-                                </div>
-                                {user.phone && (
-                                  <div className="text-sm text-gray-600 flex items-center gap-1">
-                                    <Phone className="w-3 h-3" />
-                                    {user.phone}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <Badge variant={roleColors[user.role] as any}>
-                              {roleLabels[user.role]}
-                            </Badge>
-                          </td>
-                          <td className="p-4">
-                            {getStatusBadge(user.status)}
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <MapPin className="w-3 h-3" />
-                              <div>
-                                {user.barangay && <div>Brgy. {user.barangay}</div>}
-                                <div>{user.municipality}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4 text-sm text-gray-600">
-                            {formatLastLogin(user.lastLogin)}
-                          </td>
-                          <td className="p-4">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View Profile
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit User
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete User
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="roles" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.entries(roleLabels).map(([roleKey, roleLabel]) => (
-                <Card key={roleKey}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>{roleLabel}</span>
-                      <Badge variant={roleColors[roleKey as keyof typeof roleColors] as any}>
-                        {stats.byRole[roleKey]} users
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      {roleKey === 'admin' && (
-                        <div className="space-y-1">
-                          <div>• Full system access</div>
-                          <div>• User management</div>
-                          <div>• System configuration</div>
-                          <div>• All reports and analytics</div>
-                        </div>
-                      )}
-                      {roleKey === 'health_worker' && (
-                        <div className="space-y-1">
-                          <div>• Site monitoring access</div>
-                          <div>• Alert management</div>
-                          <div>• Health reports</div>
-                          <div>• Community notifications</div>
-                        </div>
-                      )}
-                      {roleKey === 'lgu_official' && (
-                        <div className="space-y-1">
-                          <div>• Regional oversight</div>
-                          <div>• Reports and analytics</div>
-                          <div>• Policy decisions</div>
-                          <div>• Resource allocation</div>
-                        </div>
-                      )}
-                      {roleKey === 'resident' && (
-                        <div className="space-y-1">
-                          <div>• View water quality data</div>
-                          <div>• Access site information</div>
-                          <div>• Basic monitoring features</div>
-                          <div>• Community health info</div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+        {/* Bottom spacing */}
+        <div style={{ height: 40 }} />
       </div>
+
+      {/* ── Edit Profile Dialog ── */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent
+          hideCloseButton={true}
+          style={{
+            width: isMobile ? "90vw" : 480,
+            maxWidth: isMobile ? "90vw" : 480,
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            border: "none",
+            fontFamily: POPPINS,
+          }}
+          className="p-0"
+        >
+          <div style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #eef0f2",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+              Edit Profile
+            </h2>
+            <DialogClose asChild>
+              <button
+                style={{
+                  width: 32, height: 32,
+                  minWidth: 32, minHeight: 32,
+                  borderRadius: "50%",
+                  border: "none",
+                  background: "#f3f4f6",
+                  color: "#64748b",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  padding: 0,
+                  flexShrink: 0,
+                  boxSizing: "border-box",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </DialogClose>
+          </div>
+
+          <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <Label style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 6, display: "block" }}>Name</Label>
+              <Input
+                defaultValue={profileUser.name}
+                style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+              />
+            </div>
+            <div>
+              <Label style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 6, display: "block" }}>Email</Label>
+              <Input
+                defaultValue={profileUser.email}
+                style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+              />
+            </div>
+            <div>
+              <Label style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 6, display: "block" }}>Phone</Label>
+              <Input
+                defaultValue={profileUser.phone || ''}
+                style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+              />
+            </div>
+            <div>
+              <Label style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 6, display: "block" }}>Designation</Label>
+              <Select defaultValue={profileUser.role}>
+                <SelectTrigger style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent style={{ fontFamily: POPPINS }}>
+                  <SelectItem value="resident">Community Resident</SelectItem>
+                  <SelectItem value="health_worker">Health Worker</SelectItem>
+                  <SelectItem value="lgu_official">LGU Official</SelectItem>
+                  <SelectItem value="admin">System Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <button
+              onClick={() => setIsEditOpen(false)}
+              style={{
+                width: "100%",
+                padding: "12px 0",
+                borderRadius: 12,
+                border: "none",
+                background: "#357D86",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily: POPPINS,
+                cursor: "pointer",
+                marginTop: 4,
+                transition: "opacity 0.2s",
+              }}
+            >
+              Save Changes
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

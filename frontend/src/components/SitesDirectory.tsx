@@ -430,8 +430,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             }}>
               {card.icon}
             </div>
-            <span style={{ fontSize: isMobile ? 22 : 28, fontWeight: 600, color: card.color, fontFamily: POPPINS }}>{card.value}</span>
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>{card.label}</span>
+            <span style={{ fontSize: isMobile ? 22 : 28, fontWeight: 600, color: card.color, fontFamily: POPPINS, textAlign: "center" }}>{card.value}</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS, textAlign: "center" }}>{card.label}</span>
           </div>
         ))}
       </div>
@@ -460,25 +460,28 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             cursor: (isMobile || isTablet) ? "pointer" : "default",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
             {isMobile && (
               <div style={{
                 width: 38,
                 height: 38,
+                minWidth: 38,
                 borderRadius: 12,
                 background: "#f0f8f9",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}>
                 <BarChart3 size={18} color="#357D86" strokeWidth={2.5} />
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <h2 style={{
                 fontSize: 15, fontWeight: 700, color: "#1a2a3a",
                 margin: 0,
                 fontFamily: POPPINS,
+                whiteSpace: "nowrap" as const,
               }}>
                 Time-Series Data
               </h2>
@@ -487,7 +490,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   fontSize: 11, 
                   color: "#7b8a9a", 
                   fontWeight: 500, 
-                  fontFamily: POPPINS 
+                  fontFamily: POPPINS,
+                  whiteSpace: "nowrap" as const,
                 }}>
                   Recent monitoring trends
                 </span>
@@ -503,9 +507,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               alignItems: "center",
               justifyContent: "center",
               gap: 4,
+              flexShrink: 0,
+              whiteSpace: "nowrap" as const,
             }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86", lineHeight: 1 }}>View Details</span>
-              <ChevronRight size={14} color="#357D86" strokeWidth={3} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86", lineHeight: 1, whiteSpace: "nowrap" as const }}>View Details</span>
+              <ChevronRight size={14} color="#357D86" strokeWidth={3} style={{ flexShrink: 0 }} />
             </div>
           )}
           {(!isMobile) && (

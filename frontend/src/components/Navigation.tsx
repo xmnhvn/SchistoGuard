@@ -409,13 +409,15 @@ export function NavigationHeader({
               <User className="w-4 h-4 mr-3" style={{ color: "#6b7280" }} />
               <span style={{ fontWeight: 500, color: "#1a3a4a" }}>User Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onNavigate?.("admin-settings")}
-              style={{ padding: "12px 16px", borderRadius: 12, cursor: "pointer", fontFamily: "Poppins, sans-serif" }}
-            >
-              <Settings className="w-4 h-4 mr-3" style={{ color: "#6b7280" }} />
-              <span style={{ fontWeight: 500, color: "#1a3a4a" }}>Admin Settings</span>
-            </DropdownMenuItem>
+            {user?.role === "admin" && (
+              <DropdownMenuItem
+                onClick={() => onNavigate?.("admin-settings")}
+                style={{ padding: "12px 16px", borderRadius: 12, cursor: "pointer", fontFamily: "Poppins, sans-serif" }}
+              >
+                <Settings className="w-4 h-4 mr-3" style={{ color: "#6b7280" }} />
+                <span style={{ fontWeight: 500, color: "#1a3a4a" }}>Admin Settings</span>
+              </DropdownMenuItem>
+            )}
             <div style={{ height: 1, background: "#f0f0f0", margin: "4px 8px" }} />
             <DropdownMenuItem
               className="text-red-600"

@@ -367,10 +367,6 @@ export function Dashboard({
 
   useEffect(() => {
     const fetchAlerts = () => {
-      if (!deviceConnected) {
-        setAlerts([]);
-        return;
-      }
       apiGet("/api/sensors/alerts")
         .then((data) => {
           if (Array.isArray(data)) {
@@ -446,9 +442,7 @@ export function Dashboard({
   };
 
   const unacknowledgedAlerts = alerts.filter(
-    (alert) =>
-      !alert.isAcknowledged &&
-      (alert.level === "critical" || alert.level === "warning")
+    (alert) => !alert.isAcknowledged
   ).length;
 
   // Broadcast unread count so the bell icon in NavigationHeader can show a red dot
@@ -1513,6 +1507,14 @@ export function Dashboard({
       >
         <LocateFixed size={17} color="#357D86" strokeWidth={2.5} />
       </button>
+
+      {/* Alert Details Modal */}
+      <AlertDetailsModal 
+        alert={selectedAlert}
+        isOpen={!!selectedAlert}
+        onOpenChange={(open) => !open && setSelectedAlert(null)}
+        onAcknowledge={handleAcknowledgeAlert}
+      />
 
       {/* Alerts portal — shared across all layouts */}
       {alertsPortal}

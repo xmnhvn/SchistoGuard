@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { apiPost, apiGet, apiCall } from "../utils/api";
-import { Trash2, MoreHorizontal, Search, CheckCircle2 } from "lucide-react";
+import { Trash2, MoreHorizontal, Search, CheckCircle2, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
   DropdownMenu,
@@ -305,6 +305,30 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         from { opacity: 0; transform: translateY(24px); }
         to { opacity: 1; transform: translateY(0); }
       }
+      @keyframes successOverlayIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes successCardPop {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        60% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+        100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      }
+      @keyframes checkCircleFill {
+        0% { background: rgba(255,255,255,0.85); box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        50% { background: rgba(255,255,255,0.4); box-shadow: 0 0 20px 8px rgba(34,197,94,0.15); }
+        100% { background: #22c55e; box-shadow: 0 0 30px 10px rgba(34,197,94,0.15); }
+      }
+      @keyframes checkDraw {
+        0% { stroke-dashoffset: 30; opacity: 0; }
+        40% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { stroke-dashoffset: 0; opacity: 1; }
+      }
+      @keyframes successTextIn {
+        0% { opacity: 0; transform: translateY(8px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
       .premium-shadow {
         box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05), 0 2px 10px -2px rgba(0,0,0,0.02);
       }
@@ -361,6 +385,90 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       alignItems: "stretch",
     }}>
       {styleBlock}
+
+      {/* ── Premium Success Overlay ── */}
+      {(success || showSuccess) && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.25)",
+            backdropFilter: "blur(4px)",
+            animation: "successOverlayIn 0.3s ease both",
+          }}
+          onClick={() => { setSuccess(""); setShowSuccess(false); }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "#fff",
+              borderRadius: 24,
+              padding: "36px 40px 32px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+              minWidth: 260,
+              maxWidth: "85vw",
+              animation: "successCardPop 0.5s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            {/* Animated Check Circle */}
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: "checkCircleFill 0.8s 0.15s cubic-bezier(0.22,1,0.36,1) both",
+                background: "rgba(255,255,255,0.85)",
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M5 13l4 4L19 7"
+                  stroke="#fff"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    strokeDasharray: 30,
+                    strokeDashoffset: 30,
+                    animation: "checkDraw 0.6s 0.55s cubic-bezier(0.22,1,0.36,1) both",
+                  }}
+                />
+              </svg>
+            </div>
+
+            {/* Success Text */}
+            <p
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#1a2a3a",
+                fontFamily: POPPINS,
+                textAlign: "center",
+                lineHeight: 1.4,
+                animation: "successTextIn 0.5s 0.4s cubic-bezier(0.22,1,0.36,1) both",
+              }}
+            >
+              {success || "Settings Updated"}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className={`mx-auto flex h-full min-h-0 flex-col ${isMobile ? 'w-full' : 'w-full max-w-[1700px]'}`}>
         {/* Synchronized Header Section */}
@@ -525,7 +633,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
 
                 {error && <div style={{ padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13, fontFamily: POPPINS }}>{error}</div>}
-                {success && <div style={{ padding: 12, borderRadius: 12, background: "#f0fdf4", border: "1px solid #dcfce7", color: "#15803d", fontSize: 13, fontFamily: POPPINS }}>{success}</div>}
+
 
                 <Button type="submit" className="w-full" disabled={loading} style={{
                   background: "#357D86",
@@ -704,6 +812,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                             onClick={() => openUpdatePasswordModal(item)}
                             className="cursor-pointer"
                           >
+                            <KeyRound className="mr-2 h-4 w-4" />
                             <span>Update Password</span>
                           </DropdownMenuItem>
                           {!item.isProtected && (
@@ -864,56 +973,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           >
             Save Settings
           </button>
-          {intervalMsg && <div style={{ marginTop: 12, color: intervalMsg.includes("success") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
-
-          {/* Centered Success Popup */}
-          {showSuccess && (
-            <div style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 50,
-              pointerEvents: "none"
-            }}>
-              <div style={{
-                background: "rgba(255, 255, 255, 0.95)",
-                backdropFilter: "blur(8px)",
-                padding: "24px",
-                borderRadius: "24px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 12,
-                pointerEvents: "auto",
-                boxShadow: "0 20px 40px -10px rgba(53, 125, 134, 0.2)",
-                border: "1px solid rgba(53, 125, 134, 0.1)",
-                animation: "contentSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both"
-              }}>
-                <div style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: "50%",
-                  background: "#f0fdf4",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#15803d"
-                }}>
-                  <CheckCircle2 size={32} />
-                </div>
-                <span style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#1e293b",
-                  fontFamily: POPPINS
-                }}>
-                  Interval Updated
-                </span>
-              </div>
-            </div>
-          )}
+          {intervalMsg && !intervalMsg.includes("success") && <div style={{ marginTop: 12, color: "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
         </div>
 
         {/* Balanced Bottom Spacer matching other pages */}

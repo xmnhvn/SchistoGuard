@@ -40,7 +40,7 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "admin"
+    role: "bhw"
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -139,9 +139,9 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">System Admin</SelectItem>
                   <SelectItem value="bhw">Barangay Health Worker</SelectItem>
                   <SelectItem value="lgu">LGU Officer</SelectItem>
+                  <SelectItem value="admin">System Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>

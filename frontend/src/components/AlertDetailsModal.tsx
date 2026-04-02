@@ -48,7 +48,7 @@ export function AlertDetailsModal({
             Alert Details
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex flex-col gap-4 sm:gap-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7">
             <div>
@@ -58,11 +58,11 @@ export function AlertDetailsModal({
               <table style={{ width: "100%", fontSize: 13 }}>
                 <tbody>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
                     <td style={{ fontFamily: "monospace", fontWeight: 600, fontSize: 13 }}>{alert.id}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Level:</td>
                     <td>
                       <Badge
                         variant={alert.level === "critical" ? "destructive" : "secondary"}
@@ -73,15 +73,15 @@ export function AlertDetailsModal({
                     </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Parameter:</td>
                     <td style={{ fontWeight: 600 }}>{alert.parameter}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
-                    <td style={{ fontWeight: 600 }}>{alert.value} <span style={{ fontWeight: 400, fontSize: 11 }}>NTU</span></td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Value:</td>
+                    <td style={{ fontWeight: 600 }}>{alert.value}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
                     <td>{alert.duration || '-'}</td>
                   </tr>
                 </tbody>
@@ -95,15 +95,15 @@ export function AlertDetailsModal({
               <table style={{ width: "100%", fontSize: 13 }}>
                 <tbody>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
                     <td style={{ fontWeight: 600 }}>{alert.siteName}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
                     <td style={{ wordBreak: "break-word" }}>{alert.barangay}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
                     <td style={{ wordBreak: "break-all", fontSize: 12 }}>{formatDateTime(alert.timestamp)}</td>
                   </tr>
                 </tbody>
@@ -139,10 +139,10 @@ export function AlertDetailsModal({
                 <span>Acknowledge Alert</span>
               </Button>
             ) : (
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 10, 
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
                 color: "#23B67E",
                 animation: "scaleInModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both"
               }}>

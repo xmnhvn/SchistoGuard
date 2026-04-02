@@ -494,8 +494,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               }}>
                 {card.icon}
               </div>
-              <span style={{ fontSize: isMobile ? 22 : 28, fontWeight: 600, color: card.color, fontFamily: POPPINS }}>{card.value}</span>
-              <span style={{ fontSize: 12, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>{card.label}</span>
+              <span style={{ fontSize: isMobile ? 22 : 28, fontWeight: 600, color: card.color, fontFamily: POPPINS, textAlign: "center" }}>{card.value}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS, textAlign: "center" }}>{card.label}</span>
             </div>
           ))}
         </div>

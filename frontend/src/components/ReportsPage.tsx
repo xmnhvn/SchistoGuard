@@ -400,22 +400,145 @@ export const ReportsPage: React.FC = () => {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes successOverlayIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes successOverlayOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes successCardPop {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+          60% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+          100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes checkCircleFill {
+          0% { background: rgba(255,255,255,0.85); box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+          50% { background: rgba(255,255,255,0.4); box-shadow: 0 0 20px 8px rgba(34,197,94,0.15); }
+          100% { background: #22c55e; box-shadow: 0 0 30px 10px rgba(34,197,94,0.15); }
+        }
+        @keyframes checkDraw {
+          0% { stroke-dashoffset: 30; opacity: 0; }
+          40% { opacity: 0; }
+          50% { opacity: 1; }
+          100% { stroke-dashoffset: 0; opacity: 1; }
+        }
+        @keyframes successTextIn {
+          0% { opacity: 0; transform: translateY(8px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
-      <div className="pointer-events-none absolute left-1/2 top-3 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
-        {successMessage && (
-          <div className="pointer-events-auto flex min-w-[320px] max-w-[680px] items-start justify-between gap-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-800 shadow-lg">
-            <p className="text-sm font-medium">{successMessage}</p>
-            <button
-              type="button"
-              aria-label="Close success message"
-              className="rounded p-1 text-green-700 transition-colors hover:bg-green-100"
-              onClick={() => setSuccessMessage(null)}
+
+      {/* ── Success Overlay ── */}
+      {successMessage && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.25)",
+            backdropFilter: "blur(4px)",
+            animation: "successOverlayIn 0.3s ease both",
+          }}
+          onClick={() => setSuccessMessage(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "#fff",
+              borderRadius: 24,
+              padding: "36px 40px 32px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+              minWidth: 260,
+              maxWidth: "85vw",
+              animation: "successCardPop 0.5s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            {/* Animated Check Circle */}
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: "checkCircleFill 0.8s 0.15s cubic-bezier(0.22,1,0.36,1) both",
+                background: "rgba(255,255,255,0.85)",
+              }}
             >
-              <X className="h-4 w-4" />
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M5 13l4 4L19 7"
+                  stroke="#fff"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    strokeDasharray: 30,
+                    strokeDashoffset: 30,
+                    animation: "checkDraw 0.6s 0.55s cubic-bezier(0.22,1,0.36,1) both",
+                  }}
+                />
+              </svg>
+            </div>
+
+            {/* Success Text */}
+            <p
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#1a2a3a",
+                fontFamily: POPPINS,
+                textAlign: "center",
+                lineHeight: 1.4,
+                animation: "successTextIn 0.5s 0.4s cubic-bezier(0.22,1,0.36,1) both",
+              }}
+            >
+              {successMessage}
+            </p>
+
+            {/* Close button */}
+            <button
+              onClick={() => setSuccessMessage(null)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                position: "absolute",
+                top: 14,
+                right: 14,
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#9ca3af",
+                transition: "all 0.2s",
+              }}
+            >
+              <X size={16} />
             </button>
           </div>
-        )}
+        </div>
+      )}
 
+      {/* ── Error Toast ── */}
+      <div className="pointer-events-none absolute left-1/2 top-3 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
         {error && (
           <div className="pointer-events-auto flex min-w-[320px] max-w-[680px] items-start justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 shadow-lg">
             <p className="text-sm font-medium">{error}</p>

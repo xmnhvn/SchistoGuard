@@ -57,6 +57,7 @@ export function AlertItem({
   const useColumnLayout = isMobile || compact;
 
   const handleAcknowledge = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onAcknowledge?.(id);
   };
 
@@ -217,7 +218,14 @@ export function AlertItem({
                 <Button
                   size="sm"
                   onClick={handleAcknowledge}
-                  className={`${compact ? "h-7 px-3 text-[10px]" : "h-8 px-4 text-xs"} bg-schistoguard-teal hover:bg-schistoguard-teal/90 rounded-lg font-semibold shadow-sm`}
+                  className={`${compact ? "h-6 px-3" : "h-7 px-4"} bg-schistoguard-teal hover:bg-schistoguard-teal/90 rounded-md shadow-sm`}
+                  style={{
+                    fontSize: compact ? "9px" : "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    fontFamily: POPPINS,
+                  }}
                 >
                   Acknowledge
                 </Button>

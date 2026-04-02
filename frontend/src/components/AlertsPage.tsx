@@ -103,10 +103,6 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   }, [visible]);
 
   useEffect(() => {
-    if (!deviceConnected) {
-      setAlerts([]);
-      return;
-    }
     const fetchAlerts = () => {
       apiGet("/api/sensors/alerts")
         .then((data) => {

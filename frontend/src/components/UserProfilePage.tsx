@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Camera, ArrowLeft, Mail, Shield, CheckCircle, ChevronDown, Trash2, Save, MoreHorizontal, X } from "lucide-react";
+import { Camera, Mail, Shield, CheckCircle, Trash2, Save, MoreHorizontal, MapPin, Phone, Calendar } from "lucide-react";
 import { apiCall } from "../utils/api";
 
 const POPPINS = "'Poppins', sans-serif";
@@ -40,7 +40,6 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
         }
     }, []);
 
-    // Keep local page state synced with authenticated user data.
     useEffect(() => {
         setSavedPhoto(user?.profilePhoto || null);
     }, [user?.profilePhoto]);
@@ -57,8 +56,6 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
             ? "Local Government Unit Personnel"
             : user?.role?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "User";
 
-    // The photo to show: pending (unsaved pick) > saved > null
-    // Note: pendingPhoto === "" means "marked for removal"
     const displayPhoto = pendingPhoto === "" ? null : (pendingPhoto ?? savedPhoto);
     const hasUnsavedChanges = pendingPhoto !== null;
     const isPendingRemoval = pendingPhoto === "";
@@ -130,12 +127,9 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
         }
     };
 
-    const infoItems = [
-        { icon: <Mail size={16} color="#357D86" />, label: "Email", value: user?.email || "N/A" },
-        { icon: <CheckCircle size={16} color="#22c55e" />, label: "Status", value: "Active", valueColor: "#22c55e", hasAction: true },
-    ];
-
     const pad = isMobile ? 16 : isTablet ? 24 : 32;
+    const bannerHeight = isMobile ? 140 : 180;
+    const avatarSize = isMobile ? 96 : 112;
 
     return (
         <div style={{
@@ -143,58 +137,25 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
             height: "100%",
             overflow: "auto",
             background: "#f5f7f9",
-            padding: pad,
             position: "relative",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "stretch",
-        } as React.CSSProperties}>
+        }}>
             <style>{`
-        *::-webkit-scrollbar { display: none; }
-        
-        @keyframes contentSlideIn {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-          100% { transform: translateY(0px); }
-        }
-
-        @keyframes meshGradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-
-        .glass-card {
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .premium-shadow {
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 
-                      0 8px 10px -6px rgba(0, 0, 0, 0.05);
-        }
-
-        .mesh-banner {
-          background: linear-gradient(135deg, #357D86 0%, #036366 100%);
-          background-size: 200% 200%;
-          animation: meshGradient 10s ease infinite;
-        }
-        
-        .mesh-banner::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 50%),
-                            radial-gradient(circle at 80% 70%, rgba(0,0,0,0.1) 0%, transparent 50%);
-        }
-      `}</style>
+                *::-webkit-scrollbar { display: none; }
+                @keyframes contentSlideIn {
+                    from { opacity: 0; transform: translateY(24px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes avatarPop {
+                    0% { transform: scale(0.7); opacity: 0; }
+                    60% { transform: scale(1.05); opacity: 1; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                @keyframes meshGradient {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+            `}</style>
 
             {/* Hidden file input */}
             <input
@@ -205,383 +166,353 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
                 onChange={handlePhotoSelect}
             />
 
-            {/* Header Section */}
+            {/* ── Banner ── */}
             <div style={{
-                marginBottom: 32,
-                animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
+                position: "relative",
+                width: "100%",
+                height: bannerHeight,
+                background: "linear-gradient(135deg, #357D86 0%, #036366 50%, #4aa3ad 100%)",
+                backgroundSize: "200% 200%",
+                animation: "meshGradient 10s ease infinite",
+                marginBottom: avatarSize / 2 + 20,
             }}>
-                <div>
-                    <h1 style={{
-                        fontSize: isMobile ? 20 : 26,
-                        fontWeight: 700,
-                        color: "#1a2a3a",
-                        margin: 0,
-                        fontFamily: POPPINS,
-                        letterSpacing: "-0.01em"
-                    }}>
-                        Profile Settings
-                    </h1>
-                    <p style={{
-                        fontSize: 12.5,
-                        color: "#7b8a9a",
-                        margin: "4px 0 0",
-                        fontFamily: POPPINS,
-                        fontWeight: 400
-                    }}>
-                        View and manage your personal identity
-                    </p>
+                {/* Subtle gradient overlay */}
+                <div style={{
+                    position: "absolute",
+                    inset: 0,
+                    backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0,0,0,0.1) 0%, transparent 50%)",
+                }} />
+
+                {/* Avatar — overlapping banner bottom */}
+                <div style={{
+                    position: "absolute",
+                    bottom: -(avatarSize / 2),
+                    left: `calc(50% - ${avatarSize / 2}px)`,
+                    animation: animate ? "avatarPop 0.6s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
+                }}>
+                    <div
+                        style={{
+                            width: avatarSize,
+                            height: avatarSize,
+                            borderRadius: "50%",
+                            border: hasUnsavedChanges ? "4px solid #357D86" : "4px solid #fff",
+                            boxShadow: hasUnsavedChanges
+                                ? "0 0 0 4px rgba(53, 125, 134, 0.15), 0 4px 12px rgba(0,0,0,0.12)"
+                                : "0 4px 12px rgba(0,0,0,0.12)",
+                            cursor: "pointer",
+                            overflow: "visible",
+                            background: "linear-gradient(135deg, #357D86 0%, #05a5a9 100%)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+                            position: "relative",
+                        }}
+                        onClick={() => fileInputRef.current?.click()}
+                        onMouseEnter={() => setIsHoveringAvatar(true)}
+                        onMouseLeave={() => setIsHoveringAvatar(false)}
+                    >
+                        <div style={{
+                            width: "100%", height: "100%",
+                            borderRadius: "50%", overflow: "hidden",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                            {displayPhoto ? (
+                                <img
+                                    src={displayPhoto}
+                                    alt="Profile"
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                            ) : (
+                                <span style={{
+                                    fontSize: isMobile ? 30 : 36, fontWeight: 800, color: "#fff",
+                                    fontFamily: POPPINS, userSelect: "none",
+                                    letterSpacing: "0.05em"
+                                }}>
+                                    {initials}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Camera button on hover */}
+                        <div style={{
+                            position: "absolute",
+                            bottom: 2, right: -4,
+                            width: 34, height: 34, borderRadius: "50%",
+                            border: "3px solid #fff", background: "#357D86",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            cursor: "pointer", color: "#fff",
+                            boxShadow: "0 4px 12px rgba(53, 125, 134, 0.3)",
+                            opacity: isHoveringAvatar ? 1 : 0.8,
+                            transition: "all 0.3s",
+                            zIndex: 10,
+                        }}
+                            onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                        >
+                            <Camera size={15} />
+                        </div>
+
+                        {/* Remove photo button */}
+                        {savedPhoto && isHoveringAvatar && (
+                            <div style={{
+                                position: "absolute",
+                                top: 2, right: -4,
+                                width: 28, height: 28, borderRadius: "50%",
+                                border: "3px solid #fff", background: "#fef2f2",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                cursor: "pointer", color: "#dc2626",
+                                boxShadow: "0 4px 12px rgba(220, 38, 38, 0.15)",
+                                transition: "all 0.3s",
+                                zIndex: 10,
+                            }}
+                                onClick={(e) => { e.stopPropagation(); setPendingPhoto(""); }}
+                            >
+                                <Trash2 size={12} />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div style={{ maxWidth: 800, width: "100%", margin: (isMobile || isTablet) ? "0" : "0 auto" }}>
+            {/* ── Main content ── */}
+            <div style={{
+                maxWidth: 720,
+                margin: "0 auto",
+                padding: `0 ${pad}px ${pad * 2}px`,
+                animation: animate ? "contentSlideIn 0.8s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
+            }}>
 
-                {/* Profile Card Center Container */}
+                {/* ── Name & Role section ── */}
                 <div style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    width: "100%",
-                    animation: animate
-                        ? "contentSlideIn 1s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both"
-                        : "none",
+                    textAlign: "center",
+                    marginBottom: 24,
                 }}>
-                    <div className="glass-card premium-shadow" style={{
-                        maxWidth: 440,
-                        width: "100%",
-                        borderRadius: 32,
-                        overflow: "hidden",
+                    <h1 style={{
+                        fontSize: isMobile ? 22 : 28,
+                        fontWeight: 800,
+                        color: "#0f172a",
+                        margin: "0 0 6px",
+                        fontFamily: POPPINS,
+                        letterSpacing: "-0.01em",
+                    }}>
+                        {user ? `${user.firstName} ${user.lastName}` : "Authenticated User"}
+                    </h1>
+                    <div style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        background: "rgba(53, 125, 134, 0.08)",
+                        padding: "5px 14px", borderRadius: 100,
+                    }}>
+                        <Shield size={13} color="#357D86" />
+                        <span style={{
+                            fontSize: 12, fontWeight: 700, color: "#357D86",
+                            fontFamily: POPPINS,
+                        }}>
+                            {roleDisplay}
+                        </span>
+                    </div>
+                </div>
+
+                {/* ── Save/Cancel buttons when photo has unsaved changes ── */}
+                {hasUnsavedChanges && (
+                    <div style={{
+                        display: "flex", gap: 12, marginBottom: 24,
+                        justifyContent: (isMobile || isTablet) ? "flex-start" : "center",
+                        animation: "contentSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
+                    }}>
+                        <button
+                            onClick={handleCancelPhoto}
+                            style={{
+                                padding: "10px 24px", borderRadius: 14,
+                                border: "1px solid #e2e8f0", background: "#fff",
+                                color: "#64748b", fontSize: 13, fontWeight: 700,
+                                fontFamily: POPPINS, cursor: "pointer",
+                                transition: "all 0.3s",
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSavePhoto}
+                            disabled={savingPhoto}
+                            style={{
+                                padding: "10px 28px", borderRadius: 14,
+                                border: "none",
+                                background: isPendingRemoval ? "#dc2626" : "#357D86",
+                                color: "#fff", fontSize: 13, fontWeight: 700,
+                                fontFamily: POPPINS, cursor: "pointer",
+                                display: "flex", alignItems: "center", gap: 10,
+                                boxShadow: isPendingRemoval
+                                    ? "0 8px 20px -5px rgba(220, 38, 38, 0.4)"
+                                    : "0 8px 20px -5px rgba(53, 125, 134, 0.4)",
+                                transition: "all 0.3s",
+                                opacity: savingPhoto ? 0.7 : 1,
+                            }}
+                        >
+                            {isPendingRemoval ? <Trash2 size={16} /> : <Save size={16} />}
+                            {savingPhoto ? "Saving..." : (isPendingRemoval ? "Confirm Removal" : "Save Changes")}
+                        </button>
+                    </div>
+                )}
+
+                {/* ── Divider ── */}
+                <div style={{ height: 1, background: "#e8ecf0", marginBottom: 28 }} />
+
+                {/* ── Info items ── */}
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                    gap: 16,
+                    marginBottom: 28,
+                }}>
+                    {/* Email */}
+                    <div style={{
+                        display: "flex", alignItems: "center", gap: 14,
+                        padding: "14px 18px",
+                        background: "#fff",
+                        borderRadius: 16,
+                        border: "1px solid #f0f1f3",
+                    }}>
+                        <div style={{
+                            width: 40, height: 40, borderRadius: 12,
+                            background: "#f0f8f9", display: "flex",
+                            alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                        }}>
+                            <Mail size={16} color="#357D86" />
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                            <span style={{
+                                fontSize: 11, fontWeight: 600, color: "#9ca3af",
+                                fontFamily: POPPINS, textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                            }}>
+                                Email
+                            </span>
+                            <span style={{
+                                fontSize: 14, fontWeight: 600, color: "#1e293b",
+                                fontFamily: POPPINS, overflow: "hidden",
+                                textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            }}>
+                                {user?.email || "N/A"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Status + Delete Action */}
+                    <div style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "14px 18px",
+                        background: "#fff",
+                        borderRadius: 16,
+                        border: "1px solid #f0f1f3",
                         position: "relative",
                     }}>
-                        {/* Mesh banner */}
-                        <div className="mesh-banner" style={{
-                            height: 120,
-                            position: "relative",
-                        }} />
-
-                        {/* Avatar section */}
-                        <div style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            marginTop: -50,
-                            padding: "0 28px 28px",
-                            position: "relative",
-                        }}>
-                            {/* Avatar with luxury border */}
-                            <div
-                                style={{
-                                    position: "relative",
-                                    width: 100, height: 100,
-                                    borderRadius: "50%",
-                                    border: hasUnsavedChanges ? "4px solid #357D86" : "4px solid #fff",
-                                    boxShadow: hasUnsavedChanges
-                                        ? "0 0 0 4px rgba(53, 125, 134, 0.15), 0 12px 24px -8px rgba(0,0,0,0.2)"
-                                        : "0 12px 24px -8px rgba(0,0,0,0.2)",
-                                    cursor: "pointer",
-                                    overflow: "visible", 
-                                    background: "linear-gradient(135deg, #357D86 0%, #05a5a9 100%)",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-                                }}
-                                onClick={() => fileInputRef.current?.click()}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "scale(1.02)";
-                                    setIsHoveringAvatar(true);
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "scale(1)";
-                                    setIsHoveringAvatar(false);
-                                }}
-                            >
-                                <div style={{
-                                    width: "100%", height: "100%",
-                                    borderRadius: "50%", overflow: "hidden",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    position: "relative"
-                                }}>
-                                    {displayPhoto ? (
-                                        <img
-                                            src={displayPhoto}
-                                            alt="Profile"
-                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                        />
-                                    ) : (
-                                        <span style={{
-                                            fontSize: 34, fontWeight: 800, color: "#fff",
-                                            fontFamily: POPPINS, userSelect: "none",
-                                            letterSpacing: "0.05em"
-                                        }}>
-                                            {initials}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Floating buttons outside the circle but anchored to it */}
-                                <div style={{
-                                    position: "absolute",
-                                    bottom: 4,
-                                    right: -8,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 8,
-                                    zIndex: 10,
-                                    opacity: isHoveringAvatar ? 1 : 0,
-                                    transform: isHoveringAvatar ? "translateX(0) scale(1)" : "translateX(-10px) scale(0.9)",
-                                    pointerEvents: isHoveringAvatar ? "auto" : "none",
-                                    transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
-                                }}>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                                        style={{
-                                            width: 40, height: 40, borderRadius: "50%",
-                                            border: "3.5px solid #fff", background: "#357D86",
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            cursor: "pointer", transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                                            color: "#fff",
-                                            boxShadow: "0 4px 12px rgba(53, 125, 134, 0.3)"
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = "scale(1.15) rotate(5deg)";
-                                            e.currentTarget.style.background = "#036366";
-                                            e.currentTarget.style.boxShadow = "0 6px 16px rgba(53, 125, 134, 0.4)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = "scale(1)";
-                                            e.currentTarget.style.background = "#357D86";
-                                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(53, 125, 134, 0.3)";
-                                        }}
-                                        title="Update Photo"
-                                    >
-                                        <Camera size={18} />
-                                    </button>
-
-                                    {savedPhoto && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setPendingPhoto(""); }}
-                                            style={{
-                                                width: 40, height: 40, borderRadius: "50%",
-                                                border: "3.5px solid #fff", background: "#fef2f2",
-                                                display: "flex", alignItems: "center", justifyContent: "center",
-                                                cursor: "pointer", transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                                                color: "#dc2626",
-                                                boxShadow: "0 4px 12px rgba(220, 38, 38, 0.15)"
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.transform = "scale(1.15) rotate(-5deg)";
-                                                e.currentTarget.style.background = "#fee2e2";
-                                                e.currentTarget.style.boxShadow = "0 6px 16px rgba(220, 38, 38, 0.25)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.transform = "scale(1)";
-                                                e.currentTarget.style.background = "#fef2f2";
-                                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(220, 38, 38, 0.15)";
-                                            }}
-                                            title="Remove Photo"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Save / Cancel buttons — Premium styling */}
-                            {hasUnsavedChanges && (
-                                <div style={{
-                                    display: "flex", gap: 12, marginTop: 20,
-                                    animation: "contentSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
-                                }}>
-                                    <button
-                                        onClick={handleCancelPhoto}
-                                        style={{
-                                            padding: "10px 24px", borderRadius: 14,
-                                            border: "1px solid #e2e8f0", background: "rgba(255,255,255,0.8)",
-                                            color: "#64748b", fontSize: 13, fontWeight: 700,
-                                            fontFamily: POPPINS, cursor: "pointer",
-                                            transition: "all 0.3s",
-                                            backdropFilter: "blur(4px)"
-                                        }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.8)"; e.currentTarget.style.transform = "translateY(0px)"; }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSavePhoto}
-                                        disabled={savingPhoto}
-                                        style={{
-                                            padding: "10px 28px", borderRadius: 14,
-                                            border: "none", background: isPendingRemoval ? "#dc2626" : "#357D86",
-                                            color: "#fff", fontSize: 13, fontWeight: 700,
-                                            fontFamily: POPPINS, cursor: "pointer",
-                                            display: "flex", alignItems: "center", gap: 10,
-                                            boxShadow: isPendingRemoval
-                                                ? "0 8px 20px -5px rgba(220, 38, 38, 0.4)"
-                                                : "0 8px 20px -5px rgba(53, 125, 134, 0.4)",
-                                            transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                                            opacity: savingPhoto ? 0.7 : 1,
-                                        }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.02)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0px) scale(1)"; e.currentTarget.style.filter = "brightness(1)"; }}
-                                    >
-                                        {isPendingRemoval ? <Trash2 size={16} /> : <Save size={16} />}
-                                        {savingPhoto ? "Saving..." : (isPendingRemoval ? "Confirm Removal" : "Save Changes")}
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Name & Role — Enhanced typography */}
-                            <h2 style={{
-                                fontSize: 21, fontWeight: 800, color: "#0f172a",
-                                margin: hasUnsavedChanges ? "14px 0 4px" : "18px 0 4px",
-                                fontFamily: POPPINS, textAlign: "center",
-                                letterSpacing: "-0.01em"
-                            }}>
-                                {user ? `${user.firstName} ${user.lastName}` : "Authenticated User"}
-                            </h2>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                             <div style={{
-                                display: "flex", alignItems: "center", gap: 8,
-                                background: "rgba(53, 125, 134, 0.08)",
-                                padding: "6px 14px", borderRadius: 100,
+                                width: 40, height: 40, borderRadius: 12,
+                                background: "#e6f7ef", display: "flex",
+                                alignItems: "center", justifyContent: "center",
+                                flexShrink: 0,
                             }}>
-                                <Shield size={14} color="#357D86" />
+                                <CheckCircle size={16} color="#22c55e" />
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column" }}>
                                 <span style={{
-                                    fontSize: 13, fontWeight: 700, color: "#357D86",
+                                    fontSize: 11, fontWeight: 600, color: "#9ca3af",
+                                    fontFamily: POPPINS, textTransform: "uppercase",
+                                    letterSpacing: "0.05em",
+                                }}>
+                                    Status
+                                </span>
+                                <span style={{
+                                    fontSize: 14, fontWeight: 700, color: "#22c55e",
                                     fontFamily: POPPINS,
                                 }}>
-                                    {roleDisplay}
+                                    Active
                                 </span>
                             </div>
-
                         </div>
 
-                        {/* Divider */}
-                        <div style={{ height: 1, background: "rgba(0,0,0,0.04)", margin: "0 32px" }} />
-
-                        {/* Premium Info Items Grid */}
-                        <div style={{ padding: "0 28px 28px", display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
-                            {infoItems.map((item, i) => (
-                                <div key={item.label} style={{
-                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                    padding: "14px 18px",
-                                    background: "rgba(0,0,0,0.02)",
-                                    borderRadius: 18,
-                                    border: "1px solid rgba(0,0,0,0.03)",
-                                    transition: "all 0.3s ease",
-                                    animation: animate ? `contentSlideIn 0.8s ${0.3 + i * 0.12}s cubic-bezier(0.16, 1, 0.3, 1) both` : "none",
+                        {/* More actions button */}
+                        <div style={{ position: "relative" }}>
+                            <button
+                                onClick={() => { setShowDeleteMenu(!showDeleteMenu); setShowDeleteConfirm(false); }}
+                                style={{
+                                    background: "none", border: "none",
+                                    padding: 8, borderRadius: "50%",
+                                    cursor: "pointer", display: "flex",
+                                    alignItems: "center", justifyContent: "center",
+                                    transition: "background 0.2s",
+                                    color: showDeleteMenu ? "#ef4444" : "#64748b"
                                 }}
-                                >
-                                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                                        <div style={{
-                                            width: 40, height: 40, borderRadius: 12,
-                                            background: "#fff", display: "flex",
-                                            alignItems: "center", justifyContent: "center",
-                                            boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
-                                        }}>
-                                            {item.icon}
-                                        </div>
-                                        <div style={{ display: "flex", flexDirection: "column" }}>
-                                            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                                {item.label}
-                                            </span>
-                                            <span style={{
-                                                fontSize: 15, fontWeight: 700,
-                                                color: item.valueColor || "#1e293b",
-                                                fontFamily: POPPINS,
-                                                marginTop: 1
-                                            }}>
-                                                {item.value}
-                                            </span>
-                                        </div>
-                                    </div>
+                            >
+                                <MoreHorizontal size={18} />
+                            </button>
 
-                                    {item.hasAction && (
-                                        <div style={{ position: "relative" }}>
-                                            <button
-                                                onClick={() => { setShowDeleteMenu(!showDeleteMenu); setShowDeleteConfirm(false); }}
-                                                style={{
-                                                    background: "none", border: "none",
-                                                    padding: 8, borderRadius: "50%",
-                                                    cursor: "pointer", display: "flex",
-                                                    alignItems: "center", justifyContent: "center",
-                                                    transition: "background 0.2s",
-                                                    color: showDeleteMenu ? "#ef4444" : "#64748b"
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                                            >
-                                                <MoreHorizontal size={18} />
-                                            </button>
-
-                                            {/* Contextual Delete Menu */}
-                                            {showDeleteMenu && (
-                                                <div className="premium-shadow" style={{
-                                                    position: "absolute",
-                                                    bottom: "100%",
-                                                    right: 0,
-                                                    transform: "translateY(-8px)",
-                                                    background: "#fff",
-                                                    borderRadius: 16,
-                                                    padding: 8,
-                                                    minWidth: 160,
-                                                    zIndex: 100,
-                                                    border: "1px solid rgba(0,0,0,0.05)",
-                                                    animation: "contentSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both"
-                                                }}>
-                                                    {!showDeleteConfirm ? (
-                                                        <button
-                                                            onClick={() => setShowDeleteConfirm(true)}
-                                                            style={{
-                                                                width: "100%", padding: "10px 14px",
-                                                                borderRadius: 10, border: "none",
-                                                                background: "none", color: "#ef4444",
-                                                                fontSize: 13, fontWeight: 700,
-                                                                fontFamily: POPPINS, cursor: "pointer",
-                                                                display: "flex", alignItems: "center", gap: 10,
-                                                                textAlign: "left"
-                                                            }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
-                                                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                                                        >
-                                                            <Trash2 size={16} /> Delete Profile
-                                                        </button>
-                                                    ) : (
-                                                        <div style={{ padding: 4 }}>
-                                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center", textTransform: "uppercase" }}>Confirm?</div>
-                                                            <div style={{ display: "flex", gap: 6 }}>
-                                                                <button
-                                                                    onClick={() => setShowDeleteConfirm(false)}
-                                                                    disabled={deleting}
-                                                                    style={{
-                                                                        flex: 1, padding: "8px 0",
-                                                                        borderRadius: 8, border: "1px solid #e2e8f0",
-                                                                        background: "#fff", color: "#64748b",
-                                                                        fontSize: 11, fontWeight: 700,
-                                                                        fontFamily: POPPINS, cursor: "pointer",
-                                                                    }}
-                                                                >
-                                                                    No
-                                                                </button>
-                                                                <button
-                                                                    onClick={handleDeleteAccount}
-                                                                    disabled={deleting}
-                                                                    style={{
-                                                                        flex: 1.5, padding: "8px 0",
-                                                                        borderRadius: 8, border: "none",
-                                                                        background: "#ef4444", color: "#fff",
-                                                                        fontSize: 11, fontWeight: 700,
-                                                                        fontFamily: POPPINS, cursor: "pointer",
-                                                                    }}
-                                                                >
-                                                                    {deleting ? "Wait..." : "Yes, Delete"}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                            {/* Delete menu */}
+                            {showDeleteMenu && (
+                                <div style={{
+                                    position: "absolute",
+                                    bottom: "100%",
+                                    right: 0,
+                                    transform: "translateY(-8px)",
+                                    background: "#fff",
+                                    borderRadius: 16,
+                                    padding: 8,
+                                    minWidth: 160,
+                                    zIndex: 100,
+                                    border: "1px solid #f0f1f3",
+                                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.08)",
+                                    animation: "contentSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both"
+                                }}>
+                                    {!showDeleteConfirm ? (
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(true)}
+                                            style={{
+                                                width: "100%", padding: "10px 14px",
+                                                borderRadius: 10, border: "none",
+                                                background: "none", color: "#ef4444",
+                                                fontSize: 13, fontWeight: 700,
+                                                fontFamily: POPPINS, cursor: "pointer",
+                                                display: "flex", alignItems: "center", gap: 10,
+                                                textAlign: "left"
+                                            }}
+                                        >
+                                            <Trash2 size={16} /> Delete Profile
+                                        </button>
+                                    ) : (
+                                        <div style={{ padding: 4 }}>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center", textTransform: "uppercase" }}>Confirm?</div>
+                                            <div style={{ display: "flex", gap: 6 }}>
+                                                <button
+                                                    onClick={() => setShowDeleteConfirm(false)}
+                                                    disabled={deleting}
+                                                    style={{
+                                                        flex: 1, padding: "8px 0",
+                                                        borderRadius: 8, border: "1px solid #e2e8f0",
+                                                        background: "#fff", color: "#64748b",
+                                                        fontSize: 11, fontWeight: 700,
+                                                        fontFamily: POPPINS, cursor: "pointer",
+                                                    }}
+                                                >
+                                                    No
+                                                </button>
+                                                <button
+                                                    onClick={handleDeleteAccount}
+                                                    disabled={deleting}
+                                                    style={{
+                                                        flex: 1.5, padding: "8px 0",
+                                                        borderRadius: 8, border: "none",
+                                                        background: "#ef4444", color: "#fff",
+                                                        fontSize: 11, fontWeight: 700,
+                                                        fontFamily: POPPINS, cursor: "pointer",
+                                                    }}
+                                                >
+                                                    {deleting ? "Wait..." : "Yes, Delete"}
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
                 </div>
