@@ -146,7 +146,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
   // Fallback logic for marker and address (sync with dashboard)
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
-  const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string } | null>(null);
+  const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
 
   const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
     .map((v: any) => (typeof v === "string" ? v.trim() : ""))
@@ -156,6 +156,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const displayAddress =
     gpsAddress ||
     (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
     "No recorded address yet";
 
@@ -277,13 +278,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
         .then((data) => {
+          console.log('[LandingPage] /api/sensors/latest response:', data);
           if (data && data.deviceConnected === false) {
+            console.log('[LandingPage] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
             if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+              console.log('[LandingPage] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
                 lat: data.latitude,
                 lng: data.longitude,
                 siteName: data.siteName || 'Last Known Location',
+                address: data.address || null,
               };
               setLastSavedLocation(fallbackLoc);
               setGpsSites([
@@ -295,6 +300,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 },
               ]);
               localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
+            } else {
+              console.log('[LandingPage] NO fallback coords, clearing map');
             }
             setDeviceConnected(false);
             setLatestReading(null);
@@ -302,6 +309,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             setDataOk(false);
             return;
           }
+          console.log('[LandingPage] Device connected, setting latestReading');
           setLatestReading(data);
           setBackendOk(true);
           setDataOk(true);

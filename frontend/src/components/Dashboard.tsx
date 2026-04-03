@@ -94,7 +94,7 @@ export function Dashboard({
   // Strictly use real sensor device location (from GSM/GPS)
   // Fallback to last known location in localStorage if sensor is not yet available
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
-  const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string } | null>(null);
+  const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
   
   // Update location whenever latestReading changes
   useEffect(() => {
@@ -202,6 +202,7 @@ export function Dashboard({
   const displayAddress =
     gpsAddress ||
     (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
     "No recorded address yet";
 
@@ -270,14 +271,18 @@ export function Dashboard({
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
         .then((data) => {
+          console.log('[Dashboard] /api/sensors/latest response:', data);
           // If backend says deviceConnected: false, treat as disconnected
           if (data && data.deviceConnected === false) {
+            console.log('[Dashboard] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
             if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+              console.log('[Dashboard] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
                 lat: data.latitude,
                 lng: data.longitude,
                 siteName: data.siteName || 'Last Known Location',
+                address: data.address || null,
               };
               setLastSavedLocation(fallbackLoc);
               setGpsSites([
@@ -289,6 +294,8 @@ export function Dashboard({
                 },
               ]);
               localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
+            } else {
+              console.log('[Dashboard] NO fallback coords, clearing map');
             }
             setDeviceConnected(false);
             setLatestReading(null);
@@ -296,6 +303,7 @@ export function Dashboard({
             setDataOk(false);
             return;
           }
+          console.log('[Dashboard] Device connected, setting latestReading');
           setLatestReading(data);
           setBackendOk(true);
           setDataOk(true);

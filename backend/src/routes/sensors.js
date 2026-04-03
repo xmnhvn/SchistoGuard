@@ -502,6 +502,7 @@ router.post("/", async (req, res) => {
 
 router.get("/latest", (req, res) => {
   const sendDisconnectedWithLastLocation = () => {
+    console.log('[API /latest] Triggered fallback: querying raw_readings for last GPS location...');
     db.get(
       "SELECT latitude, longitude, address, timestamp FROM raw_readings WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
       [],
@@ -511,7 +512,10 @@ router.get("/latest", (req, res) => {
           return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
         }
 
+        console.log('[API /latest] Fallback query result:', row || 'NO ROW FOUND');
+
         if (row) {
+          console.log('[API /latest] Returning disconnected with fallback coords:', { lat: row.latitude, lng: row.longitude, ts: row.timestamp });
           return res.json({
             deviceConnected: false,
             siteName: GLOBAL_DEVICE_NAME,
@@ -522,6 +526,7 @@ router.get("/latest", (req, res) => {
           });
         }
 
+        console.log('[API /latest] No GPS location found in raw_readings, returning bare disconnected status');
         return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
       }
     );
@@ -531,8 +536,11 @@ router.get("/latest", (req, res) => {
     // Consider device disconnected if last data is older than 10 seconds
     const now = Date.now();
     const ts = new Date(latestData.timestamp).getTime();
-    console.log('[API /latest] now:', new Date(now).toISOString(), 'latestData.timestamp:', latestData.timestamp, 'diff(ms):', Math.abs(now - ts), 'latestData:', latestData);
+    const diffMs = Math.abs(now - ts);
+    console.log('[API /latest] latestData fresh check: now=' + new Date(now).toISOString() + ' | ts=' + new Date(ts).toISOString() + ' | diffMs=' + diffMs + ' | threshold=10000ms | isFresh=' + (diffMs < 10000));
+
     if (Math.abs(now - ts) < 10000) {
+      console.log('[API /latest] Data is fresh, returning as connected');
       res.json({
         ...latestData,
         siteName: GLOBAL_DEVICE_NAME,
