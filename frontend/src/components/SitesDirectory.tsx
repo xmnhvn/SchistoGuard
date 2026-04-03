@@ -141,19 +141,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         riskLevel: r.riskLevel,
       };
     });
-    doc.text('SchistoGuard Time-Series Data Export', 40, 40);
-    autoTable(doc, {
-      columns,
-      body: rows,
-      startY: 60,
-      styles: { fontSize: 10, cellPadding: 4 },
-      headStyles: { fillColor: [53, 125, 134] },
-    });
-    // Filename: schistoguard_timeseries_[risk]_[timerange]_YYYYMMDD-HHmm.pdf
+
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const dmy = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
-    // Capitalize risk and time range for filename
     const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
     let time = 'AllTime';
     if (filterTimeRange !== 'all') {
@@ -163,6 +154,110 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         time = filterTimeRange.charAt(0).toUpperCase() + filterTimeRange.slice(1);
       }
     }
+
+    const img = new Image();
+    img.src = '/schistoguard.png';
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve; // Continue even if image fails
+    });
+
+    let pdfFont = 'helvetica';
+    const bufferToBase64 = (buffer: ArrayBuffer) => {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    };
+
+    try {
+      const [regRes, boldRes] = await Promise.all([
+        fetch('/fonts/Poppins-Regular.ttf'),
+        fetch('/fonts/Poppins-Bold.ttf')
+      ]);
+      if (regRes.ok && boldRes.ok) {
+        const [regBuf, boldBuf] = await Promise.all([
+          regRes.arrayBuffer(),
+          boldRes.arrayBuffer()
+        ]);
+        doc.addFileToVFS('Poppins-Regular.ttf', bufferToBase64(regBuf));
+        doc.addFileToVFS('Poppins-Bold.ttf', bufferToBase64(boldBuf));
+        doc.addFont('Poppins-Regular.ttf', 'poppins', 'normal');
+        doc.addFont('Poppins-Bold.ttf', 'poppins', 'bold');
+        pdfFont = 'poppins';
+      }
+    } catch (e) {
+      console.warn('Failed to load local Poppins TTF fonts for PDF rendering, falling back to Helvetica.', e);
+    }
+
+    const pw = doc.internal.pageSize.getWidth();
+    let topStartX = pw / 2;
+    let imgWidth = 0;
+    
+    if (img.complete && img.naturalWidth > 0) {
+      const imgHeight = 22;
+      imgWidth = imgHeight * (img.naturalWidth / img.naturalHeight);
+      
+      doc.setFontSize(20);
+      doc.setFont(pdfFont, 'bold');
+      const titleWidth = doc.getTextWidth('SchistoGuard');
+      const totalTopWidth = imgWidth + 5 + titleWidth;
+      topStartX = (pw - totalTopWidth) / 2;
+      
+      doc.addImage(img, 'PNG', topStartX, 30, imgWidth, imgHeight);
+      doc.setTextColor(53, 125, 134); // #357d86
+      doc.text('SchistoGuard', topStartX + imgWidth + 5, 47.5); 
+    } else {
+      doc.setFontSize(20);
+      doc.setFont(pdfFont, 'bold');
+      const titleWidth = doc.getTextWidth('SchistoGuard');
+      topStartX = (pw - titleWidth) / 2;
+      doc.setTextColor(53, 125, 134);
+      doc.text('SchistoGuard', topStartX, 47.5);
+    }
+
+    doc.setFontSize(8.5);
+    doc.setFont(pdfFont, 'normal');
+    doc.setTextColor(107, 114, 128); // #6b7280
+    const subtitle = 'ENVIRONMENTAL MONITORING PDF REPORT';
+    const charSpacing = 1;
+    const baseW = doc.getTextWidth(subtitle);
+    const totalSubW = baseW + (subtitle.length - 1) * charSpacing;
+    doc.text(subtitle, (pw - totalSubW) / 2, 60, { charSpace: charSpacing });
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184); // #94a3b8
+    const address = '[Insert Official Address Here]';
+    doc.text(address, (pw - doc.getTextWidth(address)) / 2, 70);
+
+    doc.setFontSize(7);
+    doc.setFont(pdfFont, 'bold');
+    doc.setTextColor(107, 114, 128);
+    doc.text('Date Exported:', pw - 40, 40, { align: 'right' });
+    doc.setFont(pdfFont, 'normal');
+    const dateFormat = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'});
+    const timeFormat = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    doc.text(`${dateFormat} at ${timeFormat}`, pw - 40, 48, { align: 'right' });
+    
+    doc.setFont(pdfFont, 'bold');
+    doc.text(`Time Range: ${time} | Risk: ${risk}`, pw - 40, 58, { align: 'right' });
+
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(1);
+    doc.line(40, 78, pw - 40, 78);
+
+    autoTable(doc, {
+      columns,
+      body: rows,
+      startY: 84,
+      styles: { fontSize: 8.5, cellPadding: 6, font: pdfFont },
+      headStyles: { fillColor: [53, 125, 134], textColor: 255, halign: 'left', fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { top: 40, right: 40, bottom: 40, left: 40 }
+    });
+
     const filename = `SchistoGuard_Timeseries_${risk}_${time}_${dmy}.pdf`;
     doc.save(filename);
   };
