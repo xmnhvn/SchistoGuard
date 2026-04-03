@@ -62,25 +62,28 @@ export function SiteDetailView({
   // Ref for chart container
   const chartRef = useRef<HTMLDivElement>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
     if (!chartRef.current) return;
-    // Find the PDF-only explanation element
-    const pdfOnlyElem = chartRef.current.querySelector('.sg-pdf-only') as HTMLElement | null;
-    let prevDisplay = '';
-    if (pdfOnlyElem) {
-      prevDisplay = pdfOnlyElem.style.display;
-      pdfOnlyElem.style.display = 'block';
-    }
+    setExporting(true);
+    const originalTransform = chartRef.current.style.transform;
+    const originalHeight = chartRef.current.style.height;
+    
+    // Add layout class for PDF to handle margins/gaps
+    chartRef.current.classList.add('sg-exporting-pdf');
+    
+    // Find the PDF-only explanation elements
+    const pdfOnlyElems = chartRef.current.querySelectorAll('.sg-pdf-only');
+    const prevDisplays: string[] = [];
+    pdfOnlyElems.forEach((el: any) => {
+      prevDisplays.push(el.style.display);
+      el.style.display = 'block';
+    });
+
     try {
       const html2pdf = await loadHtml2Pdf();
-      if (typeof html2pdf !== 'function') throw new Error('PDF export library is unavailable.');
-      // Filename: SchistoGuard_TimeseriesGraph_[Risk]_[TimeRange]_dd-mm-yyyy.pdf
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
-      const risk = currentRisk ? (currentRisk.charAt(0).toUpperCase() + currentRisk.slice(1)) : 'AllRisk';
       let time = 'AllTime';
       if (timeRange && timeRange !== 'all') {
         if (timeRange.endsWith('h')) {
@@ -89,7 +92,14 @@ export function SiteDetailView({
           time = timeRange.charAt(0).toUpperCase() + timeRange.slice(1);
         }
       }
-      const filename = `SchistoGuard_TimeseriesGraph_${risk}_${time}_${dmy}.pdf`;
+      
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
+      
+      const sanitizedName = siteName?.replace(/\s+/g, '_') || 'Site';
+      const filename = `${sanitizedName}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
+      
       await html2pdf()
         .set({
           margin: [10, 10, 10, 10],
@@ -97,15 +107,20 @@ export function SiteDetailView({
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         })
         .from(chartRef.current)
         .save();
     } catch (err) {
-      alert('Failed to export chart PDF.');
+      console.error('Failed to export chart PDF.', err);
     } finally {
-      if (pdfOnlyElem) {
-        pdfOnlyElem.style.display = prevDisplay || 'none';
-      }
+      if (originalTransform) chartRef.current.style.transform = originalTransform;
+      chartRef.current.style.height = originalHeight;
+      pdfOnlyElems.forEach((el: any, index: number) => {
+        el.style.display = prevDisplays[index] || 'none';
+      });
+      chartRef.current.classList.remove('sg-exporting-pdf');
+      setExporting(false);
     }
   };
 
@@ -236,6 +251,7 @@ export function SiteDetailView({
       }
 
       return {
+        originalTime: r.timestamp,
         time: timeLabel,
         turbidity: Math.max(0, r.turbidity),
         temperature: r.temperature,
@@ -245,6 +261,7 @@ export function SiteDetailView({
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      if (payload[0].payload.time === "Initial reading" || payload[0].payload.time === "Latest reading") return null;
       return (
         <div style={{
           background: "#fff",
@@ -278,14 +295,29 @@ export function SiteDetailView({
   };
 
   const CustomActiveDot = (props: any) => {
-    const { cx, cy, stroke } = props;
+    const { cx, cy, stroke, payload } = props;
+    if (payload && (payload.time === "Initial reading" || payload.time === "Latest reading")) {
+      return <g key={`empty-${cx}-${cy}`} />;
+    }
     return (
       <g>
-        <circle cx={cx} cy={cy} r={6} fill="#fff" stroke={stroke} strokeWidth={2.5} />
-        <circle cx={cx} cy={cy} r={12} fill={stroke} fillOpacity={0.15} />
+        <circle cx={cx} cy={cy} r={6} fill={stroke} stroke="#fff" strokeWidth={2} />
+        <circle cx={cx} cy={cy} r={12} fill={stroke} fillOpacity={0.25} />
       </g>
     );
   };
+
+  const CustomCursor = (props: any) => {
+    const { payload, points, height } = props;
+    if (payload && payload.length) {
+      const t = payload[0].payload.time;
+      if (t === "Initial reading" || t === "Latest reading") return <g />;
+    }
+    if (!points || !points.length) return <g />;
+    return <line x1={points[0].x} y1={0} x2={points[0].x} y2={height} stroke="#e2e8f0" strokeWidth={1} strokeDasharray="4 4" />;
+  };
+
+
 
   // Save timeRange to localStorage on change
   useEffect(() => {
@@ -295,6 +327,82 @@ export function SiteDetailView({
   }, [timeRange]);
 
   const pad = isMobile ? 16 : isTablet ? 24 : 32;
+
+  const getInterpretation = () => {
+    if (!chartData || chartData.length === 0) return "No data available.";
+    const filterData = chartData.filter(d => d.time !== "Initial reading" && d.time !== "Latest reading");
+    if (filterData.length === 0) return "Not enough data.";
+
+    const avgTemp = (filterData.reduce((acc, c) => acc + c.temperature, 0) / filterData.length).toFixed(1);
+    const avgPh = (filterData.reduce((acc, c) => acc + c.ph, 0) / filterData.length).toFixed(2);
+    const avgTurb = (filterData.reduce((acc, c) => acc + c.turbidity, 0) / filterData.length).toFixed(1);
+
+    let tempStatus = "Safe";
+    if (filterData.some(c => c.temperature >= 25 && c.temperature <= 30)) tempStatus = "Critical";
+    else if (filterData.some(c => (c.temperature >= 20 && c.temperature < 25) || (c.temperature > 30 && c.temperature <= 32))) tempStatus = "Warning";
+
+    let phStatus = "Safe";
+    if (filterData.some(c => c.ph >= 7.0 && c.ph <= 8.5)) phStatus = "Critical";
+    else if (filterData.some(c => (c.ph >= 6.5 && c.ph < 7.0) || (c.ph > 8.5 && c.ph <= 9.0))) phStatus = "Warning";
+
+    let turbStatus = "Safe";
+    if (filterData.some(c => c.turbidity < 5)) turbStatus = "Critical";
+    else if (filterData.some(c => c.turbidity >= 5 && c.turbidity <= 15)) turbStatus = "Warning";
+
+    if (tempStatus === "Safe" && phStatus === "Safe" && turbStatus === "Safe") {
+      return `Water conditions are NORMAL (Avg: ${avgTemp}°C, pH ${avgPh}, ${avgTurb} NTU). The environment is currently unfavorable for schistosomiasis transmission.`;
+    } else {
+      let issues = [];
+      if (tempStatus !== "Safe") issues.push(`Temperature: ${tempStatus.toUpperCase()}`);
+      if (phStatus !== "Safe") issues.push(`pH: ${phStatus.toUpperCase()}`);
+      if (turbStatus !== "Safe") issues.push(`Turbidity: ${turbStatus.toUpperCase()}`);
+      
+      return `ALERT: Anomalies detected in ${issues.join(', ')} (Avg: ${avgTemp}°C, pH ${avgPh}, ${avgTurb} NTU). The current conditions present an elevated risk for schistosomiasis transmission.`;
+    }
+  };
+
+  const filterDataObj = chartData.filter(d => d.time !== "Initial reading" && d.time !== "Latest reading");
+  const safeFormat = (dateStr: string) => {
+    if (!dateStr) return "--";
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch(e) { return dateStr; }
+  };
+  const fetchedStart = filterDataObj.length > 0 ? safeFormat((filterDataObj[0] as any).originalTime) : "--";
+  const fetchedEnd = filterDataObj.length > 0 ? safeFormat((filterDataObj[filterDataObj.length-1] as any).originalTime) : "--";
+
+  const getStat = (key: 'temperature' | 'ph' | 'turbidity') => {
+    if (filterDataObj.length === 0) return { highest: '--', lowest: '--', latest: '--', hDate: '--', lDate: '--', date: '--' };
+    const latestObj = filterDataObj[filterDataObj.length - 1];
+    let maxObj = filterDataObj[0];
+    let minObj = filterDataObj[0];
+    
+    filterDataObj.forEach((d: any) => {
+      if (d[key] > maxObj[key]) maxObj = d;
+      if (d[key] < minObj[key]) minObj = d;
+    });
+
+    const formatShortTime = (dateStr: string) => {
+      if (!dateStr) return "--";
+      try {
+        const d = new Date(dateStr);
+        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+      } catch { return "--"; }
+    };
+    
+    return {
+      highest: Number(maxObj[key]).toFixed(2),
+      lowest: Number(minObj[key]).toFixed(2),
+      latest: Number(latestObj[key]).toFixed(2),
+      hDate: formatShortTime((maxObj as any).originalTime),
+      lDate: formatShortTime((minObj as any).originalTime),
+      date: formatShortTime((latestObj as any).originalTime)
+    };
+  };
+
+  const tempStats = getStat('temperature');
+  const phStats = getStat('ph');
+  const turbStats = getStat('turbidity');
 
   return (
     <div style={{
@@ -401,9 +509,19 @@ export function SiteDetailView({
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 w-full">
+        <div ref={chartRef} className="flex flex-col gap-6 w-full sg-pdf-bg-patch" style={{ background: '#ffffff' }}>
+          <div className="sg-pdf-only top-header-gap" style={{ display: 'none', padding: '10px 0px 0px 0px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <img src="/schistoguard.png" alt="SchistoGuard Logo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
+                <h2 style={{ margin: 0, fontSize: 26, color: '#357d86', fontFamily: POPPINS, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1 }}>SchistoGuard</h2>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: 11, color: '#6b7280', fontFamily: POPPINS, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 500, lineHeight: 1 }}>Environmental Monitoring PDF Report</p>
+            </div>
+          </div>
           <div className="flex flex-col w-full">
-            <div style={{
+            <div 
+              style={{
               background: "#fff",
               borderRadius: 20,
               overflow: "hidden",
@@ -464,9 +582,13 @@ export function SiteDetailView({
                 {chartData.length === 0 ? (
                   <div className="flex h-[350px] w-full items-center justify-center text-gray-400">No time series data available.</div>
                 ) : (
-                  <div ref={chartRef} className="w-full" style={{ height: 350, position: 'relative' }}>
+                  <div className="w-full chart-inner-wrap" style={{ height: 350, position: 'relative' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData}>
+                      <AreaChart data={chartData.length === 1 ? [
+                        { ...chartData[0], time: "Initial reading" },
+                        chartData[0],
+                        { ...chartData[0], time: "Latest reading" }
+                      ] : chartData}>
                         <defs>
                           <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#4187d6" stopOpacity={0.3} />
@@ -486,40 +608,210 @@ export function SiteDetailView({
                           axisLine={false}
                           tickLine={false}
                           tick={{ fill: "#cbd5e1", fontSize: 11, fontFamily: POPPINS }}
+                          tickFormatter={(val) => (val === "Initial reading" || val === "Latest reading" ? "" : val)}
                           dy={10}
                         />
                         <YAxis hide domain={['dataMin - 1', 'dataMax + 2']} />
-                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#e2e8f0", strokeWidth: 1, strokeDasharray: "4 4" }} />
+                        <Tooltip content={<CustomTooltip />} cursor={<CustomCursor />} />
                         <Area
                           type="monotone"
                           dataKey="ph"
                           stroke="#4187d6"
-                          strokeWidth={1}
+                          strokeWidth={2}
                           fill="url(#phGradient)"
                           name="pH Level"
+                          isAnimationActive={chartData.length > 1}
                           activeDot={<CustomActiveDot stroke="#4187d6" />}
+                          dot={false}
                         />
                         <Area
                           type="monotone"
                           dataKey="turbidity"
                           stroke="#2c5282"
-                          strokeWidth={1}
+                          strokeWidth={2}
                           fill="url(#turbidityGradient)"
                           name="Turbidity (NTU)"
+                          isAnimationActive={chartData.length > 1}
                           activeDot={<CustomActiveDot stroke="#2c5282" />}
+                          dot={false}
                         />
                         <Area
                           type="monotone"
                           dataKey="temperature"
                           stroke="#43c6b6"
-                          strokeWidth={1}
+                          strokeWidth={2}
                           fill="url(#temperatureGradient)"
                           name="Temperature (°C)"
+                          isAnimationActive={chartData.length > 1}
                           activeDot={<CustomActiveDot stroke="#43c6b6" />}
+                          dot={false}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
-                    {/* PDF-only explanation removed from absolute position to avoid clipping */}
+                  </div>
+                )}
+                
+                <div className="threshold-container" style={{ background: "#ffffffc5", border: "1px solid #f1f5f9", borderRadius: 16, padding: "24px", marginTop: 12, fontFamily: POPPINS, width: "100%" }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                    <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
+                        <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>25 – 30</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 24.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 32</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
+                      </div>
+                    </div>
+                    <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
+                        <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>7.0 – 8.5</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.5 – 6.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.51 – 9.0</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
+                      </div>
+                    </div>
+                    <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
+                        <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {chartData.length > 0 && (
+                  <div className="sg-pdf-only pdf-summary-container" style={{ display: 'none', padding: '16px 0 0 0', marginTop: '10px' }}>
+                    <div style={{ padding: '0 0 16px 0', marginBottom: 16, borderBottom: '1px solid #f0f1f3', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Report Details</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>Site: {siteName} ({barangay})</div>
+                        <div style={{ fontSize: 13, color: '#43c6b6', marginTop: 4, fontFamily: POPPINS, fontWeight: 600, fontStyle: 'italic' }}>Data sourced from IoT sensors</div>
+
+                        <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>Time Range Filter: {timeRange}</div>
+                      </div>
+                      <div style={{ flex: 1.2 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Data Extent</div>
+                        <div style={{ fontSize: 12, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}><strong style={{color:'#64748b'}}>Start:</strong> {fetchedStart}</div>
+                        <div style={{ fontSize: 12, color: '#1a2a3a', marginTop: 2, fontFamily: POPPINS }}><strong style={{color:'#64748b'}}>Latest:</strong> {fetchedEnd}</div>
+                      </div>
+                      <div style={{ textAlign: 'right', flex: 0.8 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Exported On</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric'})}</div>
+                        <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ marginBottom: 24, padding: '20px', borderRadius: '16px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 8, background: '#357d86', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Automated Interpretation</div>
+                      </div>
+                      <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.6, fontFamily: POPPINS, fontWeight: 500 }}>
+                        {getInterpretation()}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 16, justifyContent: 'space-between', borderTop: '1px solid #f0f1f3', paddingTop: 20 }}>
+                      <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
+                        <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} /> Temperature
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.hDate}</span>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{tempStats.highest !== '--' ? tempStats.highest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>°C</span></span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.lDate}</span>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{tempStats.lowest !== '--' ? tempStats.lowest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>°C</span></span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 12, color: '#43c6b6', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.date}</span>
+                            </div>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: '#43c6b6', fontFamily: POPPINS, marginTop: -4 }}>{tempStats.latest !== '--' ? tempStats.latest : '--'} <span style={{fontSize: 12, opacity: 0.8, fontWeight: 600}}>°C</span></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
+                        <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} /> pH Level
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.hDate}</span>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{phStats.highest !== '--' ? phStats.highest : '--'}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.lDate}</span>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{phStats.lowest !== '--' ? phStats.lowest : '--'}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 12, color: '#4187d6', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.date}</span>
+                            </div>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: '#4187d6', fontFamily: POPPINS, marginTop: -4 }}>{phStats.latest !== '--' ? phStats.latest : '--'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
+                        <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} /> Turbidity
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.hDate}</span>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{turbStats.highest !== '--' ? turbStats.highest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>NTU</span></span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.lDate}</span>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{turbStats.lowest !== '--' ? turbStats.lowest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>NTU</span></span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: 12, color: '#2c5282', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
+                              <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.date}</span>
+                            </div>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: '#2c5282', fontFamily: POPPINS, marginTop: -4 }}>{turbStats.latest !== '--' ? turbStats.latest : '--'} <span style={{fontSize: 12, opacity: 0.8, fontWeight: 600}}>NTU</span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
                 <div className="flex flex-col items-center gap-2 mt-3">
@@ -658,48 +950,16 @@ export function SiteDetailView({
                   @media print {
                     .sg-print-only { display: block !important; }
                   }
+                  .sg-exporting-pdf {
+                    gap: 8px !important;
+                  }
+                  .sg-exporting-pdf .threshold-container { margin-top: 4px !important; padding: 16px !important; }
+                  .sg-exporting-pdf .pdf-summary-container { padding-top: 6px !important; margin-top: 4px !important; }
+                  .sg-exporting-pdf .top-header-gap { padding-top: 0px !important; }
                 `}</style>
               </div>
             </div>
 
-            <div style={{ background: "#ffffffc5", border: "1px solid #f1f5f9", borderRadius: 16, padding: "24px", marginTop: 12, fontFamily: POPPINS, width: "100%" }}>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-                <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
-                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>25 – 30</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 24.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 32</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
-                  </div>
-                </div>
-                <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
-                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>7.0 – 8.5</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.5 – 6.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.51 – 9.0</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
-                  </div>
-                </div>
-                <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
-                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
