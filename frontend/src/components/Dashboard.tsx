@@ -45,9 +45,9 @@ export function Dashboard({
   const [readings, setReadings] = useState<any[]>([]);
   const [siteData, setSiteData] = useState<any>({
     siteName: "SchistoGuard Device 1",
-    barangay: "San Miguel",
-    municipality: "Tacloban City",
-    area: "100 square meters",
+    barangay: "",
+    municipality: "",
+    area: "",
   });
   // Device connection state
   const [deviceConnected, setDeviceConnected] = useState(true);
@@ -193,6 +193,17 @@ export function Dashboard({
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
+    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean)
+    .join(", ");
+
+  const displayAddress =
+    gpsAddress ||
+    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    metaAddress ||
+    "No recorded address yet";
 
   useEffect(() => {
     const check = () => {
@@ -838,11 +849,7 @@ export function Dashboard({
               fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", margin: "5px 0 10px",
               fontFamily: POPPINS
             }}>
-              {gpsAddress
-                ? gpsAddress
-                : lastSavedLocation && lastSavedLocation.siteName
-                  ? lastSavedLocation.siteName
-                  : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
+              {displayAddress}
             </p>
             {/* System Operational badge — left-aligned, under address */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1271,11 +1278,7 @@ export function Dashboard({
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 400,
           }}>
-            {gpsAddress
-              ? gpsAddress
-              : lastSavedLocation && lastSavedLocation.siteName
-                ? lastSavedLocation.siteName
-              : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
+            {displayAddress}
           </p>
         </div>
 

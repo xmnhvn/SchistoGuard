@@ -85,9 +85,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [deviceConnected, setDeviceConnected] = useState(true);
   const [siteData, setSiteData] = useState<any>({
     siteName: "SchistoGuard Device 1",
-    barangay: "San Miguel",
-    municipality: "Tacloban City",
-    area: "100 square meters",
+    barangay: "",
+    municipality: "",
+    area: "",
   });
 
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
@@ -148,6 +148,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string } | null>(null);
 
+  const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
+    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean)
+    .join(", ");
+
+  const displayAddress =
+    gpsAddress ||
+    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    metaAddress ||
+    "No recorded address yet";
+
   // Strictly follow real sensor device location (from GSM/GPS data)
   // Fallback to last known location in localStorage if sensor is not yet available
   useEffect(() => {
@@ -199,17 +210,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
       
-      // 3. Absolute fallback to Philippines center if nothing else exists
-      if (!cachedSet && !gpsSites) {
-        sites = [{
-          id: 'device-gps',
-          name: siteData.siteName || "SchistoGuard Device 1",
-          lat: 11.2447,
-          lng: 125.0041,
-        }];
-        lastLoc = { lat: 11.2447, lng: 125.0041, siteName: siteData.siteName };
-        setGpsSites(sites);
-        setLastSavedLocation(lastLoc);
+      // 3. If no live/cached location, keep map marker empty to avoid fake location pins
+      if (!cachedSet) {
+        setGpsSites(undefined);
+        setLastSavedLocation(null);
       }
     }
   }, [latestReading, siteData.siteName]);
@@ -275,6 +279,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         .then((data) => {
           if (data && data.deviceConnected === false) {
             if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+              const fallbackLoc = {
+                lat: data.latitude,
+                lng: data.longitude,
+                siteName: data.siteName || 'Last Known Location',
+              };
+              setLastSavedLocation(fallbackLoc);
+              setGpsSites([
+                {
+                  id: 'device-gps',
+                  name: fallbackLoc.siteName,
+                  lat: fallbackLoc.lat,
+                  lng: fallbackLoc.lng,
+                },
+              ]);
+              localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
+            }
             setDeviceConnected(false);
             setLatestReading(null);
             setBackendOk(true);
@@ -832,12 +853,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   animation: 'slideInFromRight 0.6s 0.3s ease-out both',
                 }}
               >
-                {/* Show live address if available, else fallback to static info */}
-                {gpsAddress
-                  ? gpsAddress
-                  : lastSavedLocation && lastSavedLocation.siteName
-                    ? lastSavedLocation.siteName
-                    : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
+                {displayAddress}
               </p>
 
               {/* System Status Capsule (Dashboard style) + Location Button */}
