@@ -501,6 +501,32 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/latest", (req, res) => {
+  const sendDisconnectedWithLastLocation = () => {
+    db.get(
+      "SELECT latitude, longitude, address, timestamp FROM raw_readings WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+      [],
+      (dbErr, row) => {
+        if (dbErr) {
+          console.error('[API /latest] Failed to load last GPS location from DB:', dbErr.message);
+          return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+        }
+
+        if (row) {
+          return res.json({
+            deviceConnected: false,
+            siteName: GLOBAL_DEVICE_NAME,
+            latitude: row.latitude,
+            longitude: row.longitude,
+            address: row.address || null,
+            timestamp: row.timestamp || null,
+          });
+        }
+
+        return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+      }
+    );
+  };
+
   if (latestData) {
     // Consider device disconnected if last data is older than 10 seconds
     const now = Date.now();
@@ -516,11 +542,11 @@ router.get("/latest", (req, res) => {
       });
     } else {
       console.warn('[API /latest] Device considered disconnected: data too old');
-      res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+      sendDisconnectedWithLastLocation();
     }
   } else {
     console.warn('[API /latest] No latestData available, device considered disconnected');
-    res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+    sendDisconnectedWithLastLocation();
   }
 });
 

@@ -146,17 +146,10 @@ export function Dashboard({
         }
       }
       
-      // 3. Absolute fallback to Philippines center if nothing else exists
-      if (!cachedSet && !gpsSites) {
-        sites = [{
-          id: 'device-gps',
-          name: siteData.siteName || "SchistoGuard Device 1",
-          lat: 11.2447,
-          lng: 125.0041,
-        }];
-        lastLoc = { lat: 11.2447, lng: 125.0041, siteName: siteData.siteName };
-        setGpsSites(sites);
-        setLastSavedLocation(lastLoc);
+      // 3. If no live/cached location, keep map marker empty to avoid fake location pins
+      if (!cachedSet) {
+        setGpsSites(undefined);
+        setLastSavedLocation(null);
       }
     }
   }, [latestReading, siteData.siteName]);
@@ -269,6 +262,23 @@ export function Dashboard({
           // If backend says deviceConnected: false, treat as disconnected
           if (data && data.deviceConnected === false) {
             if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+              const fallbackLoc = {
+                lat: data.latitude,
+                lng: data.longitude,
+                siteName: data.siteName || 'Last Known Location',
+              };
+              setLastSavedLocation(fallbackLoc);
+              setGpsSites([
+                {
+                  id: 'device-gps',
+                  name: fallbackLoc.siteName,
+                  lat: fallbackLoc.lat,
+                  lng: fallbackLoc.lng,
+                },
+              ]);
+              localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
+            }
             setDeviceConnected(false);
             setLatestReading(null);
             setBackendOk(true);
@@ -1263,6 +1273,8 @@ export function Dashboard({
           }}>
             {gpsAddress
               ? gpsAddress
+              : lastSavedLocation && lastSavedLocation.siteName
+                ? lastSavedLocation.siteName
               : `${siteData.area} • ${siteData.barangay}, ${siteData.municipality}`}
           </p>
         </div>
