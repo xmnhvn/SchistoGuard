@@ -486,91 +486,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           marginBottom: 24,
           animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
-<<<<<<< HEAD
-          <div style={{ flex: isMobile ? 1 : undefined }}>
-            <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
-              <SelectTrigger style={{
-                width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-                minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                border: "1px solid #e2e5ea", background: "#fff", height: 38,
-              }}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="6h">Last 6 Hours</SelectItem>
-                <SelectItem value="12h">Last 12 Hours</SelectItem>
-                <SelectItem value="24h">Last 24 Hours</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div style={{ flex: isMobile ? 1 : undefined }}>
-            <Select value={filterRisk} onValueChange={setFilterRisk}>
-              <SelectTrigger style={{
-                width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-                minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                border: "1px solid #e2e5ea", background: "#fff", height: 38,
-              }}>
-                <SelectValue placeholder="Risk Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Risk Levels</SelectItem>
-                <SelectItem value="safe">Safe</SelectItem>
-                <SelectItem value="warning">Moderate Possible Risk</SelectItem>
-                <SelectItem value="critical">High Possible Risk</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <button
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              padding: "0 16px", height: 38, borderRadius: 12,
-              border: "1px solid #e2e5ea",
-              background: "#fff", cursor: "pointer", fontSize: 13,
-              fontFamily: POPPINS, fontWeight: 500, color: "#374151",
-              ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
-            }}
-            onClick={handleExportPDF}
-          >
-            <Download size={15} />
-            Export
-          </button>
-        </div>
-      </div>
-
-      {/* Stat Cards */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
-        gap: isMobile ? 12 : 16,
-        marginBottom: 24,
-        animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
-      }}>
-        {[
-          { label: "Total Readings", value: filteredReadings.length * 3, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3" },
-          { label: "Safe", value: safeCount, icon: <CheckCircle2 style={{ width: 20, height: 20, color: "#23B67E" }} />, color: "#23B67E", bg: "#E9FBF3" },
-          { label: "Moderate Possible Risk", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#F1A11A" }} />, color: "#F1A11A", bg: "#FFF9E6" },
-          { label: "High Possible Risk", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#D14343" }} />, color: "#D14343", bg: "#FFF1F1" },
-        ].map((card, i) => (
-          <div key={card.label} style={{
-            background: "#fff",
-            borderRadius: 20,
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 6,
-            ...(animationEnabled ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` } : {}),
-          }}>
-            <div style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: card.bg,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-=======
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
               fontSize: isMobile ? 20 : 26,
@@ -582,7 +497,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               overflow: isMobile ? undefined : "hidden",
               textOverflow: isMobile ? undefined : "ellipsis",
               letterSpacing: isMobile ? 0.1 : undefined,
->>>>>>> 3d141b3c3b6ba3f64471ce09a3d89a14950de8ad
             }}>
               Sites Directory
             </h1>
@@ -640,8 +554,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 <SelectContent>
                   <SelectItem value="all">All Risk Levels</SelectItem>
                   <SelectItem value="safe">Safe</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="warning">Moderate Possible Risk</SelectItem>
+                  <SelectItem value="critical">High Possible Risk</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -671,10 +585,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           animation: animationEnabled ? "contentSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           {[
-            { label: "Total Readings", value: filteredReadings.length, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3", sub: "All readings" },
+            { label: "Total Readings", value: filteredReadings.length * 3, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3", sub: "All readings" },
             { label: "Safe", value: safeCount, icon: <CheckCircle2 style={{ width: 20, height: 20, color: "#23B67E" }} />, color: "#23B67E", bg: "#E9FBF3", sub: "In safe range" },
-            { label: "Warning", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#F1A11A" }} />, color: "#F1A11A", bg: "#FFF9E6", sub: "Require attention" },
-            { label: "Critical", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#D14343" }} />, color: "#D14343", bg: "#FFF1F1", sub: "High priority" },
+            { label: "Moderate Possible Risk", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#F1A11A" }} />, color: "#F1A11A", bg: "#FFF9E6", sub: "Require attention" },
+            { label: "High Possible Risk", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#D14343" }} />, color: "#D14343", bg: "#FFF1F1", sub: "For immediate verification" },
           ].map((card, i) => (
             <div key={card.label} style={{
               background: "#fff",
@@ -918,110 +832,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         {/* ── Mobile View All List Modal ── */}
         {(isMobile) && showMobileViewAll && (
           <div style={{
-<<<<<<< HEAD
-            flex: 1,
-            minHeight: 0,
-            overflowX: "auto",
-            overflowY: "auto",
-            padding: 0,
-          }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                  {deleteMode && (
-                    <th style={{
-                      padding: "10px 14px 10px 24px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 1
-                    }}></th>
-                  )}
-                  {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
-                    <th key={h} style={{
-                      padding: h === "Time" && !deleteMode ? "10px 14px 10px 24px" : h === "" ? "10px 24px 10px 14px" : "10px 14px",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#7b8a9a",
-                      textAlign: h === "" ? "right" : (h === "Time" || h === "Date") ? "left" : "center",
-                      position: "sticky",
-                      top: 0,
-                      background: "#fff",
-                      zIndex: 1,
-                      fontFamily: POPPINS,
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReadings.map((reading, idx) => {
-                  const time = formatTimestamp(reading.timestamp);
-                  const riskColors: Record<string, { bg: string; color: string }> = {
-                    safe: { bg: "#E9FBF3", color: "#23B67E" },
-                    warning: { bg: "#FFF9E6", color: "#F1A11A" },
-                    critical: { bg: "#FFF1F1", color: "#D14343" },
-                  };
-                  const rc = riskColors[reading.riskLevel] || riskColors.safe;
-                  return (
-                    <tr key={reading.id} style={{
-                      borderBottom: "1px solid #f5f5f5",
-                      animation: animationEnabled ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both` : "none",
-                      background: selectedIds.has(reading.id) ? "#fff1f1" : "transparent",
-                      transition: "background 0.2s ease",
-                      cursor: deleteMode ? "pointer" : "default"
-                    }}
-                    onClick={() => deleteMode && toggleSelection(reading.id)}
-                    >
-                      {deleteMode && (
-                        <td style={{ padding: "12px 14px 12px 24px", textAlign: "center" }}>
-                          <div style={{
-                            width: 20, height: 20, borderRadius: 6,
-                            border: `2px solid ${selectedIds.has(reading.id) ? "#ef4444" : "#d1d5db"}`,
-                            background: selectedIds.has(reading.id) ? "#ef4444" : "#fff",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            cursor: "pointer", transition: "all 0.15s ease"
-                          }}>
-                            {selectedIds.has(reading.id) && <Check size={12} color="#fff" strokeWidth={3} />}
-                          </div>
-                        </td>
-                      )}
-                      <td style={{ padding: deleteMode ? "12px 14px" : "12px 14px 12px 24px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
-                      <td style={{ padding: "12px 14px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
-                      <td style={{ padding: "12px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                          <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                          <Thermometer style={{ width: 14, height: 14, color: "#357D86" }} />
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
-                      <td style={{ padding: "12px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
-                        <span style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          padding: "3px 12px",
-                          borderRadius: 20,
-                          background: rc.bg,
-                          color: rc.color,
-                          textTransform: "capitalize",
-                          fontFamily: POPPINS,
-                        }}>{getRiskDisplayLabel(reading.riskLevel)}</span>
-                      </td>
-                      <td style={{ padding: "12px 24px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
-                        {formatRelativeTime(reading.timestamp)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      {/* ── Mobile View All List Modal ── */}
-      {(isMobile) && showMobileViewAll && (
-        <div style={{
           position: "fixed", inset: 0, zIndex: 10001,
           background: "rgba(0,0,0,0.6)",
           display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
@@ -1113,90 +923,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                       <div style={{
                         flex: 1,
                         padding: "16px 20px",
-=======
-            position: "fixed", inset: 0, zIndex: 10001,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
-            padding: isMobile ? "92px 20px 20px" : "40px 20px",
-            animation: "fadeIn 0.2s ease-out both"
-          }} onClick={() => setShowMobileViewAll(false)}>
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "100%",
-                maxWidth: 540,
-                maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
-                background: "#fff",
-                borderRadius: 16,
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
-                animation: "contentSlideIn 0.25s cubic-bezier(0.22,1,0.36,1) both",
-              }}
-            >
-              {/* Modal Header */}
-              <div style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid #eef0f2",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                flexShrink: 0,
-              }}>
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
-                  All Data Readings
-                </h2>
-                <button
-                  onClick={() => setShowMobileViewAll(false)}
-                  style={{
-                    width: "32px", height: "32px",
-                    minWidth: "32px", minHeight: "32px",
-                    padding: "0px", margin: "0px",
-                    borderRadius: "1000px",
-                    border: "none", background: "#f3f4f6",
-                    color: "#64748b",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    flexShrink: 0,
-                    lineHeight: 0,
-                    overflow: "hidden",
-                    appearance: "none",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                  className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              {/* Modal Scrollable List */}
-              <div style={{
-                flex: 1, minHeight: 0, overflowY: "auto",
-                padding: 20,
-                position: "relative",
-              } as React.CSSProperties}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {filteredReadings.map((reading) => {
-                    const time = formatTimestamp(reading.timestamp);
-                    const riskColors: Record<string, { bg: string; color: string; border: string }> = {
-                      safe: { bg: "#E9FBF3", color: "#23B67E", border: "#23B67E" },
-                      warning: { bg: "#FFF9E6", color: "#F1A11A", border: "#F1A11A" },
-                      critical: { bg: "#FFF1F1", color: "#D14343", border: "#D14343" },
-                    };
-                    const rc = riskColors[reading.riskLevel] || riskColors.safe;
-                    return (
-                      <div key={reading.id} style={{
-                        background: "#fff",
-                        borderRadius: 12,
-                        border: "1px solid #f0f1f3",
->>>>>>> 3d141b3c3b6ba3f64471ce09a3d89a14950de8ad
                         display: "flex",
-                        flexDirection: "row",
-                        minHeight: 110,
-                        overflow: "hidden",
-                        position: "relative"
+                        flexDirection: "column",
+                        gap: 12
                       }}>
-<<<<<<< HEAD
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <div style={{ display: "flex", gap: 8 }}>
                             <span style={{
@@ -1207,52 +937,26 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                               fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
                               border: "1px solid #e2e8f0", color: "#64748b", fontFamily: POPPINS,
                             }}>Verified</span>
-=======
-                        {/* Premium Folder-Style Side Accent */}
-                        <div style={{
-                          width: 6,
-                          backgroundColor: rc.color,
-                          flexShrink: 0
-                        }} />
-
-                        <div style={{
-                          flex: 1,
-                          padding: "16px 20px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 12
-                        }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                            <div style={{ display: "flex", gap: 8 }}>
-                              <span style={{
-                                fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
-                                background: rc.bg, color: rc.color, textTransform: "capitalize", fontFamily: POPPINS,
-                              }}>{reading.riskLevel}</span>
-                              <span style={{
-                                fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
-                                border: "1px solid #e2e8f0", color: "#64748b", fontFamily: POPPINS,
-                              }}>Verified</span>
-                            </div>
->>>>>>> 3d141b3c3b6ba3f64471ce09a3d89a14950de8ad
-                          </div>
-                          <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <Droplets style={{ width: 16, height: 16, color: "#1a2a3a" }} />
-                              <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.turbidity} NTU</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <Thermometer style={{ width: 16, height: 16, color: "#1a2a3a" }} />
-                              <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.temperature}°C</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>pH {reading.ph}</span>
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: POPPINS, fontWeight: 500 }}>
-                            {time.date}, {time.time}
                           </div>
                         </div>
+                        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <Droplets style={{ width: 16, height: 16, color: "#1a2a3a" }} />
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.turbidity} NTU</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <Thermometer style={{ width: 16, height: 16, color: "#1a2a3a" }} />
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.temperature}°C</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>pH {reading.ph}</span>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: POPPINS, fontWeight: 500 }}>
+                          {time.date}, {time.time}
+                        </div>
                       </div>
+                    </div>
                     );
                   })}
                 </div>

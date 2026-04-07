@@ -313,21 +313,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           sub="Require attention"
           isCompact={isMobile}
         />
-<<<<<<< HEAD
-        <StatCard 
-          icon={<AlertTriangle size={(isMobile) ? 18 : 22} color="#ef4444" />} 
-          label="High Possible Risk Alerts" 
-          value={String(criticalCount)} 
-          valueColor="#dc2626" 
-          sub="For immediate verification" 
-=======
         <StatCard
           icon={<AlertTriangle size={(isMobile) ? 18 : 22} color="#ef4444" />}
-          label="Critical Alerts"
+          label="High Possible Risk Alerts"
           value={String(criticalCount)}
           valueColor="#dc2626"
-          sub="High priority"
->>>>>>> 3d141b3c3b6ba3f64471ce09a3d89a14950de8ad
+          sub="For immediate verification"
           isCompact={isMobile}
         />
         <StatCard
