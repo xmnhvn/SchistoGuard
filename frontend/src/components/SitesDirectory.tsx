@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { apiGet } from '../utils/api';
+import { PDFHeader } from './PDFHeader';
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -71,6 +72,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(true);
+  const headerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Disable entry animation after it's finished to prevent glitches on re-renders
@@ -80,14 +82,28 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   // Fetch metadata for PDF header
   useEffect(() => {
+    // 0. Load from cache first
+    try {
+      const cachedName = localStorage.getItem("sg_latest_site_name");
+      const cachedAddr = localStorage.getItem("sg_latest_address");
+      if (cachedName) setDynamicSiteName(cachedName);
+      if (cachedAddr) setAddress(cachedAddr);
+    } catch (e) {}
+
     // 1. Try latest reading
     apiGet("/api/sensors/latest").then(data => {
       if (data) {
-        if (data.siteName && data.siteName !== "Site Name") setDynamicSiteName(data.siteName);
+        if (data.siteName && data.siteName !== "Site Name") {
+          setDynamicSiteName(data.siteName);
+          localStorage.setItem("sg_latest_site_name", data.siteName);
+        }
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(data.latitude, data.longitude).then(addr => {
-              if (addr) setAddress(addr);
+              if (addr) {
+                setAddress(addr);
+                localStorage.setItem("sg_latest_address", addr);
+              }
             });
           });
         }
@@ -101,11 +117,17 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         .find(r => typeof r.latitude === 'number' && typeof r.longitude === 'number');
 
       if (latestWithGps) {
-        if (latestWithGps.siteName) setDynamicSiteName(latestWithGps.siteName);
+        if (latestWithGps.siteName) {
+          setDynamicSiteName(latestWithGps.siteName);
+          localStorage.setItem("sg_latest_site_name", latestWithGps.siteName);
+        }
         if (!address) {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-              if (addr) setAddress(addr);
+              if (addr) {
+                setAddress(addr);
+                localStorage.setItem("sg_latest_address", addr);
+              }
             });
           });
         }
@@ -168,9 +190,38 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     try {
     const jsPDFModule = await import('jspdf');
     const autoTableModule = await import('jspdf-autotable');
+    const html2canvas = (await import('html2canvas')).default;
+
     const jsPDF = jsPDFModule.default;
     const autoTable = autoTableModule.default;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    
+    // 150ms delay to ensure DOM and address state are fully updated before capture
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Capture the high-fidelity HTML header
+    if (!headerRef.current) throw new Error("Header reference not found");
+    const canvas = await html2canvas(headerRef.current, { 
+      scale: 3, 
+      useCORS: true, 
+      backgroundColor: '#ffffff',
+      logging: false 
+    });
+    const headerImgData = canvas.toDataURL('image/png');
+
+    const pw = doc.internal.pageSize.getWidth();
+    
+    // Calculate header proportions (targeting approx 500pt width in landscape)
+    const targetHeaderWidth = 500;
+    const targetHeaderHeight = (canvas.height * targetHeaderWidth) / canvas.width;
+    
+    // Add the captured header image (centered)
+    doc.addImage(headerImgData, 'PNG', (pw - targetHeaderWidth) / 2, 25, targetHeaderWidth, targetHeaderHeight);
+
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dmy = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
+    
     const columns = [
       { header: 'Time', dataKey: 'time' },
       { header: 'Date', dataKey: 'date' },
@@ -191,130 +242,41 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       };
     });
 
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const dmy = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
-    const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
-    let time = 'AllTime';
-    if (filterTimeRange !== 'all') {
-      if (filterTimeRange.endsWith('h')) {
-        time = filterTimeRange.toUpperCase();
-      } else {
-        time = filterTimeRange.charAt(0).toUpperCase() + filterTimeRange.slice(1);
-      }
-    }
-
-    const img = new Image();
-    img.src = '/schistoguard.png';
-    await new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = resolve; // Continue even if image fails
-    });
-
-    let pdfFont = 'helvetica';
-    const bufferToBase64 = (buffer: ArrayBuffer) => {
-      let binary = '';
-      const bytes = new Uint8Array(buffer);
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return window.btoa(binary);
-    };
-
-    try {
-      const [regRes, boldRes] = await Promise.all([
-        fetch('/fonts/Poppins-Regular.ttf'),
-        fetch('/fonts/Poppins-Bold.ttf')
-      ]);
-      if (regRes.ok && boldRes.ok) {
-        const [regBuf, boldBuf] = await Promise.all([
-          regRes.arrayBuffer(),
-          boldRes.arrayBuffer()
-        ]);
-        doc.addFileToVFS('Poppins-Regular.ttf', bufferToBase64(regBuf));
-        doc.addFileToVFS('Poppins-Bold.ttf', bufferToBase64(boldBuf));
-        doc.addFont('Poppins-Regular.ttf', 'poppins', 'normal');
-        doc.addFont('Poppins-Bold.ttf', 'poppins', 'bold');
-        pdfFont = 'poppins';
-      }
-    } catch (e) {
-      console.warn('Failed to load local Poppins TTF fonts for PDF rendering, falling back to Helvetica.', e);
-    }
-
-    const pw = doc.internal.pageSize.getWidth();
-    let topStartX = pw / 2;
-    let imgWidth = 0;
-    
-    if (img.complete && img.naturalWidth > 0) {
-      const imgHeight = 22;
-      imgWidth = imgHeight * (img.naturalWidth / img.naturalHeight);
-      
-      doc.setFontSize(20);
-      doc.setFont(pdfFont, 'bold');
-      const titleWidth = doc.getTextWidth('SchistoGuard');
-      const totalTopWidth = imgWidth + 5 + titleWidth;
-      topStartX = (pw - totalTopWidth) / 2;
-      
-      doc.addImage(img, 'PNG', topStartX, 30, imgWidth, imgHeight);
-      doc.setTextColor(53, 125, 134); // #357d86
-      doc.text('SchistoGuard', topStartX + imgWidth + 5, 47.5); 
-    } else {
-      doc.setFontSize(20);
-      doc.setFont(pdfFont, 'bold');
-      const titleWidth = doc.getTextWidth('SchistoGuard');
-      topStartX = (pw - titleWidth) / 2;
-      doc.setTextColor(53, 125, 134);
-      doc.text('SchistoGuard', topStartX, 47.5);
-    }
-
-    doc.setFontSize(8.5);
-    doc.setFont(pdfFont, 'normal');
-    doc.setTextColor(107, 114, 128); // #6b7280
-    const subtitle = 'ENVIRONMENTAL MONITORING PDF REPORT';
-    const charSpacing = 1;
-    const baseW = doc.getTextWidth(subtitle);
-    const totalSubW = baseW + (subtitle.length - 1) * charSpacing;
-    doc.text(subtitle, (pw - totalSubW) / 2, 60, { charSpace: charSpacing });
-
-    doc.setFontSize(9.5);
-    doc.setFont(pdfFont, 'bold');
-    doc.setTextColor(26, 42, 58); // #1a2a3a
-    const sName = dynamicSiteName || 'Matina Site';
-    doc.text(sName, (pw - doc.getTextWidth(sName)) / 2, 68);
-
-    doc.setFontSize(7.5);
-    doc.setFont(pdfFont, 'normal');
-    doc.setTextColor(148, 163, 184); // #94a3b8
-    const addr = address || 'Device Address';
-    doc.text(addr, (pw - doc.getTextWidth(addr)) / 2, 75);
-
-    doc.setFontSize(7);
+    const metadataY = 25 + targetHeaderHeight + 12;
+    doc.setFontSize(9.5); // Enlarge from 7.5pt
+    const pdfFont = 'helvetica';
     doc.setFont(pdfFont, 'bold');
     doc.setTextColor(107, 114, 128);
-    doc.text('Date Exported:', pw - 40, 40, { align: 'right' });
-    doc.setFont(pdfFont, 'normal');
+    
     const dateFormat = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'});
     const timeFormat = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    doc.text(`${dateFormat} at ${timeFormat}`, pw - 40, 48, { align: 'right' });
-    
-    doc.setFont(pdfFont, 'bold');
-    doc.text(`Time Range: ${time} | Risk: ${risk}`, pw - 40, 58, { align: 'right' });
+    const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
+    let timeRangeText = 'AllTime';
+    if (filterTimeRange !== 'all') {
+      if (filterTimeRange.endsWith('h')) timeRangeText = `${filterTimeRange.replace('h', '')} Hours`;
+      else if (filterTimeRange === '24') timeRangeText = 'Last 24 Hours';
+      else timeRangeText = filterTimeRange;
+    }
+
+    const metaStr = `Date Exported: ${dateFormat} at ${timeFormat} | Time Range: ${timeRangeText} | Risk: ${risk}`;
+    doc.text(metaStr, pw / 2, metadataY, { align: 'center' });
 
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(1);
-    doc.line(40, 82, pw - 40, 82);
+    doc.line(40, metadataY + 12, pw - 40, metadataY + 12);
 
     autoTable(doc, {
       columns,
       body: rows,
-      startY: 84,
+      startY: metadataY + 18,
       styles: { fontSize: 8.5, cellPadding: 6, font: pdfFont },
       headStyles: { fillColor: [53, 125, 134], textColor: 255, halign: 'left', fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       margin: { top: 40, right: 40, bottom: 40, left: 40 }
     });
 
-    const filename = `SchistoGuard_Timeseries_${risk}_${time}_${dmy}.pdf`;
+
+    const filename = `SchistoGuard_Timeseries_${risk}_${timeRangeText}_${dmy}.pdf`;
     doc.save(filename);
     } finally {
       setIsExporting(false);
@@ -984,6 +946,24 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         </div>
       )}
       </div>
+    <div 
+      ref={headerRef} 
+      style={{ 
+        position: 'absolute', 
+        top: '-9999px', 
+        left: '-9999px', 
+        width: '800px', 
+        background: 'white',
+        padding: '20px',
+        fontFamily: POPPINS
+      }}
+    >
+      <PDFHeader 
+        dynamicSiteName={dynamicSiteName} 
+        address={address} 
+        logoNudge={10}
+      />
+    </div>
     </div>
   );
 };

@@ -13,6 +13,7 @@ import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { reverseGeocode } from "../utils/reverseGeocode";
+import { PDFHeader } from "./PDFHeader";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -80,8 +81,14 @@ export function SiteDetailView({
   // Persistence triggers
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      if (address) localStorage.setItem(`sg_${siteId}_address`, address);
-      if (dynamicSiteName) localStorage.setItem(`sg_${siteId}_siteName`, dynamicSiteName);
+      if (address) {
+        localStorage.setItem(`sg_${siteId}_address`, address);
+        localStorage.setItem('sg_global_latest_address', address);
+      }
+      if (dynamicSiteName) {
+        localStorage.setItem(`sg_${siteId}_siteName`, dynamicSiteName);
+        localStorage.setItem('sg_global_latest_siteName', dynamicSiteName);
+      }
     }
   }, [address, dynamicSiteName, siteId]);
 
@@ -104,9 +111,13 @@ export function SiteDetailView({
         // to prevent overwriting custom Admin settings.
         if (latestWithGps.siteName && latestWithGps.siteName !== "Site Name") {
           setDynamicSiteName(latestWithGps.siteName);
+          localStorage.setItem('sg_global_latest_siteName', latestWithGps.siteName);
         }
         reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-          if (addr) setAddress(addr);
+          if (addr) {
+            setAddress(addr);
+            localStorage.setItem('sg_global_latest_address', addr);
+          }
         });
       }
     }
@@ -627,15 +638,12 @@ export function SiteDetailView({
 
         <div ref={chartRef} className="flex flex-col gap-3 w-full sg-pdf-bg-patch">
           <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <img src="/schistoguard.png" alt="SchistoGuard Logo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
-                <h2 style={{ margin: 0, fontSize: 26, color: '#357d86', fontFamily: POPPINS, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1 }}>SchistoGuard</h2>
-              </div>
-              <p style={{ margin: '4px 0 0 0', fontSize: 11, color: '#6b7280', fontFamily: POPPINS, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 500, lineHeight: 1 }}>Environmental Monitoring PDF Report</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: 14, color: '#1a2a3a', fontFamily: POPPINS, fontWeight: 700, lineHeight: 1.2 }}>{dynamicSiteName || siteName}</p>
-              <p style={{ margin: '2px 0 0 0', fontSize: 10, color: '#94a3b8', fontFamily: POPPINS, fontWeight: 500, lineHeight: 1 }}>{address || (barangay ? barangay + ", Leyte Province" : "Riverside, Leyte Province")}</p>
-            </div>
+            <PDFHeader 
+              dynamicSiteName={dynamicSiteName} 
+              siteName={siteName} 
+              address={address} 
+              barangay={barangay} 
+            />
           </div>
           <div className="flex flex-col w-full">
             <div 

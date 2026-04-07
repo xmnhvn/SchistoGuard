@@ -28,6 +28,9 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { apiGet, apiPost, apiDelete } from '../utils/api';
+import { loadHtml2Pdf } from '../utils/loadHtml2Pdf';
+import { reverseGeocode } from '../utils/reverseGeocode';
+import { PDFHeader } from './PDFHeader';
 
 let _reportsFirstLoadDone = false;
 
@@ -101,6 +104,16 @@ export const ReportsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showMobileReportList, setShowMobileReportList] = useState(false);
+  
+  // Persistent Global Cache for Header Metadata
+  const [address, setAddress] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('sg_global_latest_address');
+    return null;
+  });
+  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('sg_global_latest_siteName');
+    return null;
+  });
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   React.useEffect(() => {
@@ -133,6 +146,50 @@ export const ReportsPage: React.FC = () => {
     const timeoutId = window.setTimeout(() => setError(null), 4200);
     return () => window.clearTimeout(timeoutId);
   }, [error]);
+
+  // Fetch metadata for PDF header
+  React.useEffect(() => {
+    apiGet("/api/sensors/latest").then(data => {
+      if (data) {
+        if (data.siteName && data.siteName !== "Site Name") {
+          setDynamicSiteName(data.siteName);
+          localStorage.setItem('sg_global_latest_siteName', data.siteName);
+        }
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          reverseGeocode(data.latitude, data.longitude).then(addr => {
+            if (addr) {
+              setAddress(addr);
+              localStorage.setItem('sg_global_latest_address', addr);
+            }
+          });
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
+  React.useEffect(() => {
+    if (!address && typeof window !== 'undefined') {
+      const keys = Object.keys(localStorage);
+      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+      if (addressKey) {
+        const cached = localStorage.getItem(addressKey);
+        if (cached) {
+          setAddress(cached);
+          localStorage.setItem('sg_global_latest_address', cached);
+        }
+      }
+      
+      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
+      if (siteNameKey && !dynamicSiteName) {
+        const cachedName = localStorage.getItem(siteNameKey);
+        if (cachedName) {
+          setDynamicSiteName(cachedName);
+          localStorage.setItem('sg_global_latest_siteName', cachedName);
+        }
+      }
+    }
+  }, [address, dynamicSiteName]);
 
   const yearOptions = React.useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -946,9 +1003,11 @@ export const ReportsPage: React.FC = () => {
 
                   <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
                     <article ref={previewDocumentRef} className="mx-auto w-full max-w-[760px] bg-white p-5 text-[13px] leading-relaxed text-slate-800 sm:p-7">
-                      <header className="border-b border-slate-300 pb-3 text-center">
-                        <h3 className="text-base font-semibold uppercase tracking-wide text-slate-900">Water Quality Report For SchistoSomiasis Risk</h3>
-                        <p className="mt-1 text-sm font-medium text-slate-700">{selectedReport.period}</p>
+                      <header className="mb-6 border-b border-slate-200 pb-6 text-center">
+                        <PDFHeader 
+                          dynamicSiteName={dynamicSiteName || 'System Summary Report'} 
+                          address={address || "Riverside, Leyte Province"} 
+                        />
                       </header>
 
                       <section className="mt-4 overflow-x-auto">

@@ -182,6 +182,9 @@ export function Dashboard({
         setGpsAddress(null); // reset while loading
         reverseGeocode(lat, lng).then(addr => {
           setGpsAddress(addr);
+          if (addr && typeof window !== 'undefined') {
+            localStorage.setItem('sg_global_latest_address', addr);
+          }
         });
       }
     } else {
@@ -321,8 +324,10 @@ export function Dashboard({
           setDeviceConnected(true);
           // Only update siteName from telemetry if it's not the generic default, 
           // to prevent overwriting custom Admin settings.
-          if (data && data.siteName && data.siteName !== "Site Name")
+          if (data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            localStorage.setItem('sg_global_latest_siteName', data.siteName);
+          }
         })
         .catch(() => {
           setBackendOk(false);
