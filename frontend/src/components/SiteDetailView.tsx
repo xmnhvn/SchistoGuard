@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+import { reverseGeocode } from "../utils/reverseGeocode";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -63,6 +64,23 @@ export function SiteDetailView({
   const chartRef = useRef<HTMLDivElement>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [address, setAddress] = useState<string | null>(null);
+
+  // Fetch address based on GPS from the latest history reading
+  useEffect(() => {
+    if (history && history.length > 0) {
+      // Find latest valid GPS in history
+      const latestWithGps = [...history]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .find(r => typeof r.latitude === 'number' && typeof r.longitude === 'number');
+
+      if (latestWithGps) {
+        reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+          if (addr) setAddress(addr);
+        });
+      }
+    }
+  }, [history]);
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
@@ -517,7 +535,7 @@ export function SiteDetailView({
                 <h2 style={{ margin: 0, fontSize: 26, color: '#357d86', fontFamily: POPPINS, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1 }}>SchistoGuard</h2>
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: 11, color: '#6b7280', fontFamily: POPPINS, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 500, lineHeight: 1 }}>Environmental Monitoring PDF Report</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: 10, color: '#94a3b8', fontFamily: POPPINS, fontWeight: 500, lineHeight: 1 }}>[Insert Official Address Here]</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: 10, color: '#94a3b8', fontFamily: POPPINS, fontWeight: 500, lineHeight: 1 }}>{address || barangay || 'Leyte Province'}</p>
             </div>
           </div>
           <div className="flex flex-col w-full">
@@ -952,11 +970,23 @@ export function SiteDetailView({
                     .sg-print-only { display: block !important; }
                   }
                   .sg-exporting-pdf {
-                    gap: 8px !important;
+                    gap: 4px !important;
                   }
-                  .sg-exporting-pdf .threshold-container { margin-top: 4px !important; padding: 16px !important; }
-                  .sg-exporting-pdf .pdf-summary-container { padding-top: 6px !important; margin-top: 4px !important; }
+                  .sg-exporting-pdf .chart-inner-wrap {
+                    height: 240px !important;
+                  }
+                  .sg-exporting-pdf .threshold-container { 
+                    margin-top: 4px !important; 
+                    padding: 12px 16px !important; 
+                    break-inside: avoid;
+                  }
+                  .sg-exporting-pdf .pdf-summary-container { 
+                    padding-top: 4px !important; 
+                    margin-top: 4px !important; 
+                    break-inside: avoid;
+                  }
                   .sg-exporting-pdf .top-header-gap { padding-top: 0px !important; }
+                  .sg-exporting-pdf .mb-20, .sg-exporting-pdf [style*="margin-bottom: 20px"] { margin-bottom: 8px !important; }
                 `}</style>
               </div>
             </div>
