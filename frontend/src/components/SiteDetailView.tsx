@@ -65,6 +65,7 @@ export function SiteDetailView({
   const [showExportModal, setShowExportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
+  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
 
   // Fetch address based on GPS from the latest history reading
   useEffect(() => {
@@ -75,12 +76,27 @@ export function SiteDetailView({
         .find(r => typeof r.latitude === 'number' && typeof r.longitude === 'number');
 
       if (latestWithGps) {
+        if (latestWithGps.siteName) setDynamicSiteName(latestWithGps.siteName);
         reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
           if (addr) setAddress(addr);
         });
       }
     }
   }, [history]);
+
+  // Also try to get site name from interval config or latest
+  useEffect(() => {
+    apiGet("/api/sensors/latest").then(data => {
+      if (data) {
+        if (data.siteName) setDynamicSiteName(data.siteName);
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          reverseGeocode(data.latitude, data.longitude).then(addr => {
+            if (addr) setAddress(addr);
+          });
+        }
+      }
+    }).catch(() => {});
+  }, []);
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
@@ -460,7 +476,7 @@ export function SiteDetailView({
                 overflow: isMobile ? undefined : "hidden",
                 textOverflow: isMobile ? undefined : "ellipsis",
                 letterSpacing: isMobile ? 0.1 : undefined,
-              }}>{siteName}</h1>
+              }}>{dynamicSiteName || siteName}</h1>
               {isMobile && (
                 <span style={{
                   fontSize: 12.5,
@@ -471,7 +487,7 @@ export function SiteDetailView({
                   lineHeight: 1.3,
                   display: "block",
                   whiteSpace: "normal",
-                }}>{barangay}, Leyte Province</span>
+                }}>{address || (barangay ? barangay + ", Leyte Province" : "Riverside, Leyte Province")}</span>
               )}
               {!isMobile && (
                 <p style={{
@@ -479,7 +495,7 @@ export function SiteDetailView({
                   color: "#7b8a9a",
                   margin: "4px 0 0",
                   fontFamily: POPPINS,
-                }}>{barangay}, Leyte Province</p>
+                }}>{address || (barangay ? barangay + ", Leyte Province" : "Riverside, Leyte Province")}</p>
               )}
             </div>
           </div>
@@ -970,23 +986,11 @@ export function SiteDetailView({
                     .sg-print-only { display: block !important; }
                   }
                   .sg-exporting-pdf {
-                    gap: 4px !important;
+                    gap: 8px !important;
                   }
-                  .sg-exporting-pdf .chart-inner-wrap {
-                    height: 240px !important;
-                  }
-                  .sg-exporting-pdf .threshold-container { 
-                    margin-top: 4px !important; 
-                    padding: 12px 16px !important; 
-                    break-inside: avoid;
-                  }
-                  .sg-exporting-pdf .pdf-summary-container { 
-                    padding-top: 4px !important; 
-                    margin-top: 4px !important; 
-                    break-inside: avoid;
-                  }
+                  .sg-exporting-pdf .threshold-container { margin-top: 4px !important; padding: 16px !important; }
+                  .sg-exporting-pdf .pdf-summary-container { padding-top: 6px !important; margin-top: 4px !important; }
                   .sg-exporting-pdf .top-header-gap { padding-top: 0px !important; }
-                  .sg-exporting-pdf .mb-20, .sg-exporting-pdf [style*="margin-bottom: 20px"] { margin-bottom: 8px !important; }
                 `}</style>
               </div>
             </div>
