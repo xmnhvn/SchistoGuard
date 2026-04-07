@@ -70,14 +70,20 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const animate = !_sitesFirstLoadDone;
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+
+  useEffect(() => {
+    // Disable entry animation after it's finished to prevent glitches on re-renders
+    const timer = setTimeout(() => setAnimationEnabled(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch metadata for PDF header
   useEffect(() => {
     // 1. Try latest reading
     apiGet("/api/sensors/latest").then(data => {
       if (data) {
-        if (data.siteName && data.siteName !== "SchistoGuard Device 1") setDynamicSiteName(data.siteName);
+        if (data.siteName && data.siteName !== "Site Name") setDynamicSiteName(data.siteName);
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(data.latitude, data.longitude).then(addr => {
@@ -279,7 +285,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     doc.setFontSize(7.5);
     doc.setFont(pdfFont, 'normal');
     doc.setTextColor(148, 163, 184); // #94a3b8
-    const addr = address || 'Venus Street, GSIS Heights, Davao City';
+    const addr = address || 'Device Address';
     doc.text(addr, (pw - doc.getTextWidth(addr)) / 2, 75);
 
     doc.setFontSize(7);
@@ -324,11 +330,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
-  useEffect(() => {
-    if (visible && !_sitesFirstLoadDone) {
-      setTimeout(() => { _sitesFirstLoadDone = true; }, 50);
-    }
-  }, [visible]);
+
 
   useEffect(() => {
     const getData = async () => {
@@ -460,7 +462,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         </div>
       )}
 
-      <div className={`flex flex-col gap-6 w-full ${animate ? 'animate-fade-in' : ''}`} style={{
+      <div className={`flex flex-col gap-6 w-full ${animationEnabled ? 'animate-fade-in' : ''}`} style={{
       fontFamily: POPPINS,
       height: "100%",
       overflow: "hidden",
@@ -478,6 +480,9 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.7s ease-out both;
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -501,7 +506,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         alignItems: (isMobile || isTablet) ? "flex-start" : "center",
         gap: 16,
         marginBottom: 24,
-        animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
+        animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <h1 style={{
@@ -599,7 +604,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
         gap: isMobile ? 12 : 16,
         marginBottom: 24,
-        animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
+        animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         {[
           { label: "Total Readings", value: filteredReadings.length * 3, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3" },
@@ -615,7 +620,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             flexDirection: "column",
             alignItems: "center",
             gap: 6,
-            ...(animate ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` } : {}),
+            ...(animationEnabled ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` } : {}),
           }}>
             <div style={{
               width: 38,
@@ -644,7 +649,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
-        animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+        animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <div 
           onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
@@ -785,7 +790,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   return (
                     <tr key={reading.id} style={{
                       borderBottom: "1px solid #f5f5f5",
-                      animation: animate ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both` : "none",
+                      animation: animationEnabled ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both` : "none",
                       background: selectedIds.has(reading.id) ? "#fff1f1" : "transparent",
                       transition: "background 0.2s ease",
                       cursor: deleteMode ? "pointer" : "default"

@@ -31,7 +31,7 @@ export interface SiteDetailViewProps {
 
 export function SiteDetailView({
   siteId,
-  siteName = "SchistoGuard Device 1",
+  siteName = "Site Name",
   barangay = "Riverside",
   currentRisk,
   onBack,
@@ -66,6 +66,13 @@ export function SiteDetailView({
   const [isExporting, setExporting] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+
+  useEffect(() => {
+    // Disable entry animation after it's finished to prevent glitches on re-renders
+    const timer = setTimeout(() => setAnimationEnabled(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch address based on GPS from the latest history reading
   useEffect(() => {
@@ -78,7 +85,7 @@ export function SiteDetailView({
       if (latestWithGps) {
         // Only update siteName from telemetry if it's not the generic default, 
         // to prevent overwriting custom Admin settings.
-        if (latestWithGps.siteName && latestWithGps.siteName !== "SchistoGuard Device 1") {
+        if (latestWithGps.siteName && latestWithGps.siteName !== "Site Name") {
           setDynamicSiteName(latestWithGps.siteName);
         }
         reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
@@ -93,7 +100,7 @@ export function SiteDetailView({
     apiGet("/api/sensors/latest").then(data => {
       if (data) {
         // Only update if not the generic default
-        if (data.siteName && data.siteName !== "SchistoGuard Device 1") {
+        if (data.siteName && data.siteName !== "Site Name") {
           setDynamicSiteName(data.siteName);
         }
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
@@ -168,11 +175,7 @@ export function SiteDetailView({
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
-  useEffect(() => {
-    if (visible && !_siteDetailFirstLoadDone) {
-      setTimeout(() => { _siteDetailFirstLoadDone = true; }, 50);
-    }
-  }, [visible]);
+
 
   // Interval config state
   const [intervalValue, setIntervalValue] = useState(5);
@@ -508,7 +511,11 @@ export function SiteDetailView({
         }
         .sg-pdf-only { display: none !important; }
       `}</style>
-      <div style={{ display: "flex", flexDirection: "column", animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        animation: animationEnabled ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' 
+      }}>
         <div style={{
           display: "flex",
           flexDirection: (isMobile || isTablet) ? "column" : "row",
@@ -540,7 +547,7 @@ export function SiteDetailView({
                   lineHeight: 1.3,
                   display: "block",
                   whiteSpace: "normal",
-                }}>{address || (barangay ? barangay + ", Leyte Province" : "Riverside, Leyte Province")}</span>
+                }}>{address || "Device Address"}</span>
               )}
               {!isMobile && (
                 <p style={{
@@ -548,7 +555,9 @@ export function SiteDetailView({
                   color: "#7b8a9a",
                   margin: "4px 0 0",
                   fontFamily: POPPINS,
-                }}>{address || (barangay ? barangay + ", Leyte Province" : "Riverside, Leyte Province")}</p>
+                  minHeight: "20px", // Reserve space to prevent layout jump
+                  transition: 'opacity 0.3s ease-in-out'
+                }}>{address || "Device Address"}</p>
               )}
             </div>
           </div>

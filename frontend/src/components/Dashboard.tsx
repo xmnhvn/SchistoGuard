@@ -44,7 +44,7 @@ export function Dashboard({
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
   const [siteData, setSiteData] = useState<any>({
-    siteName: "SchistoGuard Device 1",
+    siteName: "Site Name",
     barangay: "",
     municipality: "",
     area: "",
@@ -59,8 +59,13 @@ export function Dashboard({
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [mapReady, setMapReady] = useState(false);
-  // Only animate on the very first load — not on re-navigation (Dashboard stays mounted)
-  const animate = !_dashboardFirstLoadDone;
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+
+  useEffect(() => {
+    // Disable entry animation after it's finished to prevent glitches on re-renders
+    const timer = setTimeout(() => setAnimationEnabled(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // When the Dashboard becomes visible again (after being hidden), resize the map
   useEffect(() => {
@@ -193,6 +198,12 @@ export function Dashboard({
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const isNarrowDesktop = vw < 1600;
+  // Shared card height so ALL dashboard cards are uniform
+  const cardH = isNarrowDesktop ? 140 : 190;
+  const panelWidth = isNarrowDesktop ? "46%" : "44%";
 
   const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
     .map((v: any) => (typeof v === "string" ? v.trim() : ""))
@@ -204,7 +215,7 @@ export function Dashboard({
     (typeof latestReading?.address === "string" ? latestReading.address : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
-    "No recorded address yet";
+    "Device Address";
 
   useEffect(() => {
     const check = () => {
@@ -275,7 +286,7 @@ export function Dashboard({
           // If backend says deviceConnected: false, treat as disconnected
           if (data && data.deviceConnected === false) {
             console.log('[Dashboard] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
-            if (data.siteName && data.siteName !== "SchistoGuard Device 1") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            if (data.siteName && data.siteName !== "Site Name") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[Dashboard] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
@@ -310,7 +321,7 @@ export function Dashboard({
           setDeviceConnected(true);
           // Only update siteName from telemetry if it's not the generic default, 
           // to prevent overwriting custom Admin settings.
-          if (data && data.siteName && data.siteName !== "SchistoGuard Device 1")
+          if (data && data.siteName && data.siteName !== "Site Name")
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
         })
         .catch(() => {
@@ -324,11 +335,7 @@ export function Dashboard({
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (visible && !_dashboardFirstLoadDone) {
-      setTimeout(() => { _dashboardFirstLoadDone = true; }, 50);
-    }
-  }, [visible]);
+
 
   // Load interval config from backend
   useEffect(() => {
@@ -337,7 +344,7 @@ export function Dashboard({
       try {
         const data = await apiGet("/api/sensors/interval-config");
         let ms = data.intervalMs || 300000;
-        if (data.deviceName && data.deviceName !== "SchistoGuard Device 1") {
+        if (data.deviceName && data.deviceName !== "Site Name") {
           setSiteData((prev: any) => ({ ...prev, siteName: data.deviceName }));
         }
         if (ms !== lastIntervalMs) {
@@ -772,7 +779,7 @@ export function Dashboard({
               dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
               active={deviceConnected && !!latestReading}
               compact={compactCards}
-              fadeIn={animate}
+              fadeIn={animationEnabled}
             />
 
             <SensorMiniCard
@@ -784,7 +791,7 @@ export function Dashboard({
               dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
               active={deviceConnected && !!latestReading}
               compact={compactCards}
-              fadeIn={animate}
+              fadeIn={animationEnabled}
             />
 
             <SensorMiniCard
@@ -796,7 +803,7 @@ export function Dashboard({
               dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
               active={deviceConnected && !!latestReading}
               compact={compactCards}
-              fadeIn={animate}
+              fadeIn={animationEnabled}
             />
           </div>
         </div>
@@ -845,7 +852,7 @@ export function Dashboard({
         } as React.CSSProperties}>
 
           {/* Dashboard Site Info Header (Site Name, Barangay) */}
-          <div style={{ padding: `${dPad}px ${dPad}px 0`, display: "flex", flexDirection: "column", pointerEvents: "auto", animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+          <div style={{ padding: `${dPad}px ${dPad}px 0`, display: "flex", flexDirection: "column", pointerEvents: "auto", animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
             {/* Site name */}
             <h1 style={{
               fontSize: isTab ? 30 : 26, fontWeight: 700, color: "#fff", margin: 0,
@@ -856,8 +863,14 @@ export function Dashboard({
             </h1>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
-              fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", margin: "5px 0 10px",
-              fontFamily: POPPINS
+              fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", 
+              margin: "5px 0 10px",
+              fontFamily: POPPINS,
+              minHeight: (isTab || isMobile) ? 44 : 20, // Reserve space for wrapping to prevent graph jump
+              display: "-webkit-box",
+              WebkitLineClamp: isNarrowDesktop ? 1 : 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden"
             }}>
               {displayAddress}
             </p>
@@ -902,7 +915,7 @@ export function Dashboard({
           <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : 20}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
               {/* Temperature — tablet uses the same SensorMiniCard as desktop */}
               {isTab ? (
                 <SensorMiniCard
@@ -915,7 +928,7 @@ export function Dashboard({
                   active={!!latestReading}
                   compact
                   fixedHeight={140}
-                  fadeIn={animate}
+                  fadeIn={animationEnabled}
                 />
               ) : (
                 <div style={{
@@ -935,7 +948,7 @@ export function Dashboard({
                   <img src="/icons/icon-temperature.svg" alt="temp"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
                   <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Temperature</p>
-                  <div style={{ animation: animate ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
+                  <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.temperature : "—"}
@@ -963,7 +976,7 @@ export function Dashboard({
                   active={!!latestReading}
                   compact
                   fixedHeight={140}
-                  fadeIn={animate}
+                  fadeIn={animationEnabled}
                 />
               ) : (
                 <div style={{
@@ -983,7 +996,7 @@ export function Dashboard({
                   <img src="/icons/icon-turbidity.svg" alt="turbidity"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
                   <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Turbidity</p>
-                  <div style={{ animation: animate ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
+                  <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.turbidity : "—"}
@@ -1011,7 +1024,7 @@ export function Dashboard({
                   active={!!latestReading}
                   compact
                   fixedHeight={140}
-                  fadeIn={animate}
+                  fadeIn={animationEnabled}
                 />
               ) : (
                 <div style={{
@@ -1031,7 +1044,7 @@ export function Dashboard({
                   <img src="/icons/icon-ph.svg" alt="ph"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
                   <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>pH Level</p>
-                  <div style={{ animation: animate ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
+                  <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.ph : "—"}
@@ -1085,7 +1098,7 @@ export function Dashboard({
                   fontFamily: POPPINS,
                   minHeight: 140,
                   boxSizing: "border-box" as const,
-                  animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+                  animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
                     <div>
@@ -1114,7 +1127,7 @@ export function Dashboard({
                   display: "flex", alignItems: "stretch", gap: 14,
                   minHeight: 140,
                   boxSizing: "border-box" as const,
-                  animation: animate ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
+                  animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                     <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 22, color: "#337C85", fontFamily: POPPINS }}>
@@ -1159,7 +1172,7 @@ export function Dashboard({
                 background: "rgba(255,255,255,0.96)", borderRadius: 24,
                 padding: "20px 18px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                 display: "flex", alignItems: "stretch", gap: 14,
-                animation: animate ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
+                animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
               }}>
                 {/* Risk Level */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
@@ -1230,13 +1243,7 @@ export function Dashboard({
     );
   }
 
-
   // ─── Full dashboard ──────────────────────────────────────────────────────
-  const vw = window.innerWidth;
-  const isNarrowDesktop = vw < 1600;
-  // Shared card height so ALL dashboard cards are uniform
-  const cardH = isNarrowDesktop ? 140 : 190;
-  const panelWidth = isNarrowDesktop ? "46%" : "44%";
   const panelPadding = `${isNarrowDesktop ? dPad : 40}px ${dPad}px ${isNarrowDesktop ? dPad : 40}px ${dPad}px`;
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
@@ -1270,7 +1277,7 @@ export function Dashboard({
         } as React.CSSProperties}
       >
         {/* Site header */}
-        <div style={{ marginBottom: isNarrowDesktop ? 12 : 20, animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ marginBottom: isNarrowDesktop ? 12 : 20, animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           <h1 style={{
             fontSize: isNarrowDesktop ? 30 : 36,
             fontWeight: 700,
@@ -1293,7 +1300,7 @@ export function Dashboard({
         </div>
 
         {/* ── 3 Sensor mini-cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: isNarrowDesktop ? 10 : 14, marginBottom: isNarrowDesktop ? 12 : 24, animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: isNarrowDesktop ? 10 : 14, marginBottom: isNarrowDesktop ? 12 : 24, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           {/* Temperature */}
           <SensorMiniCard
             label="Temperature"
@@ -1305,7 +1312,7 @@ export function Dashboard({
             active={!!latestReading}
             compact
             fixedHeight={cardH}
-            fadeIn={animate}
+            fadeIn={animationEnabled}
           />
           {/* Turbidity */}
           <SensorMiniCard
@@ -1318,7 +1325,7 @@ export function Dashboard({
             active={!!latestReading}
             compact
             fixedHeight={cardH}
-            fadeIn={animate}
+            fadeIn={animationEnabled}
           />
           {/* pH */}
           <SensorMiniCard
@@ -1331,7 +1338,7 @@ export function Dashboard({
             active={!!latestReading}
             compact
             fixedHeight={cardH}
-            fadeIn={animate}
+            fadeIn={animationEnabled}
           />
         </div>
 
@@ -1348,7 +1355,7 @@ export function Dashboard({
             minHeight: cardH,
             boxSizing: "border-box" as const,
             boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-            animation: animate ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+            animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
@@ -1381,7 +1388,7 @@ export function Dashboard({
             gap: isNarrowDesktop ? 10 : 16,
             minHeight: cardH,
             boxSizing: "border-box" as const,
-            animation: animate ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
+            animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
           }}
         >
           {/* LEFT: Risk Level */}

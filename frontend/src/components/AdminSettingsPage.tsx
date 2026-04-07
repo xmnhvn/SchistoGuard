@@ -59,7 +59,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [intervalMsg, setIntervalMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [deviceName, setDeviceName] = useState("SchistoGuard Device 1");
+  const [deviceName, setDeviceName] = useState("Site Name");
   // Load interval from backend
   useEffect(() => {
     (async () => {

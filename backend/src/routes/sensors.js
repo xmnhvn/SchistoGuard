@@ -8,7 +8,7 @@ const reverseGeocode = require("../utils/reverseGeocode");
 
 // Generalized memory interval and global trackers
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
-let GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
+let GLOBAL_DEVICE_NAME = "Site Name";
 
 // Helper to load settings from DB
 async function loadSettingsFromDB() {
@@ -45,7 +45,7 @@ router.post('/interval-config', (req, res) => {
     return res.status(400).json({ error: 'Invalid intervalMs' });
   }
 
-  const newName = deviceName || "SchistoGuard Device 1";
+  const newName = deviceName || "Site Name";
   
   db.setSetting('aggregate_interval_ms', String(intervalMs), (err) => {
     if (err) return res.status(500).json({ error: 'Failed to save interval' });
@@ -171,7 +171,7 @@ loadSettingsFromDB().then(() => {
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       if (config && config.intervalMs && !AGGREGATE_INTERVAL_MS) AGGREGATE_INTERVAL_MS = config.intervalMs;
-      if (config && config.deviceName && GLOBAL_DEVICE_NAME === "SchistoGuard Device 1") GLOBAL_DEVICE_NAME = config.deviceName;
+      if (config && config.deviceName && GLOBAL_DEVICE_NAME === "Site Name") GLOBAL_DEVICE_NAME = config.deviceName;
     }
   } catch (e) { /* ignore */ }
 });
