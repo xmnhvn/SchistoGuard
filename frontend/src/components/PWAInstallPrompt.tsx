@@ -70,7 +70,6 @@ export function PWAInstallPrompt() {
         >
           <X size={18} />
         </button>
- Broadway: "none"
       </div>
     </div>
   );

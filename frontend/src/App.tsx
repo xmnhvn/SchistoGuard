@@ -11,6 +11,7 @@ import { AdminSettingsPage } from './components/AdminSettingsPage';
 import { UserProfilePage } from './components/UserProfilePage';
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginForm } from './components/LoginForm';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
@@ -33,6 +34,7 @@ export default function App() {
   const [adminUnlockError, setAdminUnlockError] = useState('');
   const [adminUnlockLoading, setAdminUnlockLoading] = useState(false);
   const [pendingAdminView, setPendingAdminView] = useState<ViewType | null>(null);
+  const pwaInstallPrompt = <PWAInstallPrompt />;
 
   useEffect(() => {
     const check = () => {
@@ -250,172 +252,183 @@ export default function App() {
 
   if (currentView === 'landing') {
     return (
-      <LandingPage
-        onViewMap={() => setCurrentView('login')}
-        onLearnMore={() => setCurrentView('sensor-info')}
-        onEnterApp={() => setCurrentView('login')}
-      />
+      <>
+        <LandingPage
+          onViewMap={() => setCurrentView('login')}
+          onLearnMore={() => setCurrentView('sensor-info')}
+          onEnterApp={() => setCurrentView('login')}
+        />
+        {pwaInstallPrompt}
+      </>
     );
   }
 
   if (currentView === 'sensor-info') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white" style={isMobile ? { padding: 0, background: 'none' } : {}}>
-        <div className={isMobile ? "" : "px-3 py-6"}>
-          {isMobile ? (
-            /* Mobile: Full-screen dashboard with back button positioned beside header */
-            <div style={{ position: 'relative', height: '100vh' }}>
-              <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
-              <button
-                onClick={() => setCurrentView('landing')}
-                style={{
-                  position: 'absolute',
-                  top: 20,
-                  left: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 32,
-                  height: 32,
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  zIndex: 10,
-                  padding: 0,
-                  flexShrink: 0,
-                }}
-                aria-label="Back to Home"
-              >
-                <ChevronLeft style={{ width: 20, height: 20 }} />
-              </button>
-            </div>
-          ) : (
-            /* Desktop/Tablet: Original layout with left-aligned back button */
-            <div className="flex gap-3 items-start">
-              <button
-                onClick={() => setCurrentView('landing')}
-                className="flex items-center justify-center w-10 h-10 rounded-full text-schistoguard-navy hover:text-schistoguard-navy/80 transition-colors flex-shrink-0"
-                aria-label="Back to Home"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="flex-1 min-w-0">
+      <>
+        <div className="min-h-screen bg-gradient-to-b from-green-50 to-white" style={isMobile ? { padding: 0, background: 'none' } : {}}>
+          <div className={isMobile ? "" : "px-3 py-6"}>
+            {isMobile ? (
+              <div style={{ position: 'relative', height: '100vh' }}>
                 <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
+                <button
+                  onClick={() => setCurrentView('landing')}
+                  style={{
+                    position: 'absolute',
+                    top: 20,
+                    left: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 32,
+                    height: 32,
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    zIndex: 10,
+                    padding: 0,
+                    flexShrink: 0,
+                  }}
+                  aria-label="Back to Home"
+                >
+                  <ChevronLeft style={{ width: 20, height: 20 }} />
+                </button>
               </div>
-              <div className="w-10 flex-shrink-0" aria-hidden="true" />
-            </div>
-          )}
+            ) : (
+              <div className="flex gap-3 items-start">
+                <button
+                  onClick={() => setCurrentView('landing')}
+                  className="flex items-center justify-center w-10 h-10 rounded-full text-schistoguard-navy hover:text-schistoguard-navy/80 transition-colors flex-shrink-0"
+                  aria-label="Back to Home"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
+                </div>
+                <div className="w-10 flex-shrink-0" aria-hidden="true" />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+        {pwaInstallPrompt}
+      </>
     );
   }
 
   if (currentView === 'login') {
-    return <LoginForm onLogin={handleLogin} onCancel={() => setCurrentView('landing')} />;
+    return (
+      <>
+        <LoginForm onLogin={handleLogin} onCancel={() => setCurrentView('landing')} />
+        {pwaInstallPrompt}
+      </>
+    );
   }
 
   if (isAuthenticated) {
     return (
-      <NavigationProvider
-        currentView={currentView}
-        onNavigate={handleNavigate}
-        onLogout={handleLogout}
-        systemStatus={systemStatus}
-        user={user}
-      >
-        {/* Dashboard stays mounted (preserves map), hidden via CSS when not active */}
-        <div style={{ display: currentView === 'dashboard' ? 'contents' : 'none' }}>
-          <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} user={user} />
-        </div>
-        <div style={{ display: currentView === 'alerts' ? 'contents' : 'none' }}>
-          <AlertsPage onNavigate={handleNavigate} visible={currentView === 'alerts'} user={user} />
-        </div>
-        {currentView === 'reports' && <ReportsPage />}
-        <div style={{ display: currentView === 'sites' ? 'contents' : 'none' }}>
-          <SitesDirectory onViewSiteDetail={handleViewSiteDetail} visible={currentView === 'sites'} />
-        </div>
-        {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
-          <div style={{ display: currentView === 'site-details' ? 'contents' : 'none' }}>
-            <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} visible={currentView === 'site-details'} />
+      <>
+        <NavigationProvider
+          currentView={currentView}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+          systemStatus={systemStatus}
+          user={user}
+        >
+          <div style={{ display: currentView === 'dashboard' ? 'contents' : 'none' }}>
+            <Dashboard onNavigate={handleNavigate} setSystemStatus={setSystemStatus} visible={currentView === 'dashboard'} user={user} />
           </div>
-        )}
-        {currentView === 'recipients' && (
-          <SettingsPage siteName={selectedSiteId || "All Sites"} />
-        )}
-        {currentView === 'admin-settings' && <AdminSettingsPage user={user} />}
-        {currentView === 'user-profile' && (
-          <UserProfilePage
-            user={user}
-            onBack={() => handleNavigate('dashboard')}
-            onLogout={handleLogout}
-            onProfilePhotoChange={(profilePhoto) => {
-              setUser((prev) => {
-                if (!prev) return prev;
-                return { ...prev, profilePhoto };
-              });
-            }}
-          />
-        )}
-
-        <Dialog open={adminUnlockOpen} onOpenChange={(open) => { if (!open) closeAdminUnlockModal(); }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Admin Authentication Required</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Enter admin credentials to continue to Admin Settings.
-              </p>
-
-              <div className="space-y-2">
-                <Label htmlFor="admin-unlock-email">Admin Email</Label>
-                <Input
-                  id="admin-unlock-email"
-                  type="email"
-                  value={adminUnlockEmail}
-                  onChange={(e) => setAdminUnlockEmail(e.target.value)}
-                  autoComplete="username"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="admin-unlock-password">Admin Password</Label>
-                <Input
-                  id="admin-unlock-password"
-                  type="password"
-                  value={adminUnlockPassword}
-                  onChange={(e) => setAdminUnlockPassword(e.target.value)}
-                  autoComplete="current-password"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (!adminUnlockLoading) {
-                        submitAdminUnlock();
-                      }
-                    }
-                  }}
-                />
-              </div>
-
-              {adminUnlockError && (
-                <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
-                  {adminUnlockError}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeAdminUnlockModal} disabled={adminUnlockLoading}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={submitAdminUnlock} disabled={adminUnlockLoading}>
-                  {adminUnlockLoading ? 'Verifying...' : 'Verify Admin'}
-                </Button>
-              </div>
+          <div style={{ display: currentView === 'alerts' ? 'contents' : 'none' }}>
+            <AlertsPage onNavigate={handleNavigate} visible={currentView === 'alerts'} user={user} />
+          </div>
+          {currentView === 'reports' && <ReportsPage />}
+          <div style={{ display: currentView === 'sites' ? 'contents' : 'none' }}>
+            <SitesDirectory onViewSiteDetail={handleViewSiteDetail} visible={currentView === 'sites'} />
+          </div>
+          {((currentView === 'site-details' && selectedSiteId) || currentView === 'site-details') && (
+            <div style={{ display: currentView === 'site-details' ? 'contents' : 'none' }}>
+              <SiteDetailView siteId={selectedSiteId || 'site-1'} onBack={handleBackFromSiteDetail} visible={currentView === 'site-details'} />
             </div>
-          </DialogContent>
-        </Dialog>
-      </NavigationProvider>
+          )}
+          {currentView === 'recipients' && (
+            <SettingsPage siteName={selectedSiteId || "All Sites"} />
+          )}
+          {currentView === 'admin-settings' && <AdminSettingsPage user={user} />}
+          {currentView === 'user-profile' && (
+            <UserProfilePage
+              user={user}
+              onBack={() => handleNavigate('dashboard')}
+              onLogout={handleLogout}
+              onProfilePhotoChange={(profilePhoto) => {
+                setUser((prev) => {
+                  if (!prev) return prev;
+                  return { ...prev, profilePhoto };
+                });
+              }}
+            />
+          )}
+
+          <Dialog open={adminUnlockOpen} onOpenChange={(open) => { if (!open) closeAdminUnlockModal(); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Admin Authentication Required</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Enter admin credentials to continue to Admin Settings.
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="admin-unlock-email">Admin Email</Label>
+                  <Input
+                    id="admin-unlock-email"
+                    type="email"
+                    value={adminUnlockEmail}
+                    onChange={(e) => setAdminUnlockEmail(e.target.value)}
+                    autoComplete="username"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="admin-unlock-password">Admin Password</Label>
+                  <Input
+                    id="admin-unlock-password"
+                    type="password"
+                    value={adminUnlockPassword}
+                    onChange={(e) => setAdminUnlockPassword(e.target.value)}
+                    autoComplete="current-password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (!adminUnlockLoading) {
+                          submitAdminUnlock();
+                        }
+                      }
+                    }}
+                  />
+                </div>
+
+                {adminUnlockError && (
+                  <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+                    {adminUnlockError}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={closeAdminUnlockModal} disabled={adminUnlockLoading}>
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={submitAdminUnlock} disabled={adminUnlockLoading}>
+                    {adminUnlockLoading ? 'Verifying...' : 'Verify Admin'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </NavigationProvider>
+        {pwaInstallPrompt}
+      </>
     );
   }
 
