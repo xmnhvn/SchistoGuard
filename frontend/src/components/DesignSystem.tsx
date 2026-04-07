@@ -428,7 +428,7 @@ export function DesignSystem() {
               <div>
                 <h3 className="font-medium mb-2">Water Quality Thresholds</h3>
                 <div className="text-sm space-y-1 text-muted-foreground">
-                  <p>• <strong>Turbidity:</strong> Safe ≤5 NTU, Moderate Possible Risk 5–15 NTU, High Possible Risk &lt;5 NTU</p>
+                  <p>• <strong>Turbidity:</strong> High Possible Risk &lt;5 NTU, Moderate Possible Risk 5–15 NTU, Safe &gt;15 NTU</p>
                   <p>• <strong>Temperature:</strong> Normal 22–30°C</p>
                   <p>• <strong>pH:</strong> Normal 6.5–8.0</p>
                   <p>• <strong>UV Index:</strong> Low risk &lt;3, High risk &gt;6</p>

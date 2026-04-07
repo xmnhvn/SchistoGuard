@@ -479,7 +479,104 @@ void connectWiFiAndSetupOTA() {
       json += "\"pH\":" + String(latestPHConnected ? latestPH : -999, 2) + ",";
       json += "\"phConnected\":" + String(latestPHConnected ? "true" : "false") + ",";
       json += "\"turbidity\":" + String(latestTurbConnected ? latestTurbidity : -999, 2) + ",";
-      json += "\"turbConnected\":" + String(latestTurbConnected ? "true" : "false");
+      json += "\"turbConnected\":" + String(latestTurbConnected ? "true" : "false") + ",";
+      json += "\"turbRaw\":" + String(lastTurbRaw) + ",";
+      json += "\"turbVoltage\":" + String(lastTurbVoltage, 4) + ",";
+      json += "\"turbStdDev\":" + String(lastTurbStdDev, 1) + ",";
+      json += "\"turbCalVoltClear\":" + String(turbCalVoltClear, 4) + ",";
+      json += "\"turbCalNtuClear\":" + String(turbCalNtuClear, 2) + ",";
+      json += "\"turbCalVoltCloudy\":" + String(turbCalVoltCloudy, 4) + ",";
+      json += "\"turbCalNtuCloudy\":" + String(turbCalNtuCloudy, 2);
+      json += "}";
+      server.send(200, "application/json", json);
+    });
+
+    server.on("/api/turbidity/calibration", HTTP_GET, []() {
+      String json = "{";
+      json += "\"clearVoltage\":" + String(turbCalVoltClear, 4) + ",";
+      json += "\"clearNtu\":" + String(turbCalNtuClear, 2) + ",";
+      json += "\"cloudyVoltage\":" + String(turbCalVoltCloudy, 4) + ",";
+      json += "\"cloudyNtu\":" + String(turbCalNtuCloudy, 2) + ",";
+      json += "\"latestVoltage\":" + String(lastTurbVoltage, 4) + ",";
+      json += "\"latestRaw\":" + String(lastTurbRaw) + ",";
+      json += "\"latestStdDev\":" + String(lastTurbStdDev, 1);
+      json += "}";
+      server.send(200, "application/json", json);
+    });
+
+    server.on("/api/turbidity/calibration", HTTP_POST, []() {
+      // Accept URL/form parameters for OTA calibration updates.
+      // Required params: clearVoltage, clearNtu, cloudyVoltage, cloudyNtu
+      if (!server.hasArg("clearVoltage") || !server.hasArg("clearNtu") ||
+          !server.hasArg("cloudyVoltage") || !server.hasArg("cloudyNtu")) {
+        server.send(400, "application/json",
+          "{\"error\":\"Missing params. Use clearVoltage, clearNtu, cloudyVoltage, cloudyNtu\"}");
+        return;
+      }
+
+      float clearV = server.arg("clearVoltage").toFloat();
+      float clearNtu = server.arg("clearNtu").toFloat();
+      float cloudyV = server.arg("cloudyVoltage").toFloat();
+      float cloudyNtu = server.arg("cloudyNtu").toFloat();
+
+      if (fabsf(cloudyV - clearV) < 0.001f) {
+        server.send(400, "application/json", "{\"error\":\"clearVoltage and cloudyVoltage must differ\"}");
+        return;
+      }
+
+      if (clearNtu < TURB_CAL_NTU_MIN || clearNtu > TURB_CAL_NTU_MAX ||
+          cloudyNtu < TURB_CAL_NTU_MIN || cloudyNtu > TURB_CAL_NTU_MAX) {
+        server.send(400, "application/json", "{\"error\":\"NTU out of configured range\"}");
+        return;
+      }
+
+      turbCalVoltClear = clearV;
+      turbCalNtuClear = clearNtu;
+      turbCalVoltCloudy = cloudyV;
+      turbCalNtuCloudy = cloudyNtu;
+      printTurbidityCalibration();
+
+      String json = "{";
+      json += "\"success\":true,";
+      json += "\"clearVoltage\":" + String(turbCalVoltClear, 4) + ",";
+      json += "\"clearNtu\":" + String(turbCalNtuClear, 2) + ",";
+      json += "\"cloudyVoltage\":" + String(turbCalVoltCloudy, 4) + ",";
+      json += "\"cloudyNtu\":" + String(turbCalNtuCloudy, 2);
+      json += "}";
+      server.send(200, "application/json", json);
+    });
+
+    server.on("/api/turbidity/capture", HTTP_POST, []() {
+      // Capture current turbidity voltage and bind it to a known NTU for clear/cloudy point.
+      // Required params: point=clear|cloudy, ntu=<value>
+      if (!server.hasArg("point") || !server.hasArg("ntu")) {
+        server.send(400, "application/json", "{\"error\":\"Missing params. Use point=clear|cloudy and ntu\"}");
+        return;
+      }
+
+      String point = server.arg("point");
+      point.toLowerCase();
+      float ntu = server.arg("ntu").toFloat();
+
+      if (ntu < TURB_CAL_NTU_MIN || ntu > TURB_CAL_NTU_MAX) {
+        server.send(400, "application/json", "{\"error\":\"NTU out of configured range\"}");
+        return;
+      }
+
+      if (point == "clear") {
+        setTurbidityCalibrationPoint(true, lastTurbVoltage, ntu);
+      } else if (point == "cloudy") {
+        setTurbidityCalibrationPoint(false, lastTurbVoltage, ntu);
+      } else {
+        server.send(400, "application/json", "{\"error\":\"Invalid point. Use clear or cloudy\"}");
+        return;
+      }
+
+      String json = "{";
+      json += "\"success\":true,";
+      json += "\"capturedVoltage\":" + String(lastTurbVoltage, 4) + ",";
+      json += "\"point\":\"" + point + "\",";
+      json += "\"ntu\":" + String(ntu, 2);
       json += "}";
       server.send(200, "application/json", json);
     });

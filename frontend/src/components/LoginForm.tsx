@@ -486,7 +486,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div>
                 <strong>Turbidity (Water Clarity)</strong>
-                <br />Safe: ≤5 NTU • Moderate Possible Risk: 5-15 NTU • High Possible Risk: &lt;5 NTU
+                <br />High Possible Risk: &lt;5 NTU • Moderate Possible Risk: 5-15 NTU • Safe: &gt;15 NTU
               </div>
               <div>
                 <strong>Temperature</strong>

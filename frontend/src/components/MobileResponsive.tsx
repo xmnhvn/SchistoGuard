@@ -165,7 +165,7 @@ export function ResponsiveDashboard() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Safe Sites</span>
-                      <Badge className="bg-status-safe text-white">{readings.filter(r => r.turbidity <= 5).length}</Badge>
+                      <Badge className="bg-status-safe text-white">{readings.filter(r => r.turbidity > 15).length}</Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Moderate Possible Risk Sites</span>
@@ -173,7 +173,7 @@ export function ResponsiveDashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">High Possible Risk Sites</span>
-                      <Badge className="bg-status-critical text-white">{readings.filter(r => r.turbidity > 15).length}</Badge>
+                      <Badge className="bg-status-critical text-white">{readings.filter(r => r.turbidity < 5).length}</Badge>
                     </div>
                   </div>
                 </CardContent>
