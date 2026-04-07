@@ -11,7 +11,6 @@
 #include <math.h>
 #include "gps_module.h"
 #include "config.h"
-#define CLOUD_BACKEND_URL "https://schistoguard-production.up.railway.app/api/sensors"
 
 const int LCD_SDA = 33; // D33
 const int LCD_SCL = 26; // D26
@@ -47,10 +46,6 @@ const float PH_MOD_RISK_MAX = 8.5;      // Moderate snail survival
 const float TURBIDITY_CLEAR = 5.0;      // NTU - Clear water (potential schisto habitat)
 const float TURBIDITY_MODERATE = 15.0;  // NTU - Moderate clarity
 
-// Turbidity calibration placeholder: convert measured voltage to NTU
-// IMPORTANT: calibrate this constant for your sensor. Default 1.0 assumes sensor outputs NTU directly (unlikely).
-const float TURBIDITY_CAL = 1.0; // NTU per volt (placeholder)
-
 // Heuristic thresholds to detect floating ADC when turbidity sensor is unplugged
 const int TURB_SAMPLES = 12;
 const float TURB_FLOAT_STDDEV = 300.0; // ADC counts
@@ -78,6 +73,20 @@ bool latestPHConnected = false;
 float latestTurbidity = 0.0;
 bool latestTurbConnected = false;
 
+float turbCalVoltClear = TURB_CAL_VOLT_CLEAR;
+float turbCalNtuClear = TURB_CAL_NTU_CLEAR;
+float turbCalVoltCloudy = TURB_CAL_VOLT_CLOUDY;
+float turbCalNtuCloudy = TURB_CAL_NTU_CLOUDY;
+
+int lastTurbRaw = 0;
+float lastTurbVoltage = 0.0;
+float lastTurbStdDev = 0.0;
+
+String serialCommandBuffer;
+bool turbLiveMode = false;
+unsigned long lastTurbLivePrintMs = 0;
+const unsigned long TURB_LIVE_PRINT_INTERVAL_MS = 1000;
+
 int readAnalogAverage(int pin, int samples, float &stddev) {
   long sum = 0;
   long sumSq = 0;
@@ -93,6 +102,143 @@ int readAnalogAverage(int pin, int samples, float &stddev) {
   if (variance < 0) variance = 0;
   stddev = sqrtf(variance);
   return (int)(mean + 0.5f);
+}
+
+float voltageToTurbidityNTU(float voltage) {
+  const float deltaV = turbCalVoltCloudy - turbCalVoltClear;
+  if (fabsf(deltaV) < 0.001f) {
+    // Invalid calibration points; return a safe fallback.
+    return turbCalNtuClear;
+  }
+
+  const float slope = (turbCalNtuCloudy - turbCalNtuClear) / deltaV;
+  float ntu = turbCalNtuClear + ((voltage - turbCalVoltClear) * slope);
+
+  if (ntu < TURB_CAL_NTU_MIN) ntu = TURB_CAL_NTU_MIN;
+  if (ntu > TURB_CAL_NTU_MAX) ntu = TURB_CAL_NTU_MAX;
+  return ntu;
+}
+
+void printTurbidityCalibration() {
+  Serial.println("[TURB] Current calibration:");
+  Serial.print("  clear  -> V="); Serial.print(turbCalVoltClear, 4);
+  Serial.print("  NTU="); Serial.println(turbCalNtuClear, 2);
+  Serial.print("  cloudy -> V="); Serial.print(turbCalVoltCloudy, 4);
+  Serial.print("  NTU="); Serial.println(turbCalNtuCloudy, 2);
+
+  Serial.println("[TURB] Copy to config.h if values are final:");
+  Serial.print("const float TURB_CAL_VOLT_CLEAR = "); Serial.print(turbCalVoltClear, 4); Serial.println("f;");
+  Serial.print("const float TURB_CAL_NTU_CLEAR = "); Serial.print(turbCalNtuClear, 2); Serial.println("f;");
+  Serial.print("const float TURB_CAL_VOLT_CLOUDY = "); Serial.print(turbCalVoltCloudy, 4); Serial.println("f;");
+  Serial.print("const float TURB_CAL_NTU_CLOUDY = "); Serial.print(turbCalNtuCloudy, 2); Serial.println("f;");
+}
+
+void setTurbidityCalibrationPoint(bool isClearPoint, float voltage, float ntu) {
+  if (isClearPoint) {
+    turbCalVoltClear = voltage;
+    turbCalNtuClear = ntu;
+  } else {
+    turbCalVoltCloudy = voltage;
+    turbCalNtuCloudy = ntu;
+  }
+  printTurbidityCalibration();
+}
+
+void printSerialCommandHelp() {
+  Serial.println("[TURB] Commands:");
+  Serial.println("  turb show");
+  Serial.println("  turb live on");
+  Serial.println("  turb live off");
+  Serial.println("  turb set clear <voltage> <ntu>");
+  Serial.println("  turb set cloudy <voltage> <ntu>");
+  Serial.println("  turb capture clear <ntu>");
+  Serial.println("  turb capture cloudy <ntu>");
+}
+
+void handleSerialCommand(String commandLine) {
+  commandLine.trim();
+  if (commandLine.length() == 0) return;
+
+  if (commandLine.equalsIgnoreCase("help") || commandLine == "?") {
+    printSerialCommandHelp();
+    return;
+  }
+
+  if (commandLine.equalsIgnoreCase("turb show")) {
+    printTurbidityCalibration();
+    return;
+  }
+
+  if (commandLine.equalsIgnoreCase("turb live on")) {
+    turbLiveMode = true;
+    Serial.println("[TURB] Live mode ON");
+    return;
+  }
+
+  if (commandLine.equalsIgnoreCase("turb live off")) {
+    turbLiveMode = false;
+    Serial.println("[TURB] Live mode OFF");
+    return;
+  }
+
+  if (commandLine.startsWith("turb set clear ")) {
+    float voltage = 0.0f;
+    float ntu = 0.0f;
+    if (sscanf(commandLine.c_str() + 15, "%f %f", &voltage, &ntu) == 2) {
+      setTurbidityCalibrationPoint(true, voltage, ntu);
+    } else {
+      Serial.println("[TURB] Invalid format. Use: turb set clear <voltage> <ntu>");
+    }
+    return;
+  }
+
+  if (commandLine.startsWith("turb set cloudy ")) {
+    float voltage = 0.0f;
+    float ntu = 0.0f;
+    if (sscanf(commandLine.c_str() + 16, "%f %f", &voltage, &ntu) == 2) {
+      setTurbidityCalibrationPoint(false, voltage, ntu);
+    } else {
+      Serial.println("[TURB] Invalid format. Use: turb set cloudy <voltage> <ntu>");
+    }
+    return;
+  }
+
+  if (commandLine.startsWith("turb capture clear ")) {
+    float ntu = 0.0f;
+    if (sscanf(commandLine.c_str() + 19, "%f", &ntu) == 1) {
+      setTurbidityCalibrationPoint(true, lastTurbVoltage, ntu);
+    } else {
+      Serial.println("[TURB] Invalid format. Use: turb capture clear <ntu>");
+    }
+    return;
+  }
+
+  if (commandLine.startsWith("turb capture cloudy ")) {
+    float ntu = 0.0f;
+    if (sscanf(commandLine.c_str() + 20, "%f", &ntu) == 1) {
+      setTurbidityCalibrationPoint(false, lastTurbVoltage, ntu);
+    } else {
+      Serial.println("[TURB] Invalid format. Use: turb capture cloudy <ntu>");
+    }
+    return;
+  }
+
+  Serial.print("[TURB] Unknown command: ");
+  Serial.println(commandLine);
+  printSerialCommandHelp();
+}
+
+void processSerialCommands() {
+  while (Serial.available() > 0) {
+    char c = (char)Serial.read();
+    if (c == '\r') continue;
+    if (c == '\n') {
+      handleSerialCommand(serialCommandBuffer);
+      serialCommandBuffer = "";
+    } else if (serialCommandBuffer.length() < 120) {
+      serialCommandBuffer += c;
+    }
+  }
 }
 
 void initGSM() {
@@ -436,11 +582,14 @@ void setup() {
   delay(100);
 
   Serial.println("ESP32 sensor firmware started");
+  printSerialCommandHelp();
+  printTurbidityCalibration();
   
   lcd.clear();
 }
 
 void loop() {
+  processSerialCommands();
   readGPS();
 
   if (!otaReady && (millis() - lastWifiRetryMs >= WIFI_RETRY_INTERVAL_MS)) {
@@ -474,9 +623,19 @@ void loop() {
   float turbStdDev = 0.0;
   int turbRaw = readAnalogAverage(TURBIDITY_PIN, TURB_SAMPLES, turbStdDev);
   float turbVoltage = turbRaw * (VREF / ADC_MAX);
-  // Analog Turbidity Module at 3.3V: linear mapping 0-3.3V to 0-14 NTU
-  float turbidityNTU = turbVoltage / 0.236;
+  float turbidityNTU = voltageToTurbidityNTU(turbVoltage);
   bool turbSensorConnected = (turbStdDev <= TURB_FLOAT_STDDEV);
+  lastTurbRaw = turbRaw;
+  lastTurbVoltage = turbVoltage;
+  lastTurbStdDev = turbStdDev;
+
+  if (turbLiveMode && (millis() - lastTurbLivePrintMs >= TURB_LIVE_PRINT_INTERVAL_MS)) {
+    lastTurbLivePrintMs = millis();
+    Serial.print("[TURB] raw="); Serial.print(lastTurbRaw);
+    Serial.print(" V="); Serial.print(lastTurbVoltage, 4);
+    Serial.print(" NTU="); Serial.print(turbidityNTU, 2);
+    Serial.print(" stddev="); Serial.println(lastTurbStdDev, 1);
+  }
 
   // Read pH
   float phStdDev = 0.0;
@@ -492,7 +651,7 @@ void loop() {
 
   if (otaReady && WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-    http.begin(CLOUD_BACKEND_URL);
+    http.begin(BACKEND_URL);
     http.addHeader("Content-Type", "application/json");
     String payload = "{";
     payload += "\"temperature\":" + String(tempValid ? tempC : -999, 2) + ",";
@@ -562,6 +721,7 @@ void loop() {
   Serial.println();
 
   for (int i = 0; i < 10; i++) {
+    processSerialCommands();
     if (otaReady && WiFi.status() == WL_CONNECTED) {
       ArduinoOTA.handle();
       server.handleClient();

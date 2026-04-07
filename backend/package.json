@@ -5,8 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "concurrently \"nodemon src/server.js\" \"node esp32-to-backend.js\"",
-    "migrate:data": "node migrate-alerts-readings.js"
+    "dev": "concurrently \"nodemon src/server.js\" \"node esp32-to-backend.js\""
   },
   "dependencies": {
     "axios": "^1.13.2",
