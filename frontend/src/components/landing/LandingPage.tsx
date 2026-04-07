@@ -43,7 +43,7 @@ function getSensorStatus(
   if (type === "turbidity") {
     if (value < 5) return { label: "Clear Water – Higher Schisto Risk", color: "#ef4444" };
     if (value <= 15) return { label: "Moderate Turbidity", color: "#E7B213" };
-    return { label: "High Turbidity", color: "#22c55e" };
+    return { label: "Safe", color: "#22c55e" };
   }
   if (type === "ph") {
     if (value >= 6.5 && value <= 8.0) return { label: "High Possible Risk", color: "#ef4444" };
