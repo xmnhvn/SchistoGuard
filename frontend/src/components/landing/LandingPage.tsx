@@ -134,7 +134,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     apiGet("/api/sensors/interval-config")
       .then((data: any) => {
-        if (data && data.deviceName) {
+        if (data && data.deviceName && data.deviceName !== "SchistoGuard Device 1") {
           setSiteData((prev: any) => ({ ...prev, siteName: data.deviceName }));
         }
       })

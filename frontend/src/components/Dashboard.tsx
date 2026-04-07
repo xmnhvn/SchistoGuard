@@ -337,7 +337,7 @@ export function Dashboard({
       try {
         const data = await apiGet("/api/sensors/interval-config");
         let ms = data.intervalMs || 300000;
-        if (data.deviceName) {
+        if (data.deviceName && data.deviceName !== "SchistoGuard Device 1") {
           setSiteData((prev: any) => ({ ...prev, siteName: data.deviceName }));
         }
         if (ms !== lastIntervalMs) {

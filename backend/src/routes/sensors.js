@@ -10,14 +10,15 @@ const reverseGeocode = require("../utils/reverseGeocode");
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
 
-// Helper to load interval from DB settings
-async function loadIntervalFromDB() {
+// Helper to load settings from DB
+async function loadSettingsFromDB() {
   return new Promise((resolve) => {
-    db.getSetting('aggregate_interval_ms', (err, value) => {
-      if (!err && value) {
-        AGGREGATE_INTERVAL_MS = parseInt(value, 10);
-      }
-      resolve(AGGREGATE_INTERVAL_MS);
+    db.getSetting('aggregate_interval_ms', (err, interval) => {
+      if (!err && interval) AGGREGATE_INTERVAL_MS = parseInt(interval, 10);
+      db.getSetting('device_name', (err, name) => {
+        if (!err && name) GLOBAL_DEVICE_NAME = name;
+        resolve();
+      });
     });
   });
 }
@@ -32,11 +33,9 @@ async function saveIntervalToDB(ms) {
 }
 
 // API: Get current interval config
-router.get('/interval-config', (req, res) => {
-  db.getSetting('aggregate_interval_ms', (err, value) => {
-    let ms = value ? parseInt(value, 10) : 5 * 60 * 1000;
-    res.json({ intervalMs: ms, deviceName: GLOBAL_DEVICE_NAME });
-  });
+router.get('/interval-config', async (req, res) => {
+  await loadSettingsFromDB();
+  res.json({ intervalMs: AGGREGATE_INTERVAL_MS, deviceName: GLOBAL_DEVICE_NAME });
 });
 
 // API: Update interval config
@@ -45,19 +44,20 @@ router.post('/interval-config', (req, res) => {
   if (!intervalMs || typeof intervalMs !== 'number' || intervalMs < 1000) {
     return res.status(400).json({ error: 'Invalid intervalMs' });
   }
-  AGGREGATE_INTERVAL_MS = intervalMs;
-  saveIntervalToDB(intervalMs)
-    .then(() => {
-      if (deviceName) {
-        GLOBAL_DEVICE_NAME = deviceName;
-      } else {
-        GLOBAL_DEVICE_NAME = "SchistoGuard Device 1";
-      }
+
+  const newName = deviceName || "SchistoGuard Device 1";
+  
+  db.setSetting('aggregate_interval_ms', String(intervalMs), (err) => {
+    if (err) return res.status(500).json({ error: 'Failed to save interval' });
+    
+    db.setSetting('device_name', newName, (err) => {
+      if (err) return res.status(500).json({ error: 'Failed to save device name' });
+      
+      AGGREGATE_INTERVAL_MS = intervalMs;
+      GLOBAL_DEVICE_NAME = newName;
       res.json({ success: true, intervalMs, deviceName: GLOBAL_DEVICE_NAME });
-    })
-    .catch((e) => {
-      res.status(500).json({ error: 'Failed to write interval config', details: e.message });
     });
+  });
 });
 
 // ESP32 connection for SMS
@@ -161,15 +161,20 @@ router.post("/alerts/:id/acknowledge", (req, res) => {
 let latestData = null;
 
 // (Variables hoisted upwards)
-try {
-  const fs = require('fs');
-  const configPath = require('path').resolve(__dirname, '../../interval-config.json');
-  if (fs.existsSync(configPath)) {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    if (config && config.intervalMs) AGGREGATE_INTERVAL_MS = config.intervalMs;
-    if (config && config.deviceName) GLOBAL_DEVICE_NAME = config.deviceName;
-  }
-} catch (e) { /* ignore */ }
+// Load initial settings on startup
+loadSettingsFromDB().then(() => {
+  console.log('✓ Initial sensor settings loaded from DB:', { AGGREGATE_INTERVAL_MS, GLOBAL_DEVICE_NAME });
+  
+  // Also check file for backwards compatibility if needed
+  try {
+    const configPath = require('path').resolve(__dirname, '../../interval-config.json');
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (config && config.intervalMs && !AGGREGATE_INTERVAL_MS) AGGREGATE_INTERVAL_MS = config.intervalMs;
+      if (config && config.deviceName && GLOBAL_DEVICE_NAME === "SchistoGuard Device 1") GLOBAL_DEVICE_NAME = config.deviceName;
+    }
+  } catch (e) { /* ignore */ }
+});
 
 let firstLogged = false;
 
