@@ -76,7 +76,11 @@ export function SiteDetailView({
         .find(r => typeof r.latitude === 'number' && typeof r.longitude === 'number');
 
       if (latestWithGps) {
-        if (latestWithGps.siteName) setDynamicSiteName(latestWithGps.siteName);
+        // Only update siteName from telemetry if it's not the generic default, 
+        // to prevent overwriting custom Admin settings.
+        if (latestWithGps.siteName && latestWithGps.siteName !== "SchistoGuard Device 1") {
+          setDynamicSiteName(latestWithGps.siteName);
+        }
         reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
           if (addr) setAddress(addr);
         });
@@ -88,7 +92,10 @@ export function SiteDetailView({
   useEffect(() => {
     apiGet("/api/sensors/latest").then(data => {
       if (data) {
-        if (data.siteName) setDynamicSiteName(data.siteName);
+        // Only update if not the generic default
+        if (data.siteName && data.siteName !== "SchistoGuard Device 1") {
+          setDynamicSiteName(data.siteName);
+        }
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           reverseGeocode(data.latitude, data.longitude).then(addr => {
             if (addr) setAddress(addr);

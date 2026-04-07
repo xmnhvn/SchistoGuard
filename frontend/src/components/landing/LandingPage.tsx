@@ -281,7 +281,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           console.log('[LandingPage] /api/sensors/latest response:', data);
           if (data && data.deviceConnected === false) {
             console.log('[LandingPage] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
-            if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            if (data.siteName && data.siteName !== "SchistoGuard Device 1") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[LandingPage] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
@@ -314,7 +314,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);
-          if (data && data.siteName) {
+          if (data && data.siteName && data.siteName !== "SchistoGuard Device 1") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
           }
         })

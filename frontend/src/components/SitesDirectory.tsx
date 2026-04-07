@@ -76,7 +76,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     // 1. Try latest reading
     apiGet("/api/sensors/latest").then(data => {
       if (data) {
-        if (data.siteName) setDynamicSiteName(data.siteName);
+        if (data.siteName && data.siteName !== "SchistoGuard Device 1") setDynamicSiteName(data.siteName);
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(data.latitude, data.longitude).then(addr => {

@@ -275,7 +275,7 @@ export function Dashboard({
           // If backend says deviceConnected: false, treat as disconnected
           if (data && data.deviceConnected === false) {
             console.log('[Dashboard] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
-            if (data.siteName) setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            if (data.siteName && data.siteName !== "SchistoGuard Device 1") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[Dashboard] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
@@ -308,7 +308,9 @@ export function Dashboard({
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);
-          if (data && data.siteName)
+          // Only update siteName from telemetry if it's not the generic default, 
+          // to prevent overwriting custom Admin settings.
+          if (data && data.siteName && data.siteName !== "SchistoGuard Device 1")
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
         })
         .catch(() => {
