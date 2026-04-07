@@ -59,13 +59,18 @@ export function Dashboard({
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [mapReady, setMapReady] = useState(false);
-  const [animationEnabled, setAnimationEnabled] = useState(true);
+  const [animationEnabled, setAnimationEnabled] = useState(!_dashboardFirstLoadDone);
 
   useEffect(() => {
-    // Disable entry animation after it's finished to prevent glitches on re-renders
-    const timer = setTimeout(() => setAnimationEnabled(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (visible && !_dashboardFirstLoadDone) {
+      setAnimationEnabled(true);
+      const timer = setTimeout(() => {
+        setAnimationEnabled(false);
+        _dashboardFirstLoadDone = true;
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
 
   // When the Dashboard becomes visible again (after being hidden), resize the map
   useEffect(() => {

@@ -71,14 +71,19 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [animationEnabled, setAnimationEnabled] = useState(true);
+  const [animationEnabled, setAnimationEnabled] = useState(!_sitesFirstLoadDone);
   const headerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Disable entry animation after it's finished to prevent glitches on re-renders
-    const timer = setTimeout(() => setAnimationEnabled(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (visible && !_sitesFirstLoadDone) {
+      setAnimationEnabled(true);
+      const timer = setTimeout(() => {
+        setAnimationEnabled(false);
+        _sitesFirstLoadDone = true;
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
 
   // Fetch metadata for PDF header
   useEffect(() => {
@@ -88,7 +93,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       const cachedAddr = localStorage.getItem("sg_latest_address");
       if (cachedName) setDynamicSiteName(cachedName);
       if (cachedAddr) setAddress(cachedAddr);
-    } catch (e) {}
+    } catch (e) { }
 
     // 1. Try latest reading
     apiGet("/api/sensors/latest").then(data => {
@@ -108,7 +113,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           });
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 2. Try history if readings are loaded
     if (readings && readings.length > 0) {
@@ -139,7 +144,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     try {
       const stored = localStorage.getItem("sg_hidden_readings");
       if (stored) setHiddenReadings(JSON.parse(stored));
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   const toggleSelection = (id: string, e?: React.MouseEvent) => {
@@ -188,96 +193,96 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     // BEFORE hitting the heavy PDF generation script.
     await new Promise(resolve => setTimeout(resolve, 250));
     try {
-    const jsPDFModule = await import('jspdf');
-    const autoTableModule = await import('jspdf-autotable');
-    const html2canvas = (await import('html2canvas')).default;
+      const jsPDFModule = await import('jspdf');
+      const autoTableModule = await import('jspdf-autotable');
+      const html2canvas = (await import('html2canvas')).default;
 
-    const jsPDF = jsPDFModule.default;
-    const autoTable = autoTableModule.default;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    
-    // 150ms delay to ensure DOM and address state are fully updated before capture
-    await new Promise(resolve => setTimeout(resolve, 150));
+      const jsPDF = jsPDFModule.default;
+      const autoTable = autoTableModule.default;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
 
-    // Capture the high-fidelity HTML header
-    if (!headerRef.current) throw new Error("Header reference not found");
-    const canvas = await html2canvas(headerRef.current, { 
-      scale: 3, 
-      useCORS: true, 
-      backgroundColor: '#ffffff',
-      logging: false 
-    });
-    const headerImgData = canvas.toDataURL('image/png');
+      // 150ms delay to ensure DOM and address state are fully updated before capture
+      await new Promise(resolve => setTimeout(resolve, 150));
 
-    const pw = doc.internal.pageSize.getWidth();
-    
-    // Calculate header proportions (targeting approx 500pt width in landscape)
-    const targetHeaderWidth = 500;
-    const targetHeaderHeight = (canvas.height * targetHeaderWidth) / canvas.width;
-    
-    // Add the captured header image (centered)
-    doc.addImage(headerImgData, 'PNG', (pw - targetHeaderWidth) / 2, 25, targetHeaderWidth, targetHeaderHeight);
+      // Capture the high-fidelity HTML header
+      if (!headerRef.current) throw new Error("Header reference not found");
+      const canvas = await html2canvas(headerRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+      const headerImgData = canvas.toDataURL('image/png');
 
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const dmy = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
-    
-    const columns = [
-      { header: 'Time', dataKey: 'time' },
-      { header: 'Date', dataKey: 'date' },
-      { header: 'Turbidity (NTU)', dataKey: 'turbidity' },
-      { header: 'Temperature (°C)', dataKey: 'temperature' },
-      { header: 'pH Level', dataKey: 'ph' },
-      { header: 'Risk Level', dataKey: 'riskLevel' },
-    ];
-    const rows = filteredReadings.map(r => {
-      const t = formatTimestamp(r.timestamp);
-      return {
-        time: t.time,
-        date: t.date,
-        turbidity: r.turbidity,
-        temperature: r.temperature,
-        ph: r.ph,
-        riskLevel: r.riskLevel,
-      };
-    });
+      const pw = doc.internal.pageSize.getWidth();
 
-    const metadataY = 25 + targetHeaderHeight + 12;
-    doc.setFontSize(9.5); // Enlarge from 7.5pt
-    const pdfFont = 'helvetica';
-    doc.setFont(pdfFont, 'bold');
-    doc.setTextColor(107, 114, 128);
-    
-    const dateFormat = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'});
-    const timeFormat = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
-    let timeRangeText = 'AllTime';
-    if (filterTimeRange !== 'all') {
-      if (filterTimeRange.endsWith('h')) timeRangeText = `${filterTimeRange.replace('h', '')} Hours`;
-      else if (filterTimeRange === '24') timeRangeText = 'Last 24 Hours';
-      else timeRangeText = filterTimeRange;
-    }
+      // Calculate header proportions (targeting approx 500pt width in landscape)
+      const targetHeaderWidth = 500;
+      const targetHeaderHeight = (canvas.height * targetHeaderWidth) / canvas.width;
 
-    const metaStr = `Date Exported: ${dateFormat} at ${timeFormat} | Time Range: ${timeRangeText} | Risk: ${risk}`;
-    doc.text(metaStr, pw / 2, metadataY, { align: 'center' });
+      // Add the captured header image (centered)
+      doc.addImage(headerImgData, 'PNG', (pw - targetHeaderWidth) / 2, 25, targetHeaderWidth, targetHeaderHeight);
 
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(1);
-    doc.line(40, metadataY + 12, pw - 40, metadataY + 12);
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
 
-    autoTable(doc, {
-      columns,
-      body: rows,
-      startY: metadataY + 18,
-      styles: { fontSize: 8.5, cellPadding: 6, font: pdfFont },
-      headStyles: { fillColor: [53, 125, 134], textColor: 255, halign: 'left', fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { top: 40, right: 40, bottom: 40, left: 40 }
-    });
+      const columns = [
+        { header: 'Time', dataKey: 'time' },
+        { header: 'Date', dataKey: 'date' },
+        { header: 'Turbidity (NTU)', dataKey: 'turbidity' },
+        { header: 'Temperature (°C)', dataKey: 'temperature' },
+        { header: 'pH Level', dataKey: 'ph' },
+        { header: 'Risk Level', dataKey: 'riskLevel' },
+      ];
+      const rows = filteredReadings.map(r => {
+        const t = formatTimestamp(r.timestamp);
+        return {
+          time: t.time,
+          date: t.date,
+          turbidity: r.turbidity,
+          temperature: r.temperature,
+          ph: r.ph,
+          riskLevel: r.riskLevel,
+        };
+      });
+
+      const metadataY = 25 + targetHeaderHeight + 12;
+      doc.setFontSize(9.5); // Enlarge from 7.5pt
+      const pdfFont = 'helvetica';
+      doc.setFont(pdfFont, 'bold');
+      doc.setTextColor(107, 114, 128);
+
+      const dateFormat = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeFormat = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
+      let timeRangeText = 'AllTime';
+      if (filterTimeRange !== 'all') {
+        if (filterTimeRange.endsWith('h')) timeRangeText = `${filterTimeRange.replace('h', '')} Hours`;
+        else if (filterTimeRange === '24') timeRangeText = 'Last 24 Hours';
+        else timeRangeText = filterTimeRange;
+      }
+
+      const metaStr = `Date Exported: ${dateFormat} at ${timeFormat} | Time Range: ${timeRangeText} | Risk: ${risk}`;
+      doc.text(metaStr, pw / 2, metadataY, { align: 'center' });
+
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(1);
+      doc.line(40, metadataY + 12, pw - 40, metadataY + 12);
+
+      autoTable(doc, {
+        columns,
+        body: rows,
+        startY: metadataY + 18,
+        styles: { fontSize: 8.5, cellPadding: 6, font: pdfFont },
+        headStyles: { fillColor: [53, 125, 134], textColor: 255, halign: 'left', fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { top: 40, right: 40, bottom: 40, left: 40 }
+      });
 
 
-    const filename = `SchistoGuard_Timeseries_${risk}_${timeRangeText}_${dmy}.pdf`;
-    doc.save(filename);
+      const filename = `SchistoGuard_Timeseries_${risk}_${timeRangeText}_${dmy}.pdf`;
+      doc.save(filename);
     } finally {
       setIsExporting(false);
     }
@@ -430,16 +435,17 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         </div>
       )}
 
-      <div className={`flex flex-col gap-6 w-full ${animationEnabled ? 'animate-fade-in' : ''}`} style={{
-      fontFamily: POPPINS,
-      height: "100%",
-      overflow: "hidden",
-      background: "#f5f7f9",
-      padding: pad,
-      display: "flex",
-      flexDirection: "column",
-    }}>
-      <style>{`
+      <div style={{
+        width: "100%",
+        fontFamily: POPPINS,
+        height: "100%",
+        overflow: "hidden",
+        background: "#f5f7f9",
+        padding: pad,
+        display: "flex",
+        flexDirection: "column",
+      }}>
+        <style>{`
         *::-webkit-scrollbar { display: none; }
         @keyframes contentSlideIn {
           from { opacity: 0; transform: translateY(18px); }
@@ -448,6 +454,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes cardDataFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in {
           animation: fadeIn 0.7s ease-out both;
@@ -466,55 +476,17 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         }
       `}</style>
 
-      {/* Header */}
-      <div style={{
-        display: "flex",
-        flexDirection: (isMobile || isTablet) ? "column" : "row",
-        justifyContent: "space-between",
-        alignItems: (isMobile || isTablet) ? "flex-start" : "center",
-        gap: 16,
-        marginBottom: 24,
-        animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
-      }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
-          <h1 style={{
-            fontSize: isMobile ? 20 : 26,
-            fontWeight: 700,
-            color: "#1a2a3a",
-            margin: 0,
-            fontFamily: POPPINS,
-            whiteSpace: isMobile ? "normal" : "nowrap",
-            overflow: isMobile ? undefined : "hidden",
-            textOverflow: isMobile ? undefined : "ellipsis",
-            letterSpacing: isMobile ? 0.1 : undefined,
-          }}>
-            Sites Directory
-          </h1>
-          {isMobile && (
-            <span style={{
-              fontSize: 12.5,
-              color: "#7b8a9a",
-              fontWeight: 400,
-              marginTop: 2,
-              fontFamily: POPPINS,
-              lineHeight: 1.3,
-              display: "block",
-              whiteSpace: "normal",
-            }}>Real-time water quality readings & risk assessment</span>
-          )}
-          {!isMobile && (
-            <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
-              Real-time water quality readings & risk assessment
-            </p>
-          )}
-        </div>
+        {/* Header */}
         <div style={{
           display: "flex",
-          alignItems: "center",
-          gap: isMobile ? 8 : 10,
-          flexWrap: isMobile ? "nowrap" as const : "wrap",
-          ...(isMobile ? { width: "100%" } : {}),
+          flexDirection: (isMobile || isTablet) ? "column" : "row",
+          justifyContent: "space-between",
+          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
+          gap: 16,
+          marginBottom: 24,
+          animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
+<<<<<<< HEAD
           <div style={{ flex: isMobile ? 1 : undefined }}>
             <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
               <SelectTrigger style={{
@@ -598,124 +570,355 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+=======
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
+            <h1 style={{
+              fontSize: isMobile ? 20 : 26,
+              fontWeight: 700,
+              color: "#1a2a3a",
+              margin: 0,
+              fontFamily: POPPINS,
+              whiteSpace: isMobile ? "normal" : "nowrap",
+              overflow: isMobile ? undefined : "hidden",
+              textOverflow: isMobile ? undefined : "ellipsis",
+              letterSpacing: isMobile ? 0.1 : undefined,
+>>>>>>> 3d141b3c3b6ba3f64471ce09a3d89a14950de8ad
             }}>
-              {card.icon}
-            </div>
-            <span style={{ fontSize: isMobile ? 22 : 28, fontWeight: 600, color: card.color, fontFamily: POPPINS, textAlign: "center" }}>{card.value}</span>
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS, textAlign: "center" }}>{card.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Time-Series Data Card */}
-      <div style={{
-        background: "#fff",
-        borderRadius: 20,
-        border: "1px solid #e2e5ea",
-        overflow: "hidden",
-        flex: isMobile ? "0 0 auto" : 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
-      }}>
-        <div 
-          onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
-          style={{
-            padding: (isMobile || isTablet) ? "12px 14px" : "20px 24px 16px",
-            background: (isMobile || isTablet) ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
-            borderBottom: (isMobile || isTablet) ? "none" : "1px solid #f0f1f3",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            cursor: (isMobile || isTablet) ? "pointer" : "default",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+              Sites Directory
+            </h1>
             {isMobile && (
-              <div style={{
-                width: 38,
-                height: 38,
-                minWidth: 38,
-                borderRadius: 12,
-                background: "#f0f8f9",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}>
-                <BarChart3 size={18} color="#357D86" strokeWidth={2.5} />
-              </div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-              <h2 style={{
-                fontSize: 15, fontWeight: 700, color: "#1a2a3a",
-                margin: 0,
+              <span style={{
+                fontSize: 12.5,
+                color: "#7b8a9a",
+                fontWeight: 400,
+                marginTop: 2,
                 fontFamily: POPPINS,
-                whiteSpace: "nowrap" as const,
-              }}>
-                Time-Series Data
-              </h2>
+                lineHeight: 1.3,
+                display: "block",
+                whiteSpace: "normal",
+              }}>Real-time water quality readings & risk assessment</span>
+            )}
+            {!isMobile && (
+              <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
+                Real-time water quality readings & risk assessment
+              </p>
+            )}
+          </div>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: isMobile ? 8 : 10,
+            flexWrap: isMobile ? "nowrap" as const : "wrap",
+            ...(isMobile ? { width: "100%" } : {}),
+          }}>
+            <div style={{ flex: isMobile ? 1 : undefined }}>
+              <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
+                <SelectTrigger style={{
+                  width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="6h">Last 6 Hours</SelectItem>
+                  <SelectItem value="12h">Last 12 Hours</SelectItem>
+                  <SelectItem value="24h">Last 24 Hours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div style={{ flex: isMobile ? 1 : undefined }}>
+              <Select value={filterRisk} onValueChange={setFilterRisk}>
+                <SelectTrigger style={{
+                  width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                }}>
+                  <SelectValue placeholder="Risk Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Risk Levels</SelectItem>
+                  <SelectItem value="safe">Safe</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <button
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "0 16px", height: 38, borderRadius: 12,
+                border: "1px solid #e2e5ea",
+                background: "#fff", cursor: "pointer", fontSize: 13,
+                fontFamily: POPPINS, fontWeight: 500, color: "#374151",
+                ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
+              }}
+              onClick={handleExportPDF}
+            >
+              <Download size={15} />
+              Export
+            </button>
+          </div>
+        </div>
+
+        {/* Stat Cards */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+          gap: isMobile ? 12 : 16,
+          marginBottom: 24,
+          animation: animationEnabled ? "contentSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both" : "none",
+        }}>
+          {[
+            { label: "Total Readings", value: filteredReadings.length, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3", sub: "All readings" },
+            { label: "Safe", value: safeCount, icon: <CheckCircle2 style={{ width: 20, height: 20, color: "#23B67E" }} />, color: "#23B67E", bg: "#E9FBF3", sub: "In safe range" },
+            { label: "Warning", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#F1A11A" }} />, color: "#F1A11A", bg: "#FFF9E6", sub: "Require attention" },
+            { label: "Critical", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#D14343" }} />, color: "#D14343", bg: "#FFF1F1", sub: "High priority" },
+          ].map((card, i) => (
+            <div key={card.label} style={{
+              background: "#fff",
+              borderRadius: 20,
+              padding: 20,
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+              border: "1px solid rgba(0,0,0,0.03)",
+              ...(animationEnabled ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.12 + i * 0.07}s both` } : {}),
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "#8E8B8B", fontFamily: POPPINS }}>{card.label}</span>
+                <div style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: card.bg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  {card.icon}
+                </div>
+              </div>
+              <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: card.color, fontFamily: POPPINS, lineHeight: 1 }}>{card.value}</div>
+              <span style={{ fontSize: 12, color: "#8E8B8B", marginTop: 4, fontWeight: 400, fontFamily: POPPINS }}>{card.sub}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Time-Series Data Card */}
+        <div style={{
+          background: "#fff",
+          borderRadius: 20,
+          border: "1px solid #e2e5ea",
+          overflow: "hidden",
+          flex: isMobile ? "0 0 auto" : 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
+        }}>
+          <div
+            onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
+            style={{
+              padding: (isMobile || isTablet) ? "12px 14px" : "20px 24px 16px",
+              background: (isMobile || isTablet) ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
+              borderBottom: (isMobile || isTablet) ? "none" : "1px solid #f0f1f3",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: (isMobile || isTablet) ? "pointer" : "default",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
               {isMobile && (
-                <span style={{ 
-                  fontSize: 11, 
-                  color: "#7b8a9a", 
-                  fontWeight: 500, 
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  minWidth: 38,
+                  borderRadius: 12,
+                  background: "#f0f8f9",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <BarChart3 size={18} color="#357D86" strokeWidth={2.5} />
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                <h2 style={{
+                  fontSize: 15, fontWeight: 700, color: "#1a2a3a",
+                  margin: 0,
                   fontFamily: POPPINS,
                   whiteSpace: "nowrap" as const,
                 }}>
-                  Recent monitoring trends
-                </span>
-              )}
+                  Time-Series Data
+                </h2>
+                {isMobile && (
+                  <span style={{
+                    fontSize: 11,
+                    color: "#7b8a9a",
+                    fontWeight: 500,
+                    fontFamily: POPPINS,
+                    whiteSpace: "nowrap" as const,
+                  }}>
+                    Recent monitoring trends
+                  </span>
+                )}
+              </div>
             </div>
+            {(isMobile) && (
+              <div style={{
+                background: "#f0f8f9",
+                padding: "7px 14px",
+                borderRadius: 20,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                flexShrink: 0,
+                whiteSpace: "nowrap" as const,
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86", lineHeight: 1, whiteSpace: "nowrap" as const }}>View Details</span>
+                <ChevronRight size={14} color="#357D86" strokeWidth={3} style={{ flexShrink: 0 }} />
+              </div>
+            )}
+            {(!isMobile) && (
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {deleteMode ? (
+                  <>
+                    <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                      Select All
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                      Cancel
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Trash2 size={14} /> Delete ({selectedIds.size})
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteMode(true); }}
+                    style={{
+                      background: "transparent", border: "none", padding: "4px", cursor: "pointer", color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center"
+                    }}
+                    title="Select Data to Delete"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          {(isMobile) && (
+
+          {!isMobile && (
             <div style={{
-              background: "#f0f8f9",
-              padding: "7px 14px",
-              borderRadius: 20,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 4,
-              flexShrink: 0,
-              whiteSpace: "nowrap" as const,
+              flex: 1,
+              minHeight: 0,
+              overflowX: "auto",
+              overflowY: "auto",
+              padding: 20, // Match AlertsPage internal padding
             }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#357D86", lineHeight: 1, whiteSpace: "nowrap" as const }}>View Details</span>
-              <ChevronRight size={14} color="#357D86" strokeWidth={3} style={{ flexShrink: 0 }} />
-            </div>
-          )}
-          {(!isMobile) && (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              {deleteMode ? (
-                <>
-                  <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
-                    Select All
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
-                    Cancel
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Trash2 size={14} /> Delete ({selectedIds.size})
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDeleteMode(true); }}
-                  style={{
-                    background: "transparent", border: "none", padding: "4px", cursor: "pointer", color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center"
-                  }}
-                  title="Select Data to Delete"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
+              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+                    {deleteMode && (
+                      <th style={{
+                        padding: "16px 14px 16px 24px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 1
+                      }}></th>
+                    )}
+                    {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
+                      <th key={h} style={{
+                        padding: h === "Time" && !deleteMode ? "16px 14px 16px 24px" : h === "" ? "16px 24px 16px 14px" : "16px 14px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#7b8a9a",
+                        textAlign: h === "" ? "right" : (h === "Time" || h === "Date") ? "left" : "center",
+                        position: "sticky",
+                        top: 0,
+                        background: "#fff",
+                        zIndex: 1,
+                        fontFamily: POPPINS,
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReadings.map((reading, idx) => {
+                    const time = formatTimestamp(reading.timestamp);
+                    const riskColors: Record<string, { bg: string; color: string }> = {
+                      safe: { bg: "#E9FBF3", color: "#23B67E" },
+                      warning: { bg: "#FFF9E6", color: "#F1A11A" },
+                      critical: { bg: "#FFF1F1", color: "#D14343" },
+                    };
+                    const rc = riskColors[reading.riskLevel] || riskColors.safe;
+                    return (
+                      <tr key={reading.id} style={{
+                        borderBottom: "1px solid #f5f5f5",
+                        animation: animationEnabled ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both` : "none",
+                        background: selectedIds.has(reading.id) ? "#fff1f1" : "transparent",
+                        transition: "background 0.2s ease",
+                        cursor: deleteMode ? "pointer" : "default"
+                      }}
+                        onClick={() => deleteMode && toggleSelection(reading.id)}
+                      >
+                        {deleteMode && (
+                          <td style={{ padding: "16px 14px 16px 24px", textAlign: "center" }}>
+                            <div style={{
+                              width: 20, height: 20, borderRadius: 6,
+                              border: `2px solid ${selectedIds.has(reading.id) ? "#ef4444" : "#d1d5db"}`,
+                              background: selectedIds.has(reading.id) ? "#ef4444" : "#fff",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              cursor: "pointer", transition: "all 0.15s ease"
+                            }}>
+                              {selectedIds.has(reading.id) && <Check size={12} color="#fff" strokeWidth={3} />}
+                            </div>
+                          </td>
+                        )}
+                        <td style={{ padding: deleteMode ? "16px 14px" : "16px 14px 16px 24px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
+                        <td style={{ padding: "16px 14px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
+                        <td style={{ padding: "16px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
+                          </span>
+                        </td>
+                        <td style={{ padding: "16px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <Thermometer style={{ width: 14, height: 14, color: "#357D86" }} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
+                          </span>
+                        </td>
+                        <td style={{ padding: "16px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
+                        <td style={{ padding: "16px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "3px 12px",
+                            borderRadius: 20,
+                            background: rc.bg,
+                            color: rc.color,
+                            textTransform: "capitalize",
+                            fontFamily: POPPINS,
+                          }}>{reading.riskLevel}</span>
+                        </td>
+                        <td style={{ padding: "16px 24px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                          {formatRelativeTime(reading.timestamp)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
-
-        {!isMobile && (
+        {/* ── Mobile View All List Modal ── */}
+        {(isMobile) && showMobileViewAll && (
           <div style={{
+<<<<<<< HEAD
             flex: 1,
             minHeight: 0,
             overflowX: "auto",
@@ -910,10 +1113,90 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                       <div style={{
                         flex: 1,
                         padding: "16px 20px",
+=======
+            position: "fixed", inset: 0, zIndex: 10001,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+            padding: isMobile ? "92px 20px 20px" : "40px 20px",
+            animation: "fadeIn 0.2s ease-out both"
+          }} onClick={() => setShowMobileViewAll(false)}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxWidth: 540,
+                maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
+                background: "#fff",
+                borderRadius: 16,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+                animation: "contentSlideIn 0.25s cubic-bezier(0.22,1,0.36,1) both",
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #eef0f2",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                flexShrink: 0,
+              }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+                  All Data Readings
+                </h2>
+                <button
+                  onClick={() => setShowMobileViewAll(false)}
+                  style={{
+                    width: "32px", height: "32px",
+                    minWidth: "32px", minHeight: "32px",
+                    padding: "0px", margin: "0px",
+                    borderRadius: "1000px",
+                    border: "none", background: "#f3f4f6",
+                    color: "#64748b",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    flexShrink: 0,
+                    lineHeight: 0,
+                    overflow: "hidden",
+                    appearance: "none",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                  className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {/* Modal Scrollable List */}
+              <div style={{
+                flex: 1, minHeight: 0, overflowY: "auto",
+                padding: 20,
+                position: "relative",
+              } as React.CSSProperties}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {filteredReadings.map((reading) => {
+                    const time = formatTimestamp(reading.timestamp);
+                    const riskColors: Record<string, { bg: string; color: string; border: string }> = {
+                      safe: { bg: "#E9FBF3", color: "#23B67E", border: "#23B67E" },
+                      warning: { bg: "#FFF9E6", color: "#F1A11A", border: "#F1A11A" },
+                      critical: { bg: "#FFF1F1", color: "#D14343", border: "#D14343" },
+                    };
+                    const rc = riskColors[reading.riskLevel] || riskColors.safe;
+                    return (
+                      <div key={reading.id} style={{
+                        background: "#fff",
+                        borderRadius: 12,
+                        border: "1px solid #f0f1f3",
+>>>>>>> 3d141b3c3b6ba3f64471ce09a3d89a14950de8ad
                         display: "flex",
-                        flexDirection: "column",
-                        gap: 12
+                        flexDirection: "row",
+                        minHeight: 110,
+                        overflow: "hidden",
+                        position: "relative"
                       }}>
+<<<<<<< HEAD
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <div style={{ display: "flex", gap: 8 }}>
                             <span style={{
@@ -924,52 +1207,78 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                               fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
                               border: "1px solid #e2e8f0", color: "#64748b", fontFamily: POPPINS,
                             }}>Verified</span>
+=======
+                        {/* Premium Folder-Style Side Accent */}
+                        <div style={{
+                          width: 6,
+                          backgroundColor: rc.color,
+                          flexShrink: 0
+                        }} />
+
+                        <div style={{
+                          flex: 1,
+                          padding: "16px 20px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 12
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <span style={{
+                                fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
+                                background: rc.bg, color: rc.color, textTransform: "capitalize", fontFamily: POPPINS,
+                              }}>{reading.riskLevel}</span>
+                              <span style={{
+                                fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
+                                border: "1px solid #e2e8f0", color: "#64748b", fontFamily: POPPINS,
+                              }}>Verified</span>
+                            </div>
+>>>>>>> 3d141b3c3b6ba3f64471ce09a3d89a14950de8ad
                           </div>
-                        </div>
-                        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <Droplets style={{ width: 16, height: 16, color: "#1a2a3a" }} />
-                            <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.turbidity} NTU</span>
+                          <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <Droplets style={{ width: 16, height: 16, color: "#1a2a3a" }} />
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.turbidity} NTU</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <Thermometer style={{ width: 16, height: 16, color: "#1a2a3a" }} />
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.temperature}°C</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>pH {reading.ph}</span>
+                            </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <Thermometer style={{ width: 16, height: 16, color: "#1a2a3a" }} />
-                            <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>{reading.temperature}°C</span>
+                          <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: POPPINS, fontWeight: 500 }}>
+                            {time.date}, {time.time}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS }}>pH {reading.ph}</span>
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: POPPINS, fontWeight: 500 }}>
-                          {time.date}, {time.time}
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
-    <div 
-      ref={headerRef} 
-      style={{ 
-        position: 'absolute', 
-        top: '-9999px', 
-        left: '-9999px', 
-        width: '800px', 
-        background: 'white',
-        padding: '20px',
-        fontFamily: POPPINS
-      }}
-    >
-      <PDFHeader 
-        dynamicSiteName={dynamicSiteName} 
-        address={address} 
-        logoNudge={10}
-      />
-    </div>
+      <div
+        ref={headerRef}
+        style={{
+          position: 'absolute',
+          top: '-9999px',
+          left: '-9999px',
+          width: '800px',
+          background: 'white',
+          padding: '20px',
+          fontFamily: POPPINS
+        }}
+      >
+        <PDFHeader
+          dynamicSiteName={dynamicSiteName}
+          address={address}
+          logoNudge={10}
+        />
+      </div>
     </div>
   );
 };

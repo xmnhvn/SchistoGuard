@@ -39,7 +39,8 @@ export function SiteDetailView({
   visible = true
 }: SiteDetailViewProps) {
   console.log("SiteDetailView mounted");
-  const animate = !_siteDetailFirstLoadDone;
+  const [animate] = useState(!_siteDetailFirstLoadDone);
+  const [graphReady, setGraphReady] = useState(false);
   // Load last selected timeRange from localStorage if available
   const getInitialTimeRange = () => {
     if (typeof window !== 'undefined') {
@@ -94,7 +95,10 @@ export function SiteDetailView({
 
   useEffect(() => {
     // Disable entry animation after it's finished to prevent glitches on re-renders
-    const timer = setTimeout(() => setAnimationEnabled(false), 1500);
+    const timer = setTimeout(() => {
+      setAnimationEnabled(false);
+      _siteDetailFirstLoadDone = true;
+    }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -324,6 +328,16 @@ export function SiteDetailView({
         ph: r.ph ?? 7.2
       };
     });
+    
+  // Sync graph animation with data load
+  useEffect(() => {
+    if (chartData.length > 0) {
+      const timer = setTimeout(() => setGraphReady(true), 400);
+      return () => clearTimeout(timer);
+    } else {
+      setGraphReady(false);
+    }
+  }, [chartData.length]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -551,7 +565,7 @@ export function SiteDetailView({
         display: "flex", 
         flexDirection: "column", 
         background: "#f6f8fb",
-        animation: animationEnabled ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' 
+        // Main container no longer animates as a whole; children use staggered animations
       }}>
         <div style={{
           display: "flex",
@@ -561,7 +575,11 @@ export function SiteDetailView({
           gap: 16,
           marginBottom: 24,
         }}>
-          <div style={{ minWidth: 0, width: (isMobile || isTablet) ? "100%" : "auto" }}>
+          <div style={{ 
+            minWidth: 0, 
+            width: (isMobile || isTablet) ? "100%" : "auto",
+            animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none'
+          }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
               <h1 style={{
                 fontSize: isMobile ? 20 : 26,
@@ -605,6 +623,7 @@ export function SiteDetailView({
             gap: isMobile ? 8 : 10,
             flexWrap: isMobile ? "nowrap" : "wrap",
             ...(isMobile ? { width: "100%" } : {}),
+            animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both' : 'none'
           }}>
             <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={timeRange} onValueChange={setTimeRange}>
@@ -642,7 +661,9 @@ export function SiteDetailView({
           </div>
         </div>
 
-        <div ref={chartRef} className="flex flex-col gap-3 w-full sg-pdf-bg-patch">
+        <div ref={chartRef} className="flex flex-col gap-3 w-full sg-pdf-bg-patch" style={{
+          animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both' : 'none'
+        }}>
           <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
             <PDFHeader 
               dynamicSiteName={dynamicSiteName} 
@@ -752,7 +773,7 @@ export function SiteDetailView({
                           strokeWidth={2}
                           fill="url(#phGradient)"
                           name="pH Level"
-                          isAnimationActive={chartData.length > 1}
+                          isAnimationActive={graphReady}
                           activeDot={<CustomActiveDot stroke="#4187d6" />}
                           dot={false}
                         />
@@ -763,7 +784,7 @@ export function SiteDetailView({
                           strokeWidth={2}
                           fill="url(#turbidityGradient)"
                           name="Turbidity (NTU)"
-                          isAnimationActive={chartData.length > 1}
+                          isAnimationActive={graphReady}
                           activeDot={<CustomActiveDot stroke="#2c5282" />}
                           dot={false}
                         />
@@ -774,7 +795,7 @@ export function SiteDetailView({
                           strokeWidth={2}
                           fill="url(#temperatureGradient)"
                           name="Temperature (°C)"
-                          isAnimationActive={chartData.length > 1}
+                          isAnimationActive={graphReady}
                           activeDot={<CustomActiveDot stroke="#43c6b6" />}
                           dot={false}
                         />
@@ -783,7 +804,10 @@ export function SiteDetailView({
                   </div>
                 )}
                 
-                <div className="threshold-container" style={{ background: "#ffffff", border: "1px solid #f1f5f9", borderRadius: 24, padding: "24px", marginTop: 0, fontFamily: POPPINS, width: "100%" }}>
+                <div className="threshold-container" style={{ 
+                  background: "#ffffff", border: "1px solid #f1f5f9", borderRadius: 24, padding: "24px", marginTop: 0, fontFamily: POPPINS, width: "100%",
+                  animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both' : 'none'
+                }}>
                   <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                     <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
