@@ -67,7 +67,44 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [hiddenReadings, setHiddenReadings] = useState<string[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [showMobileViewAll, setShowMobileViewAll] = useState(false);
+  const [address, setAddress] = useState<string | null>(null);
+  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
   const animate = !_sitesFirstLoadDone;
+
+  // Fetch metadata for PDF header
+  useEffect(() => {
+    // 1. Try latest reading
+    apiGet("/api/sensors/latest").then(data => {
+      if (data) {
+        if (data.siteName) setDynamicSiteName(data.siteName);
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
+            reverseGeocode(data.latitude, data.longitude).then(addr => {
+              if (addr) setAddress(addr);
+            });
+          });
+        }
+      }
+    }).catch(() => {});
+
+    // 2. Try history if readings are loaded
+    if (readings && readings.length > 0) {
+      const latestWithGps = [...readings]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .find(r => typeof r.latitude === 'number' && typeof r.longitude === 'number');
+
+      if (latestWithGps) {
+        if (latestWithGps.siteName) setDynamicSiteName(latestWithGps.siteName);
+        if (!address) {
+          import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
+            reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+              if (addr) setAddress(addr);
+            });
+          });
+        }
+      }
+    }
+  }, [readings]);
 
   useEffect(() => {
     try {
@@ -227,10 +264,17 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     const totalSubW = baseW + (subtitle.length - 1) * charSpacing;
     doc.text(subtitle, (pw - totalSubW) / 2, 60, { charSpace: charSpacing });
 
+    doc.setFontSize(9.5);
+    doc.setFont(pdfFont, 'bold');
+    doc.setTextColor(26, 42, 58); // #1a2a3a
+    const sName = dynamicSiteName || 'Matina Site';
+    doc.text(sName, (pw - doc.getTextWidth(sName)) / 2, 68);
+
     doc.setFontSize(7.5);
+    doc.setFont(pdfFont, 'normal');
     doc.setTextColor(148, 163, 184); // #94a3b8
-    const address = '[Insert Official Address Here]';
-    doc.text(address, (pw - doc.getTextWidth(address)) / 2, 70);
+    const addr = address || 'Venus Street, GSIS Heights, Davao City';
+    doc.text(addr, (pw - doc.getTextWidth(addr)) / 2, 75);
 
     doc.setFontSize(7);
     doc.setFont(pdfFont, 'bold');
@@ -246,7 +290,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(1);
-    doc.line(40, 78, pw - 40, 78);
+    doc.line(40, 82, pw - 40, 82);
 
     autoTable(doc, {
       columns,

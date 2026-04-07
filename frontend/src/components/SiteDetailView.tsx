@@ -551,7 +551,8 @@ export function SiteDetailView({
                 <h2 style={{ margin: 0, fontSize: 26, color: '#357d86', fontFamily: POPPINS, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1 }}>SchistoGuard</h2>
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: 11, color: '#6b7280', fontFamily: POPPINS, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 500, lineHeight: 1 }}>Environmental Monitoring PDF Report</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: 10, color: '#94a3b8', fontFamily: POPPINS, fontWeight: 500, lineHeight: 1 }}>{address || barangay || 'Leyte Province'}</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: 14, color: '#1a2a3a', fontFamily: POPPINS, fontWeight: 700, lineHeight: 1.2 }}>{dynamicSiteName || siteName}</p>
+              <p style={{ margin: '2px 0 0 0', fontSize: 10, color: '#94a3b8', fontFamily: POPPINS, fontWeight: 500, lineHeight: 1 }}>{address || (barangay ? barangay + ", Leyte Province" : "Riverside, Leyte Province")}</p>
             </div>
           </div>
           <div className="flex flex-col w-full">
@@ -986,11 +987,23 @@ export function SiteDetailView({
                     .sg-print-only { display: block !important; }
                   }
                   .sg-exporting-pdf {
-                    gap: 8px !important;
+                    gap: 4px !important;
                   }
-                  .sg-exporting-pdf .threshold-container { margin-top: 4px !important; padding: 16px !important; }
-                  .sg-exporting-pdf .pdf-summary-container { padding-top: 6px !important; margin-top: 4px !important; }
+                  .sg-exporting-pdf .chart-inner-wrap {
+                    height: 240px !important;
+                  }
+                  .sg-exporting-pdf .threshold-container { 
+                    margin-top: 4px !important; 
+                    padding: 12px 16px !important; 
+                    break-inside: avoid;
+                  }
+                  .sg-exporting-pdf .pdf-summary-container { 
+                    padding-top: 4px !important; 
+                    margin-top: 4px !important; 
+                    break-inside: avoid;
+                  }
                   .sg-exporting-pdf .top-header-gap { padding-top: 0px !important; }
+                  .sg-exporting-pdf .mb-20, .sg-exporting-pdf [style*="margin-bottom: 20px"] { margin-bottom: 8px !important; }
                 `}</style>
               </div>
             </div>
