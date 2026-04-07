@@ -68,7 +68,7 @@ export function AlertDetailsModal({
                         variant={alert.level === "critical" ? "destructive" : "secondary"}
                         className={alert.level === "critical" ? "bg-red-500 hover:bg-red-600 h-6 px-2 text-[11px]" : "bg-yellow-500 hover:bg-yellow-600 text-black h-6 px-2 text-[11px]"}
                       >
-                        {alert.level.charAt(0).toUpperCase() + alert.level.slice(1)}
+                        {alert.level === "critical" ? "High Possible Risk" : "Moderate Possible Risk"}
                       </Badge>
                     </td>
                   </tr>

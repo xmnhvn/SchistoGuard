@@ -100,7 +100,7 @@ export const HeroIllustration: React.FC = () => {
       <div className="absolute top-4 left-4 lg:top-6 lg:left-6 bg-white rounded-lg shadow-lg border-l-4 border-red-500 p-3 max-w-xs animate-pulse">
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-          <span className="text-xs font-medium text-red-700">Critical Alert</span>
+          <span className="text-xs font-medium text-red-700">High Possible Risk Alert</span>
         </div>
         <p className="text-xs text-gray-700 mt-1">
           Turbidity 18.2 NTU — Barangay San Miguel River

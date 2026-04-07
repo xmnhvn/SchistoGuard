@@ -33,8 +33,8 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
   const temperature = readings.temperature;
   const totalReadings = summary?.totalReadings;
   function getRiskLabel(risk: 'critical' | 'warning' | 'safe'): string {
-    if (risk === 'critical') return 'Critical';
-    if (risk === 'warning') return 'Warning';
+    if (risk === 'critical') return 'High Possible Risk';
+    if (risk === 'warning') return 'Moderate Possible Risk';
     return 'Safe';
   }
 
@@ -82,11 +82,11 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
           const temp = temperature;
           let riskLabel = getRiskLabel('safe');
           let riskColor = "text-green-600";
-          if (temp >= 25 && temp <= 30) {
-            riskLabel = "High Schistosomiasis Risk";
+          if (temp >= 22 && temp <= 30) {
+            riskLabel = "High Possible Risk";
             riskColor = "text-red-600";
-          } else if ((temp >= 20 && temp < 25) || (temp > 30 && temp <= 32)) {
-            riskLabel = "Possible Schistosomiasis Risk";
+          } else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) {
+            riskLabel = "Moderate Possible Risk";
             riskColor = "text-yellow-500";
           }
           return (
@@ -131,11 +131,11 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
         {(() => {
           let phRiskLabel = "Safe";
           let phRiskColor = "text-green-600";
-          if (ph >= 7.0 && ph <= 8.5) {
-            phRiskLabel = "High Schistosomiasis Risk";
+          if (ph >= 6.5 && ph <= 8.0) {
+            phRiskLabel = "High Possible Risk";
             phRiskColor = "text-red-600";
-          } else if ((ph >= 6.5 && ph < 7.0) || (ph > 8.5 && ph <= 9.0)) {
-            phRiskLabel = "Possible Schistosomiasis Risk";
+          } else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) {
+            phRiskLabel = "Moderate Possible Risk";
             phRiskColor = "text-yellow-500";
           }
           return (

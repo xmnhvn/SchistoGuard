@@ -270,8 +270,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Levels</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="warning">Warning</SelectItem>
+              <SelectItem value="critical">High Possible Risk</SelectItem>
+              <SelectItem value="warning">Moderate Possible Risk</SelectItem>
             </SelectContent>
           </Select>
 
@@ -304,10 +304,10 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         />
         <StatCard 
           icon={<AlertTriangle size={(isMobile) ? 18 : 22} color="#ef4444" />} 
-          label="Critical Alerts" 
+          label="High Possible Risk Alerts" 
           value={String(criticalCount)} 
           valueColor="#dc2626" 
-          sub="High priority" 
+          sub="For immediate verification" 
           isCompact={isMobile}
         />
         <StatCard 

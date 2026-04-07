@@ -15,11 +15,11 @@ function classifyWater(temperature, pH, turbidity) {
 
     let riskLevels = [];
 
-    // Temperature classification (25-30°C optimal for snail/cercariae)
+    // Temperature classification (22-30°C optimal for snail/cercariae)
     if (temperature != null) {
-        if (temperature >= 25 && temperature <= 30) {
+        if (temperature >= 22 && temperature <= 30) {
             riskLevels.push("high-risk");
-        } else if ((temperature >= 20 && temperature < 25) || (temperature > 30 && temperature <= 32)) {
+        } else if ((temperature >= 20 && temperature < 22) || (temperature > 30 && temperature <= 35)) {
             riskLevels.push("possible-risk");
         } else {
             riskLevels.push("low-risk");

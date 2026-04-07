@@ -23,14 +23,14 @@ export const ComponentsShowcase: React.FC = () => {
   const sampleAlerts = [
     {
       id: '1',
-      title: 'Critical Turbidity Level',
+      title: 'High Possible Risk Turbidity Level',
       details: 'Turbidity 18.2 NTU — Barangay San Miguel River',
       level: 'critical' as const,
       timestamp: '2025-09-15 14:31'
     },
     {
       id: '2',
-      title: 'Temperature Warning',
+      title: 'Temperature Moderate Possible Risk',
       details: 'Water temp 32°C — Barangay Riverside',
       level: 'warning' as const,
       timestamp: '2025-09-15 13:45'
@@ -104,8 +104,8 @@ export const ComponentsShowcase: React.FC = () => {
               <h4 className="text-md font-medium mb-3">Status Badges</h4>
               <div className="flex flex-wrap gap-3">
                 <StatusBadge variant="safe">Safe</StatusBadge>
-                <StatusBadge variant="warning">Warning</StatusBadge>
-                <StatusBadge variant="critical">Critical</StatusBadge>
+                <StatusBadge variant="warning">Moderate Possible Risk</StatusBadge>
+                <StatusBadge variant="critical">High Possible Risk</StatusBadge>
                 <StatusBadge variant="info">Info</StatusBadge>
               </div>
             </div>
@@ -131,8 +131,8 @@ export const ComponentsShowcase: React.FC = () => {
             <div>
               <h4 className="text-md font-medium mb-3">Sizes</h4>
               <div className="flex flex-wrap gap-3 items-center">
-                <StatusBadge variant="warning" size="sm">Small Warning</StatusBadge>
-                <StatusBadge variant="warning" size="md">Medium Warning</StatusBadge>
+                <StatusBadge variant="warning" size="sm">Small Moderate Possible Risk</StatusBadge>
+                <StatusBadge variant="warning" size="md">Medium Moderate Possible Risk</StatusBadge>
               </div>
             </div>
           </div>
@@ -173,7 +173,7 @@ export const ComponentsShowcase: React.FC = () => {
           <div className="space-y-4 max-w-sm">
             <AlertOverlay
               level="critical"
-              title="Critical Alert"
+              title="High Possible Risk Alert"
               details="Turbidity 18.2 NTU — Barangay San Miguel River"
               timestamp="2025-09-15 14:31"
               onAcknowledge={() => alert('Alert acknowledged')}
@@ -181,7 +181,7 @@ export const ComponentsShowcase: React.FC = () => {
             />
             <AlertOverlay
               level="warning"
-              title="Temperature Warning"
+              title="Temperature Moderate Possible Risk"
               details="Water temp 32°C — Barangay Riverside"
               timestamp="2025-09-15 13:45"
               onAcknowledge={() => alert('Alert acknowledged')}

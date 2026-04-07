@@ -404,12 +404,12 @@ export function SiteDetailView({
     const avgTurb = (filterData.reduce((acc, c) => acc + c.turbidity, 0) / filterData.length).toFixed(1);
 
     let tempStatus = "Safe";
-    if (filterData.some(c => c.temperature >= 25 && c.temperature <= 30)) tempStatus = "Critical";
-    else if (filterData.some(c => (c.temperature >= 20 && c.temperature < 25) || (c.temperature > 30 && c.temperature <= 32))) tempStatus = "Warning";
+    if (filterData.some(c => c.temperature >= 22 && c.temperature <= 30)) tempStatus = "Critical";
+    else if (filterData.some(c => (c.temperature >= 20 && c.temperature < 22) || (c.temperature > 30 && c.temperature <= 35))) tempStatus = "Warning";
 
     let phStatus = "Safe";
-    if (filterData.some(c => c.ph >= 7.0 && c.ph <= 8.5)) phStatus = "Critical";
-    else if (filterData.some(c => (c.ph >= 6.5 && c.ph < 7.0) || (c.ph > 8.5 && c.ph <= 9.0))) phStatus = "Warning";
+    if (filterData.some(c => c.ph >= 6.5 && c.ph <= 8.0)) phStatus = "Critical";
+    else if (filterData.some(c => (c.ph >= 6.0 && c.ph < 6.5) || (c.ph > 8.0 && c.ph <= 8.5))) phStatus = "Warning";
 
     let turbStatus = "Safe";
     if (filterData.some(c => c.turbidity < 5)) turbStatus = "Critical";
@@ -418,12 +418,18 @@ export function SiteDetailView({
     if (tempStatus === "Safe" && phStatus === "Safe" && turbStatus === "Safe") {
       return `Water conditions are NORMAL (Avg: ${avgTemp}°C, pH ${avgPh}, ${avgTurb} NTU). The environment is currently unfavorable for schistosomiasis transmission.`;
     } else {
+      const toDisplay = (status: string) => {
+        if (status === "Critical") return "High Possible Risk";
+        if (status === "Warning") return "Moderate Possible Risk";
+        return "Safe";
+      };
+
       let issues = [];
-      if (tempStatus !== "Safe") issues.push(`Temperature: ${tempStatus.toUpperCase()}`);
-      if (phStatus !== "Safe") issues.push(`pH: ${phStatus.toUpperCase()}`);
-      if (turbStatus !== "Safe") issues.push(`Turbidity: ${turbStatus.toUpperCase()}`);
-      
-      return `ALERT: Anomalies detected in ${issues.join(', ')} (Avg: ${avgTemp}°C, pH ${avgPh}, ${avgTurb} NTU). The current conditions present an elevated risk for schistosomiasis transmission.`;
+      if (tempStatus !== "Safe") issues.push(`Temperature: ${toDisplay(tempStatus)}`);
+      if (phStatus !== "Safe") issues.push(`pH: ${toDisplay(phStatus)}`);
+      if (turbStatus !== "Safe") issues.push(`Turbidity: ${toDisplay(turbStatus)}`);
+
+      return `Early-warning: Possible risk conditions detected in ${issues.join(', ')} (Avg: ${avgTemp}°C, pH ${avgPh}, ${avgTurb} NTU). Continue monitoring and apply precautionary measures.`;
     }
   };
 
@@ -786,8 +792,8 @@ export function SiteDetailView({
                         <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>25 – 30</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 24.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 32</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>22 – 30</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                       </div>
                     </div>
@@ -797,8 +803,8 @@ export function SiteDetailView({
                         <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>7.0 – 8.5</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.5 – 6.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.51 – 9.0</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>6.5 – 8.0</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                       </div>
                     </div>
@@ -808,8 +814,8 @@ export function SiteDetailView({
                         <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Critical</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Warning</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
                       </div>
                     </div>

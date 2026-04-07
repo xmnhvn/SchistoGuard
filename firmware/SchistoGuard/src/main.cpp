@@ -30,10 +30,10 @@ const float VREF = 3.3;
 
 // WHO/DOH Schistosomiasis Risk Thresholds
 // Temperature: Optimal range for schistosome-transmitting snail activity and cercariae survival
-const float TEMP_HIGH_RISK_MIN = 25.0;  // °C - High risk zone start
+const float TEMP_HIGH_RISK_MIN = 22.0;  // °C - High risk zone start
 const float TEMP_HIGH_RISK_MAX = 30.0;  // °C - High risk zone end
 const float TEMP_MOD_RISK_MIN = 20.0;   // °C - Moderate risk zone start
-const float TEMP_MOD_RISK_MAX = 32.0;   // °C - Moderate risk zone end
+const float TEMP_MOD_RISK_MAX = 35.0;   // °C - Moderate risk zone end
 
 // pH: Optimal range for schistosome-transmitting snails (slightly alkaline)
 // WHO/DOH standard: 6.5-8.0 = high risk, 6.0-6.5 or 8.0-8.5 = moderate, <6.0 or >8.5 = safe

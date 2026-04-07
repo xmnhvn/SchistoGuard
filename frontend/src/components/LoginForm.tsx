@@ -465,7 +465,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             </div>
             
             <div className="border-l-4 border-l-yellow-500 pl-4">
-              <h3 className="font-medium text-yellow-700">Warning Levels</h3>
+              <h3 className="font-medium text-yellow-700">Moderate Possible Risk Levels</h3>
               <p className="text-sm text-muted-foreground">
                 Yellow alerts indicate parameters approaching unsafe levels. 
                 Monitor closely and consider precautionary measures.
@@ -473,7 +473,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             </div>
             
             <div className="border-l-4 border-l-red-500 pl-4">
-              <h3 className="font-medium text-red-700">Critical Levels</h3>
+              <h3 className="font-medium text-red-700">High Possible Risk Levels</h3>
               <p className="text-sm text-muted-foreground">
                 Red alerts require immediate attention. Avoid water contact and 
                 notify your Barangay Health Worker immediately.
@@ -486,7 +486,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div>
                 <strong>Turbidity (Water Clarity)</strong>
-                <br />Safe: ≤5 NTU • Warning: 6-15 NTU • Critical: &gt;15 NTU
+                <br />Safe: ≤5 NTU • Moderate Possible Risk: 5-15 NTU • High Possible Risk: &lt;5 NTU
               </div>
               <div>
                 <strong>Temperature</strong>

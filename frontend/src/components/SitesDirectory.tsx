@@ -23,16 +23,16 @@ const fetchReadings = async () => {
           const ph = r.ph ?? 7.2;
 
           let tempRisk: 'critical' | 'warning' | 'safe' = 'safe';
-          if (temp >= 25 && temp <= 30) tempRisk = 'critical';
-          else if ((temp >= 20 && temp < 25) || (temp > 30 && temp <= 32)) tempRisk = 'warning';
+          if (temp >= 22 && temp <= 30) tempRisk = 'critical';
+          else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) tempRisk = 'warning';
 
           let turbidityRisk: 'critical' | 'warning' | 'safe' = 'safe';
           if (turbidity < 5) turbidityRisk = 'critical';
           else if (turbidity >= 5 && turbidity <= 15) turbidityRisk = 'warning';
 
           let phRisk: 'critical' | 'warning' | 'safe' = 'safe';
-          if (ph >= 7.0 && ph <= 8.5) phRisk = 'critical';
-          else if ((ph >= 6.5 && ph < 7.0) || (ph > 8.5 && ph <= 9.0)) phRisk = 'warning';
+          if (ph >= 6.5 && ph <= 8.0) phRisk = 'critical';
+          else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) phRisk = 'warning';
 
           // Overall risk: critical if any is critical, warning if any is warning, else safe
           let overallRisk: 'critical' | 'warning' | 'safe' = 'safe';
@@ -333,6 +333,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     }
   };
 
+  const getRiskDisplayLabel = (riskLevel: string) => {
+    if (riskLevel === 'critical') return 'High Possible Risk';
+    if (riskLevel === 'warning') return 'Moderate Possible Risk';
+    return 'Safe';
+  };
+
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     return {
@@ -361,13 +367,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       return 'safe';
     }
     if (param === 'temperature') {
-      if (value < 22 || value > 30) return 'critical';
-      if ((value >= 22 && value < 24) || (value > 28 && value <= 30)) return 'warning';
+      if (value >= 22 && value <= 30) return 'critical';
+      if ((value >= 20 && value < 22) || (value > 30 && value <= 35)) return 'warning';
       return 'safe';
     }
     if (param === 'ph') {
-      if (value < 6.5 || value > 8.0) return 'critical';
-      if ((value >= 6.5 && value < 7.0) || (value > 7.5 && value <= 8.0)) return 'warning';
+      if (value >= 6.5 && value <= 8.0) return 'critical';
+      if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5)) return 'warning';
       return 'safe';
     }
     return 'safe';
@@ -538,8 +544,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <SelectContent>
                 <SelectItem value="all">All Risk Levels</SelectItem>
                 <SelectItem value="safe">Safe</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="warning">Moderate Possible Risk</SelectItem>
+                <SelectItem value="critical">High Possible Risk</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -571,8 +577,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         {[
           { label: "Total Readings", value: filteredReadings.length * 3, icon: <BarChart3 style={{ width: 20, height: 20, color: "#357D86" }} />, color: "#357D86", bg: "#e6f2f3" },
           { label: "Safe", value: safeCount, icon: <CheckCircle2 style={{ width: 20, height: 20, color: "#23B67E" }} />, color: "#23B67E", bg: "#E9FBF3" },
-          { label: "Warning", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#F1A11A" }} />, color: "#F1A11A", bg: "#FFF9E6" },
-          { label: "Critical", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#D14343" }} />, color: "#D14343", bg: "#FFF1F1" },
+          { label: "Moderate Possible Risk", value: warningCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#F1A11A" }} />, color: "#F1A11A", bg: "#FFF9E6" },
+          { label: "High Possible Risk", value: criticalCount, icon: <AlertTriangle style={{ width: 20, height: 20, color: "#D14343" }} />, color: "#D14343", bg: "#FFF1F1" },
         ].map((card, i) => (
           <div key={card.label} style={{
             background: "#fff",
@@ -797,7 +803,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                           color: rc.color,
                           textTransform: "capitalize",
                           fontFamily: POPPINS,
-                        }}>{reading.riskLevel}</span>
+                        }}>{getRiskDisplayLabel(reading.riskLevel)}</span>
                       </td>
                       <td style={{ padding: "12px 24px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                         {formatRelativeTime(reading.timestamp)}
@@ -913,7 +919,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                             <span style={{
                               fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
                               background: rc.bg, color: rc.color, textTransform: "capitalize", fontFamily: POPPINS,
-                            }}>{reading.riskLevel}</span>
+                            }}>{getRiskDisplayLabel(reading.riskLevel)}</span>
                             <span style={{
                               fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
                               border: "1px solid #e2e8f0", color: "#64748b", fontFamily: POPPINS,

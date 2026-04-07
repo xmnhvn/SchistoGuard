@@ -186,6 +186,12 @@ export const SiteSpotCard: React.FC<SiteSpotProps> = ({
     critical: 'text-red-600 bg-red-100'
   };
 
+  const riskLabels = {
+    safe: 'Safe',
+    warning: 'Moderate Possible Risk',
+    critical: 'High Possible Risk'
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-3">
@@ -194,7 +200,7 @@ export const SiteSpotCard: React.FC<SiteSpotProps> = ({
           <p className="text-sm text-gray-600">{barangay}</p>
         </div>
         <StatusBadge variant={riskLevel} size="sm">
-          {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)}
+          {riskLabels[riskLevel]}
         </StatusBadge>
       </div>
 

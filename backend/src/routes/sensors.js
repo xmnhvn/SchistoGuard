@@ -260,99 +260,21 @@ setInterval(() => {
 function generateAlertsFromData(data, now = new Date()) {
   let alertMessages = [];
 
-  // Overall water quality risk classification (all three parameters)
-  const status = classifyWater(data.temperature, data.ph, data.turbidity);
-  const level = classifyLevel(status);
-  // Track which parameters already have an alert
-  const alertedParams = new Set();
-  if (level !== "safe") {
-    // Build parameter summary for alert
-    const params = [];
-    if (data.temperature != null && data.temperature >= 25 && data.temperature <= 30) params.push("Temperature");
-    if (data.ph != null && data.ph >= 6.5 && data.ph <= 8.0) params.push("pH");
-    if (data.turbidity != null && data.turbidity < 5) params.push("Turbidity");
-    // Insert one alert per parameter
-    params.forEach(param => {
-      let msg = level === "critical"
-        ? `Water conditions support schistosomiasis transmission. Risk detected in: ${param}`
-        : `Possible schistosomiasis risk. Monitor water quality closely. Contributing parameter: ${param}`;
-      let value = "";
-      if (param === "Temperature") value = data.temperature + "°C";
-      if (param === "pH") value = data.ph;
-      if (param === "Turbidity") value = data.turbidity + " NTU";
-      db.run(
-        `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          level,
-          msg,
-          param,
-          value,
-          now.toISOString(),
-          0,
-          data.siteName || GLOBAL_DEVICE_NAME,
-          data.barangay || "Unknown",
-          "-",
-          null
-        ],
-        (err) => { if (err) console.error('alerts insert error:', err); }
-      );
-      alertedParams.add(param);
-      alertMessages.push(`${param}: ${value} (${level === "critical" ? "High" : "Possible"} Risk)`);
-    });
-  }
+  ["Temperature", "pH", "Turbidity"].forEach((parameter) => {
+    const level = classifyParameterRisk(parameter, data);
+    if (level === "safe") return;
 
-  // Turbidity alert (clear water = higher schisto risk)
-  if (data.turbidity != null && data.turbidity < 5 && !alertedParams.has("Turbidity")) {
-    db.run(
-      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "critical",
-        "Clear water detected - Higher schistosomiasis risk (slow/stagnant water)",
-        "Turbidity",
-        data.turbidity + " NTU",
-        now.toISOString(),
-        0,
-        data.siteName || GLOBAL_DEVICE_NAME,
-        data.barangay || "Unknown",
-        "-",
-        null
-      ],
-      (err) => { if (err) console.error('alerts insert error:', err); }
-    );
-    alertMessages.push(`Turbidity: ${data.turbidity.toFixed(1)} NTU (Clear Water - High Risk)`);
-  } else if (data.turbidity != null && data.turbidity >= 5 && data.turbidity <= 15 && !alertedParams.has("Turbidity")) {
-    db.run(
-      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "warning",
-        "Moderate water clarity - Possible schisto habitat",
-        "Turbidity",
-        data.turbidity + " NTU",
-        now.toISOString(),
-        0,
-        data.siteName || GLOBAL_DEVICE_NAME,
-        data.barangay || "Unknown",
-        "-",
-        null
-      ],
-      (err) => { if (err) console.error('alerts insert error:', err); }
-    );
-    alertMessages.push(`Turbidity: ${data.turbidity.toFixed(1)} NTU (Moderate - Possible Risk)`);
-  }
+    const value = formatAlertValue(parameter, data);
+    const message = buildAlertMessage(parameter, level);
 
-  // pH alert (optimal for snails: 6.5-8.0 per WHO/DOH)
-  if (data.ph != null && data.ph >= 6.5 && data.ph <= 8.0 && !alertedParams.has("pH")) {
     db.run(
       `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        "critical",
-        "pH level optimal for schistosome-transmitting snails (6.5-8.0)",
-        "pH",
-        data.ph,
+        level,
+        message,
+        parameter,
+        value,
         now.toISOString(),
         0,
         data.siteName || GLOBAL_DEVICE_NAME,
@@ -362,33 +284,15 @@ function generateAlertsFromData(data, now = new Date()) {
       ],
       (err) => { if (err) console.error('alerts insert error:', err); }
     );
-    alertMessages.push(`pH: ${data.ph.toFixed(1)} (High Risk)`);
-  } else if (data.ph != null && ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5)) && !alertedParams.has("pH")) {
-    db.run(
-      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "warning",
-        "pH level allows snail survival - Possible schisto risk",
-        "pH",
-        data.ph,
-        now.toISOString(),
-        0,
-        data.siteName || GLOBAL_DEVICE_NAME,
-        data.barangay || "Unknown",
-        "-",
-        null
-      ],
-      (err) => { if (err) console.error('alerts insert error:', err); }
-    );
-    alertMessages.push(`pH: ${data.ph.toFixed(1)} (Possible Risk)`);
-  }
+
+    alertMessages.push(buildSmsLine(parameter, value, level));
+  });
 
   // Send SMS for ANY alerts (critical or warning)
   if (alertMessages.length > 0) {
     const timestamp = new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    const smsMessage = `SchistoGuard ALERT!\n[Recorded: ${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
-    sendSMSViaESP32(smsMessage);
+    const smsMessage = `SchistoGuard EARLY WARNING\n[Recorded: ${timestamp}]\n\n${alertMessages.join('\n')}\n\nPlease verify and monitor.`;
+    sendSMSViaESP32(smsMessage, alertMessages);
   }
 }
 
@@ -398,40 +302,60 @@ function classifyLevel(status) {
   return "safe";
 }
 
+function classifyParameterRisk(parameter, data) {
+  if (parameter === "Temperature") {
+    if (data.temperature == null) return "safe";
+    if (data.temperature >= 22 && data.temperature <= 30) return "critical";
+    if ((data.temperature >= 20 && data.temperature < 22) || (data.temperature > 30 && data.temperature <= 35)) return "warning";
+    return "safe";
+  }
+
+  if (parameter === "pH") {
+    if (data.ph == null) return "safe";
+    if (data.ph >= 6.5 && data.ph <= 8.0) return "critical";
+    if ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5)) return "warning";
+    return "safe";
+  }
+
+  if (parameter === "Turbidity") {
+    if (data.turbidity == null) return "safe";
+    if (data.turbidity < 5) return "critical";
+    if (data.turbidity >= 5 && data.turbidity <= 15) return "warning";
+    return "safe";
+  }
+
+  return "safe";
+}
+
+function formatAlertValue(parameter, data) {
+  if (parameter === "Temperature") return `${Number(data.temperature).toFixed(1)} °C`;
+  if (parameter === "pH") return `${Number(data.ph).toFixed(2)}`;
+  if (parameter === "Turbidity") return `${Number(data.turbidity).toFixed(1)} NTU`;
+  return "-";
+}
+
+function buildAlertMessage(parameter, level) {
+  if (level === "critical") {
+    return `High possible risk: ${parameter} is within the early-warning range for possible schistosomiasis risk. Please verify on site.`;
+  }
+  return `Moderate possible risk: ${parameter} is showing an early-warning signal. Please continue monitoring and validate the reading.`;
+}
+
+function buildSmsLine(parameter, value, level) {
+  const levelText = level === "critical" ? "High Possible Risk" : "Moderate Possible Risk";
+  return `${parameter}: ${value} (${levelText})`;
+}
+
 // Check alerts immediately (not wait for 5-minute save)
 function checkAndAlertImmediate(data) {
   let alertMessages = [];
 
-  // Overall water quality risk classification (all three parameters)
-  const status = classifyWater(data.temperature, data.ph, data.turbidity);
-  const level = classifyLevel(status);
-  
-  // Add individual parameter alerts with details
-  if (data.temperature != null) {
-    if (data.temperature >= 25 && data.temperature <= 30) {
-      alertMessages.push(`🌡️ Temperature: ${data.temperature.toFixed(1)}°C (HIGH RISK - Optimal for snails)`);
-    } else if ((data.temperature >= 20 && data.temperature < 25) || (data.temperature > 30 && data.temperature <= 32)) {
-      alertMessages.push(`🌡️ Temperature: ${data.temperature.toFixed(1)}°C (Possible Risk)`);
-    }
-  }
-
-  // Turbidity
-  if (data.turbidity != null) {
-    if (data.turbidity < 5) {
-      alertMessages.push(`💧 Turbidity: ${data.turbidity.toFixed(1)} NTU (HIGH RISK - Clear/Stagnant Water)`);
-    } else if (data.turbidity >= 5 && data.turbidity <= 15) {
-      alertMessages.push(`💧 Turbidity: ${data.turbidity.toFixed(1)} NTU (Possible Risk)`);
-    }
-  }
-
-  // pH
-  if (data.ph != null) {
-    if (data.ph >= 6.5 && data.ph <= 8.0) {
-      alertMessages.push(`⚗️ pH: ${data.ph.toFixed(1)} (HIGH RISK - Optimal for snails)`);
-    } else if ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5)) {
-      alertMessages.push(`⚗️ pH: ${data.ph.toFixed(1)} (Possible Risk)`);
-    }
-  }
+  ["Temperature", "pH", "Turbidity"].forEach((parameter) => {
+    const level = classifyParameterRisk(parameter, data);
+    if (level === "safe") return;
+    const value = formatAlertValue(parameter, data);
+    alertMessages.push(buildSmsLine(parameter, value, level));
+  });
 
   // Send SMS for ANY alerts (critical or warning) ONLY if device is connected (last data < 10s)
   if (alertMessages.length > 0) {
@@ -443,7 +367,7 @@ function checkAndAlertImmediate(data) {
       const dateStr = nowDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
       const timeStr = nowDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const timestamp = `${dateStr}, ${timeStr}`;
-      const smsMessage = `SchistoGuard ALERT!\n[${timestamp}]\n\n${alertMessages.join('\n')}\n\nAction Required!`;
+      const smsMessage = `SchistoGuard EARLY WARNING\n[Recorded: ${timestamp}]\n\n${alertMessages.join('\n')}\n\nPlease verify and monitor.`;
       // Get resident phone numbers for this site - prioritize BHWs and LGUs
       const siteName = data.siteName || GLOBAL_DEVICE_NAME;
       db.all(

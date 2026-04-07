@@ -180,7 +180,7 @@ export function AlertItem({
                     fontFamily: POPPINS,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
-                  }}>Critical</span>
+                  }}>High Possible Risk</span>
                 ) : (
                   <span style={{
                     backgroundColor: "#FFF9E6",
@@ -192,7 +192,7 @@ export function AlertItem({
                     fontFamily: POPPINS,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
-                  }}>Warning</span>
+                  }}>Moderate Possible Risk</span>
                 ) }
                 {isAcknowledged && (
                   <span style={{

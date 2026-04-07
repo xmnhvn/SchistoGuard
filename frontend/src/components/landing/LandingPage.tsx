@@ -34,10 +34,10 @@ function getSensorStatus(
   value: number
 ): { label: string; color: string } {
   if (type === "temperature") {
-    if (value >= 25 && value <= 30)
-      return { label: "Possible Schistosomiasis Risk", color: "#E7B213" };
-    if ((value >= 20 && value < 25) || (value > 30 && value <= 32))
-      return { label: "Moderate Risk", color: "#E7B213" };
+    if (value >= 22 && value <= 30)
+      return { label: "High Possible Risk", color: "#ef4444" };
+    if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
+      return { label: "Moderate Possible Risk", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "turbidity") {
@@ -46,9 +46,9 @@ function getSensorStatus(
     return { label: "High Turbidity", color: "#22c55e" };
   }
   if (type === "ph") {
-    if (value >= 7.0 && value <= 8.5) return { label: "Critical Range", color: "#ef4444" };
-    if ((value >= 6.5 && value < 7.0) || (value > 8.5 && value <= 9.0))
-      return { label: "Warning Range", color: "#f59e0b" };
+    if (value >= 6.5 && value <= 8.0) return { label: "High Possible Risk", color: "#ef4444" };
+    if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
+      return { label: "Moderate Possible Risk", color: "#f59e0b" };
     return { label: "Safe", color: "#22c55e" };
   }
   return { label: "", color: "#9ca3af" };
@@ -375,14 +375,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const sampleAlerts = [
     {
       id: "1",
-      title: "Critical Turbidity Level",
+      title: "High Possible Risk Turbidity Level",
       details: "Turbidity 18.2 NTU — Barangay San Miguel River",
       level: "critical" as const,
       timestamp: "2025-09-15 14:31",
     },
     {
       id: "2",
-      title: "Temperature Warning",
+      title: "Temperature Moderate Possible Risk",
       details: "Water temp 32°C — Barangay Riverside",
       level: "warning" as const,
       timestamp: "2025-09-15 13:45",

@@ -120,7 +120,7 @@ export function DesignSystem() {
             <CardContent className="p-4 text-center">
               <div className="w-full h-12 bg-status-warning rounded-md mb-2"></div>
               <div className="text-sm">
-                <p className="font-medium">Warning Status</p>
+                <p className="font-medium">Moderate Possible Risk Status</p>
                 <p className="text-muted-foreground">#FFC107</p>
               </div>
             </CardContent>
@@ -129,7 +129,7 @@ export function DesignSystem() {
             <CardContent className="p-4 text-center">
               <div className="w-full h-12 bg-status-critical rounded-md mb-2"></div>
               <div className="text-sm">
-                <p className="font-medium">Critical Status</p>
+                <p className="font-medium">High Possible Risk Status</p>
                 <p className="text-muted-foreground">#FF6B6B</p>
               </div>
             </CardContent>
@@ -251,8 +251,8 @@ export function DesignSystem() {
               <h3 className="font-medium">Status Badges</h3>
               <div className="flex flex-wrap gap-3">
                 <Badge className="bg-status-safe hover:bg-status-safe/80 text-white">Safe</Badge>
-                <Badge className="bg-status-warning hover:bg-status-warning/80 text-black">Warning</Badge>
-                <Badge className="bg-status-critical hover:bg-status-critical/80 text-white">Critical</Badge>
+                <Badge className="bg-status-warning hover:bg-status-warning/80 text-black">Moderate Possible Risk</Badge>
+                <Badge className="bg-status-critical hover:bg-status-critical/80 text-white">High Possible Risk</Badge>
               </div>
             </div>
             
@@ -310,11 +310,11 @@ export function DesignSystem() {
                 </div>
                 <div className="text-center space-y-2">
                   <MapPin riskLevel="warning" />
-                  <p className="text-xs text-muted-foreground">Warning</p>
+                  <p className="text-xs text-muted-foreground">Moderate Possible Risk</p>
                 </div>
                 <div className="text-center space-y-2">
                   <MapPin riskLevel="critical" />
-                  <p className="text-xs text-muted-foreground">Critical</p>
+                  <p className="text-xs text-muted-foreground">High Possible Risk</p>
                 </div>
               </div>
             </div>
@@ -428,7 +428,7 @@ export function DesignSystem() {
               <div>
                 <h3 className="font-medium mb-2">Water Quality Thresholds</h3>
                 <div className="text-sm space-y-1 text-muted-foreground">
-                  <p>• <strong>Turbidity:</strong> Safe ≤5 NTU, Warning 6–15 NTU, Critical &gt;15 NTU</p>
+                  <p>• <strong>Turbidity:</strong> Safe ≤5 NTU, Moderate Possible Risk 5–15 NTU, High Possible Risk &lt;5 NTU</p>
                   <p>• <strong>Temperature:</strong> Normal 22–30°C</p>
                   <p>• <strong>pH:</strong> Normal 6.5–8.0</p>
                   <p>• <strong>UV Index:</strong> Low risk &lt;3, High risk &gt;6</p>

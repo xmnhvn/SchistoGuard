@@ -503,16 +503,16 @@ export function Dashboard({
     const ph = latestReading.ph;
 
     let tempRisk: "critical" | "warning" | "safe" = "safe";
-    if (temp >= 25 && temp <= 30) tempRisk = "critical";
-    else if ((temp >= 20 && temp < 25) || (temp > 30 && temp <= 32)) tempRisk = "warning";
+    if (temp >= 22 && temp <= 30) tempRisk = "critical";
+    else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) tempRisk = "warning";
 
     let turbidityRisk: "critical" | "warning" | "safe" = "safe";
     if (turbidity < 5) turbidityRisk = "critical";
     else if (turbidity >= 5 && turbidity <= 15) turbidityRisk = "warning";
 
     let phRisk: "critical" | "warning" | "safe" = "safe";
-    if (ph >= 7.0 && ph <= 8.5) phRisk = "critical";
-    else if ((ph >= 6.5 && ph < 7.0) || (ph > 8.5 && ph <= 9.0)) phRisk = "warning";
+    if (ph >= 6.5 && ph <= 8.0) phRisk = "critical";
+    else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) phRisk = "warning";
 
     if ([tempRisk, turbidityRisk, phRisk].includes("critical")) overallRisk = "critical";
     else if ([tempRisk, turbidityRisk, phRisk].includes("warning")) overallRisk = "warning";
@@ -531,6 +531,12 @@ export function Dashboard({
       : overallRisk === "warning"
         ? "linear-gradient(135deg, #fbbf24 0%, #d97706 100%)"
         : "linear-gradient(135deg, #4ade80 0%, #16a34a 100%)";
+
+  const getOverallRiskLabel = (risk: "critical" | "warning" | "safe") => {
+    if (risk === "critical") return "High Possible Risk";
+    if (risk === "warning") return "Moderate Possible Risk";
+    return "Safe";
+  };
 
   // ─── Alerts portal — rendered in ALL layout branches ─────────────────────
   const alertsPortal = (() => {
@@ -1148,7 +1154,7 @@ export function Dashboard({
                         fontWeight: 700, fontSize: 15,
                         fontFamily: POPPINS, textTransform: "capitalize" as const,
                       }}>
-                        {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
+                        {getOverallRiskLabel(overallRisk)}
                       </span>
                     </div>
                     <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -1194,7 +1200,7 @@ export function Dashboard({
                       padding: "5px 16px", fontWeight: 700, fontSize: 13,
                       fontFamily: POPPINS, textTransform: "capitalize" as const,
                     }}>
-                      {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
+                      {getOverallRiskLabel(overallRisk)}
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -1422,7 +1428,7 @@ export function Dashboard({
                   textTransform: "capitalize",
                 }}
               >
-                {overallRisk.charAt(0).toUpperCase() + overallRisk.slice(1)}
+                {getOverallRiskLabel(overallRisk)}
               </span>
             </div>
             <p style={{ margin: 0, fontSize: isNarrowDesktop ? 12 : 14, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
@@ -1750,21 +1756,21 @@ function getSensorStatus(
   value: number
 ): { label: string; color: string } {
   if (type === "temperature") {
-    if (value >= 25 && value <= 30)
-      return { label: "Possible Schistosomiasis Risk", color: "#E7B213" };
-    if ((value >= 20 && value < 25) || (value > 30 && value <= 32))
-      return { label: "Moderate Risk", color: "#E7B213" };
+    if (value >= 22 && value <= 30)
+      return { label: "High Possible Risk", color: "#ef4444" };
+    if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
+      return { label: "Moderate Possible Risk", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "turbidity") {
-    if (value < 5) return { label: "Clear Water – Higher Schisto Risk", color: "#ef4444" };
-    if (value <= 15) return { label: "Moderate Turbidity", color: "#E7B213" };
+    if (value < 5) return { label: "High Possible Risk", color: "#ef4444" };
+    if (value <= 15) return { label: "Moderate Possible Risk", color: "#E7B213" };
     return { label: "High Turbidity", color: "#22c55e" };
   }
   if (type === "ph") {
-    if (value >= 7.0 && value <= 8.5) return { label: "Critical Range", color: "#ef4444" };
-    if ((value >= 6.5 && value < 7.0) || (value > 8.5 && value <= 9.0))
-      return { label: "Warning Range", color: "#f59e0b" };
+    if (value >= 6.5 && value <= 8.0) return { label: "High Possible Risk", color: "#ef4444" };
+    if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
+      return { label: "Moderate Possible Risk", color: "#f59e0b" };
     return { label: "Safe", color: "#22c55e" };
   }
   return { label: "", color: "#9ca3af" };
