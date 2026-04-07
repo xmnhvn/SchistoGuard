@@ -51,8 +51,12 @@ export function Dashboard({
   });
   // Device connection state
   const [deviceConnected, setDeviceConnected] = useState(true);
-  // Address from reverse geocoding
-  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
+  // Address from reverse geocoding — initialize from cache to prevent flicker
+  const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('sg_global_latest_address') || null;
+    } catch { return null; }
+  });
   // Cache last lat/lng to avoid unnecessary API calls
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
   // Interval config state
@@ -184,7 +188,7 @@ export function Dashboard({
     if (lat !== null && lng !== null) {
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
-        setGpsAddress(null); // reset while loading
+        // Don't reset gpsAddress to null — keep old address visible while loading new one
         reverseGeocode(lat, lng).then(addr => {
           setGpsAddress(addr);
           if (addr && typeof window !== 'undefined') {

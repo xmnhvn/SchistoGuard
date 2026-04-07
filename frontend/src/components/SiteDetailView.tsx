@@ -155,9 +155,24 @@ export function SiteDetailView({
 
     const originalTransform = chartRef.current.style.transform;
     const originalHeight = chartRef.current.style.height;
+    const originalWidth = chartRef.current.style.width;
+    const originalMinWidth = chartRef.current.style.minWidth;
+    const originalPosition = chartRef.current.style.position;
+    const originalLeft = chartRef.current.style.left;
     
     // Add layout class for PDF to handle margins/gaps
     chartRef.current.classList.add('sg-exporting-pdf');
+
+    // Force desktop-width layout so the PDF always matches the desktop version
+    const needsDesktopOverride = window.innerWidth < 1100;
+    if (needsDesktopOverride) {
+      chartRef.current.style.width = '1200px';
+      chartRef.current.style.minWidth = '1200px';
+      chartRef.current.style.position = 'absolute';
+      chartRef.current.style.left = '-9999px';
+      // Allow a reflow for the desktop layout to take effect
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
     
     try {
       const html2pdf = await loadHtml2Pdf();
@@ -193,6 +208,10 @@ export function SiteDetailView({
     } finally {
       if (originalTransform) chartRef.current.style.transform = originalTransform;
       chartRef.current.style.height = originalHeight;
+      chartRef.current.style.width = originalWidth;
+      chartRef.current.style.minWidth = originalMinWidth;
+      chartRef.current.style.position = originalPosition;
+      chartRef.current.style.left = originalLeft;
       chartRef.current.classList.remove('sg-exporting-pdf');
       setExporting(false);
     }
