@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3, ChevronRight, X, Trash2, Check } from 'lucide-react';
+import { Clock, Filter, Droplets, Thermometer, Download, Calendar, AlertTriangle, CheckCircle2, BarChart3, ChevronRight, X, Trash2, Check, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { Card, CardContent } from './ui/card';
@@ -69,6 +69,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [showMobileViewAll, setShowMobileViewAll] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const animate = !_sitesFirstLoadDone;
 
   // Fetch metadata for PDF header
@@ -154,6 +155,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   // PDF Export handler
   const handleExportPDF = async () => {
     if (!filteredReadings.length) return;
+    setIsExporting(true);
+    // 250ms delay to ensure the animation is stable and running on its own GPU layer
+    // BEFORE hitting the heavy PDF generation script.
+    await new Promise(resolve => setTimeout(resolve, 250));
+    try {
     const jsPDFModule = await import('jspdf');
     const autoTableModule = await import('jspdf-autotable');
     const jsPDF = jsPDFModule.default;
@@ -304,6 +310,9 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
     const filename = `SchistoGuard_Timeseries_${risk}_${time}_${dmy}.pdf`;
     doc.save(filename);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   useEffect(() => {
@@ -412,8 +421,46 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   const pad = isMobile ? 16 : isTablet ? 24 : 32;
 
+  if (!visible) return null;
   return (
-    <div style={{
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {/* ── Premium Export Overlay ── */}
+      {isExporting && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          // Removed animation for instant coverage
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: '30px 40px',
+            borderRadius: 24,
+            boxShadow: '0 20px 50px rgba(53, 125, 134, 0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16,
+            border: '1px solid rgba(53, 125, 134, 0.1)'
+          }}>
+            <Loader2 className="animate-spin" size={40} color="#357d86" />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: '#1a2a3a', fontFamily: POPPINS }}>Preparing Report</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: 14, color: '#64748b', fontFamily: POPPINS }}>Please wait while we generate your PDF...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`flex flex-col gap-6 w-full ${animate ? 'animate-fade-in' : ''}`} style={{
       fontFamily: POPPINS,
       height: "100%",
       overflow: "hidden",
@@ -427,6 +474,18 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         @keyframes contentSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin { 
+          animation: spin 0.8s linear infinite; 
+          will-change: transform;
         }
         @keyframes cardDataFadeIn {
           from { opacity: 0; transform: translateY(10px); }
@@ -919,6 +978,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

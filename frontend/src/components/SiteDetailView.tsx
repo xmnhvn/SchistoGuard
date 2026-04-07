@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { AlertItem } from "./AlertItem";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { ArrowLeft, Download, Settings, Bell, Calendar, Info, X } from "lucide-react";
+import { ArrowLeft, Download, Settings, Bell, Calendar, Info, X, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
@@ -63,7 +63,7 @@ export function SiteDetailView({
   // Ref for chart container
   const chartRef = useRef<HTMLDivElement>(null);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [isExporting, setExporting] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
 
@@ -109,20 +109,17 @@ export function SiteDetailView({
   const handleExportChartPDF = async () => {
     if (!chartRef.current) return;
     setExporting(true);
+    
+    // Slightly longer delay (250ms) to ensure the animation "gets going" on its own GPU layer
+    // BEFORE the CPU-intensive capture logic hits and potentially freezes the main thread.
+    await new Promise(resolve => setTimeout(resolve, 250));
+
     const originalTransform = chartRef.current.style.transform;
     const originalHeight = chartRef.current.style.height;
     
     // Add layout class for PDF to handle margins/gaps
     chartRef.current.classList.add('sg-exporting-pdf');
     
-    // Find the PDF-only explanation elements
-    const pdfOnlyElems = chartRef.current.querySelectorAll('.sg-pdf-only');
-    const prevDisplays: string[] = [];
-    pdfOnlyElems.forEach((el: any) => {
-      prevDisplays.push(el.style.display);
-      el.style.display = 'block';
-    });
-
     try {
       const html2pdf = await loadHtml2Pdf();
       let time = 'AllTime';
@@ -157,9 +154,6 @@ export function SiteDetailView({
     } finally {
       if (originalTransform) chartRef.current.style.transform = originalTransform;
       chartRef.current.style.height = originalHeight;
-      pdfOnlyElems.forEach((el: any, index: number) => {
-        el.style.display = prevDisplays[index] || 'none';
-      });
       chartRef.current.classList.remove('sg-exporting-pdf');
       setExporting(false);
     }
@@ -448,6 +442,49 @@ export function SiteDetailView({
   return (
     <div style={{
       fontFamily: POPPINS,
+      background: "#f8fafc",
+      minHeight: "100vh",
+      width: "100%",
+      position: "relative"
+    }}>
+      {/* ── Premium Export Overlay ── */}
+      {isExporting && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          // Removed animation to ensure INSTANT coverage of the flicker
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: '30px 40px',
+            borderRadius: 24,
+            boxShadow: '0 20px 50px rgba(53, 125, 134, 0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16,
+            border: '1px solid rgba(53, 125, 134, 0.1)'
+          }}>
+            <Loader2 className="animate-spin" size={40} color="#357d86" />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: '#1a2a3a' }}>Preparing Report</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: 14, color: '#64748b' }}>Please wait while we generate your PDF...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{
+      fontFamily: POPPINS,
       height: "100%",
       overflowY: "auto",
       background: "#f5f7f9",
@@ -461,6 +498,15 @@ export function SiteDetailView({
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin { 
+          animation: spin 0.8s linear infinite; 
+          will-change: transform;
+        }
+        .sg-pdf-only { display: none !important; }
       `}</style>
       <div style={{ display: "flex", flexDirection: "column", animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
         <div style={{
@@ -551,7 +597,7 @@ export function SiteDetailView({
         </div>
 
         <div ref={chartRef} className="flex flex-col gap-6 w-full sg-pdf-bg-patch" style={{ background: '#ffffff' }}>
-          <div className="sg-pdf-only top-header-gap" style={{ display: 'none', padding: '10px 0px 0px 0px' }}>
+          <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <img src="/schistoguard.png" alt="SchistoGuard Logo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
@@ -734,7 +780,7 @@ export function SiteDetailView({
                 </div>
 
                 {chartData.length > 0 && (
-                  <div className="sg-pdf-only pdf-summary-container" style={{ display: 'none', padding: '16px 0 0 0', marginTop: '10px' }}>
+                  <div className="sg-pdf-only pdf-summary-container" style={{ padding: '16px 0 0 0', marginTop: '10px' }}>
                     <div style={{ padding: '0 0 16px 0', marginBottom: 16, borderBottom: '1px solid #f0f1f3', display: 'flex', justifyContent: 'space-between' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Report Details</div>
@@ -750,7 +796,7 @@ export function SiteDetailView({
                       </div>
                       <div style={{ textAlign: 'right', flex: 0.8 }}>
                         <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Exported On</div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric'})}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric'})}</div>
                         <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
                     </div>
@@ -996,6 +1042,9 @@ export function SiteDetailView({
                   .sg-exporting-pdf {
                     gap: 4px !important;
                   }
+                  .sg-exporting-pdf .sg-pdf-only { 
+                    display: block !important; 
+                  }
                   .sg-exporting-pdf .chart-inner-wrap {
                     height: 240px !important;
                   }
@@ -1017,6 +1066,7 @@ export function SiteDetailView({
 
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
