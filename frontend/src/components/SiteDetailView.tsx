@@ -33,7 +33,7 @@ export interface SiteDetailViewProps {
 export function SiteDetailView({
   siteId,
   siteName = "Site Name",
-  barangay = "Riverside",
+  barangay = "",
   currentRisk,
   onBack,
   visible = true
