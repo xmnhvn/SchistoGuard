@@ -56,16 +56,19 @@ export async function triggerPdfDownload(worker: any, fileName: string) {
  */
 export async function captureCleanElement(
   originalElement: HTMLElement,
-  callback: (clonedElement: HTMLElement) => Promise<void>
+  callback: (clonedElement: HTMLElement) => Promise<void>,
+  options: { width?: number; padding?: string } = {}
 ) {
   if (typeof window === 'undefined') return;
+
+  const targetWidth = options.width || 720;
 
   // 1. Create a hidden container on the body
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.left = '-9999px';
   container.style.top = '0';
-  container.style.width = '794px'; // A4 width at 96 DPI
+  container.style.width = `${targetWidth + 20}px`; // Add small buffer
   container.style.backgroundColor = 'white';
   container.style.zIndex = '-9999';
   
@@ -73,11 +76,11 @@ export async function captureCleanElement(
   const clone = originalElement.cloneNode(true) as HTMLElement;
   
   // 3. Force desktop-friendly styles on the clone
-  clone.style.width = '794px';
-  clone.style.minWidth = '794px';
-  clone.style.maxWidth = '794px';
+  clone.style.width = `${targetWidth}px`;
+  clone.style.minWidth = `${targetWidth}px`;
+  clone.style.maxWidth = `${targetWidth}px`;
   clone.style.margin = '0';
-  clone.style.padding = originalElement.style.padding || '20px';
+  clone.style.padding = options.padding || originalElement.style.padding || '20px';
   clone.style.boxSizing = 'border-box';
   clone.style.overflow = 'visible';
   clone.style.height = 'auto';

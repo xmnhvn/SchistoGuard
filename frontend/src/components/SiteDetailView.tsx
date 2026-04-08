@@ -177,11 +177,6 @@ export function SiteDetailView({
       const filename = `${sanitizedName}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
       
       await captureCleanElement(chartRef.current, async (clonedElement) => {
-        // Force landscape-friendly width for the chart clone
-        clonedElement.style.width = '1120px'; 
-        clonedElement.style.minWidth = '1120px';
-        clonedElement.style.maxWidth = '1120px';
-
         const worker = html2pdf()
           .set({
             margin: [10, 10, 10, 10],
@@ -200,7 +195,7 @@ export function SiteDetailView({
           .from(clonedElement);
         
         await triggerPdfDownload(worker, filename);
-      });
+      }, { width: 1120 });
     } catch (err) {
       console.error('Failed to export chart PDF.', err);
     } finally {

@@ -372,7 +372,7 @@ export const ReportsPage: React.FC = () => {
           .from(clonedElement);
 
         await triggerPdfDownload(worker, fileName);
-      });
+      }, { width: 720 });
     } catch (err: any) {
       setError(err.message || 'Failed to download report PDF');
     } finally {
