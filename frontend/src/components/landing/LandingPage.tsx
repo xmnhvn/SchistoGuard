@@ -86,11 +86,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
   const [deviceConnected, setDeviceConnected] = useState(true);
-  const [siteData, setSiteData] = useState<any>({
-    siteName: "Site Name",
-    barangay: "",
-    municipality: "",
-    area: "",
+  const [siteData, setSiteData] = useState<any>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const cachedName = localStorage.getItem('sg_global_latest_siteName');
+        return {
+          siteName: cachedName || "Matina Site",
+          barangay: "Matina Crossing",
+          municipality: "Davao City",
+          area: "C. Enclabo St",
+        };
+      }
+    } catch { }
+    return {
+      siteName: "Matina Site",
+      barangay: "Matina Crossing",
+      municipality: "Davao City",
+      area: "C. Enclabo St",
+    };
   });
 
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
@@ -143,8 +156,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       })
       .catch(console.error);
   }, []);
-  // Address from reverse geocoding
-  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
+  // Address from reverse geocoding (sync with dashboard)
+  const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('sg_global_latest_address');
+        if (cached) return cached;
+      }
+    } catch { }
+    return null;
+  });
   // Cache last lat/lng to avoid unnecessary API calls
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
   // Fallback logic for marker and address (sync with dashboard)
@@ -231,6 +252,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         setGpsAddress(null); // reset while loading
         reverseGeocode(lat, lng).then(addr => {
           setGpsAddress(addr);
+          // Sync with dashboard global cache
+          if (addr && addr !== "Unnamed Road" && addr !== "Device Address") {
+            localStorage.setItem('sg_global_latest_address', addr);
+          }
         });
       }
     } else {
@@ -238,6 +263,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       lastLatLngRef.current = null;
     }
   }, [gpsSites]);
+  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
+  useEffect(() => {
+    if (!gpsAddress && typeof window !== 'undefined') {
+      const keys = Object.keys(localStorage);
+      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+      if (addressKey) {
+        const cached = localStorage.getItem(addressKey);
+        if (cached && cached !== "Device Address") {
+          setGpsAddress(cached);
+          localStorage.setItem('sg_global_latest_address', cached);
+        }
+      }
+
+      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
+      if (siteNameKey && siteData.siteName === "Matina Site") {
+        const cachedName = localStorage.getItem(siteNameKey);
+        if (cachedName && cachedName !== "Site Name") {
+          setSiteData((prev: any) => ({ ...prev, siteName: cachedName }));
+          localStorage.setItem('sg_global_latest_siteName', cachedName);
+        }
+      }
+    }
+  }, [gpsAddress, siteData.siteName]);
+
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
 
@@ -556,7 +605,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {shouldRenderMap && (
             <DashboardMap
               ref={mapRef}
-              interactive={showLiveUpdates}
+              interactive={showLiveUpdates && screenWidth >= 600}
               mobileMode={isMobileOrTablet}
               sites={gpsSites}
               // On desktop preview, shift pin further right (-0.0032) to match Pic 2 framing
@@ -564,9 +613,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               latOffset={
                 isMobileOrTablet
                   ? isPreviewActive
-                    ? screenWidth >= 800
-                      ? 0.0018
-                      : 0.0012
+                    ? screenWidth < 380
+                      ? -0.0010 // Pic 1 - Galaxy (Lowered from -0.0015)
+                      : screenWidth < 600
+                        ? -0.0008 // Pic 2 - iPhone 13 (Lowered from -0.0012)
+                        : screenWidth < 800
+                          ? -0.0016 // Pic 5 - iPad mini (Raised from -0.0008)
+                          : -0.0013 // Pic 3 & 4 - iPad Air/Pro (Raised from -0.0006)
                     : -0.00099 // Dashboard default for mobile/tablet
                   : undefined
               }
@@ -935,10 +988,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
               padding: isMobileOrTablet
-                ? (screenWidth < 400 ? '72px 16px 48px' :
-                  screenWidth < 600 ? '76px 20px 56px' :
-                    screenWidth < 800 ? '80px 24px 64px' :
-                      '88px 28px 72px')
+                ? (screenWidth < 400 ? '72px 16px 16px' :
+                  screenWidth < 600 ? '76px 20px 20px' :
+                    screenWidth < 800 ? '80px 24px 24px' :
+                      '88px 28px 28px')
                 : '100px 50px 120px',
               display: 'flex',
               flexDirection: 'column',
@@ -1045,27 +1098,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   } as any} />
                   {(deviceConnected && backendOk && dataOk) ? 'System Operational' : 'System Down'}
                 </div>
-                <button
-                  onClick={() => mapRef.current?.resetView()}
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.92)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                    backdropFilter: 'blur(4px)',
-                  }}
-                  title="Reset map position"
-                >
-                  <LocateFixed size={15} color="#357D86" strokeWidth={2.5} />
-                </button>
+                {screenWidth >= 600 && (
+                  <button
+                    onClick={() => mapRef.current?.resetView()}
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.92)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                    title="Reset map position"
+                  >
+                    <LocateFixed size={15} color="#357D86" strokeWidth={2.5} />
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* flex spacer — grows to fill remaining space so cards anchor to bottom */}
+            {isMobileOrTablet && <div style={{ flex: 1, minHeight: isMobileOrTablet ? (screenWidth < 600 ? 20 : 40) : 0 }} />}
 
             <div
               ref={cardsGridRef}
