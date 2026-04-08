@@ -56,6 +56,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         // Use easeTo for smooth slide instead of panTo to avoid glitch/jump
         map.current.easeTo({
           center: targetCenter,
+          zoom: defaultView.current.zoom,
           duration: center ? 600 : 500, // Preview: 0.6s fast, Return: 0.5s very fast
           easing: (t) => t, // Linear easing for clean slide
         });

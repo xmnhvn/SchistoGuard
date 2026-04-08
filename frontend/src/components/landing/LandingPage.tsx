@@ -99,9 +99,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     const checkInstalled = () => {
       // Check if running in standalone mode (installed)
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                          (window.navigator as any).standalone || 
-                          document.referrer.includes('android-app://');
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone ||
+        document.referrer.includes('android-app://');
       setIsPWAInstalled(isStandalone);
     };
 
@@ -168,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     let sites;
     let lastLoc;
-    
+
     // 1. Prioritize real-time data from latestReading
     if (
       latestReading &&
@@ -184,12 +184,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         lng: latestReading.longitude,
       }];
       lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
-      
+
       // Persist to localStorage for immediate loading on next visit
       localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
-    } 
+    }
     // 2. Fallback to cached location if no live reading yet
     else {
       let cachedSet = false;
@@ -213,7 +213,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           } catch { }
         }
       }
-      
+
       // 3. If no live/cached location, keep map marker empty to avoid fake location pins
       if (!cachedSet) {
         setGpsSites(undefined);
@@ -467,15 +467,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         boxShadow: screenWidth < 600 ? "0 4px 18px rgba(0,0,0,0.11)" : "0 2px 12px rgba(0,0,0,0.09)",
         fontFamily: "'Poppins', sans-serif",
         animation: 'cardFadeIn 0.6s 0.6s ease-out both',
-        gridColumn: '1 / -1', 
+        gridColumn: '1 / -1',
         display: "flex",
         flexDirection: "column",
         gap: 12,
         marginTop: 4, // Added margin to separate from the cards above
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <div style={{ 
-            width: 34, height: 34, borderRadius: 10, 
+          <div style={{
+            width: 34, height: 34, borderRadius: 10,
             background: "linear-gradient(135deg, #357D86, #4EA8B1)",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
@@ -487,9 +487,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         {/* Current Risk Interpretation */}
-        <div style={{ 
-          padding: "12px 14px", 
-          borderRadius: 14, 
+        <div style={{
+          padding: "12px 14px",
+          borderRadius: 14,
           background: current.bgColor,
           border: `1px solid ${current.borderColor}`,
           display: "flex",
@@ -559,8 +559,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               interactive={showLiveUpdates}
               mobileMode={isMobileOrTablet}
               sites={gpsSites}
-              // On desktop preview, shift pin right (-0.0030) to center it in the empty right half of the screen
-              lngOffset={!isMobileOrTablet ? (isPreviewActive ? -0.0010 : -0.0015) : undefined}
+              // On desktop preview, shift pin further right (-0.0032) to match Pic 2 framing
+              lngOffset={!isMobileOrTablet ? (isPreviewActive ? -0.0020 : -0.0015) : undefined}
               latOffset={
                 isMobileOrTablet
                   ? isPreviewActive
@@ -935,11 +935,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
               padding: isMobileOrTablet
-                ? (screenWidth < 400 ? '72px 16px 48px' : 
-                  screenWidth < 600 ? '76px 20px 56px' : 
-                    screenWidth < 800 ? '80px 24px 64px' : 
-                      '88px 28px 72px') 
-                : '100px 50px 120px', 
+                ? (screenWidth < 400 ? '72px 16px 48px' :
+                  screenWidth < 600 ? '76px 20px 56px' :
+                    screenWidth < 800 ? '80px 24px 64px' :
+                      '88px 28px 72px')
+                : '100px 50px 120px',
               display: 'flex',
               flexDirection: 'column',
               gap: 16,
@@ -1071,11 +1071,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ref={cardsGridRef}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 20, // Increased from 16 for better breathing room
+                gridTemplateColumns: screenWidth >= 1100 ? '1fr 1fr 1fr' : '1fr 1fr',
+                gap: 20,
                 pointerEvents: 'auto',
-                marginTop: 20, // Increased from 16
-                maxWidth: screenWidth < 1100 ? '100%' : 400,
+                marginTop: 20,
+                maxWidth: screenWidth < 1100 ? '100%' : 680, // Increased for 3-col layout
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
@@ -1168,8 +1168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* pH Card */}
               <div
                 style={{
-                  // Span both columns to fill bottom row
-                  gridColumn: '1 / -1',
+                  gridColumn: screenWidth >= 1100 ? 'auto' : '1 / -1',
                   background: '#fff',
                   borderRadius: 20,
                   padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
@@ -1262,9 +1261,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       />
       {/* PWA Instructions Modal */}
-      <PWAInstructionsModal 
-        isOpen={showPWAInstructions} 
-        onClose={() => setShowPWAInstructions(false)} 
+      <PWAInstructionsModal
+        isOpen={showPWAInstructions}
+        onClose={() => setShowPWAInstructions(false)}
       />
     </div>
   );

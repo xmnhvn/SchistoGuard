@@ -1127,10 +1127,7 @@ export function Dashboard({
           {/* flex spacer — grows to fill remaining space so cards anchor to bottom */}
           <div style={{ flex: 1, minHeight: isTab ? 20 : 40 }} />
 
-          {/* Data Interpretation (Mobile) */}
-          <div style={{ padding: `0 ${dPad}px 16px`, pointerEvents: "auto" }}>
-            {renderDataInterpretation(true)}
-          </div>
+
 
           {/* ── CARDS — anchored to bottom, no solid section bg ── */}
           <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : 20}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
