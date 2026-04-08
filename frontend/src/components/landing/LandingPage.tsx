@@ -467,10 +467,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         boxShadow: screenWidth < 600 ? "0 4px 18px rgba(0,0,0,0.11)" : "0 2px 12px rgba(0,0,0,0.09)",
         fontFamily: "'Poppins', sans-serif",
         animation: 'cardFadeIn 0.6s 0.6s ease-out both',
-        gridColumn: '1 / -1', // Always spans full width of the preview column
+        gridColumn: '1 / -1', 
         display: "flex",
         flexDirection: "column",
-        gap: 12
+        gap: 12,
+        marginTop: 4, // Added margin to separate from the cards above
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <div style={{ 
@@ -934,11 +935,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
               padding: isMobileOrTablet
-                ? (screenWidth < 400 ? '72px 16px 16px' : // Very small phones
-                  screenWidth < 600 ? '76px 20px 20px' : // Small phones
-                    screenWidth < 800 ? '80px 24px 24px' : // Large phones
-                      '88px 28px 28px') // Tablets
-                : '100px 50px 50px', // Desktop
+                ? (screenWidth < 400 ? '72px 16px 48px' : 
+                  screenWidth < 600 ? '76px 20px 56px' : 
+                    screenWidth < 800 ? '80px 24px 64px' : 
+                      '88px 28px 72px') 
+                : '100px 50px 120px', 
               display: 'flex',
               flexDirection: 'column',
               gap: 16,
@@ -1071,9 +1072,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                gap: 16,
+                gap: 20, // Increased from 16 for better breathing room
                 pointerEvents: 'auto',
-                marginTop: 16,
+                marginTop: 20, // Increased from 16
                 maxWidth: screenWidth < 1100 ? '100%' : 400,
               }}
             >
