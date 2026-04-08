@@ -931,14 +931,14 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               minHeight: 0,
               overflowX: "auto",
               overflowY: "auto",
-              padding: 20, // Match AlertsPage internal padding
+              padding: "0 24px 24px", // Removed top padding to stabilize sticky header
             }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
                     {deleteMode && (
                       <th style={{
-                        padding: "16px 14px 16px 24px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 1
+                        padding: "16px 14px 16px 24px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 20
                       }}></th>
                     )}
                     {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
@@ -951,7 +951,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                         position: "sticky",
                         top: 0,
                         background: "#fff",
-                        zIndex: 1,
+                        zIndex: 20, // Increased z-index to stay above animating rows
                         fontFamily: POPPINS,
                       }}>{h}</th>
                     ))}
