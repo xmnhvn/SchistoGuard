@@ -404,7 +404,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // ─── Risk Calculation Logic (Sync with Dashboard) ───────────────────────
   const getOverallRisk = () => {
-    if (!latestReading) return "safe";
+    if (!latestReading) return "no-data";
     const temp = latestReading.temperature;
     const turbidity = latestReading.turbidity;
     const ph = latestReading.ph;
@@ -447,6 +447,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         color: "#ef4444",
         bgColor: "rgba(239,68,68,0.08)",
         borderColor: "rgba(239,68,68,0.2)"
+      },
+      "no-data": {
+        title: "Waiting for Data",
+        message: "Establishing connection to SchistoGuard sensor for live analysis.",
+        color: "#64748b",
+        bgColor: "rgba(100,116,139,0.08)",
+        borderColor: "rgba(100,116,139,0.2)"
       }
     };
 
@@ -1201,8 +1208,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 )}
               </div>
 
-              {/* Data Interpretation & Analysis Card */}
-              {latestReading && renderAnalysisCard()}
+              {/* Data Interpretation & Analysis Card — persistent for educational guide */}
+              {renderAnalysisCard()}
             </div>
           </div>
         </div>
