@@ -127,6 +127,7 @@ export const ReportsPage: React.FC = () => {
   const isWeb = windowWidth >= 1024;
 
   const previewDocumentRef = React.useRef<HTMLElement | null>(null);
+  const mobilePreviewRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
     fetchReports();
@@ -324,7 +325,7 @@ export const ReportsPage: React.FC = () => {
     setDownloading(true);
 
     try {
-      const previewElement = previewDocumentRef.current;
+      const previewElement = previewDocumentRef.current || mobilePreviewRef.current;
       if (!previewElement) {
         throw new Error('Report preview is not ready yet. Please try again.');
       }
@@ -1131,6 +1132,112 @@ export const ReportsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Hidden off-screen article for mobile PDF generation */}
+      {(isMobile || isTablet) && selectedReport && (
+        <div style={{ position: 'fixed', left: '-9999px', top: 0, width: 760, zIndex: -1, pointerEvents: 'none' }}>
+          <article ref={mobilePreviewRef} style={{ width: 760, background: '#fff', padding: '28px', fontSize: 13, lineHeight: 1.6, color: '#1e293b', fontFamily: "'Poppins', sans-serif" }}>
+            <header style={{ marginBottom: 24, borderBottom: '1px solid #e2e8f0', paddingBottom: 24, textAlign: 'center' }}>
+              <PDFHeader
+                dynamicSiteName={dynamicSiteName || 'System Summary Report'}
+                address={address || 'Device Address'}
+              />
+            </header>
+
+            <section style={{ marginTop: 16, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <tbody>
+                  <tr>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 600 }}>Report Title</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{selectedReport.title}</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 600 }}>Report Type</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', textTransform: 'capitalize' }}>{selectedReport.type}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 600 }}>Generated</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>
+                      {new Date(selectedReport.generatedDate)
+                        .toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                        .replaceAll('/', '-')}
+                    </td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 600 }}>Risk Level</td>
+                    <td style={{
+                      border: '1px solid #cbd5e1', padding: '4px 8px', textTransform: 'capitalize',
+                      color: selectedReport.summary.riskLevel === 'high' ? '#EB5757' :
+                        selectedReport.summary.riskLevel === 'moderate' ? '#F2994A' : '#27AE60',
+                      fontWeight: 700
+                    }}>
+                      {selectedReport.summary.riskLevel}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 600 }}>Total Sites</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{selectedReport.summary.totalSites}</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 600 }}>Alerts</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{selectedReport.summary.alertsGenerated}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section style={{ marginTop: 16 }}>
+              <h4 style={{ borderBottom: '1px solid #cbd5e1', paddingBottom: 4, fontSize: 14, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#0f172a' }}>Summary</h4>
+              <p style={{ marginTop: 8, fontSize: 12, color: '#334155' }}>
+                This {selectedReport.type} report covers monitoring data for {selectedReport.period}. A total of {selectedReport.summary.totalSites}{' '}
+                monitoring sites were reviewed, and {selectedReport.summary.alertsGenerated} alerts were logged for follow-up.
+              </p>
+            </section>
+
+            <section style={{ marginTop: 16, overflowX: 'auto' }}>
+              <h4 style={{ borderBottom: '1px solid #cbd5e1', paddingBottom: 4, fontSize: 14, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#0f172a' }}>Key Actions And Metrics</h4>
+              <table style={{ marginTop: 8, width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr>
+                    <th style={{ border: '1px solid #cbd5e1', padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Metric</th>
+                    <th style={{ border: '1px solid #cbd5e1', padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Average</th>
+                    <th style={{ border: '1px solid #cbd5e1', padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Status</th>
+                    <th style={{ border: '1px solid #cbd5e1', padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>Turbidity</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{formatMetric(selectedReport.summary.avgTurbidity)} NTU</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{getTurbidityRemark(selectedReport.summary.avgTurbidity).label}</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>Track suspended particles and clarity trends.</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>Temperature</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{formatMetric(selectedReport.summary.avgTemperature)} C</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{getTemperatureRemark(selectedReport.summary.avgTemperature || 0).label}</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>Review thermal conditions affecting parasite viability.</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>pH Level</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{formatMetric(selectedReport.summary.avgPh)} pH</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>{getPhRemark(selectedReport.summary.avgPh || 0).label}</td>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>Check acidity/alkalinity drift versus target range.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section style={{ marginTop: 16 }}>
+              <h4 style={{ borderBottom: '1px solid #cbd5e1', paddingBottom: 4, fontSize: 14, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#0f172a' }}>Findings And Observations</h4>
+              <p style={{ marginTop: 8, fontSize: 12, color: '#334155' }}>
+                Overall risk classification for this reporting period is <span style={{
+                  fontWeight: 600, textTransform: 'capitalize',
+                  color: selectedReport.summary.riskLevel === 'high' ? '#D14343' :
+                    selectedReport.summary.riskLevel === 'moderate' ? '#F1A11A' : '#23B67E'
+                }}>{selectedReport.summary.riskLevel}</span>.
+                {selectedReport.summary.alertsGenerated > 0
+                  ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
+                  : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
+              </p>
+            </section>
+          </article>
+        </div>
+      )}
 
       {/* Create Report Dialog */}
       <Dialog open={showCreateReport} onOpenChange={setShowCreateReport}>
