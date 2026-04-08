@@ -957,23 +957,21 @@ export function Dashboard({
             {/* Address (sync with LandingPage logic) */}
             <p style={{
               fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", 
-              margin: "5px 0 10px",
+              margin: "5px 0 12px",
               fontFamily: POPPINS,
-              minHeight: (isTab || isMobile) ? 44 : 20, // Reserve space for wrapping to prevent graph jump
-              display: "-webkit-box",
-              WebkitLineClamp: isNarrowDesktop ? 1 : 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden"
+              minHeight: "auto",
+              lineHeight: 1.4
             }}>
               {displayAddress}
             </p>
             {/* System Operational badge — left-aligned, under address */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 background: "rgba(255,255,255,0.92)", borderRadius: 999,
                 padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
+                width: "fit-content"
               }}>
                 <span style={{
                   width: 8, height: 8, borderRadius: "50%",
