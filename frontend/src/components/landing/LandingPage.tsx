@@ -8,6 +8,9 @@ import {
   ChevronLeft,
   LocateFixed,
   Download,
+  Thermometer,
+  Droplets,
+  Info,
 } from "lucide-react";
 import { DashboardMap } from "../DashboardMap";
 import type { DashboardMapHandle } from "../DashboardMap";
@@ -398,6 +401,142 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Upstream implementation uses state for gpsSites, procedural logic removed.
 
   const isPreviewActive = showLiveUpdates && !isExitingLiveUpdates;
+
+  // ─── Risk Calculation Logic (Sync with Dashboard) ───────────────────────
+  const getOverallRisk = () => {
+    if (!latestReading) return "safe";
+    const temp = latestReading.temperature;
+    const turbidity = latestReading.turbidity;
+    const ph = latestReading.ph;
+
+    let risks = [];
+    if (temp >= 22 && temp <= 30) risks.push("critical");
+    else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) risks.push("warning");
+
+    if (turbidity < 5) risks.push("critical");
+    else if (turbidity <= 15) risks.push("warning");
+
+    if (ph >= 6.5 && ph <= 8.0) risks.push("critical");
+    else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) risks.push("warning");
+
+    if (risks.includes("critical")) return "critical";
+    if (risks.includes("warning")) return "warning";
+    return "safe";
+  };
+
+  const renderAnalysisCard = () => {
+    const overallRisk = getOverallRisk();
+    const riskData = {
+      safe: {
+        title: "Safe Environment",
+        message: "Conditions are currently unfavorable for Schistosomiasis snails.",
+        color: "#22c55e",
+        bgColor: "rgba(34,197,94,0.08)",
+        borderColor: "rgba(34,197,94,0.2)"
+      },
+      warning: {
+        title: "Moderate Risk",
+        message: "Parameters are approaching optimal breeding ranges for snails.",
+        color: "#f59e0b",
+        bgColor: "rgba(245,158,11,0.08)",
+        borderColor: "rgba(245,158,11,0.2)"
+      },
+      critical: {
+        title: "High Risk",
+        message: "Environment is highly favorable for Schistosomiasis intermediate hosts.",
+        color: "#ef4444",
+        bgColor: "rgba(239,68,68,0.08)",
+        borderColor: "rgba(239,68,68,0.2)"
+      }
+    };
+
+    const current = riskData[overallRisk as keyof typeof riskData];
+
+    return (
+      <div style={{
+        background: "#fff",
+        borderRadius: 20,
+        padding: screenWidth < 600 ? "16px" : "22px",
+        boxShadow: screenWidth < 600 ? "0 4px 18px rgba(0,0,0,0.11)" : "0 2px 12px rgba(0,0,0,0.09)",
+        fontFamily: "'Poppins', sans-serif",
+        animation: 'cardFadeIn 0.6s 0.6s ease-out both',
+        gridColumn: '1 / -1', // Always spans full width of the preview column
+        display: "flex",
+        flexDirection: "column",
+        gap: 12
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <div style={{ 
+            width: 34, height: 34, borderRadius: 10, 
+            background: "linear-gradient(135deg, #357D86, #4EA8B1)",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <Activity size={18} color="#fff" />
+          </div>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#337C85" }}>
+            Data Interpretation
+          </h3>
+        </div>
+
+        {/* Current Risk Interpretation */}
+        <div style={{ 
+          padding: "12px 14px", 
+          borderRadius: 14, 
+          background: current.bgColor,
+          border: `1px solid ${current.borderColor}`,
+          display: "flex",
+          gap: 10,
+          alignItems: "flex-start"
+        }}>
+          <Info size={16} color={current.color} style={{ marginTop: 2, flexShrink: 0 }} />
+          <div>
+            <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: current.color }}>
+              {current.title}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
+              {current.message}
+            </p>
+          </div>
+        </div>
+
+        {/* Threshold Quick Guide */}
+        <div style={{ marginTop: 4 }}>
+          <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>
+            Snail Breeding Danger Zones
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Thermometer size={14} color="#77ABB2" />
+                <span style={{ fontSize: 12, color: "#475569" }}>Temperature</span>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+                22°C - 30°C
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Droplets size={14} color="#77ABB2" />
+                <span style={{ fontSize: 12, color: "#475569" }}>Turbidity</span>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+                Clear (&lt; 5 NTU)
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Info size={14} color="#77ABB2" />
+                <span style={{ fontSize: 12, color: "#475569" }}>pH Levels</span>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+                6.5 - 8.0 pH
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden bg-white">
@@ -1061,6 +1200,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 )}
               </div>
+
+              {/* Data Interpretation & Analysis Card */}
+              {latestReading && renderAnalysisCard()}
             </div>
           </div>
         </div>
