@@ -356,7 +356,7 @@ export const ReportsPage: React.FC = () => {
         const isMobile = window.innerWidth < 768;
         const worker = html2pdf()
           .set({
-            margin: [15, 15, 15, 15],
+            margin: [10, 10, 10, 10],
             filename: fileName,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { 
@@ -437,10 +437,10 @@ export const ReportsPage: React.FC = () => {
   const renderReportArticle = (report: Report, isForCapture: boolean = false) => (
     <article
       ref={isForCapture ? (previewDocumentRef as any) : null}
-      className={`mx-auto w-full max-w-[760px] bg-white text-[13px] leading-relaxed text-slate-800 ${
+      className={`mx-auto w-full max-w-[720px] bg-white text-[13px] leading-relaxed text-slate-800 ${
         isForCapture ? 'p-10' : 'p-5 sm:p-7'
       }`}
-      style={isForCapture ? { width: '760px', minHeight: '1000px' } : {}}
+      style={isForCapture ? { width: '720px', minHeight: '1000px' } : {}}
     >
       <header className="mb-6 border-b border-slate-200 pb-6 text-center">
         <PDFHeader
@@ -623,7 +623,7 @@ export const ReportsPage: React.FC = () => {
           position: 'fixed', 
           left: '-9999px', 
           top: 0, 
-          width: '794px', 
+          width: '730px', 
           zIndex: -1, 
           visibility: 'hidden',
           pointerEvents: 'none'
