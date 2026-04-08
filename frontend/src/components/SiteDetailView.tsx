@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
-import { loadHtml2Pdf, triggerPdfDownload } from "../utils/loadHtml2Pdf";
+import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from "../utils/loadHtml2Pdf";
 import { reverseGeocode } from "../utils/reverseGeocode";
 import { PDFHeader } from "./PDFHeader";
 
@@ -153,29 +153,13 @@ export function SiteDetailView({
     // BEFORE the CPU-intensive capture logic hits and potentially freezes the main thread.
     await new Promise(resolve => setTimeout(resolve, 250));
 
-    const originalTransform = chartRef.current.style.transform;
-    const originalHeight = chartRef.current.style.height;
-    const originalWidth = chartRef.current.style.width;
-    const originalMinWidth = chartRef.current.style.minWidth;
-    const originalPosition = chartRef.current.style.position;
-    const originalLeft = chartRef.current.style.left;
-    
     // Add layout class for PDF to handle margins/gaps
     chartRef.current.classList.add('sg-exporting-pdf');
 
-    // Force desktop-width layout so the PDF always matches the desktop version
-    const needsDesktopOverride = window.innerWidth < 1100;
-    if (needsDesktopOverride) {
-      chartRef.current.style.width = '1200px';
-      chartRef.current.style.minWidth = '1200px';
-      chartRef.current.style.position = 'absolute';
-      chartRef.current.style.left = '-9999px';
-      // Allow a reflow for the desktop layout to take effect
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-    
     try {
       const html2pdf = await loadHtml2Pdf();
+      if (!html2pdf) return;
+
       let time = 'AllTime';
       if (timeRange && timeRange !== 'all') {
         if (timeRange.endsWith('h')) {
@@ -192,28 +176,37 @@ export function SiteDetailView({
       const sanitizedName = siteName?.replace(/\s+/g, '_') || 'Site';
       const filename = `${sanitizedName}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
       
-      const worker = html2pdf()
-        .set({
-          margin: [10, 10, 10, 10],
-          filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        })
-        .from(chartRef.current);
-      
-      await triggerPdfDownload(worker, filename);
+      await captureCleanElement(chartRef.current, async (clonedElement) => {
+        // Force landscape-friendly width for the chart clone
+        clonedElement.style.width = '1120px'; 
+        clonedElement.style.minWidth = '1120px';
+        clonedElement.style.maxWidth = '1120px';
+
+        const worker = html2pdf()
+          .set({
+            margin: [10, 10, 10, 10],
+            filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+              scale: window.innerWidth < 768 ? 1.5 : 2, 
+              useCORS: true, 
+              backgroundColor: '#ffffff',
+              logging: false,
+              letterRendering: true
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          })
+          .from(clonedElement);
+        
+        await triggerPdfDownload(worker, filename);
+      });
     } catch (err) {
       console.error('Failed to export chart PDF.', err);
     } finally {
-      if (originalTransform) chartRef.current.style.transform = originalTransform;
-      chartRef.current.style.height = originalHeight;
-      chartRef.current.style.width = originalWidth;
-      chartRef.current.style.minWidth = originalMinWidth;
-      chartRef.current.style.position = originalPosition;
-      chartRef.current.style.left = originalLeft;
-      chartRef.current.classList.remove('sg-exporting-pdf');
+      if (chartRef.current) {
+        chartRef.current.classList.remove('sg-exporting-pdf');
+      }
       setExporting(false);
     }
   };

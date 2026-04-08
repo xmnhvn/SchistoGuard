@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { apiGet, apiPost, apiDelete } from '../utils/api';
-import { loadHtml2Pdf, triggerPdfDownload } from '../utils/loadHtml2Pdf';
+import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from '../utils/loadHtml2Pdf';
 import { reverseGeocode } from '../utils/reverseGeocode';
 import { PDFHeader } from './PDFHeader';
 
@@ -352,37 +352,27 @@ export const ReportsPage: React.FC = () => {
         throw new Error('PDF export library is unavailable. Please try again.');
       }
 
-      // Force desktop-width layout so the PDF always matches the desktop version
-      const needsDesktopOverride = window.innerWidth < 1100;
-      const origWidth = previewElement.style.width;
-      const origMinWidth = previewElement.style.minWidth;
-      const origMaxWidth = previewElement.style.maxWidth;
-      if (needsDesktopOverride) {
-        previewElement.style.width = '760px';
-        previewElement.style.minWidth = '760px';
-        previewElement.style.maxWidth = '760px';
-        // Allow a reflow for the desktop layout to take effect
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-
-      try {
+      await captureCleanElement(previewElement, async (clonedElement) => {
+        const isMobile = window.innerWidth < 768;
         const worker = html2pdf()
           .set({
             margin: [15, 15, 15, 15],
             filename: fileName,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+            html2canvas: { 
+              scale: isMobile ? 1.5 : 2, 
+              useCORS: true, 
+              backgroundColor: '#ffffff',
+              logging: false,
+              letterRendering: true
+            },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] },
           })
-          .from(previewElement);
+          .from(clonedElement);
 
         await triggerPdfDownload(worker, fileName);
-      } finally {
-        previewElement.style.width = origWidth;
-        previewElement.style.minWidth = origMinWidth;
-        previewElement.style.maxWidth = origMaxWidth;
-      }
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to download report PDF');
     } finally {

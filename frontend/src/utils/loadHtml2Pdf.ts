@@ -45,6 +45,58 @@ export async function triggerPdfDownload(worker: any, fileName: string) {
   } catch (error) {
     console.error('PDF Download failed:', error);
     // Fallback to default save if blob method fails
-    return worker.save();
+  }
+}
+
+/**
+ * Isolates an element for high-quality, stable capture.
+ * Clones the element, forces a desktop layout (A4 width),
+ * and renders it in a hidden container to avoid interference
+ * from mobile UI, modals, or scroll positions.
+ */
+export async function captureCleanElement(
+  originalElement: HTMLElement,
+  callback: (clonedElement: HTMLElement) => Promise<void>
+) {
+  if (typeof window === 'undefined') return;
+
+  // 1. Create a hidden container on the body
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = '794px'; // A4 width at 96 DPI
+  container.style.backgroundColor = 'white';
+  container.style.zIndex = '-9999';
+  
+  // 2. Clone the element
+  const clone = originalElement.cloneNode(true) as HTMLElement;
+  
+  // 3. Force desktop-friendly styles on the clone
+  clone.style.width = '794px';
+  clone.style.minWidth = '794px';
+  clone.style.maxWidth = '794px';
+  clone.style.margin = '0';
+  clone.style.padding = originalElement.style.padding || '20px';
+  clone.style.boxSizing = 'border-box';
+  clone.style.overflow = 'visible';
+  clone.style.height = 'auto';
+  
+  // Ensure background is visible to html2canvas
+  clone.style.backgroundColor = 'white';
+
+  // 4. Attach and run capture logic
+  container.appendChild(clone);
+  document.body.appendChild(container);
+
+  try {
+    // Small delay to ensure any reflows or dynamic content (like SVGs) are stable
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await callback(clone);
+  } finally {
+    // 5. Cleanup
+    if (document.body.contains(container)) {
+      document.body.removeChild(container);
+    }
   }
 }
