@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
-import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+import { loadHtml2Pdf, triggerPdfDownload } from "../utils/loadHtml2Pdf";
 import { reverseGeocode } from "../utils/reverseGeocode";
 import { PDFHeader } from "./PDFHeader";
 
@@ -192,7 +192,7 @@ export function SiteDetailView({
       const sanitizedName = siteName?.replace(/\s+/g, '_') || 'Site';
       const filename = `${sanitizedName}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
       
-      await html2pdf()
+      const worker = html2pdf()
         .set({
           margin: [10, 10, 10, 10],
           filename,
@@ -201,8 +201,9 @@ export function SiteDetailView({
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
           pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         })
-        .from(chartRef.current)
-        .save();
+        .from(chartRef.current);
+      
+      await triggerPdfDownload(worker, filename);
     } catch (err) {
       console.error('Failed to export chart PDF.', err);
     } finally {

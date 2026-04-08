@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { apiGet, apiPost, apiDelete } from '../utils/api';
-import { loadHtml2Pdf } from '../utils/loadHtml2Pdf';
+import { loadHtml2Pdf, triggerPdfDownload } from '../utils/loadHtml2Pdf';
 import { reverseGeocode } from '../utils/reverseGeocode';
 import { PDFHeader } from './PDFHeader';
 
@@ -347,34 +347,8 @@ export const ReportsPage: React.FC = () => {
       const truncatedDescriptor = descriptor.slice(0, 120).trim();
       const fileName = `${truncatedDescriptor || 'Water Quality Report'} - ${formattedDate}.pdf`;
 
-      const loadHtml2Pdf = async () => {
-        if (typeof (window as any).html2pdf === 'function') {
-          return;
-        }
-
-        await new Promise<void>((resolve, reject) => {
-          const existingScript = document.querySelector('script[data-html2pdf="true"]') as HTMLScriptElement | null;
-
-          if (existingScript) {
-            existingScript.addEventListener('load', () => resolve(), { once: true });
-            existingScript.addEventListener('error', () => reject(new Error('Failed to load PDF export library.')), { once: true });
-            return;
-          }
-
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-          script.async = true;
-          script.dataset.html2pdf = 'true';
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Failed to load PDF export library.'));
-          document.body.appendChild(script);
-        });
-      };
-
-      await loadHtml2Pdf();
-      const html2pdf = (window as any).html2pdf;
-
-      if (typeof html2pdf !== 'function') {
+      const html2pdf = await loadHtml2Pdf();
+      if (!html2pdf) {
         throw new Error('PDF export library is unavailable. Please try again.');
       }
 
@@ -392,7 +366,7 @@ export const ReportsPage: React.FC = () => {
       }
 
       try {
-        await html2pdf()
+        const worker = html2pdf()
           .set({
             margin: [15, 15, 15, 15],
             filename: fileName,
@@ -401,8 +375,9 @@ export const ReportsPage: React.FC = () => {
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] },
           })
-          .from(previewElement)
-          .save();
+          .from(previewElement);
+
+        await triggerPdfDownload(worker, fileName);
       } finally {
         previewElement.style.width = origWidth;
         previewElement.style.minWidth = origMinWidth;
