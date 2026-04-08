@@ -396,7 +396,33 @@ export function Dashboard({
     const fetchReadings = () => {
       apiGet(`/api/sensors/history?interval=${getIntervalString()}&range=24h`)
         .then((data) => {
-          if (Array.isArray(data)) setReadings(data);
+          if (Array.isArray(data)) {
+            setReadings(data);
+
+            // Fallback: scan history for the latest reading with valid GPS coordinates
+            // to resolve an address when the real-time /latest endpoint has null lat/lng.
+            // This mirrors SiteDetailView's approach.
+            if (!lastLatLngRef.current) {
+              const latestWithGps = [...data]
+                .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .find((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
+              if (latestWithGps) {
+                const fallbackLoc = {
+                  lat: latestWithGps.latitude,
+                  lng: latestWithGps.longitude,
+                  siteName: siteData.siteName || 'Last Known Location',
+                };
+                setLastSavedLocation(fallbackLoc);
+                setGpsSites([{
+                  id: 'device-gps',
+                  name: fallbackLoc.siteName,
+                  lat: fallbackLoc.lat,
+                  lng: fallbackLoc.lng,
+                }]);
+                localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
+              }
+            }
+          }
           setBackendOk(true);
         })
         .catch(() => setBackendOk(false));
