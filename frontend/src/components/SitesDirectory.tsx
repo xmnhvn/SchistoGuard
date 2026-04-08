@@ -297,187 +297,212 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         },
       });
 
-      // ── Analysis Summary Page ──
+      // ── Analysis Summary Page (Premium Redesign) ──
       doc.addPage();
       const ph = doc.internal.pageSize.getHeight();
       const margin = 40;
       let y = margin;
 
-      // Recalculate stats for analysis
+      // Restoring statistical logic for the new layout
       const totalReadings = filteredReadings.length;
       const sCount = filteredReadings.filter(r => r.riskLevel === 'safe').length;
       const wCount = filteredReadings.filter(r => r.riskLevel === 'warning').length;
       const cCount = filteredReadings.filter(r => r.riskLevel === 'critical').length;
 
-      // Param-level stats
-      const turbVals = filteredReadings.map(r => Number(r.turbidity)).filter(v => !isNaN(v));
-      const tempVals = filteredReadings.map(r => Number(r.temperature)).filter(v => !isNaN(v));
-      const phVals = filteredReadings.map(r => Number(r.ph)).filter(v => !isNaN(v));
+      const totalRiskBase = filteredReadings.length;
+      const sPct = totalRiskBase ? sCount / totalRiskBase : 0;
+      const wPct = totalRiskBase ? wCount / totalRiskBase : 0;
+      const cPct = totalRiskBase ? cCount / totalRiskBase : 0;
+
+      const turbVals = filteredReadings.map(r => Number(r.turbidity)).filter(v => !isNaN(v) && v !== -999 && v !== 0);
+      const tempVals = filteredReadings.map(r => Number(r.temperature)).filter(v => !isNaN(v) && v !== -999 && v !== 0);
+      const phVals = filteredReadings.map(r => Number(r.ph)).filter(v => !isNaN(v) && v !== -999 && v !== 0);
+      
       const avg = (arr: number[]) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
       const min = (arr: number[]) => arr.length ? Math.min(...arr) : 0;
       const max = (arr: number[]) => arr.length ? Math.max(...arr) : 0;
 
-      // Title
-      doc.setFontSize(18);
-      doc.setFont(pdfFont, 'bold');
-      doc.setTextColor(26, 42, 58);
-      doc.text('Analysis Summary', pw / 2, y, { align: 'center' });
-      y += 8;
-      doc.setDrawColor(53, 125, 134);
-      doc.setLineWidth(2);
-      doc.line(pw / 2 - 80, y, pw / 2 + 80, y);
-      y += 28;
+      // 1. Data Extent & Report Metadata
+      // Using existing dateFormat / timeFormat from outer scope
+      
+      const formatLongDate = (ts: string) => {
+        if (!ts) return "--";
+        const d = new Date(ts);
+        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+      };
+      
+      const fetchedStart = filteredReadings.length > 0 ? formatLongDate(filteredReadings[filteredReadings.length - 1].timestamp) : "--";
+      const fetchedEnd = filteredReadings.length > 0 ? formatLongDate(filteredReadings[0].timestamp) : "--";
 
-      // ── Overall Risk Distribution ──
-      doc.setFontSize(12);
-      doc.setFont(pdfFont, 'bold');
-      doc.setTextColor(26, 42, 58);
-      doc.text('Overall Risk Distribution', margin, y);
-      y += 20;
-
-      const barW = pw - margin * 2;
-      const barH = 18;
-      const sPct = totalReadings ? sCount / totalReadings : 0;
-      const wPct = totalReadings ? wCount / totalReadings : 0;
-      const cPct = totalReadings ? cCount / totalReadings : 0;
-
-      // Stacked bar
-      doc.setFillColor(35, 182, 126);
-      doc.roundedRect(margin, y, barW * sPct, barH, 4, 4, 'F');
-      doc.setFillColor(241, 161, 26);
-      doc.rect(margin + barW * sPct, y, barW * wPct, barH, 'F');
-      doc.setFillColor(209, 67, 67);
-      if (cPct > 0) {
-        doc.roundedRect(margin + barW * sPct + barW * wPct, y, barW * cPct, barH, 4, 4, 'F');
-      }
-      y += barH + 14;
-
-      // Legend
-      const legendItems = [
-        { label: `Safe: ${sCount} (${(sPct * 100).toFixed(1)}%)`, color: [35, 182, 126] as [number, number, number] },
-        { label: `Warning: ${wCount} (${(wPct * 100).toFixed(1)}%)`, color: [241, 161, 26] as [number, number, number] },
-        { label: `Critical: ${cCount} (${(cPct * 100).toFixed(1)}%)`, color: [209, 67, 67] as [number, number, number] },
-      ];
-      let lx = margin;
+      // Header Columns
       doc.setFontSize(9);
-      legendItems.forEach(item => {
-        doc.setFillColor(item.color[0], item.color[1], item.color[2]);
-        doc.roundedRect(lx, y - 6, 10, 10, 2, 2, 'F');
-        doc.setFont(pdfFont, 'normal');
-        doc.setTextColor(55, 65, 81);
-        doc.text(item.label, lx + 14, y + 2);
-        lx += 150;
-      });
-      y += 28;
-
-      // ── Parameter Statistics Table ──
+      doc.setFont(pdfFont, 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text('REPORT DETAILS', margin, y);
+      doc.text('DATA EXTENT', margin + 220, y);
+      doc.text('EXPORTED ON', pw - margin, y, { align: 'right' });
+      
+      y += 14;
+      doc.setFontSize(11);
+      doc.setTextColor(26, 42, 58);
+      doc.text('Sites Directory Summary', margin, y);
+      doc.setFontSize(10);
+      doc.text(`Start: ${fetchedStart}`, margin + 220, y);
       doc.setFontSize(12);
       doc.setFont(pdfFont, 'bold');
-      doc.setTextColor(26, 42, 58);
-      doc.text('Parameter Statistics', margin, y);
-      y += 8;
-
-      autoTable(doc, {
-        startY: y,
-        head: [['Parameter', 'Min', 'Max', 'Average', 'Status']],
-        body: [
-          [
-            'Turbidity (NTU)',
-            min(turbVals).toFixed(2),
-            max(turbVals).toFixed(2),
-            avg(turbVals).toFixed(2),
-            avg(turbVals) > 15 ? 'Critical' : avg(turbVals) > 5 ? 'Warning' : 'Safe',
-          ],
-          [
-            'Temperature (°C)',
-            min(tempVals).toFixed(2),
-            max(tempVals).toFixed(2),
-            avg(tempVals).toFixed(2),
-            (avg(tempVals) < 22 || avg(tempVals) > 30) ? 'Critical' : (avg(tempVals) < 24 || avg(tempVals) > 28) ? 'Warning' : 'Safe',
-          ],
-          [
-            'pH Level',
-            min(phVals).toFixed(2),
-            max(phVals).toFixed(2),
-            avg(phVals).toFixed(2),
-            (avg(phVals) < 6.5 || avg(phVals) > 8.0) ? 'Critical' : (avg(phVals) < 7.0 || avg(phVals) > 7.5) ? 'Warning' : 'Safe',
-          ],
-        ],
-        styles: { fontSize: 9, cellPadding: 8, font: pdfFont },
-        headStyles: { fillColor: [53, 125, 134], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        margin: { left: margin, right: margin },
-        didParseCell: (data: any) => {
-          if (data.section === 'body' && data.column.index === 4) {
-            const val = (data.cell.raw as string || '').toLowerCase();
-            const c = riskColorMap[val];
-            if (c) {
-              data.cell.styles.textColor = c;
-              data.cell.styles.fontStyle = 'bold';
-            }
-          }
-        },
-      });
-
-      // Get Y after the table
-      y = (doc as any).lastAutoTable.finalY + 30;
-
-      // ── Recommendations ──
-      doc.setFontSize(12);
+      doc.text(`${dateFormat}`, pw - margin, y, { align: 'right' });
+      
+      y += 14;
+      doc.setFontSize(10);
       doc.setFont(pdfFont, 'bold');
-      doc.setTextColor(26, 42, 58);
-      doc.text('Recommendations', margin, y);
-      y += 18;
-
-      doc.setFontSize(9.5);
+      doc.setTextColor(67, 198, 182); // #43c6b6
+      doc.text('Data sourced from IoT sensors', margin, y);
+      doc.setFontSize(10);
       doc.setFont(pdfFont, 'normal');
-      doc.setTextColor(55, 65, 81);
+      doc.setTextColor(26, 42, 58);
+      doc.text(`Latest: ${fetchedEnd}`, margin + 220, y);
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`${timeFormat}`, pw - margin, y, { align: 'right' });
 
-      const recommendations: string[] = [];
-      if (cCount > 0) {
-        recommendations.push(`⚠ ${cCount} reading(s) recorded at CRITICAL risk level. Immediate investigation recommended.`);
-      }
-      if (avg(turbVals) > 5) {
-        recommendations.push(`• Average turbidity is ${avg(turbVals).toFixed(2)} NTU (above 5 NTU threshold). Consider water filtration assessment.`);
-      }
-      if (avg(tempVals) < 22 || avg(tempVals) > 30) {
-        recommendations.push(`• Average temperature is ${avg(tempVals).toFixed(2)}°C (outside optimal 22-30°C range). Monitor environmental conditions.`);
-      }
-      if (avg(phVals) < 6.5 || avg(phVals) > 8.0) {
-        recommendations.push(`• Average pH is ${avg(phVals).toFixed(2)} (outside safe 6.5-8.0 range). Chemical treatment may be needed.`);
-      }
-      if (wCount > totalReadings * 0.3) {
-        recommendations.push(`• ${(wPct * 100).toFixed(0)}% of readings are at WARNING level. Increased monitoring frequency is advised.`);
-      }
-      if (cCount === 0 && wCount === 0) {
-        recommendations.push('✓ All readings are within safe parameters. Continue routine monitoring.');
-      }
-      if (recommendations.length === 0) {
-        recommendations.push('✓ Water quality is generally within acceptable parameters. Continue routine monitoring.');
-      }
+      y += 12;
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Time Range Filter: ${timeRangeText}`, margin, y);
 
-      recommendations.forEach(rec => {
-        const lines = doc.splitTextToSize(rec, pw - margin * 2);
-        lines.forEach((line: string) => {
-          if (y > ph - 60) { doc.addPage(); y = margin; }
-          doc.text(line, margin, y);
-          y += 14;
-        });
-        y += 4;
-      });
-
-      // ── Footer ──
-      y = Math.max(y + 20, ph - 60);
+      y += 20;
       doc.setDrawColor(226, 232, 240);
       doc.setLineWidth(0.5);
       doc.line(margin, y, pw - margin, y);
-      y += 14;
+      y += 24;
+
+      // 2. Automated Interpretation Box
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(margin, y, pw - margin * 2, 65, 12, 12, 'FD');
+      
+      // Icon Circle
+      doc.setFillColor(53, 125, 134);
+      doc.circle(margin + 20, y + 20, 10, 'F');
       doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.setFont(pdfFont, 'italic');
-      doc.text(`Generated by SchistoGuard • ${dateFormat} at ${timeFormat}`, pw / 2, y, { align: 'center' });
+      doc.setTextColor(255, 255, 255);
+      doc.setFont(pdfFont, 'bold');
+      doc.text('i', margin + 20, y + 23, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text('AUTOMATED INTERPRETATION', margin + 38, y + 23);
+      
+      doc.setFontSize(11);
+      doc.setFont(pdfFont, 'normal');
+      doc.setTextColor(51, 65, 85);
+      const interpretationText = totalReadings ? 
+        `Early-warning system analysis: Water conditions across monitored sites show a mean of ${avg(tempVals).toFixed(1)}°C, pH ${avg(phVals).toFixed(1)}, and ${avg(turbVals).toFixed(1)} NTU. ${cCount > 0 ? "Potential risk detected in one or more parameters." : "No significant hazards detected."}` : 
+        "Insufficient data for interpretation.";
+      const wrappedInterpretation = doc.splitTextToSize(interpretationText, pw - margin * 2 - 40);
+      doc.text(wrappedInterpretation, margin + 40, y + 42);
+      
+      y += 85;
+
+      // 3. Parameter Cards (3 Columns)
+      const cardW = (pw - margin * 2 - 32) / 3;
+      const cardH = 120;
+      
+      const params = [
+        { label: 'TEMPERATURE', color: [67, 198, 182], vals: tempVals, unit: '°C' },
+        { label: 'PH LEVEL', color: [65, 135, 214], vals: phVals, unit: '' },
+        { label: 'TURBIDITY', color: [44, 82, 130], vals: turbVals, unit: 'NTU' },
+      ];
+
+      params.forEach((p, idx) => {
+        const cx = margin + idx * (cardW + 16);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(cx, y, cardW, cardH, 8, 8, 'FD');
+        
+        // Card Title
+        doc.setFillColor(p.color[0], p.color[1], p.color[2]);
+        doc.circle(cx + 12, y + 15, 4, 'F');
+        doc.setFontSize(9);
+        doc.setFont(pdfFont, 'bold');
+        doc.setTextColor(26, 42, 58);
+        doc.text(p.label, cx + 22, y + 18);
+        
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(cx + 12, y + 26, cx + cardW - 12, y + 26);
+        
+        const cardAvg = avg(p.vals);
+        const cardMin = min(p.vals);
+        const cardMax = max(p.vals);
+        
+        const rowY = y + 44;
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text('HIGHEST', cx + 12, rowY);
+        doc.setTextColor(26, 42, 58);
+        doc.setFontSize(10);
+        doc.text(`${cardMax.toFixed(2)}${p.unit ? ' ' + p.unit : ''}`, cx + cardW - 12, rowY, { align: 'right' });
+        
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text('LOWEST', cx + 12, rowY + 22);
+        doc.setTextColor(26, 42, 58);
+        doc.setFontSize(10);
+        doc.text(`${cardMin.toFixed(2)}${p.unit ? ' ' + p.unit : ''}`, cx + cardW - 12, rowY + 22, { align: 'right' });
+        
+        doc.setLineDashPattern([3, 3], 0);
+        doc.setLineWidth(0.3);
+        doc.line(cx + 12, rowY + 36, cx + cardW - 12, rowY + 36);
+        doc.setLineDashPattern([], 0);
+        
+        doc.setFontSize(10);
+        doc.setFont(pdfFont, 'bold');
+        doc.setTextColor(p.color[0], p.color[1], p.color[2]);
+        doc.text('LATEST (AVG)', cx + 12, rowY + 52);
+        doc.setFontSize(18); // Increased from 14 to match premium inspiration
+        doc.text(`${cardAvg.toFixed(2)}${p.unit ? ' ' + p.unit : ''}`, cx + cardW - 12, rowY + 52, { align: 'right' });
+      });
+
+      y += cardH + 20;
+
+      // 4. Distribution Bar (Compact)
+      doc.setFontSize(10);
+      doc.setFont(pdfFont, 'bold');
+      doc.setTextColor(53, 125, 134);
+      doc.text('Overall Risk Distribution', margin, y);
       y += 12;
-      doc.text('This report is auto-generated based on real-time sensor data and should be reviewed by qualified personnel.', pw / 2, y, { align: 'center' });
+      
+      const barW = pw - margin * 2;
+      const barH = 10;
+      let curX = margin;
+      if (sPct > 0) { doc.setFillColor(35, 182, 126); doc.roundedRect(curX, y, barW * sPct, barH, 4, 4, 'F'); curX += barW * sPct; }
+      if (wPct > 0) { doc.setFillColor(241, 161, 26); if(sPct===0) doc.roundedRect(curX,y,barW*wPct,barH,4,4,'F'); else doc.rect(curX, y, barW * wPct, barH, 'F'); curX += barW * wPct; }
+      if (cPct > 0) { doc.setFillColor(209, 67, 67); doc.roundedRect(curX, y, barW * cPct, barH, 4, 4, 'F'); }
+      
+      y += barH + 16;
+      doc.setFontSize(8);
+      
+      // Safe
+      doc.setFillColor(35, 182, 126);
+      doc.roundedRect(margin, y - 6, 8, 8, 2, 2, 'F');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Safe: ${sCount} (${(sPct * 100).toFixed(1)}%)`, margin + 12, y);
+      
+      // Warning
+      doc.setFillColor(241, 161, 26);
+      doc.roundedRect(margin + 140, y - 6, 8, 8, 2, 2, 'F');
+      doc.text(`Warning: ${wCount} (${(wPct * 100).toFixed(1)}%)`, margin + 152, y);
+      
+      // Critical
+      doc.setFillColor(209, 67, 67);
+      doc.roundedRect(margin + 280, y - 6, 8, 8, 2, 2, 'F');
+      doc.text(`Critical: ${cCount} (${(cPct * 100).toFixed(1)}%)`, margin + 292, y);
+
+      // (Footer removed per user request)
+      
+      y += 12;
+      // Removed generation info text to keep the report clean and focused on data.
 
       const filename = `SchistoGuard_Timeseries_${risk}_${timeRangeText}_${dmy}.pdf`;
       doc.save(filename);
@@ -494,6 +519,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
+
+  // PDF Export stability variables: Force desktop-caliber layout during captures
+  const mobileResponsive = isMobile && !isExporting;
+  const tabletResponsive = isTablet && !isExporting;
 
 
 
@@ -677,28 +706,28 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         {/* Header */}
         <div style={{
           display: "flex",
-          flexDirection: (isMobile || isTablet) ? "column" : "row",
+          flexDirection: (mobileResponsive || tabletResponsive) ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
+          alignItems: (mobileResponsive || tabletResponsive) ? "flex-start" : "center",
           gap: 16,
           marginBottom: 24,
           animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: isMobile ? 20 : 26,
+              fontSize: mobileResponsive ? 20 : 26,
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
               fontFamily: POPPINS,
-              whiteSpace: isMobile ? "normal" : "nowrap",
-              overflow: isMobile ? undefined : "hidden",
-              textOverflow: isMobile ? undefined : "ellipsis",
-              letterSpacing: isMobile ? 0.1 : undefined,
+              whiteSpace: mobileResponsive ? "normal" : "nowrap",
+              overflow: mobileResponsive ? undefined : "hidden",
+              textOverflow: mobileResponsive ? undefined : "ellipsis",
+              letterSpacing: mobileResponsive ? 0.1 : undefined,
             }}>
               Sites Directory
             </h1>
-            {isMobile && (
+            {mobileResponsive && (
               <span style={{
                 fontSize: 12.5,
                 color: "#7b8a9a",
@@ -710,7 +739,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 whiteSpace: "normal",
               }}>Real-time water quality readings & risk assessment</span>
             )}
-            {!isMobile && (
+            {!mobileResponsive && (
               <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
                 Real-time water quality readings & risk assessment
               </p>
@@ -719,14 +748,14 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           <div style={{
             display: "flex",
             alignItems: "center",
-            gap: isMobile ? 8 : 10,
-            flexWrap: isMobile ? "nowrap" as const : "wrap",
-            ...(isMobile ? { width: "100%" } : {}),
+            gap: mobileResponsive ? 8 : 10,
+            flexWrap: mobileResponsive ? "nowrap" as const : "wrap",
+            ...(mobileResponsive ? { width: "100%" } : {}),
           }}>
             <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
                 <SelectTrigger style={{
-                  width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
+                  width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
                   minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
                   border: "1px solid #e2e5ea", background: "#fff", height: 38,
                 }}>
