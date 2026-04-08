@@ -499,11 +499,17 @@ export function Dashboard({
       apiGet("/api/sensors/alerts")
         .then((data) => {
           if (Array.isArray(data)) {
-            setAlerts(
-              data.filter((alert) =>
+            const sanitized = data
+              .filter((alert) =>
                 ["Temperature", "Turbidity", "pH"].includes(alert.parameter)
               )
-            );
+              .map(alert => ({
+                ...alert,
+                barangay: (!alert.barangay || alert.barangay === "Unknown") && alert.siteName === "Matina Site"
+                  ? "Matina Crossing"
+                  : (alert.barangay === "Unknown" ? "N/A" : alert.barangay)
+              }));
+            setAlerts(sanitized);
           }
         })
         .catch(() => { });

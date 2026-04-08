@@ -119,7 +119,15 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         .then((data) => {
           console.log('Fetched alerts:', data); // DEBUG LOG
           if (Array.isArray(data)) {
-            setAlerts(data.filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter)));
+            const sanitized = data
+              .filter(alert => ["Temperature", "Turbidity", "pH"].includes(alert.parameter))
+              .map(alert => ({
+                ...alert,
+                barangay: (!alert.barangay || alert.barangay === "Unknown") && alert.siteName === "Matina Site"
+                  ? "Matina Crossing"
+                  : (alert.barangay === "Unknown" ? "N/A" : alert.barangay)
+              }));
+            setAlerts(sanitized);
           }
         })
         .catch((err) => { console.error('Error fetching alerts:', err); });

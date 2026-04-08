@@ -11,6 +11,47 @@ import { CheckCircle2, Clock } from "lucide-react";
 
 const POPPINS = "'Poppins', sans-serif";
 
+function calculateDuration(start: string, end?: string) {
+  if (!start) return '-';
+  const startTime = new Date(start).getTime();
+  if (isNaN(startTime)) return '-';
+  
+  const endTime = end ? new Date(end).getTime() : Date.now();
+  if (isNaN(endTime)) return '-';
+
+  const diffMs = Math.max(0, endTime - startTime);
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 1) return '< 1m';
+  if (diffMins < 60) return `${diffMins}m`;
+  const diffHrs = Math.floor(diffMins / 60);
+  if (diffHrs < 24) return `${diffHrs}h ${diffMins % 60}m`;
+  return `${Math.floor(diffHrs / 24)}d ${diffHrs % 24}h`;
+}
+
+function getDisplayBarangay(barangay: string, siteName: string) {
+  const isUnknown = !barangay || barangay.toLowerCase() === 'unknown' || barangay.trim() === '';
+  
+  if (isUnknown) {
+    if (siteName === 'Matina Site') return 'Matina Crossing';
+    
+    // Try to hunt in global cache
+    try {
+      const cachedName = localStorage.getItem('sg_global_latest_siteName');
+      const cachedAddr = localStorage.getItem('sg_global_latest_address');
+      if (cachedName === siteName && cachedAddr) {
+        // Look for the barangay part (usually the second element in OpenStreetMap addresses)
+        const parts = cachedAddr.split(',');
+        if (parts.length > 1) return parts[1].trim();
+        return cachedAddr;
+      }
+    } catch (e) {}
+    
+    return 'N/A';
+  }
+  return barangay;
+}
+
 function formatDateTime(dt: string) {
   if (!dt) return '-';
   const d = new Date(dt);
@@ -81,8 +122,8 @@ export function AlertDetailsModal({
                     <td style={{ fontWeight: 600 }}>{alert.value}</td>
                   </tr>
                   <tr>
-                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Duration:</td>
-                    <td>{alert.duration || '-'}</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Handling Time:</td>
+                    <td style={{ fontWeight: 600 }}>{alert.isAcknowledged ? calculateDuration(alert.timestamp, alert.acknowledgedAt) : "Active"}</td>
                   </tr>
                 </tbody>
               </table>
@@ -100,7 +141,7 @@ export function AlertDetailsModal({
                   </tr>
                   <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
-                    <td style={{ wordBreak: "break-word" }}>{alert.barangay}</td>
+                    <td style={{ wordBreak: "break-word", fontWeight: 600 }}>{getDisplayBarangay(alert.barangay, alert.siteName)}</td>
                   </tr>
                   <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
