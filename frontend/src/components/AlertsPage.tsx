@@ -306,34 +306,38 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
       }}>
         <StatCard
-          icon={<Bell size={(isMobile) ? 18 : 22} color="#357D86" />}
+          icon={<Bell size={(isMobile) ? 18 : 20} color="#357D86" />}
           label="Total Alerts"
           value={String(alerts.length)}
           valueColor="#357D86"
+          bgColor="#e6f2f3"
           sub="All alerts (history)"
           isCompact={isMobile}
         />
         <StatCard
-          icon={<AlertTriangle size={(isMobile) ? 18 : 22} color="#eab308" />}
+          icon={<AlertTriangle size={(isMobile) ? 18 : 20} color="#F1A11A" />}
           label="Unacknowledged"
           value={String(unacknowledgedCount)}
-          valueColor="#eab308"
+          valueColor="#F1A11A"
+          bgColor="#FFF9E6"
           sub="Require attention"
           isCompact={isMobile}
         />
         <StatCard
-          icon={<AlertTriangle size={(isMobile) ? 18 : 22} color="#ef4444" />}
+          icon={<AlertTriangle size={(isMobile) ? 18 : 20} color="#D14343" />}
           label="High Possible Risk Alerts"
           value={String(criticalCount)}
-          valueColor="#dc2626"
+          valueColor="#D14343"
+          bgColor="#FFF1F1"
           sub="For immediate verification"
           isCompact={isMobile}
         />
         <StatCard
-          icon={<CheckCircle2 size={(isMobile) ? 18 : 22} color="#22c55e" />}
+          icon={<CheckCircle2 size={(isMobile) ? 18 : 20} color="#23B67E" />}
           label="Response Time"
           value={avgResponseTime}
-          valueColor="#22c55e"
+          valueColor="#23B67E"
+          bgColor="#E9FBF3"
           sub="Avg response"
           isCompact={isMobile}
         />
@@ -658,8 +662,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   );
 }
 
-function StatCard({ icon, label, value, valueColor, sub, isCompact }: {
-  icon: React.ReactNode; label: string; value: string; valueColor: string; sub: string; isCompact?: boolean;
+function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact }: {
+  icon: React.ReactNode; label: string; value: string; valueColor: string; bgColor: string; sub: string; isCompact?: boolean;
 }) {
   return (
     <div style={{
@@ -675,10 +679,10 @@ function StatCard({ icon, label, value, valueColor, sub, isCompact }: {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isCompact ? 8 : 12 }}>
         <span style={{ fontSize: isCompact ? 11 : 13, fontWeight: 500, color: "#8E8B8B", letterSpacing: isCompact ? 0.3 : 0 }}>{label}</span>
         <div style={{
-          width: isCompact ? 28 : 34,
-          height: isCompact ? 28 : 34,
+          width: isCompact ? 30 : 36,
+          height: isCompact ? 30 : 36,
           borderRadius: isCompact ? 8 : 10,
-          background: `${valueColor}08`,
+          background: bgColor,
           display: "flex",
           alignItems: "center",
           justifyContent: "center"
