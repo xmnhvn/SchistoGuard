@@ -512,7 +512,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div style={{
         background: "#fff",
         borderRadius: 20,
-        padding: screenWidth < 600 ? "16px" : "22px",
+        padding: screenWidth < 600 ? "16px" : screenWidth >= 1100 ? "18px" : "22px",
         boxShadow: screenWidth < 600 ? "0 4px 18px rgba(0,0,0,0.11)" : "0 2px 12px rgba(0,0,0,0.09)",
         fontFamily: "'Poppins', sans-serif",
         animation: 'cardFadeIn 0.6s 0.6s ease-out both',
@@ -1037,7 +1037,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
 
             {/* Header */}
-            <div style={{ pointerEvents: 'none', marginTop: 0 }}>
+            <div style={{ pointerEvents: 'none', marginTop: 0, maxWidth: screenWidth < 1100 ? '100%' : 580 }}>
               <h1
                 style={{
                   margin: 0,
@@ -1133,7 +1133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: 20,
                 pointerEvents: 'auto',
                 marginTop: 20,
-                maxWidth: screenWidth < 1100 ? '100%' : 680, // Increased for 3-col layout
+                maxWidth: screenWidth < 1100 ? '100%' : 580, 
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
@@ -1142,7 +1142,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '14px 18px' : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1166,7 +1166,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 } as any} />
                 <img src="/icons/icon-temperature.svg" alt="temp"
                   style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>Temperature</p>
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 11.5 : screenWidth >= 1100 ? 12 : 15, color: '#77ABB2' }}>Temperature</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
                   <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.temperature : '—'}
