@@ -7,6 +7,10 @@ import {
   Bell,
   Asterisk,
   LocateFixed,
+  Info,
+  Thermometer,
+  Droplets,
+  Activity,
   type LucideProps,
 } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -600,6 +604,121 @@ export function Dashboard({
     else if ([tempRisk, turbidityRisk, phRisk].includes("warning")) overallRisk = "warning";
   }
 
+  const renderDataInterpretation = (compact: boolean = false) => {
+    const riskData = {
+      safe: {
+        title: "Safe Environment",
+        message: "Conditions are currently unfavorable for Schistosomiasis snails.",
+        color: "#22c55e",
+        bgColor: "rgba(34,197,94,0.08)",
+        borderColor: "rgba(34,197,94,0.2)"
+      },
+      warning: {
+        title: "Moderate Risk",
+        message: "Parameters are approaching optimal breeding ranges for snails.",
+        color: "#f59e0b",
+        bgColor: "rgba(245,158,11,0.08)",
+        borderColor: "rgba(245,158,11,0.2)"
+      },
+      critical: {
+        title: "High Risk",
+        message: "Environment is highly favorable for Schistosomiasis intermediate hosts.",
+        color: "#ef4444",
+        bgColor: "rgba(239,68,68,0.08)",
+        borderColor: "rgba(239,68,68,0.2)"
+      }
+    };
+
+    const current = riskData[overallRisk];
+
+    return (
+      <div style={{
+        background: "rgba(255,255,255,0.95)",
+        borderRadius: 24,
+        padding: compact ? "16px" : "22px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+        fontFamily: POPPINS,
+        border: "1px solid rgba(255,255,255,0.5)",
+        backdropFilter: "blur(10px)",
+        animation: animationEnabled ? "contentSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both" : "none"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ 
+            width: 38, height: 38, borderRadius: 12, 
+            background: "linear-gradient(135deg, #357D86, #4EA8B1)",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <Activity size={20} color="#fff" />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: compact ? 15 : 17, fontWeight: 700, color: "#337C85" }}>
+              Environmental Analysis
+            </h3>
+            <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>Based on last {intervalValue}{intervalUnit} interval</p>
+          </div>
+        </div>
+
+        {/* Current Risk Interpretation */}
+        <div style={{ 
+          padding: "14px", 
+          borderRadius: 16, 
+          background: current.bgColor,
+          border: `1px solid ${current.borderColor}`,
+          marginBottom: 16,
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-start"
+        }}>
+          <Info size={18} color={current.color} style={{ marginTop: 2, flexShrink: 0 }} />
+          <div>
+            <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: current.color }}>
+              {current.title}
+            </p>
+            <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.45 }}>
+              {current.message}
+            </p>
+          </div>
+        </div>
+
+        {/* Threshold Quick Guide */}
+        <div style={{ marginTop: 12 }}>
+          <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>
+            Snail Breeding Danger Zones
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Thermometer size={14} color="#77ABB2" />
+                <span style={{ fontSize: 13, color: "#475569" }}>Temperature</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+                22°C - 30°C
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Droplets size={14} color="#77ABB2" />
+                <span style={{ fontSize: 13, color: "#475569" }}>Turbidity</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+                Clear (&lt; 5 NTU)
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Info size={14} color="#77ABB2" />
+                <span style={{ fontSize: 13, color: "#475569" }}>pH Levels</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+                6.5 - 8.0 pH
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const riskColor =
     overallRisk === "critical"
       ? "#ef4444"
@@ -1000,7 +1119,12 @@ export function Dashboard({
           </div>
 
           {/* flex spacer — grows to fill remaining space so cards anchor to bottom */}
-          <div style={{ flex: 1, minHeight: isTab ? 40 : 80 }} />
+          <div style={{ flex: 1, minHeight: isTab ? 20 : 40 }} />
+
+          {/* Data Interpretation (Mobile) */}
+          <div style={{ padding: `0 ${dPad}px 16px`, pointerEvents: "auto" }}>
+            {renderDataInterpretation(true)}
+          </div>
 
           {/* ── CARDS — anchored to bottom, no solid section bg ── */}
           <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : 20}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
