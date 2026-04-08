@@ -43,18 +43,40 @@ export function Dashboard({
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
-  const [siteData, setSiteData] = useState<any>({
-    siteName: "Site Name",
-    barangay: "",
-    municipality: "",
-    area: "",
+  const [siteData, setSiteData] = useState<any>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const cachedName = localStorage.getItem('sg_global_latest_siteName');
+        return {
+          siteName: cachedName || "Site Name",
+          barangay: "",
+          municipality: "",
+          area: "",
+        };
+      }
+    } catch { }
+    return {
+      siteName: "Site Name",
+      barangay: "",
+      municipality: "",
+      area: "",
+    };
   });
   // Device connection state
   const [deviceConnected, setDeviceConnected] = useState(true);
   // Address from reverse geocoding — initialize from cache to prevent flicker
   const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
     try {
-      return localStorage.getItem('sg_global_latest_address') || null;
+      if (typeof window !== 'undefined') {
+        const globalCached = localStorage.getItem('sg_global_latest_address');
+        if (globalCached) return globalCached;
+        
+        // Fallback to searching all geocoding keys in localStorage
+        const keys = Object.keys(localStorage);
+        const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+        if (addressKey) return localStorage.getItem(addressKey);
+      }
+      return null;
     } catch { return null; }
   });
   // Cache last lat/lng to avoid unnecessary API calls
@@ -190,9 +212,11 @@ export function Dashboard({
         lastLatLngRef.current = { lat, lng };
         // Don't reset gpsAddress to null — keep old address visible while loading new one
         reverseGeocode(lat, lng).then(addr => {
-          setGpsAddress(addr);
-          if (addr && typeof window !== 'undefined') {
-            localStorage.setItem('sg_global_latest_address', addr);
+          if (addr) {
+            setGpsAddress(addr);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('sg_global_latest_address', addr);
+            }
           }
         });
       }
@@ -203,6 +227,30 @@ export function Dashboard({
       }
     }
   }, [latestReading, lastSavedLocation]);
+
+  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
+  useEffect(() => {
+    if (!gpsAddress && typeof window !== 'undefined') {
+      const keys = Object.keys(localStorage);
+      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+      if (addressKey) {
+        const cached = localStorage.getItem(addressKey);
+        if (cached) {
+          setGpsAddress(cached);
+          localStorage.setItem('sg_global_latest_address', cached);
+        }
+      }
+      
+      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
+      if (siteNameKey && siteData.siteName === "Site Name") {
+        const cachedName = localStorage.getItem(siteNameKey);
+        if (cachedName) {
+          setSiteData((prev: any) => ({ ...prev, siteName: cachedName }));
+          localStorage.setItem('sg_global_latest_siteName', cachedName);
+        }
+      }
+    }
+  }, [gpsAddress, siteData.siteName]);
 
   // Fallback: search history readings for GPS coordinates when latestReading has none
   // This mirrors the logic in SiteDetailView that finds the address from historical data
