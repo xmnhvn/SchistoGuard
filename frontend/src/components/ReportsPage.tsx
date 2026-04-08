@@ -434,6 +434,152 @@ export const ReportsPage: React.FC = () => {
 
   const activeReport = selectedReport;
 
+  const renderReportArticle = (report: Report, isForCapture: boolean = false) => (
+    <article
+      ref={isForCapture ? (previewDocumentRef as any) : null}
+      className={`mx-auto w-full max-w-[760px] bg-white text-[13px] leading-relaxed text-slate-800 ${
+        isForCapture ? 'p-10' : 'p-5 sm:p-7'
+      }`}
+      style={isForCapture ? { width: '760px', minHeight: '1000px' } : {}}
+    >
+      <header className="mb-6 border-b border-slate-200 pb-6 text-center">
+        <PDFHeader
+          dynamicSiteName={dynamicSiteName || 'System Summary Report'}
+          address={address || 'Device Address'}
+        />
+      </header>
+
+      <section className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <tbody>
+            <tr>
+              <td className="border border-slate-300 px-2 py-1 font-semibold">Report Title</td>
+              <td className="border border-slate-300 px-2 py-1">{report.title}</td>
+              <td className="border border-slate-300 px-2 py-1 font-semibold">Report Type</td>
+              <td className="border border-slate-300 px-2 py-1 capitalize">{report.type}</td>
+            </tr>
+            <tr>
+              <td className="border border-slate-300 px-2 py-1 font-semibold">Generated</td>
+              <td className="border border-slate-300 px-2 py-1">
+                {new Date(report.generatedDate)
+                  .toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                  .replaceAll('/', '-')}
+              </td>
+              <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
+              <td
+                className="border border-slate-300 px-2 py-1 capitalize"
+                style={{
+                  color:
+                    report.summary.riskLevel === 'high'
+                      ? '#EB5757'
+                      : report.summary.riskLevel === 'moderate'
+                      ? '#F2994A'
+                      : '#27AE60',
+                  fontWeight: 700,
+                }}
+              >
+                {report.summary.riskLevel}
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
+              <td className="border border-slate-300 px-2 py-1">{report.summary.totalSites}</td>
+              <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
+              <td className="border border-slate-300 px-2 py-1">{report.summary.alertsGenerated}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-4">
+        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
+          Summary
+        </h4>
+        <p className="mt-2 text-xs text-slate-700">
+          This {report.type} report covers monitoring data for {report.period}. A total of{' '}
+          {report.summary.totalSites} monitoring sites were reviewed, and{' '}
+          {report.summary.alertsGenerated} alerts were logged for follow-up.
+        </p>
+      </section>
+
+      <section className="mt-4 overflow-x-auto">
+        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
+          Key Actions And Metrics
+        </h4>
+        <table className="mt-2 w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Metric</th>
+              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Average</th>
+              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Status</th>
+              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-slate-300 px-2 py-1">Turbidity</td>
+              <td className="border border-slate-300 px-2 py-1">
+                {formatMetric(report.summary.avgTurbidity)} NTU
+              </td>
+              <td className="border border-slate-300 px-2 py-1">
+                {getTurbidityRemark(report.summary.avgTurbidity).label}
+              </td>
+              <td className="border border-slate-300 px-2 py-1">Track suspended particles and clarity trends.</td>
+            </tr>
+            <tr>
+              <td className="border border-slate-300 px-2 py-1">Temperature</td>
+              <td className="border border-slate-300 px-2 py-1">
+                {formatMetric(report.summary.avgTemperature)} C
+              </td>
+              <td className="border border-slate-300 px-2 py-1">
+                {getTemperatureRemark(report.summary.avgTemperature || 0).label}
+              </td>
+              <td className="border border-slate-300 px-2 py-1">
+                Review thermal conditions affecting parasite viability.
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-slate-300 px-2 py-1">pH Level</td>
+              <td className="border border-slate-300 px-2 py-1">{formatMetric(report.summary.avgPh)} pH</td>
+              <td className="border border-slate-300 px-2 py-1">
+                {getPhRemark(report.summary.avgPh || 0).label}
+              </td>
+              <td className="border border-slate-300 px-2 py-1">
+                Check acidity/alkalinity drift versus target range.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-4">
+        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
+          Findings And Observations
+        </h4>
+        <p className="mt-2 text-xs text-slate-700">
+          Overall risk classification for this reporting period is{' '}
+          <span
+            className="font-semibold capitalize"
+            style={{
+              color:
+                report.summary.riskLevel === 'high'
+                  ? '#D14343'
+                  : report.summary.riskLevel === 'moderate'
+                  ? '#F1A11A'
+                  : '#23B67E',
+            }}
+          >
+            {report.summary.riskLevel}
+          </span>
+          .
+          {report.summary.alertsGenerated > 0
+            ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
+            : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
+        </p>
+      </section>
+    </article>
+  );
+
   return (
     <div className="relative h-full overflow-hidden bg-schistoguard-light-bg">
       <style>{`
@@ -470,6 +616,21 @@ export const ReportsPage: React.FC = () => {
           100% { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      {/* ── Hidden Report Source for Capture ── */}
+      {selectedReport && (
+        <div style={{ 
+          position: 'fixed', 
+          left: '-9999px', 
+          top: 0, 
+          width: '794px', 
+          zIndex: -1, 
+          visibility: 'hidden',
+          pointerEvents: 'none'
+        }}>
+          {renderReportArticle(selectedReport, true)}
+        </div>
+      )}
 
       {/* ── Success Overlay ── */}
       {successMessage && (
@@ -986,109 +1147,7 @@ export const ReportsPage: React.FC = () => {
                   </div>
 
                   <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
-                    <article ref={previewDocumentRef} className="mx-auto w-full max-w-[760px] bg-white p-5 text-[13px] leading-relaxed text-slate-800 sm:p-7">
-                      <header className="mb-6 border-b border-slate-200 pb-6 text-center">
-                        <PDFHeader 
-                          dynamicSiteName={dynamicSiteName || 'System Summary Report'} 
-                          address={address || "Device Address"} 
-                        />
-                      </header>
-
-                      <section className="mt-4 overflow-x-auto">
-                        <table className="w-full border-collapse text-xs">
-                          <tbody>
-                            <tr>
-                              <td className="border border-slate-300 px-2 py-1 font-semibold">Report Title</td>
-                              <td className="border border-slate-300 px-2 py-1">{selectedReport.title}</td>
-                              <td className="border border-slate-300 px-2 py-1 font-semibold">Report Type</td>
-                              <td className="border border-slate-300 px-2 py-1 capitalize">{selectedReport.type}</td>
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-300 px-2 py-1 font-semibold">Generated</td>
-                              <td className="border border-slate-300 px-2 py-1">
-                                {new Date(selectedReport.generatedDate)
-                                  .toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
-                                  .replaceAll('/', '-')}
-                              </td>
-                              <td className="border border-slate-300 px-2 py-1 font-semibold">Risk Level</td>
-                              <td className="border border-slate-300 px-2 py-1 capitalize" style={{
-                                color: selectedReport.summary.riskLevel === 'high' ? "#EB5757" :
-                                  selectedReport.summary.riskLevel === 'moderate' ? "#F2994A" : "#27AE60",
-                                fontWeight: 700
-                              }}>
-                                {selectedReport.summary.riskLevel}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
-                              <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.totalSites}</td>
-                              <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
-                              <td className="border border-slate-300 px-2 py-1">{selectedReport.summary.alertsGenerated}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </section>
-
-                      <section className="mt-4">
-                        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">Summary</h4>
-                        <p className="mt-2 text-xs text-slate-700">
-                          This {selectedReport.type} report covers monitoring data for {selectedReport.period}. A total of {selectedReport.summary.totalSites}{' '}
-                          monitoring sites were reviewed, and {selectedReport.summary.alertsGenerated} alerts were logged for follow-up.
-                        </p>
-                      </section>
-
-                      <section className="mt-4 overflow-x-auto">
-                        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
-                          Key Actions And Metrics
-                        </h4>
-                        <table className="mt-2 w-full border-collapse text-xs">
-                          <thead>
-                            <tr>
-                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Metric</th>
-                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Average</th>
-                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Status</th>
-                              <th className="border border-slate-300 px-2 py-1 text-left font-semibold">Notes</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td className="border border-slate-300 px-2 py-1">Turbidity</td>
-                              <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTurbidity)} NTU</td>
-                              <td className="border border-slate-300 px-2 py-1">{getTurbidityRemark(selectedReport.summary.avgTurbidity).label}</td>
-                              <td className="border border-slate-300 px-2 py-1">Track suspended particles and clarity trends.</td>
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-300 px-2 py-1">Temperature</td>
-                              <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgTemperature)} C</td>
-                              <td className="border border-slate-300 px-2 py-1">{getTemperatureRemark(selectedReport.summary.avgTemperature || 0).label}</td>
-                              <td className="border border-slate-300 px-2 py-1">Review thermal conditions affecting parasite viability.</td>
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-300 px-2 py-1">pH Level</td>
-                              <td className="border border-slate-300 px-2 py-1">{formatMetric(selectedReport.summary.avgPh)} pH</td>
-                              <td className="border border-slate-300 px-2 py-1">{getPhRemark(selectedReport.summary.avgPh || 0).label}</td>
-                              <td className="border border-slate-300 px-2 py-1">Check acidity/alkalinity drift versus target range.</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </section>
-
-                      <section className="mt-4">
-                        <h4 className="border-b border-slate-300 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-900">
-                          Findings And Observations
-                        </h4>
-                        <p className="mt-2 text-xs text-slate-700">
-                          Overall risk classification for this reporting period is <span className="font-semibold capitalize" style={{
-                            color: selectedReport.summary.riskLevel === 'high' ? "#D14343" :
-                              selectedReport.summary.riskLevel === 'moderate' ? "#F1A11A" : "#23B67E"
-                          }}>{selectedReport.summary.riskLevel}</span>.
-                          {selectedReport.summary.alertsGenerated > 0
-                            ? ' Alerts were observed and should be verified by field teams for immediate corrective action.'
-                            : ' No active alerts were observed, indicating stable water quality conditions during this period.'}
-                        </p>
-                      </section>
-
-                    </article>
+                    {renderReportArticle(selectedReport)}
                   </div>
                 </Card >
               )}
