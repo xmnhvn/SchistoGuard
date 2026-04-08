@@ -197,10 +197,35 @@ export function Dashboard({
         });
       }
     } else {
-      setGpsAddress(null);
-      lastLatLngRef.current = null;
+      // Don't reset to null immediately — let the history fallback below try first
+      if (!gpsAddress) {
+        lastLatLngRef.current = null;
+      }
     }
   }, [latestReading, lastSavedLocation]);
+
+  // Fallback: search history readings for GPS coordinates when latestReading has none
+  // This mirrors the logic in SiteDetailView that finds the address from historical data
+  useEffect(() => {
+    // Only run if we don't already have a gpsAddress
+    if (gpsAddress) return;
+    if (!readings || readings.length === 0) return;
+
+    // Find the most recent reading with valid GPS coordinates
+    const latestWithGps = [...readings]
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .find((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
+
+    if (latestWithGps) {
+      reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+        if (addr) {
+          setGpsAddress(addr);
+          localStorage.setItem('sg_global_latest_address', addr);
+        }
+      });
+    }
+  }, [readings, gpsAddress]);
+
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [alertsClosing, setAlertsClosing] = useState(false);
   const alertsOpenRef = useRef(false);
@@ -396,33 +421,7 @@ export function Dashboard({
     const fetchReadings = () => {
       apiGet(`/api/sensors/history?interval=${getIntervalString()}&range=24h`)
         .then((data) => {
-          if (Array.isArray(data)) {
-            setReadings(data);
-
-            // Fallback: scan history for the latest reading with valid GPS coordinates
-            // to resolve an address when the real-time /latest endpoint has null lat/lng.
-            // This mirrors SiteDetailView's approach.
-            if (!lastLatLngRef.current) {
-              const latestWithGps = [...data]
-                .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                .find((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
-              if (latestWithGps) {
-                const fallbackLoc = {
-                  lat: latestWithGps.latitude,
-                  lng: latestWithGps.longitude,
-                  siteName: siteData.siteName || 'Last Known Location',
-                };
-                setLastSavedLocation(fallbackLoc);
-                setGpsSites([{
-                  id: 'device-gps',
-                  name: fallbackLoc.siteName,
-                  lat: fallbackLoc.lat,
-                  lng: fallbackLoc.lng,
-                }]);
-                localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
-              }
-            }
-          }
+          if (Array.isArray(data)) setReadings(data);
           setBackendOk(true);
         })
         .catch(() => setBackendOk(false));
