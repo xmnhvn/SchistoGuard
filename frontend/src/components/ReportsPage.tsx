@@ -358,9 +358,9 @@ export const ReportsPage: React.FC = () => {
           .set({
             margin: [10, 10, 10, 10],
             filename: fileName,
-            image: { type: 'jpeg', quality: 0.98 },
+            image: { type: 'jpeg', quality: 1.0 },
             html2canvas: { 
-              scale: isMobile ? 1.5 : 2, 
+              scale: 2, 
               useCORS: true, 
               backgroundColor: '#ffffff',
               logging: false,

@@ -181,9 +181,9 @@ export function SiteDetailView({
           .set({
             margin: [10, 10, 10, 10],
             filename,
-            image: { type: 'jpeg', quality: 0.98 },
+            image: { type: 'jpeg', quality: 1.0 },
             html2canvas: { 
-              scale: window.innerWidth < 768 ? 1.5 : 2, 
+              scale: 2, 
               useCORS: true, 
               backgroundColor: '#ffffff',
               logging: false,
