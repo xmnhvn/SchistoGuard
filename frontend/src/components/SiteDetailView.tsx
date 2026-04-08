@@ -66,7 +66,7 @@ export function SiteDetailView({
   const chartRef = useRef<HTMLDivElement>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setExporting] = useState(false);
-  
+
   // Persistent Address & Dynamic Name Cache per SiteId
   const getCachedData = (key: string) => {
     if (typeof window !== 'undefined') {
@@ -141,14 +141,14 @@ export function SiteDetailView({
           });
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
     if (!chartRef.current) return;
     setExporting(true);
-    
+
     // Slightly longer delay (250ms) to ensure the animation "gets going" on its own GPU layer
     // BEFORE the CPU-intensive capture logic hits and potentially freezes the main thread.
     await new Promise(resolve => setTimeout(resolve, 250));
@@ -168,34 +168,65 @@ export function SiteDetailView({
           time = timeRange.charAt(0).toUpperCase() + timeRange.slice(1);
         }
       }
-      
+
       const now = new Date();
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
+
+      const displaySiteName = dynamicSiteName || siteName || "Site Name";
+      const displayBarangay = barangay || (address ? address.split(',')[0].trim() : "");
+      const filename = `${displaySiteName.replace(/\s+/g, '_')}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
+
+      const originalTransform = chartRef.current.style.transform;
+      const originalWidth = chartRef.current.style.width;
+      const originalMinWidth = chartRef.current.style.minWidth;
+      const originalMaxWidth = chartRef.current.style.maxWidth;
+      const originalMargin = chartRef.current.style.margin;
+
+      // 1. Force native DOM to exactly 1150px so Recharts natively resizes its SVG
+      chartRef.current.style.transform = 'none';
+      chartRef.current.style.width = '1150px';
+      chartRef.current.style.minWidth = '1150px';
+      chartRef.current.style.maxWidth = '1150px';
+      chartRef.current.style.margin = '0 auto';
       
-      const sanitizedName = siteName?.replace(/\s+/g, '_') || 'Site';
-      const filename = `${sanitizedName}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
-      
+      // Allow Recharts time to natively trigger ResizeObserver and fit the SVG perfectly to 1150px
+      await new Promise(resolve => setTimeout(resolve, 350));
+
+      // 2. Capture using a standard-width clean clone (1248px) to match the physical paper width
       await captureCleanElement(chartRef.current, async (clonedElement) => {
+        // Center the 1150px content within the 1248px capture container
+        clonedElement.style.margin = '0 auto';
+        clonedElement.style.width = '1150px';
+        clonedElement.style.minWidth = '1150px';
+        clonedElement.style.maxWidth = '1150px';
+
         const worker = html2pdf()
           .set({
-            margin: [10, 10, 10, 10],
+            margin: [10, 10, 10, 10], // Safe standard margins
             filename,
             image: { type: 'jpeg', quality: 1.0 },
-            html2canvas: { 
-              scale: 2, 
-              useCORS: true, 
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
               backgroundColor: '#ffffff',
               logging: false,
               letterRendering: true
             },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+            jsPDF: { unit: 'mm', format: [215.9, 330.2], orientation: 'landscape' },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
           })
           .from(clonedElement);
-        
+
         await triggerPdfDownload(worker, filename);
-      }, { width: 1120 });
+      }, { width: 1248 }); // Exactly matching the 13-inch paper width at 96 DPI
+
+      // Instantly restore the exact original UI
+      chartRef.current.style.transform = originalTransform;
+      chartRef.current.style.width = originalWidth;
+      chartRef.current.style.minWidth = originalMinWidth;
+      chartRef.current.style.maxWidth = originalMaxWidth;
+      chartRef.current.style.margin = originalMargin;
     } catch (err) {
       console.error('Failed to export chart PDF.', err);
     } finally {
@@ -214,6 +245,10 @@ export function SiteDetailView({
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
+
+  // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
+  const mobileResponsive = isMobile && !isExporting;
+  const tabletResponsive = isTablet && !isExporting;
 
 
 
@@ -336,7 +371,7 @@ export function SiteDetailView({
         ph: r.ph ?? 7.2
       };
     });
-    
+
   // Sync graph animation with data load
   useEffect(() => {
     if (chartData.length > 0) {
@@ -414,7 +449,7 @@ export function SiteDetailView({
     }
   }, [timeRange]);
 
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : 32;
 
   const getInterpretation = () => {
     if (!chartData || chartData.length === 0) return "No data available.";
@@ -460,17 +495,17 @@ export function SiteDetailView({
     if (!dateStr) return "--";
     try {
       return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch(e) { return dateStr; }
+    } catch (e) { return dateStr; }
   };
   const fetchedStart = filterDataObj.length > 0 ? safeFormat((filterDataObj[0] as any).originalTime) : "--";
-  const fetchedEnd = filterDataObj.length > 0 ? safeFormat((filterDataObj[filterDataObj.length-1] as any).originalTime) : "--";
+  const fetchedEnd = filterDataObj.length > 0 ? safeFormat((filterDataObj[filterDataObj.length - 1] as any).originalTime) : "--";
 
   const getStat = (key: 'temperature' | 'ph' | 'turbidity') => {
     if (filterDataObj.length === 0) return { highest: '--', lowest: '--', latest: '--', hDate: '--', lDate: '--', date: '--' };
     const latestObj = filterDataObj[filterDataObj.length - 1];
     let maxObj = filterDataObj[0];
     let minObj = filterDataObj[0];
-    
+
     filterDataObj.forEach((d: any) => {
       if (d[key] > maxObj[key]) maxObj = d;
       if (d[key] < minObj[key]) minObj = d;
@@ -480,10 +515,10 @@ export function SiteDetailView({
       if (!dateStr) return "--";
       try {
         const d = new Date(dateStr);
-        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
       } catch { return "--"; }
     };
-    
+
     return {
       highest: Number(maxObj[key]).toFixed(2),
       lowest: Number(minObj[key]).toFixed(2),
@@ -526,14 +561,16 @@ export function SiteDetailView({
         }}>
           <div style={{
             background: '#fff',
-            padding: '30px 40px',
-            borderRadius: 24,
-            boxShadow: '0 20px 50px rgba(53, 125, 134, 0.15)',
+            padding: '48px 32px',
+            borderRadius: 28,
+            boxShadow: '0 24px 64px rgba(53, 125, 134, 0.2)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 16,
-            border: '1px solid rgba(53, 125, 134, 0.1)'
+            width: 'calc(100% - 40px)',
+            maxWidth: '420px',
+            gap: 20,
+            border: '1px solid rgba(53, 125, 134, 0.12)'
           }}>
             <Loader2 className="animate-spin" size={40} color="#357d86" />
             <div style={{ textAlign: 'center' }}>
@@ -553,7 +590,7 @@ export function SiteDetailView({
         width: "100%",
         minHeight: "fit-content"
       }}>
-      <style>{`
+        <style>{`
         *::-webkit-scrollbar { display: none; }
         @keyframes pageSlideIn {
           from { opacity: 0; transform: translateY(18px); }
@@ -569,559 +606,559 @@ export function SiteDetailView({
         }
         .sg-pdf-only { display: none !important; }
       `}</style>
-      <div style={{ 
-        display: "flex", 
-        flexDirection: "column", 
-        background: "#f6f8fb",
-        // Main container no longer animates as a whole; children use staggered animations
-      }}>
         <div style={{
           display: "flex",
-          flexDirection: (isMobile || isTablet) ? "column" : "row",
-          justifyContent: "space-between",
-          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
-          gap: 16,
-          marginBottom: 24,
+          flexDirection: "column",
+          background: "#f6f8fb",
+          // Main container no longer animates as a whole; children use staggered animations
         }}>
-          <div style={{ 
-            minWidth: 0, 
-            width: (isMobile || isTablet) ? "100%" : "auto",
-            animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none'
-          }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
-              <h1 style={{
-                fontSize: isMobile ? 20 : 26,
-                fontWeight: 700,
-                color: "#1a2a3a",
-                margin: 0,
-                fontFamily: POPPINS,
-                whiteSpace: isMobile ? "normal" : "nowrap",
-                overflow: isMobile ? undefined : "hidden",
-                textOverflow: isMobile ? undefined : "ellipsis",
-                letterSpacing: isMobile ? 0.1 : undefined,
-              }}>{dynamicSiteName || siteName}</h1>
-              {isMobile && (
-                <span style={{
-                  fontSize: 12.5,
-                  color: "#7b8a9a",
-                  fontWeight: 400,
-                  marginTop: 2,
-                  fontFamily: POPPINS,
-                  lineHeight: 1.3,
-                  display: "block",
-                  whiteSpace: "normal",
-                }}>{address || "Device Address"}</span>
-              )}
-              {!isMobile && (
-                <p style={{
-                  fontSize: 14,
-                  color: "#7b8a9a",
-                  margin: "4px 0 0",
-                  fontFamily: POPPINS,
-                  minHeight: "20px", // Reserve space to prevent layout jump
-                  transition: 'opacity 0.3s ease-in-out'
-                }}>{address || "Device Address"}</p>
-              )}
-            </div>
-          </div>
-
           <div style={{
             display: "flex",
-            alignItems: "center",
-            gap: isMobile ? 8 : 10,
-            flexWrap: isMobile ? "nowrap" : "wrap",
-            ...(isMobile ? { width: "100%" } : {}),
-            animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both' : 'none'
+            flexDirection: (mobileResponsive || tabletResponsive) ? "column" : "row",
+            justifyContent: "space-between",
+            alignItems: (mobileResponsive || tabletResponsive) ? "flex-start" : "center",
+            gap: 16,
+            marginBottom: 24,
           }}>
-            <div style={{ flex: isMobile ? 1 : undefined }}>
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger style={{
-                  width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
-                }}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">Last 24h</SelectItem>
-                  <SelectItem value="72h">Last 72h</SelectItem>
-                  <SelectItem value="7d">Last 7 days</SelectItem>
-                  <SelectItem value="30d">Last 30 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div style={{ flex: isMobile ? 1 : undefined }}>
-              <button
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  padding: "0 16px", height: 38, borderRadius: 12,
-                  border: "1px solid #e2e5ea",
-                  background: "#fff", cursor: "pointer", fontSize: 13,
-                  fontFamily: POPPINS, fontWeight: 500, color: "#374151",
-                  whiteSpace: "nowrap",
-                  width: isMobile ? "100%" : undefined
-                }}
-                onClick={() => setShowExportModal(true)}
-              >
-                <Download size={15} /> Export
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div ref={chartRef} className="flex flex-col gap-3 w-full sg-pdf-bg-patch" style={{
-          animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both' : 'none'
-        }}>
-          <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
-            <PDFHeader 
-              dynamicSiteName={dynamicSiteName} 
-              siteName={siteName} 
-              address={address} 
-              barangay={barangay} 
-            />
-          </div>
-          <div className="flex flex-col w-full">
-            <div 
-              style={{
-              background: "#fff",
-              borderRadius: 24,
-              border: "1px solid #f1f5f9",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              width: "100%"
+            <div style={{
+              minWidth: 0,
+              width: (mobileResponsive || tabletResponsive) ? "100%" : "auto",
+              animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none'
             }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
+                <h1 style={{
+                  fontSize: mobileResponsive ? 20 : 26,
+                  fontWeight: 700,
+                  color: "#1a2a3a",
+                  margin: 0,
+                  fontFamily: POPPINS,
+                  whiteSpace: mobileResponsive ? "normal" : "nowrap",
+                  overflow: mobileResponsive ? undefined : "hidden",
+                  textOverflow: mobileResponsive ? undefined : "ellipsis",
+                  letterSpacing: mobileResponsive ? 0.1 : undefined,
+                }}>{dynamicSiteName || siteName}</h1>
+                {mobileResponsive && (
+                  <span style={{
+                    fontSize: 12.5,
+                    color: "#7b8a9a",
+                    fontWeight: 400,
+                    marginTop: 2,
+                    fontFamily: POPPINS,
+                    lineHeight: 1.3,
+                    display: "block",
+                    whiteSpace: "normal",
+                  }}>{address || "Device Address"}</span>
+                )}
+                {!mobileResponsive && (
+                  <p style={{
+                    fontSize: 14,
+                    color: "#7b8a9a",
+                    margin: "4px 0 0",
+                    fontFamily: POPPINS,
+                    minHeight: "20px", // Reserve space to prevent layout jump
+                    transition: 'opacity 0.3s ease-in-out'
+                  }}>{address || "Device Address"}</p>
+                )}
+              </div>
+            </div>
+
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: mobileResponsive ? 8 : 10,
+              flexWrap: mobileResponsive ? "nowrap" : "wrap",
+              ...(mobileResponsive ? { width: "100%" } : {}),
+              animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both' : 'none'
+            }}>
+              <div style={{ flex: mobileResponsive ? 1 : undefined }}>
+                <Select value={timeRange} onValueChange={setTimeRange}>
+                  <SelectTrigger style={{
+                    width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
+                    minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                    border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">Last 24h</SelectItem>
+                    <SelectItem value="72h">Last 72h</SelectItem>
+                    <SelectItem value="7d">Last 7 days</SelectItem>
+                    <SelectItem value="30d">Last 30 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div style={{ flex: mobileResponsive ? 1 : undefined }}>
+                <button
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    padding: "0 16px", height: 38, borderRadius: 12,
+                    border: "1px solid #e2e5ea",
+                    background: "#fff", cursor: "pointer", fontSize: 13,
+                    fontFamily: POPPINS, fontWeight: 500, color: "#374151",
+                    whiteSpace: "nowrap",
+                    width: mobileResponsive ? "100%" : undefined
+                  }}
+                  onClick={() => setShowExportModal(true)}
+                >
+                  <Download size={15} /> Export
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div ref={chartRef} className="flex flex-col gap-3 w-full sg-pdf-bg-patch" style={{
+            animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both' : 'none'
+          }}>
+            <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
+              <PDFHeader
+                dynamicSiteName={dynamicSiteName}
+                siteName={siteName}
+                address={address}
+                barangay={barangay}
+              />
+            </div>
+            <div className="flex flex-col w-full">
               <div
                 style={{
-                  padding: "20px 24px 16px",
-                  borderBottom: "1px solid #f0f1f3",
+                  background: "#fff",
+                  borderRadius: 24,
+                  border: "1px solid #f1f5f9",
+                  overflow: "hidden",
                   display: "flex",
-                  flexDirection: isMobile ? "column" : "row",
-                  justifyContent: isMobile ? "flex-start" : "space-between",
-                  alignItems: isMobile ? "flex-start" : "center"
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: "#1a2a3a",
-                    margin: 0,
-                    fontFamily: POPPINS,
-                    marginBottom: isMobile ? 10 : 0,
-                  }}
-                >
-                  Real-Time Monitoring
-                </h3>
+                  flexDirection: "column",
+                  width: "100%"
+                }}>
                 <div
                   style={{
+                    padding: "20px 24px 16px",
+                    borderBottom: "1px solid #f0f1f3",
                     display: "flex",
-                    flexDirection: "row",
-                    flexWrap: "wrap",
-                    gap: isMobile ? 12 : 18,
-                    justifyContent: isMobile ? "center" : "flex-start",
-                    fontSize: isMobile ? 12 : 13,
-                    fontWeight: 500,
-                    color: "#7b8a9a",
-                    fontFamily: POPPINS,
-                    marginTop: isMobile ? 12 : 0,
-                    width: isMobile ? "100%" : "auto",
+                    flexDirection: mobileResponsive ? "column" : "row",
+                    justifyContent: mobileResponsive ? "flex-start" : "space-between",
+                    alignItems: mobileResponsive ? "flex-start" : "center"
                   }}
                 >
-                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6", flexShrink: 0 }} /> Temperature
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6", flexShrink: 0 }} /> pH Level
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282", flexShrink: 0 }} /> Turbidity
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-col px-6 pb-6 pt-4 w-full">
-                {chartData.length === 0 ? (
-                  <div className="flex h-[350px] w-full items-center justify-center text-gray-400">No time series data available.</div>
-                ) : (
-                  <div className="w-full chart-inner-wrap" style={{ height: 350, position: 'relative' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData.length === 1 ? [
-                        { ...chartData[0], time: "Initial reading" },
-                        chartData[0],
-                        { ...chartData[0], time: "Latest reading" }
-                      ] : chartData}>
-                        <defs>
-                          <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4187d6" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#4187d6" stopOpacity={0.05} />
-                          </linearGradient>
-                          <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2c5282" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#2c5282" stopOpacity={0.05} />
-                          </linearGradient>
-                          <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#43c6b6" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#43c6b6" stopOpacity={0.05} />
-                          </linearGradient>
-                        </defs>
-                        <XAxis
-                          dataKey="time"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#cbd5e1", fontSize: 11, fontFamily: POPPINS }}
-                          tickFormatter={(val) => (val === "Initial reading" || val === "Latest reading" ? "" : val)}
-                          dy={10}
-                        />
-                        <YAxis hide domain={['dataMin - 1', 'dataMax + 2']} />
-                        <Tooltip content={<CustomTooltip />} cursor={<CustomCursor />} />
-                        <Area
-                          type="monotone"
-                          dataKey="ph"
-                          stroke="#4187d6"
-                          strokeWidth={2}
-                          fill="url(#phGradient)"
-                          name="pH Level"
-                          isAnimationActive={graphReady}
-                          activeDot={<CustomActiveDot stroke="#4187d6" />}
-                          dot={false}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="turbidity"
-                          stroke="#2c5282"
-                          strokeWidth={2}
-                          fill="url(#turbidityGradient)"
-                          name="Turbidity (NTU)"
-                          isAnimationActive={graphReady}
-                          activeDot={<CustomActiveDot stroke="#2c5282" />}
-                          dot={false}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="temperature"
-                          stroke="#43c6b6"
-                          strokeWidth={2}
-                          fill="url(#temperatureGradient)"
-                          name="Temperature (°C)"
-                          isAnimationActive={graphReady}
-                          activeDot={<CustomActiveDot stroke="#43c6b6" />}
-                          dot={false}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-                
-                <div className="threshold-container" style={{ 
-                  background: "#ffffff", border: "1px solid #f1f5f9", borderRadius: 24, padding: "24px", marginTop: 0, fontFamily: POPPINS, width: "100%",
-                  animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both' : 'none'
-                }}>
-                  <h4 style={{ fontSize: 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-                    <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
-                        <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>22 – 30</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
-                      </div>
-                    </div>
-                    <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
-                        <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>pH Level</span>
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>6.5 – 8.0</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
-                      </div>
-                    </div>
-                    <div style={{ background: "#fff", borderRadius: 12, padding: isMobile ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 10 : 14 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
-                        <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 8, fontSize: isMobile ? 12 : 13 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
-                      </div>
-                    </div>
+                  <h3
+                    style={{
+                      fontSize: isExporting ? 14 : 16,
+                      fontWeight: 600,
+                      color: "#1a2a3a",
+                      margin: 0,
+                      fontFamily: POPPINS,
+                      marginBottom: mobileResponsive ? 10 : 0,
+                    }}
+                  >
+                    Real-Time Monitoring
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: mobileResponsive ? 12 : 18,
+                      justifyContent: mobileResponsive ? "center" : "flex-start",
+                      fontSize: mobileResponsive ? 12 : 13,
+                      fontWeight: 500,
+                      color: "#7b8a9a",
+                      fontFamily: POPPINS,
+                      marginTop: mobileResponsive ? 12 : 0,
+                      width: mobileResponsive ? "100%" : "auto",
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6", flexShrink: 0 }} /> Temperature
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6", flexShrink: 0 }} /> pH Level
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282", flexShrink: 0 }} /> Turbidity
+                    </span>
                   </div>
                 </div>
+                <div className="flex flex-col px-6 pb-6 pt-4 w-full">
+                  {chartData.length === 0 ? (
+                    <div className="flex h-[350px] w-full items-center justify-center text-gray-400">No time series data available.</div>
+                  ) : (
+                    <div className="w-full chart-inner-wrap" style={{ height: 350, position: 'relative' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData.length === 1 ? [
+                          { ...chartData[0], time: "Initial reading" },
+                          chartData[0],
+                          { ...chartData[0], time: "Latest reading" }
+                        ] : chartData}>
+                          <defs>
+                            <linearGradient id="phGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#4187d6" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#4187d6" stopOpacity={0.05} />
+                            </linearGradient>
+                            <linearGradient id="turbidityGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#2c5282" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#2c5282" stopOpacity={0.05} />
+                            </linearGradient>
+                            <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#43c6b6" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#43c6b6" stopOpacity={0.05} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis
+                            dataKey="time"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: "#cbd5e1", fontSize: 11, fontFamily: POPPINS }}
+                            tickFormatter={(val) => (val === "Initial reading" || val === "Latest reading" ? "" : val)}
+                            dy={10}
+                          />
+                          <YAxis hide domain={['dataMin - 1', 'dataMax + 2']} />
+                          <Tooltip content={<CustomTooltip />} cursor={<CustomCursor />} />
+                          <Area
+                            type="monotone"
+                            dataKey="ph"
+                            stroke="#4187d6"
+                            strokeWidth={2}
+                            fill="url(#phGradient)"
+                            name="pH Level"
+                            isAnimationActive={!isExporting && graphReady}
+                            activeDot={<CustomActiveDot stroke="#4187d6" />}
+                            dot={false}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="turbidity"
+                            stroke="#2c5282"
+                            strokeWidth={2}
+                            fill="url(#turbidityGradient)"
+                            name="Turbidity (NTU)"
+                            isAnimationActive={!isExporting && graphReady}
+                            activeDot={<CustomActiveDot stroke="#2c5282" />}
+                            dot={false}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="temperature"
+                            stroke="#43c6b6"
+                            strokeWidth={2}
+                            fill="url(#temperatureGradient)"
+                            name="Temperature (°C)"
+                            isAnimationActive={!isExporting && graphReady}
+                            activeDot={<CustomActiveDot stroke="#43c6b6" />}
+                            dot={false}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
 
-                <div className="flex flex-col items-center gap-1 mt-4 pb-4">
-                  <span className="flex-shrink-0 text-sm text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS, alignSelf: 'center' }}>
-                    All parameters shown per {getIntervalString()} interval (from time series table)
-                  </span>
+                  <div className="threshold-container" style={{
+                    background: "#ffffff", border: "1px solid #f1f5f9", borderRadius: 24, padding: isExporting ? "16px" : "24px", marginTop: 0, fontFamily: POPPINS, width: "100%",
+                    animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both' : 'none'
+                  }}>
+                    <h4 style={{ fontSize: isExporting ? 11 : 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
+                    <div style={{ display: "flex", flexWrap: isExporting ? "nowrap" : "wrap", gap: 16 }}>
+                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>22 – 30</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
+                        </div>
+                      </div>
+                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>pH Level</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>6.5 – 8.0</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
+                        </div>
+                      </div>
+                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1 mt-4 pb-4">
+                    <span className="flex-shrink-0 text-sm text-center" style={{ color: "#7b8a9a", fontFamily: POPPINS, alignSelf: 'center' }}>
+                      All parameters shown per {getIntervalString()} interval (from time series table)
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* ── PDF Hidden Content Block ── */}
+              {chartData.length > 0 && (
+                <div className="sg-pdf-only pdf-summary-container" style={{ padding: '16px 0 0 0', marginTop: '10px' }}>
+                  <div style={{ padding: '0 0 16px 0', marginBottom: 16, borderBottom: '1px solid #f0f1f3', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Report Details</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>Site: {dynamicSiteName || siteName} {barangay || (address ? `(${address.split(',')[0].trim()})` : "")}</div>
+                      <div style={{ fontSize: 13, color: '#43c6b6', marginTop: 4, fontFamily: POPPINS, fontWeight: 600, fontStyle: 'italic' }}>Data sourced from IoT sensors</div>
+
+                      <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>Time Range Filter: {timeRange}</div>
+                    </div>
+                    <div style={{ flex: 1.2 }}>
+                      <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Data Extent</div>
+                      <div style={{ fontSize: 12, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}><strong style={{ color: '#64748b' }}>Start:</strong> {fetchedStart}</div>
+                      <div style={{ fontSize: 12, color: '#1a2a3a', marginTop: 2, fontFamily: POPPINS }}><strong style={{ color: '#64748b' }}>Latest:</strong> {fetchedEnd}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', flex: 0.8 }}>
+                      <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Exported On</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                      <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 24, padding: '20px', borderRadius: '16px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 8, background: '#357d86', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Automated Interpretation</div>
+                    </div>
+                    <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.6, fontFamily: POPPINS, fontWeight: 500 }}>
+                      {getInterpretation()}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'space-between', borderTop: '1px solid #f0f1f3', paddingTop: 20 }}>
+                    <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
+                      <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} /> Temperature
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.hDate}</span>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{tempStats.highest !== '--' ? tempStats.highest : '--'} <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>°C</span></span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.lDate}</span>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{tempStats.lowest !== '--' ? tempStats.lowest : '--'} <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>°C</span></span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 12, color: '#43c6b6', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.date}</span>
+                          </div>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#43c6b6', fontFamily: POPPINS, marginTop: -4 }}>{tempStats.latest !== '--' ? tempStats.latest : '--'} <span style={{ fontSize: 12, opacity: 0.8, fontWeight: 600 }}>°C</span></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
+                      <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} /> pH Level
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.hDate}</span>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{phStats.highest !== '--' ? phStats.highest : '--'}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.lDate}</span>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{phStats.lowest !== '--' ? phStats.lowest : '--'}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 12, color: '#4187d6', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.date}</span>
+                          </div>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#4187d6', fontFamily: POPPINS, marginTop: -4 }}>{phStats.latest !== '--' ? phStats.latest : '--'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
+                      <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} /> Turbidity
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.hDate}</span>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{turbStats.highest !== '--' ? turbStats.highest : '--'} <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>NTU</span></span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.lDate}</span>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{turbStats.lowest !== '--' ? turbStats.lowest : '--'} <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>NTU</span></span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 12, color: '#2c5282', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.date}</span>
+                          </div>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#2c5282', fontFamily: POPPINS, marginTop: -4 }}>{turbStats.latest !== '--' ? turbStats.latest : '--'} <span style={{ fontSize: 12, opacity: 0.8, fontWeight: 600 }}>NTU</span></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 12, paddingBottom: 4 }}>
+                    <span style={{ fontSize: 11, color: '#64748b', fontFamily: POPPINS, textAlign: 'center', width: '100%' }}>
+                      All parameters shown per {getIntervalString()} interval (from time series table)
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-
-            {/* ── PDF Hidden Content Block ── */}
-            {chartData.length > 0 && (
-              <div className="sg-pdf-only pdf-summary-container" style={{ padding: '16px 0 0 0', marginTop: '10px' }}>
-                <div style={{ padding: '0 0 16px 0', marginBottom: 16, borderBottom: '1px solid #f0f1f3', display: 'flex', justifyContent: 'space-between' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Report Details</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>Site: {siteName} ({barangay})</div>
-                    <div style={{ fontSize: 13, color: '#43c6b6', marginTop: 4, fontFamily: POPPINS, fontWeight: 600, fontStyle: 'italic' }}>Data sourced from IoT sensors</div>
-
-                    <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>Time Range Filter: {timeRange}</div>
-                  </div>
-                  <div style={{ flex: 1.2 }}>
-                    <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Data Extent</div>
-                    <div style={{ fontSize: 12, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}><strong style={{color:'#64748b'}}>Start:</strong> {fetchedStart}</div>
-                    <div style={{ fontSize: 12, color: '#1a2a3a', marginTop: 2, fontFamily: POPPINS }}><strong style={{color:'#64748b'}}>Latest:</strong> {fetchedEnd}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flex: 0.8 }}>
-                    <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Exported On</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric'})}</div>
-                    <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
-                  </div>
-                </div>
-                
-                <div style={{ marginBottom: 24, padding: '20px', borderRadius: '16px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#357d86', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                    </div>
-                    <div style={{ fontSize: 12, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Automated Interpretation</div>
-                  </div>
-                  <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.6, fontFamily: POPPINS, fontWeight: 500 }}>
-                    {getInterpretation()}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 16, justifyContent: 'space-between', borderTop: '1px solid #f0f1f3', paddingTop: 20 }}>
-                  <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
-                    <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} /> Temperature
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.hDate}</span>
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{tempStats.highest !== '--' ? tempStats.highest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>°C</span></span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.lDate}</span>
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{tempStats.lowest !== '--' ? tempStats.lowest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>°C</span></span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 12, color: '#43c6b6', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{tempStats.date}</span>
-                        </div>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: '#43c6b6', fontFamily: POPPINS, marginTop: -4 }}>{tempStats.latest !== '--' ? tempStats.latest : '--'} <span style={{fontSize: 12, opacity: 0.8, fontWeight: 600}}>°C</span></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
-                    <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} /> pH Level
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.hDate}</span>
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{phStats.highest !== '--' ? phStats.highest : '--'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.lDate}</span>
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{phStats.lowest !== '--' ? phStats.lowest : '--'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 12, color: '#4187d6', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{phStats.date}</span>
-                        </div>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: '#4187d6', fontFamily: POPPINS, marginTop: -4 }}>{phStats.latest !== '--' ? phStats.latest : '--'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ flex: 1, background: '#f8fafc', padding: '16px', borderRadius: 12 }}>
-                    <div style={{ fontSize: 12, color: '#1a2a3a', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} /> Turbidity
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Highest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.hDate}</span>
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{turbStats.highest !== '--' ? turbStats.highest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>NTU</span></span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Lowest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.lDate}</span>
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', fontFamily: POPPINS, marginTop: -2 }}>{turbStats.lowest !== '--' ? turbStats.lowest : '--'} <span style={{fontSize: 10, color: '#94a3b8', fontWeight: 500}}>NTU</span></span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 2, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 12, color: '#2c5282', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Latest</span>
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>{turbStats.date}</span>
-                        </div>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: '#2c5282', fontFamily: POPPINS, marginTop: -4 }}>{turbStats.latest !== '--' ? turbStats.latest : '--'} <span style={{fontSize: 12, opacity: 0.8, fontWeight: 600}}>NTU</span></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 12, paddingBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: '#64748b', fontFamily: POPPINS, textAlign: 'center', width: '100%' }}>
-                    All parameters shown per {getIntervalString()} interval (from time series table)
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
 
-        {/* ── Export Info Modal ── */}
-        {showExportModal && (
-          <div
-            style={{
-              position: "fixed", inset: 0, zIndex: 10002,
-              background: "rgba(0,0,0,0.6)",
-              display: "flex", 
-              alignItems: isMobile ? "flex-start" : "center", 
-              justifyContent: "center",
-              padding: isMobile ? "92px 20px 20px" : "40px 20px",
-              animation: "fadeIn 0.2s ease-out both"
-            }}
-            onClick={() => setShowExportModal(false)}
-          >
-            <style>{`
+          {/* ── Export Info Modal ── */}
+          {showExportModal && (
+            <div
+              style={{
+                position: "fixed", inset: 0, zIndex: 10002,
+                background: "rgba(0,0,0,0.6)",
+                display: "flex",
+                alignItems: isMobile ? "flex-start" : "center",
+                justifyContent: "center",
+                padding: isMobile ? "92px 20px 20px" : "40px 20px",
+                animation: "fadeIn 0.2s ease-out both"
+              }}
+              onClick={() => setShowExportModal(false)}
+            >
+              <style>{`
               @keyframes modalPopIn {
                 from { opacity: 0; transform: scale(0.95) translateY(10px); }
                 to { opacity: 1; transform: scale(1) translateY(0); }
               }
               @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
             `}</style>
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "100%",
-                maxWidth: 540,
-                maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
-                background: "#fff",
-                borderRadius: isMobile ? 16 : 24,
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
-                animation: "modalPopIn 0.3s cubic-bezier(0.22,1,0.36,1) both",
-              }}
-            >
-              <div style={{ 
-                padding: isMobile ? "16px 20px" : "20px 24px", 
-                borderBottom: "1px solid #f1f5f9", 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center",
-                flexShrink: 0
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Download size={18} color="#1a2a3a" />
-                  </div>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>Export Report</h2>
-                </div>
-                <button 
-                  onClick={() => setShowExportModal(false)} 
-                  style={{ 
-                    width: 32, height: 32, borderRadius: "50%", 
-                    border: "none", background: "#f3f4f6", 
-                    color: "#64748b",
-                    display: "flex", alignItems: "center", justifyContent: "center", 
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <div style={{ 
-                padding: isMobile ? "20px" : "24px", 
-                display: "flex", 
-                flexDirection: "column", 
-                gap: 20,
-                flex: 1,
-                overflowY: "auto",
-                minHeight: 0
-              }}>
-                <div style={{ 
-                  background: "#f8fafc", 
-                  borderRadius: 16, 
-                  padding: "16px 18px", 
-                  border: "1px solid #f1f5f9", 
-                  position: "relative",
-                  height: "auto",
-                  display: "block"
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: "100%",
+                  maxWidth: 540,
+                  maxHeight: isMobile ? "calc(100vh - 120px)" : "85vh",
+                  background: "#fff",
+                  borderRadius: isMobile ? 16 : 24,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
+                  animation: "modalPopIn 0.3s cubic-bezier(0.22,1,0.36,1) both",
+                }}
+              >
+                <div style={{
+                  padding: isMobile ? "16px 20px" : "20px 24px",
+                  borderBottom: "1px solid #f1f5f9",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexShrink: 0
                 }}>
-                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "#1a2a3a" }} />
-                  <h4 style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", margin: "0 0 6px 0", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Info size={14} color="#1a2a3a" /> Graph Summary
-                  </h4>
-                  <p style={{ fontSize: 12.5, color: "#475569", margin: 0, lineHeight: "1.5" }}>
-                    This chart visualizes the time series trends for Temperature, pH Level, and Turbidity based on the selected time range.
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Download size={18} color="#1a2a3a" />
+                    </div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>Export Report</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowExportModal(false)}
+                    style={{
+                      width: 32, height: 32, borderRadius: "50%",
+                      border: "none", background: "#f3f4f6",
+                      color: "#64748b",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-                  <div style={{ background: "#fff", borderRadius: 16, padding: "16px", border: "1px solid #f1f5f9" }}>
-                    <h5 style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px 0" }}>How to interpret the graph</h5>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>Temperature</span><span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>25 – 30 °C</span></div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>pH Level</span><span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>6.5 – 9.0</span></div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>Turbidity (NTU)</span><span style={{ fontSize: 12, fontWeight: 700, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>Risk if &lt; 5</span></div>
+                <div style={{
+                  padding: isMobile ? "20px" : "24px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 20,
+                  flex: 1,
+                  overflowY: "auto",
+                  minHeight: 0
+                }}>
+                  <div style={{
+                    background: "#f8fafc",
+                    borderRadius: 16,
+                    padding: "16px 18px",
+                    border: "1px solid #f1f5f9",
+                    position: "relative",
+                    height: "auto",
+                    display: "block"
+                  }}>
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "#1a2a3a" }} />
+                    <h4 style={{ fontSize: 13, fontWeight: 700, color: "#1a2a3a", margin: "0 0 6px 0", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Info size={14} color="#1a2a3a" /> Graph Summary
+                    </h4>
+                    <p style={{ fontSize: 12.5, color: "#475569", margin: 0, lineHeight: "1.5" }}>
+                      This chart visualizes the time series trends for Temperature, pH Level, and Turbidity based on the selected time range.
+                    </p>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+                    <div style={{ background: "#fff", borderRadius: 16, padding: "16px", border: "1px solid #f1f5f9" }}>
+                      <h5 style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px 0" }}>How to interpret the graph</h5>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>Temperature</span><span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>25 – 30 °C</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>pH Level</span><span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>6.5 – 9.0</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>Turbidity (NTU)</span><span style={{ fontSize: 12, fontWeight: 700, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>Risk if &lt; 5</span></div>
+                      </div>
+                    </div>
+                    <div style={{ background: "#fff", borderRadius: 16, padding: "16px", border: "1px solid #f1f5f9" }}>
+                      <h5 style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px 0" }}>Understanding Trends</h5>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>Rising/Falling</span><span style={{ fontSize: 11, color: "#64748b" }}>Steady conditions</span></div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>Sudden Spikes</span><span style={{ fontSize: 11, color: "#64748b" }}>Sensor error/Issue</span></div>
+                      </div>
                     </div>
                   </div>
-                  <div style={{ background: "#fff", borderRadius: 16, padding: "16px", border: "1px solid #f1f5f9" }}>
-                    <h5 style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px 0" }}>Understanding Trends</h5>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>Rising/Falling</span><span style={{ fontSize: 11, color: "#64748b" }}>Steady conditions</span></div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>Sudden Spikes</span><span style={{ fontSize: 11, color: "#64748b" }}>Sensor error/Issue</span></div>
-                    </div>
-                  </div>
                 </div>
-              </div>
-              <div style={{ 
-                padding: isMobile ? "16px 20px" : "20px 24px", 
-                background: "#f8fafc", 
-                borderTop: "1px solid #f1f5f9", 
-                display: "flex", 
-                gap: 12,
-                flexShrink: 0
-              }}>
-                <button onClick={() => setShowExportModal(false)} style={{ flex: 1, height: 44, borderRadius: 12, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: POPPINS }}>Cancel</button>
-                <button onClick={() => { setShowExportModal(false); handleExportChartPDF(); }} style={{ flex: 2, height: 44, borderRadius: 12, border: "none", background: "#357D86", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: POPPINS, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 12px rgba(53,125,134,0.25)" }}>
-                  <Download size={18} /> Confirm & Download
-                </button>
+                <div style={{
+                  padding: isMobile ? "16px 20px" : "20px 24px",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #f1f5f9",
+                  display: "flex",
+                  gap: 12,
+                  flexShrink: 0
+                }}>
+                  <button onClick={() => setShowExportModal(false)} style={{ flex: 1, height: 44, borderRadius: 12, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: POPPINS }}>Cancel</button>
+                  <button onClick={() => { setShowExportModal(false); handleExportChartPDF(); }} style={{ flex: 2, height: 44, borderRadius: 12, border: "none", background: "#357D86", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: POPPINS, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 12px rgba(53,125,134,0.25)" }}>
+                    <Download size={18} /> Confirm & Download
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <style>{`
+          <style>{`
           @media print {
             .sg-print-only { display: block !important; }
           }
