@@ -615,7 +615,49 @@ export const ReportsPage: React.FC = () => {
           0% { opacity: 0; transform: translateY(8px); }
           100% { opacity: 1; transform: translateY(0); }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 0.8s linear infinite;
+        }
       `}</style>
+      
+      {/* ── Preparing Report Modal ── */}
+      {downloading && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 10000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: '48px 40px',
+            borderRadius: 24,
+            boxShadow: '0 20px 50px rgba(53, 125, 134, 0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16,
+            border: '1px solid rgba(53, 125, 134, 0.1)'
+          }}>
+            <Loader2 className="animate-spin" size={40} color="#357d86" />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: '#1a2a3a', fontFamily: POPPINS }}>Preparing Report</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: 14, color: '#64748b', fontFamily: POPPINS }}>Please wait while we generate your PDF...</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Hidden Report Source for Capture ── */}
       {selectedReport && (

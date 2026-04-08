@@ -561,7 +561,7 @@ export function SiteDetailView({
         }}>
           <div style={{
             background: '#fff',
-            padding: '48px 32px',
+            padding: '48px 40px',
             borderRadius: 28,
             boxShadow: '0 24px 64px rgba(53, 125, 134, 0.2)',
             display: 'flex',

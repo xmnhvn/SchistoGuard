@@ -644,7 +644,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         }}>
           <div style={{
             background: '#fff',
-            padding: '30px 40px',
+            padding: '48px 40px',
             borderRadius: 24,
             boxShadow: '0 20px 50px rgba(53, 125, 134, 0.15)',
             display: 'flex',
