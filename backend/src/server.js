@@ -61,7 +61,6 @@ if (DB_TYPE === 'postgres') {
 
 const app = express();
 
-// Environment variables
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const SESSION_SECRET = process.env.SESSION_SECRET;
