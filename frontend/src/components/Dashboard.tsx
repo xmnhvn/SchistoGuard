@@ -820,7 +820,7 @@ export function Dashboard({
             display: "flex",
             flexDirection: "column",
             gap: 16,
-            overflowY: "auto",
+            overflow: "hidden",
             pointerEvents: "none",
           } as React.CSSProperties}
         >
@@ -1425,7 +1425,7 @@ export function Dashboard({
           display: "flex",
           flexDirection: "column",
           padding: panelPadding,
-          overflowY: "auto",
+          overflow: "hidden",
           zIndex: 2,
         } as React.CSSProperties}
       >
@@ -1799,6 +1799,7 @@ function SensorMiniCard({
   fixedHeight,
   fadeIn,
   isNarrow,
+  style,
 }: {
   label: string;
   iconSrc: string;
@@ -1811,6 +1812,7 @@ function SensorMiniCard({
   fixedHeight?: number;
   fadeIn?: boolean;
   isNarrow?: boolean;
+  style?: React.CSSProperties;
 }) {
 
   const S = SENSOR_CARD_STYLE;
@@ -1839,6 +1841,7 @@ function SensorMiniCard({
         height: cardHeight as any,
         boxSizing: "border-box",
         fontFamily: POPPINS,
+        ...style
       }}
     >
       {/* Status dot — pulses when active, grey+static when no data */}
