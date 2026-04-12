@@ -486,7 +486,7 @@ export function SiteDetailView({
     } else {
       const toDisplay = (status: string) => {
         if (status === "Critical") return "High Possible Risk";
-        if (status === "Warning") return "Moderate Possible Risk";
+        if (status === "Warning") return "Moderate Risk";
         return "Safe";
       };
 
@@ -892,7 +892,7 @@ export function SiteDetailView({
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>22 – 30</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
@@ -903,7 +903,7 @@ export function SiteDetailView({
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>6.5 – 8.0</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
@@ -914,7 +914,7 @@ export function SiteDetailView({
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
                         </div>
                       </div>

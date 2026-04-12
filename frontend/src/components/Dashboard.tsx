@@ -679,7 +679,7 @@ export function Dashboard({
 
   const getOverallRiskLabel = (risk: "critical" | "warning" | "safe") => {
     if (risk === "critical") return "High Possible Risk";
-    if (risk === "warning") return "Moderate Possible Risk";
+    if (risk === "warning") return "Moderate Risk";
     return "Safe";
   };
 
@@ -1926,18 +1926,18 @@ function getSensorStatus(
     if (value >= 22 && value <= 30)
       return { label: "High Possible Risk", color: "#ef4444" };
     if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
-      return { label: "Moderate Possible Risk", color: "#E7B213" };
+      return { label: "Moderate Risk", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "turbidity") {
     if (value < 5) return { label: "High Possible Risk", color: "#ef4444" };
-    if (value <= 15) return { label: "Moderate Possible Risk", color: "#E7B213" };
+    if (value <= 15) return { label: "Moderate Risk", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "ph") {
     if (value >= 6.5 && value <= 8.0) return { label: "High Possible Risk", color: "#ef4444" };
     if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
-      return { label: "Moderate Possible Risk", color: "#f59e0b" };
+      return { label: "Moderate Risk", color: "#f59e0b" };
     return { label: "Safe", color: "#22c55e" };
   }
   return { label: "", color: "#9ca3af" };

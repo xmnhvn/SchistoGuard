@@ -404,11 +404,11 @@ function buildAlertMessage(parameter, level) {
   if (level === "critical") {
     return `High possible risk: ${parameter} is within the early-warning range for possible schistosomiasis risk. Please verify on site.`;
   }
-  return `Moderate possible risk: ${parameter} is showing an early-warning signal. Please continue monitoring and validate the reading.`;
+  return `Moderate risk: ${parameter} is showing an early-warning signal. Please continue monitoring and validate the reading.`;
 }
 
 function buildSmsLine(parameter, value, level) {
-  const levelText = level === "critical" ? "High Possible Risk" : "Moderate Possible Risk";
+  const levelText = level === "critical" ? "High Possible Risk" : "Moderate Risk";
   return `${parameter}: ${value} (${levelText})`;
 }
 

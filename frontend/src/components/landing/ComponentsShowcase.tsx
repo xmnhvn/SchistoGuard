@@ -30,7 +30,7 @@ export const ComponentsShowcase: React.FC = () => {
     },
     {
       id: '2',
-      title: 'Temperature Moderate Possible Risk',
+      title: 'Temperature Moderate Risk',
       details: 'Water temp 32°C — Barangay Riverside',
       level: 'warning' as const,
       timestamp: '2025-09-15 13:45'
@@ -104,7 +104,7 @@ export const ComponentsShowcase: React.FC = () => {
               <h4 className="text-md font-medium mb-3">Status Badges</h4>
               <div className="flex flex-wrap gap-3">
                 <StatusBadge variant="safe">Safe</StatusBadge>
-                <StatusBadge variant="warning">Moderate Possible Risk</StatusBadge>
+                <StatusBadge variant="warning">Moderate Risk</StatusBadge>
                 <StatusBadge variant="critical">High Possible Risk</StatusBadge>
                 <StatusBadge variant="info">Info</StatusBadge>
               </div>
@@ -131,8 +131,8 @@ export const ComponentsShowcase: React.FC = () => {
             <div>
               <h4 className="text-md font-medium mb-3">Sizes</h4>
               <div className="flex flex-wrap gap-3 items-center">
-                <StatusBadge variant="warning" size="sm">Small Moderate Possible Risk</StatusBadge>
-                <StatusBadge variant="warning" size="md">Medium Moderate Possible Risk</StatusBadge>
+                <StatusBadge variant="warning" size="sm">Small Moderate Risk</StatusBadge>
+                <StatusBadge variant="warning" size="md">Medium Moderate Risk</StatusBadge>
               </div>
             </div>
           </div>
@@ -181,7 +181,7 @@ export const ComponentsShowcase: React.FC = () => {
             />
             <AlertOverlay
               level="warning"
-              title="Temperature Moderate Possible Risk"
+              title="Temperature Moderate Risk"
               details="Water temp 32°C — Barangay Riverside"
               timestamp="2025-09-15 13:45"
               onAcknowledge={() => alert('Alert acknowledged')}

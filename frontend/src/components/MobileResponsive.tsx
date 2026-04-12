@@ -168,7 +168,7 @@ export function ResponsiveDashboard() {
                       <Badge className="bg-status-safe text-white">{readings.filter(r => r.turbidity > 15).length}</Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Moderate Possible Risk Sites</span>
+                      <span className="text-sm">Moderate Risk Sites</span>
                       <Badge className="bg-status-warning text-black">{readings.filter(r => r.turbidity > 5 && r.turbidity <= 15).length}</Badge>
                     </div>
                     <div className="flex items-center justify-between">

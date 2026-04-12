@@ -34,7 +34,7 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
   const totalReadings = summary?.totalReadings;
   function getRiskLabel(risk: 'critical' | 'warning' | 'safe'): string {
     if (risk === 'critical') return 'High Possible Risk';
-    if (risk === 'warning') return 'Moderate Possible Risk';
+    if (risk === 'warning') return 'Moderate Risk';
     return 'Safe';
   }
 
@@ -86,7 +86,7 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
             riskLabel = "High Possible Risk";
             riskColor = "text-red-600";
           } else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) {
-            riskLabel = "Moderate Possible Risk";
+            riskLabel = "Moderate Risk";
             riskColor = "text-yellow-500";
           }
           return (
@@ -135,7 +135,7 @@ const SensorCard: React.FC<SensorCardProps> = ({ readings, alerts, summary, offl
             phRiskLabel = "High Possible Risk";
             phRiskColor = "text-red-600";
           } else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) {
-            phRiskLabel = "Moderate Possible Risk";
+            phRiskLabel = "Moderate Risk";
             phRiskColor = "text-yellow-500";
           }
           return (
