@@ -218,12 +218,7 @@ export function SiteDetailView({
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
-  const displayAddress = formatAddress({
-    fullAddress: address,
-    locality: address,
-    barangay,
-    fallback: "Address unavailable",
-  });
+  const displayAddress = (typeof address === 'string' && address.trim()) ? address.trim() : "Address unavailable";
   const effectiveSiteName = dynamicSiteName || siteName || "Site Name";
   const headerSubtitle = selectedLocationFilter !== "all" ? selectedLocationFilter : displayAddress;
 
