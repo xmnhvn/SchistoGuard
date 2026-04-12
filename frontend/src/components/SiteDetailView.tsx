@@ -13,6 +13,7 @@ import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
 import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from "../utils/loadHtml2Pdf";
 import { reverseGeocode } from "../utils/reverseGeocode";
+import { formatAddress } from "../utils/addressFormat";
 import { PDFHeader } from "./PDFHeader";
 
 const POPPINS = "'Poppins', sans-serif";
@@ -53,13 +54,6 @@ export function SiteDetailView({
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(siteName !== "Site Name" ? siteName : null);
   const [animationEnabled, setAnimationEnabled] = useState(true);
-
-  const isDetailedAddress = (value?: string | null) => {
-    if (typeof value !== "string") return false;
-    const cleaned = value.trim();
-    if (!cleaned) return false;
-    return cleaned.split(',').length >= 3;
-  };
 
   useEffect(() => {
     // Disable entry animation after it's finished to prevent glitches on re-renders
@@ -222,10 +216,12 @@ export function SiteDetailView({
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
-  const displayAddress =
-    (isDetailedAddress(address) ? address!.trim() : null) ||
-    (typeof barangay === "string" && barangay.trim() ? barangay.trim() : null) ||
-    "Address unavailable";
+  const displayAddress = formatAddress({
+    fullAddress: address,
+    locality: address,
+    barangay,
+    fallback: "Address unavailable",
+  });
 
 
 

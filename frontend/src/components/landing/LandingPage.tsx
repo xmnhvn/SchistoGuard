@@ -24,6 +24,7 @@ import { PWAInstructionsModal } from "../PWAInstructionsModal";
 import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
 import { reverseGeocode } from "../../utils/reverseGeocode";
+import { formatAddress } from "../../utils/addressFormat";
 
 interface LandingPageProps {
   onViewMap?: () => void;
@@ -151,32 +152,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
 
-  const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
-    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean)
-    .join(", ");
-
-  const localFallbackAddress = [siteData.area, siteData.barangay]
-    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean)
-    .join(", ");
-
-  const isDetailedAddress = (value?: string | null) => {
-    if (typeof value !== "string") return false;
-    const cleaned = value.trim();
-    if (!cleaned) return false;
-    return cleaned.split(',').length >= 3;
-  };
-
-  const displayAddress =
-    (isDetailedAddress(latestReading?.address) ? latestReading.address!.trim() : null) ||
-    (isDetailedAddress(lastSavedLocation?.address) ? lastSavedLocation.address!.trim() : null) ||
-    (isDetailedAddress(gpsAddress) ? gpsAddress : null) ||
-    localFallbackAddress ||
+  const primaryAddress =
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
-    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
-    gpsAddress ||
-    "Address unavailable";
+    (typeof lastSavedLocation?.address === "string" && lastSavedLocation.address.trim() ? lastSavedLocation.address.trim() : null) ||
+    (typeof gpsAddress === "string" && gpsAddress.trim() ? gpsAddress.trim() : null) ||
+    null;
+
+  const displayAddress = formatAddress({
+    fullAddress: primaryAddress,
+    locality: primaryAddress,
+    area: siteData?.area,
+    barangay: siteData?.barangay,
+    municipality: siteData?.municipality,
+    province: siteData?.province,
+    fallback: "Address unavailable",
+  });
 
   // Strictly follow real sensor device location (from GSM/GPS data)
   useEffect(() => {

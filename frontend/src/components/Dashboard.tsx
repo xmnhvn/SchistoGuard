@@ -17,6 +17,7 @@ import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
+import { formatAddress } from "../utils/addressFormat";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -221,32 +222,21 @@ export function Dashboard({
   const sharedPad = isNarrowDesktop ? "14px 18px" : "18px 24px";
   const panelWidth = isNarrowDesktop ? "44%" : "40%";
 
-  const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
-    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean)
-    .join(", ");
-
-  const localFallbackAddress = [siteData.area, siteData.barangay]
-    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean)
-    .join(", ");
-
-  const isDetailedAddress = (value?: string | null) => {
-    if (typeof value !== "string") return false;
-    const cleaned = value.trim();
-    if (!cleaned) return false;
-    return cleaned.split(',').length >= 3;
-  };
-
-  const displayAddress =
-    (isDetailedAddress(latestReading?.address) ? latestReading.address!.trim() : null) ||
-    (isDetailedAddress(lastSavedLocation?.address) ? lastSavedLocation.address!.trim() : null) ||
-    (isDetailedAddress(gpsAddress) ? gpsAddress : null) ||
-    localFallbackAddress ||
+  const primaryAddress =
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
-    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
-    gpsAddress ||
-    "Address unavailable";
+    (typeof lastSavedLocation?.address === "string" && lastSavedLocation.address.trim() ? lastSavedLocation.address.trim() : null) ||
+    (typeof gpsAddress === "string" && gpsAddress.trim() ? gpsAddress.trim() : null) ||
+    null;
+
+  const displayAddress = formatAddress({
+    fullAddress: primaryAddress,
+    locality: primaryAddress,
+    area: siteData?.area,
+    barangay: siteData?.barangay,
+    municipality: siteData?.municipality,
+    province: siteData?.province,
+    fallback: "Address unavailable",
+  });
 
   useEffect(() => {
     const check = () => {
