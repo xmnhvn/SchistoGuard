@@ -1,4 +1,4 @@
-// Utility function to reverse geocode lat/lng to address using OpenStreetMap Nominatim API
+// Utility function to reverse geocode lat/lng to address using BigDataCloud reverse geocoding
 function buildBestAvailableAddress(data: any): string | null {
   const locality = typeof data?.locality === 'string' && data.locality.trim() ? data.locality.trim() : null;
   const city = typeof data?.city === 'string' && data.city.trim() ? data.city.trim() : null;

@@ -1,4 +1,4 @@
-// Backend utility to reverse geocode lat/lng to address using OpenStreetMap Nominatim API
+// Backend utility to reverse geocode lat/lng to address using BigDataCloud reverse geocoding
 const axios = require('axios');
 
 function buildBestAvailableAddress(data) {
