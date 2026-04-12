@@ -4,7 +4,25 @@
  */
 
 // @ts-ignore - Vite env type handling
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+
+function buildApiUrl(endpoint: string): string {
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (!API_BASE_URL) {
+    return normalizedEndpoint;
+  }
+
+  if (normalizedEndpoint.startsWith('/api') && API_BASE_URL.endsWith('/api')) {
+    return `${API_BASE_URL}${normalizedEndpoint.slice(4)}`;
+  }
+
+  return `${API_BASE_URL}${normalizedEndpoint}`;
+}
+
+function addCacheBust(url: string): string {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}_ts=${Date.now()}`;
+}
 
 let csrfTokenCache: string | null = null;
 let csrfTokenPromise: Promise<string | null> | null = null;
@@ -28,7 +46,7 @@ async function fetchCsrfToken(): Promise<string | null> {
 
   csrfTokenPromise = (async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/csrf-token`, {
+      const response = await fetch(buildApiUrl('/api/auth/csrf-token'), {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -68,8 +86,8 @@ interface FetchOptions extends RequestInit {
  * @returns {Promise<any>} Response data
  */
 export async function apiCall(endpoint: string, options: FetchOptions = {}): Promise<any> {
-  const url = `${API_BASE_URL}${endpoint}`;
   const method = (options.method || 'GET').toUpperCase();
+  const url = method === 'GET' ? addCacheBust(buildApiUrl(endpoint)) : buildApiUrl(endpoint);
 
   let csrfHeader: Record<string, string> = {};
   if (shouldAttachCsrfToken(endpoint, method)) {
@@ -82,6 +100,7 @@ export async function apiCall(endpoint: string, options: FetchOptions = {}): Pro
   try {
     let response = await fetch(url, {
       credentials: 'include', // Include cookies for session
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         ...csrfHeader,
@@ -98,6 +117,7 @@ export async function apiCall(endpoint: string, options: FetchOptions = {}): Pro
       if (refreshedToken) {
         response = await fetch(url, {
           credentials: 'include',
+          cache: 'no-store',
           headers: {
             'Content-Type': 'application/json',
             'x-csrf-token': refreshedToken,
