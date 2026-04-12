@@ -226,11 +226,26 @@ export function Dashboard({
     .filter(Boolean)
     .join(", ");
 
+  const localFallbackAddress = [siteData.area, siteData.barangay]
+    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean)
+    .join(", ");
+
+  const isDetailedAddress = (value?: string | null) => {
+    if (typeof value !== "string") return false;
+    const cleaned = value.trim();
+    if (!cleaned) return false;
+    return cleaned.split(',').length >= 3;
+  };
+
   const displayAddress =
-    gpsAddress ||
+    (isDetailedAddress(latestReading?.address) ? latestReading.address!.trim() : null) ||
+    (isDetailedAddress(lastSavedLocation?.address) ? lastSavedLocation.address!.trim() : null) ||
+    (isDetailedAddress(gpsAddress) ? gpsAddress : null) ||
+    localFallbackAddress ||
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
-    metaAddress ||
+    gpsAddress ||
     "Address unavailable";
 
   useEffect(() => {

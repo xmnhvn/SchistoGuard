@@ -54,6 +54,13 @@ export function SiteDetailView({
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(siteName !== "Site Name" ? siteName : null);
   const [animationEnabled, setAnimationEnabled] = useState(true);
 
+  const isDetailedAddress = (value?: string | null) => {
+    if (typeof value !== "string") return false;
+    const cleaned = value.trim();
+    if (!cleaned) return false;
+    return cleaned.split(',').length >= 3;
+  };
+
   useEffect(() => {
     // Disable entry animation after it's finished to prevent glitches on re-renders
     const timer = setTimeout(() => {
@@ -216,7 +223,7 @@ export function SiteDetailView({
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
   const displayAddress =
-    (typeof address === "string" && address.trim() ? address.trim() : null) ||
+    (isDetailedAddress(address) ? address!.trim() : null) ||
     (typeof barangay === "string" && barangay.trim() ? barangay.trim() : null) ||
     "Address unavailable";
 
