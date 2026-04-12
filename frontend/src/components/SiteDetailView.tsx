@@ -212,6 +212,7 @@ export function SiteDetailView({
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const isNarrowDesktop = windowWidth < 1600;
 
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
@@ -410,7 +411,7 @@ export function SiteDetailView({
 
 
 
-  const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : 32;
+  const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : (isNarrowDesktop ? 24 : 32);
 
   const getInterpretation = () => {
     if (!chartData || chartData.length === 0) return "No data available.";
@@ -587,7 +588,7 @@ export function SiteDetailView({
             }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
                 <h1 style={{
-                  fontSize: mobileResponsive ? 18 : 20,
+                  fontSize: mobileResponsive ? 18 : (isNarrowDesktop ? 19 : 22),
                   fontWeight: 700,
                   color: "#1a2a3a",
                   margin: 0,
@@ -611,11 +612,10 @@ export function SiteDetailView({
                 )}
                 {!mobileResponsive && (
                   <p style={{
-                    fontSize: 14,
+                    fontSize: isNarrowDesktop ? 11 : 12,
                     color: "#7b8a9a",
-                    margin: "4px 0 0",
+                    margin: isNarrowDesktop ? "1px 0 0 0" : "2px 0 0 0",
                     fontFamily: POPPINS,
-                    minHeight: "20px",
                     transition: 'opacity 0.3s ease-in-out'
                   }}>{displayAddress}</p>
                 )}
@@ -633,9 +633,9 @@ export function SiteDetailView({
               <div style={{ flex: mobileResponsive ? 1 : undefined }}>
                 <Select value={timeRange} onValueChange={setTimeRange}>
                   <SelectTrigger style={{
-                    width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
-                    minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                    border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                    width: mobileResponsive ? undefined : (isNarrowDesktop ? 130 : 148), flex: mobileResponsive ? 1 : undefined,
+                    minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: isNarrowDesktop ? 12 : 13,
+                    border: "1px solid #e2e5ea", background: "#fff", height: isNarrowDesktop ? 34 : 38,
                   }}>
                     <SelectValue />
                   </SelectTrigger>
@@ -651,9 +651,9 @@ export function SiteDetailView({
                 <button
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "0 16px", height: 38, borderRadius: 12,
+                    padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
                     border: "1px solid #e2e5ea",
-                    background: "#fff", cursor: "pointer", fontSize: 13,
+                    background: "#fff", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                     fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                     whiteSpace: "nowrap",
                     width: mobileResponsive ? "100%" : undefined
@@ -681,8 +681,8 @@ export function SiteDetailView({
               <div
                 style={{
                   background: "#fff",
-                  borderRadius: 24,
-                  border: "1px solid #f1f5f9",
+                  borderRadius: 20,
+                  border: "1px solid #e2e5ea",
                   overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
@@ -810,39 +810,39 @@ export function SiteDetailView({
                   )}
 
                   <div className="threshold-container" style={{
-                    background: "#ffffff", border: "1px solid #f1f5f9", borderRadius: 24, padding: isExporting ? "16px" : "24px", marginTop: 0, fontFamily: POPPINS, width: "100%",
+                    background: "#ffffff", border: "1px solid #e2e5ea", borderRadius: 20, padding: isExporting ? "16px" : (isNarrowDesktop ? "20px" : "24px"), marginTop: 0, fontFamily: POPPINS, width: "100%",
                     animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both' : 'none'
                   }}>
-                    <h4 style={{ fontSize: isExporting ? 11 : 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
+                    <h4 style={{ fontSize: isExporting ? 11 : (isNarrowDesktop ? 12 : 13), fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
                     <div style={{ display: "flex", flexWrap: isExporting ? "nowrap" : "wrap", gap: 16 }}>
-                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ background: "#fff", borderRadius: 16, padding: isNarrowDesktop ? 12 : 14, border: "1px solid rgba(0,0,0,0.03)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)", flex: "1 1 300px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
                           <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
-                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : (isNarrowDesktop ? 13 : 14)), fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>22 – 30</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
-                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ background: "#fff", borderRadius: 16, padding: isNarrowDesktop ? 12 : 14, border: "1px solid rgba(0,0,0,0.03)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)", flex: "1 1 300px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
                           <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
-                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>pH Level</span>
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : (isNarrowDesktop ? 13 : 14)), fontWeight: 600, color: "#1e293b" }}>pH Level</span>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>6.5 – 8.0</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
-                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ background: "#fff", borderRadius: 16, padding: isNarrowDesktop ? 12 : 14, border: "1px solid rgba(0,0,0,0.03)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)", flex: "1 1 300px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
                           <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
-                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : (isNarrowDesktop ? 13 : 14)), fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>

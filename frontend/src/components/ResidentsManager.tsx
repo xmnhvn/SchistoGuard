@@ -101,7 +101,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
   const isCompact = windowWidth < 1100;
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const isNarrowDesktop = windowWidth < 1600;
+  const pad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
 
   // Fetch residents
   useEffect(() => {
@@ -356,7 +357,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: isMobile ? 18 : 20,
+              fontSize: isMobile ? 18 : (isNarrowDesktop ? 19 : 22),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -365,7 +366,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               Recipients
             </h1>
             <p style={{
-              fontSize: isMobile ? 11 : 12,
+              fontSize: isMobile ? 11 : (isNarrowDesktop ? 11 : 12),
               color: "#7b8a9a",
               margin: "2px 0 0 0",
               fontFamily: POPPINS
@@ -396,9 +397,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 style={{
                   width: "100%",
                   borderRadius: 12, fontFamily: POPPINS,
-                  fontSize: 13,
+                  fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
-                  height: 38,
+                  height: isNarrowDesktop ? 34 : 38,
                   paddingLeft: 34
                 }}
               />
@@ -408,9 +409,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 <SelectTrigger style={{
                   width: isCompact ? "100%" : 170,
                   minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
-                  fontSize: 13,
+                  fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
-                  height: 38,
+                  height: isNarrowDesktop ? 34 : 38,
                   padding: "0 10px",
                   display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
@@ -440,9 +441,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               htmlFor="csv-upload-input"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: "0 16px", height: 38, borderRadius: 12,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
                 border: "1px solid #e2e5ea",
-                background: "#fff", cursor: "pointer", fontSize: 13,
+                background: "#fff", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 margin: 0, flexShrink: 0,
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
@@ -455,9 +456,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               onClick={() => setIsAddDialogOpen(true)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: "0 16px", height: 38, borderRadius: 12,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
                 border: "none", flexShrink: 0,
-                background: "#357D86", cursor: "pointer", fontSize: 13,
+                background: "#357D86", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
               }}
@@ -472,30 +473,30 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         <div style={{
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
-          gap: 16,
+          gap: isMobile ? 12 : 16,
           marginBottom: 24,
           animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           {[
-            { label: "Total Recipients", value: residents.length, icon: <Users style={{ width: 22, height: 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
-            { label: "Residents", value: residents.filter((r) => r.role === "resident").length, icon: <Users style={{ width: 22, height: 22, color: "#4478f6" }} />, color: "#4478f6", bg: "#ebf2ff" },
-            { label: "BHW", value: residents.filter((r) => r.role === "bhw").length, icon: <Users style={{ width: 22, height: 22, color: "#2cc865" }} />, color: "#2cc865", bg: "#eafff1" },
-            { label: "LGU", value: residents.filter((r) => r.role === "lgu").length, icon: <Users style={{ width: 22, height: 22, color: "#a559ea" }} />, color: "#a559ea", bg: "#f6eeff" },
+            { label: "Total Recipients", value: residents.length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
+            { label: "Residents", value: residents.filter((r) => r.role === "resident").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#4478f6" }} />, color: "#4478f6", bg: "#ebf2ff" },
+            { label: "BHW", value: residents.filter((r) => r.role === "bhw").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#2cc865" }} />, color: "#2cc865", bg: "#eafff1" },
+            { label: "LGU", value: residents.filter((r) => r.role === "lgu").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#a559ea" }} />, color: "#a559ea", bg: "#f6eeff" },
           ].map((card, i) => (
             <div key={card.label} style={{
               background: "#fff",
               borderRadius: 16,
-              padding: 14,
+              padding: isNarrowDesktop ? 12 : 14,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 6,
+              gap: isNarrowDesktop ? 4 : 6,
               height: "auto",
               animation: animate ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` : "none",
             }}>
               <div style={{
-                width: 38,
-                height: 38,
+                width: isNarrowDesktop ? 30 : 38,
+                height: isNarrowDesktop ? 30 : 38,
                 borderRadius: 10,
                 background: card.bg,
                 display: "flex",
@@ -506,8 +507,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 {card.icon}
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <span style={{ fontSize: 22, fontWeight: 600, color: card.color, fontFamily: POPPINS, lineHeight: 1.1 }}>{card.value}</span>
-                <span style={{ fontSize: 10, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>{card.label}</span>
+                <span style={{ fontSize: isNarrowDesktop ? 20 : 22, fontWeight: 600, color: card.color, fontFamily: POPPINS, lineHeight: 1.1 }}>{card.value}</span>
+                <span style={{ fontSize: isNarrowDesktop ? 9 : 10, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>{card.label}</span>
               </div>
             </div>
           ))}
@@ -619,8 +620,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
                       {["Name", "Phone Number", "Designation", "Actions"].map(h => (
                         <th key={h} style={{
-                          padding: "10px 16px",
-                          fontSize: 11,
+                          padding: isNarrowDesktop ? "8px 12px" : "10px 16px",
+                          fontSize: isNarrowDesktop ? 10.5 : 11,
                           fontWeight: 600,
                           color: "#7b8a9a",
                           textAlign: h === "Actions" ? "right" : "left",
@@ -639,17 +640,17 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                         borderBottom: "1px solid #f5f5f5",
                         animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both`,
                       }}>
-                        <td style={{ padding: "10px 16px" }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "#1a2a3a" }}>{resident.name}</div>
+                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px" }}>
+                          <div style={{ fontSize: isNarrowDesktop ? 11 : 12, fontWeight: 600, color: "#1a2a3a" }}>{resident.name}</div>
                         </td>
-                        <td style={{ padding: "10px 16px", fontSize: 11, color: "#475569", fontWeight: 500 }}>
+                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px", fontSize: isNarrowDesktop ? 10.5 : 11, color: "#475569", fontWeight: 500 }}>
                           {resident.phone}
                         </td>
-                        <td style={{ padding: "10px 16px" }}>
+                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px" }}>
                           <span style={{
-                            fontSize: 10,
+                            fontSize: isNarrowDesktop ? 9 : 10,
                             fontWeight: 600,
-                            padding: "3px 10px",
+                            padding: isNarrowDesktop ? "2px 8px" : "3px 10px",
                             borderRadius: 18,
                             background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
                             color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
@@ -658,7 +659,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                             {roleLabels[resident.role]}
                           </span>
                         </td>
-                        <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px", textAlign: "right" }}>
                           <div style={{ display: "flex", justifyContent: "flex-end" }}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>

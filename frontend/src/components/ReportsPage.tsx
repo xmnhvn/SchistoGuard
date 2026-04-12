@@ -116,8 +116,10 @@ export const ReportsPage: React.FC = () => {
   }, []);
 
   const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1024;
-  const isWeb = windowWidth >= 1024;
+  const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const isNarrowDesktop = windowWidth < 1600;
+  const isWeb = windowWidth >= 1100;
+  const pad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
 
   const previewDocumentRef = React.useRef<HTMLElement | null>(null);
 
@@ -769,7 +771,7 @@ export const ReportsPage: React.FC = () => {
 
       <div className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col" style={{
         animation: animate ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none',
-        padding: "24px"
+        padding: pad
       }}>
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Reports List Column */}
