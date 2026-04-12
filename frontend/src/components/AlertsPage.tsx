@@ -192,7 +192,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     return avgMin < 1 ? "<1m" : `${avgMin}m`;
   }
   const avgResponseTime = getAverageResponseTime(alerts);
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const isNarrowDesktop = windowWidth < 1600;
+  const pad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
 
   return (
     <div style={{
@@ -216,7 +217,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <h1 style={{
-            fontSize: isMobile ? 18 : (windowWidth < 1600 ? 16 : 22),
+            fontSize: isMobile ? 18 : (isNarrowDesktop ? 19 : 22),
             fontWeight: 700,
             color: "#1a2a3a",
             margin: 0,
@@ -242,9 +243,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           )}
           {!isMobile && (
             <p style={{
-              fontSize: windowWidth < 1600 ? 11 : 12,
+              fontSize: isNarrowDesktop ? 11 : 12,
               color: "#7b8a9a",
-              margin: windowWidth < 1600 ? "1px 0 0" : "2px 0 0",
+              margin: isNarrowDesktop ? "1px 0 0" : "2px 0 0",
               fontFamily: POPPINS,
             }}>Monitor and manage water quality alerts across all sites</p>
           )}
@@ -258,12 +259,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         }}>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger style={{
-              width: isMobile ? undefined : (windowWidth < 1600 ? 120 : 148),
+              width: isMobile ? undefined : (isNarrowDesktop ? 130 : 148),
               flex: isMobile ? 1 : undefined,
               minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
-              fontSize: windowWidth < 1600 ? 11 : 12,
+              fontSize: isNarrowDesktop ? 12 : 13,
               border: "1px solid #e2e5ea", background: "#fff",
-              height: windowWidth < 1600 ? 30 : 34,
+              height: isNarrowDesktop ? 34 : 38,
             }}>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -275,12 +276,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           </Select>
           <Select value={filterLevel} onValueChange={setFilterLevel}>
             <SelectTrigger style={{
-              width: isMobile ? undefined : (windowWidth < 1600 ? 120 : 140),
+              width: isMobile ? undefined : (isNarrowDesktop ? 124 : 140),
               flex: isMobile ? 1 : undefined,
               minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
-              fontSize: windowWidth < 1600 ? 11 : 12,
+              fontSize: isNarrowDesktop ? 12 : 13,
               border: "1px solid #e2e5ea", background: "#fff",
-              height: windowWidth < 1600 ? 30 : 34,
+              height: isNarrowDesktop ? 34 : 38,
             }}>
               <SelectValue placeholder="All Levels" />
             </SelectTrigger>
@@ -295,50 +296,54 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       </div>
 
       {/* ── Stat Cards ── */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: (isMobile) ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-        gap: (isMobile) ? 12 : 16,
-        marginBottom: 24,
-        animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
-      }}>
-        <StatCard
-          icon={<Bell size={(isMobile) ? 18 : 20} color="#357D86" />}
-          label="Total Alerts"
-          value={String(alerts.length)}
-          valueColor="#357D86"
-          bgColor="#e6f2f3"
-          sub="All alerts (history)"
-          isCompact={isMobile}
-        />
-        <StatCard
-          icon={<AlertTriangle size={(isMobile) ? 18 : 20} color="#F1A11A" />}
-          label="Unacknowledged"
-          value={String(unacknowledgedCount)}
-          valueColor="#F1A11A"
-          bgColor="#FFF9E6"
-          sub="Require attention"
-          isCompact={isMobile}
-        />
-        <StatCard
-          icon={<AlertTriangle size={(isMobile) ? 18 : 20} color="#D14343" />}
-          label="High Possible Risk Alerts"
-          value={String(criticalCount)}
-          valueColor="#D14343"
-          bgColor="#FFF1F1"
-          sub="For immediate verification"
-          isCompact={isMobile}
-        />
-        <StatCard
-          icon={<CheckCircle2 size={(isMobile) ? 18 : 20} color="#23B67E" />}
-          label="Response Time"
-          value={avgResponseTime}
-          valueColor="#23B67E"
-          bgColor="#E9FBF3"
-          sub="Avg response"
-          isCompact={isMobile}
-        />
-      </div>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: (isMobile) ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: (isMobile) ? 12 : 16,
+          marginBottom: 24,
+          animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
+        }}>
+          <StatCard
+            icon={<Bell style={{ width: 20, height: 20, color: "#357D86" }} />}
+            label="Total Alerts"
+            value={String(alerts.length)}
+            valueColor="#357D86"
+            bgColor="#e6f2f3"
+            sub="All alerts (history)"
+            isCompact={isMobile}
+            isNarrowDesktop={isNarrowDesktop}
+          />
+          <StatCard
+            icon={<AlertTriangle style={{ width: 20, height: 20, color: "#F1A11A" }} />}
+            label="Unacknowledged"
+            value={String(unacknowledgedCount)}
+            valueColor="#F1A11A"
+            bgColor="#FFF9E6"
+            sub="Require attention"
+            isCompact={isMobile}
+            isNarrowDesktop={isNarrowDesktop}
+          />
+          <StatCard
+            icon={<AlertTriangle style={{ width: 20, height: 20, color: "#D14343" }} />}
+            label="High Possible Risk Alerts"
+            value={String(criticalCount)}
+            valueColor="#D14343"
+            bgColor="#FFF1F1"
+            sub="For immediate verification"
+            isCompact={isMobile}
+            isNarrowDesktop={isNarrowDesktop}
+          />
+          <StatCard
+            icon={<CheckCircle2 style={{ width: 20, height: 20, color: "#23B67E" }} />}
+            label="Response Time"
+            value={avgResponseTime}
+            valueColor="#23B67E"
+            bgColor="#E9FBF3"
+            sub="Avg response"
+            isCompact={isMobile}
+            isNarrowDesktop={isNarrowDesktop}
+          />
+        </div>
 
       {/* ── Alert List ── */}
       <div style={{
@@ -355,7 +360,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         <div
           onClick={() => (isMobile) && setShowMobileAlertList(true)}
           style={{
-            padding: isMobile ? "12px 14px" : "14px 20px 12px",
+            padding: isMobile ? "12px 14px" : (isNarrowDesktop ? "12px 16px 10px" : "14px 20px 12px"),
             background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
             borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
             display: "flex",
@@ -393,7 +398,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             )}
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <h2 style={{
-                fontSize: 13, fontWeight: 700, color: "#1a2a3a",
+                fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 700, color: "#1a2a3a",
                 margin: 0,
                 fontFamily: POPPINS,
                 lineHeight: 1.2,
@@ -433,13 +438,13 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {deleteMode ? (
                 <>
-                  <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                     Select All
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                     Cancel
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "5px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 12, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
                     <Trash2 size={13} /> Delete ({selectedIds.size})
                   </button>
                 </>
@@ -659,26 +664,26 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   );
 }
 
-function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact }: {
-  icon: React.ReactNode; label: string; value: string; valueColor: string; bgColor: string; sub: string; isCompact?: boolean;
+function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact, isNarrowDesktop }: {
+  icon: React.ReactNode; label: string; value: string; valueColor: string; bgColor: string; sub: string; isCompact?: boolean; isNarrowDesktop?: boolean;
 }) {
   return (
     <div style={{
       background: "#fff",
-      borderRadius: isCompact ? 16 : 16,
-      padding: isCompact ? "14px 16px" : 14,
+      borderRadius: 16,
+      padding: isNarrowDesktop ? 12 : 14,
       display: "flex",
       flexDirection: "column",
       fontFamily: "'Poppins', sans-serif",
       boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
       border: "1px solid rgba(0,0,0,0.03)",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isCompact ? 8 : 10 }}>
-        <span style={{ fontSize: isCompact ? 11 : 11, fontWeight: 500, color: "#8E8B8B", letterSpacing: isCompact ? 0.3 : 0 }}>{label}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isNarrowDesktop ? 8 : 12 }}>
+        <span style={{ fontSize: isNarrowDesktop ? 11.5 : 13, fontWeight: 500, color: "#8E8B8B", letterSpacing: 0 }}>{label}</span>
         <div style={{
-          width: isCompact ? 30 : 32,
-          height: isCompact ? 30 : 32,
-          borderRadius: isCompact ? 8 : 8,
+          width: isNarrowDesktop ? 28 : 36,
+          height: isNarrowDesktop ? 28 : 36,
+          borderRadius: 10,
           background: bgColor,
           display: "flex",
           alignItems: "center",
@@ -687,8 +692,8 @@ function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact }: {
           {icon}
         </div>
       </div>
-      <div style={{ fontSize: isCompact ? 22 : 22, fontWeight: 700, color: valueColor, lineHeight: 1 }}>{value}</div>
-      <span style={{ fontSize: isCompact ? 10 : 10, color: "#8E8B8B", marginTop: isCompact ? 6 : 3, fontWeight: 400 }}>{sub}</span>
+      <div style={{ fontSize: isNarrowDesktop ? 20 : 22, fontWeight: 700, color: valueColor, lineHeight: 1 }}>{value}</div>
+      <span style={{ fontSize: isNarrowDesktop ? 9 : 10, color: "#8E8B8B", marginTop: 3, fontWeight: 400 }}>{sub}</span>
     </div>
   );
 }

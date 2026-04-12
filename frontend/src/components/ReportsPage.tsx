@@ -855,10 +855,10 @@ export const ReportsPage: React.FC = () => {
                         <Button
                           className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
                           style={{
-                            height: windowWidth < 1600 ? 30 : 34,
+                            height: 34,
                             borderRadius: 10,
                             fontFamily: POPPINS,
-                            fontSize: windowWidth < 1600 ? 11 : 12,
+                            fontSize: 12,
                             fontWeight: 500,
                             backgroundColor: "#357D86",
                             color: "#ffffff",

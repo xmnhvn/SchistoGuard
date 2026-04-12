@@ -584,7 +584,7 @@ export function SiteDetailView({
             }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
                 <h1 style={{
-                  fontSize: mobileResponsive ? 18 : (windowWidth < 1600 ? 15 : 20),
+                  fontSize: mobileResponsive ? 18 : 20,
                   fontWeight: 700,
                   color: "#1a2a3a",
                   margin: 0,
@@ -608,11 +608,11 @@ export function SiteDetailView({
                 )}
                 {!mobileResponsive && (
                   <p style={{
-                    fontSize: windowWidth < 1600 ? 12 : 14,
+                    fontSize: 14,
                     color: "#7b8a9a",
-                    margin: windowWidth < 1600 ? "2px 0 0" : "4px 0 0",
+                    margin: "4px 0 0",
                     fontFamily: POPPINS,
-                    minHeight: windowWidth < 1600 ? "16px" : "20px",
+                    minHeight: "20px",
                     transition: 'opacity 0.3s ease-in-out'
                   }}>{displayAddress}</p>
                 )}
@@ -632,7 +632,7 @@ export function SiteDetailView({
                   <SelectTrigger style={{
                     width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
                     minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                    border: "1px solid #e2e5ea", background: "#fff", height: windowWidth < 1600 ? 30 : 38,
+                    border: "1px solid #e2e5ea", background: "#fff", height: 38,
                   }}>
                     <SelectValue />
                   </SelectTrigger>
@@ -648,7 +648,7 @@ export function SiteDetailView({
                 <button
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "0 16px", height: windowWidth < 1600 ? 30 : 38, borderRadius: 12,
+                    padding: "0 16px", height: 38, borderRadius: 12,
                     border: "1px solid #e2e5ea",
                     background: "#fff", cursor: "pointer", fontSize: 13,
                     fontFamily: POPPINS, fontWeight: 500, color: "#374151",
