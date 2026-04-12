@@ -452,12 +452,6 @@ export const ReportsPage: React.FC = () => {
                 {report.summary.riskLevel}
               </td>
             </tr>
-            <tr>
-              <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
-              <td className="border border-slate-300 px-2 py-1">{report.summary.totalSites}</td>
-              <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
-              <td className="border border-slate-300 px-2 py-1">{report.summary.alertsGenerated}</td>
-            </tr>
           </tbody>
         </table>
       </section>
@@ -468,7 +462,6 @@ export const ReportsPage: React.FC = () => {
         </h4>
         <p className="mt-2 text-xs text-slate-700">
           This {report.type} report covers monitoring data for {report.period}. A total of{' '}
-          {report.summary.totalSites} monitoring sites were reviewed, and{' '}
           {report.summary.alertsGenerated} alerts were logged for follow-up.
         </p>
       </section>
@@ -1005,10 +998,10 @@ export const ReportsPage: React.FC = () => {
                                 <div className="flex flex-1 flex-col justify-center overflow-hidden">
                                   <div className="mb-1 flex items-center justify-between">
                                     <span style={{
-                                      fontSize: 9,
+                                      fontSize: isNarrowDesktop ? 9 : 10,
                                       fontWeight: 700,
-                                      padding: "3px 8px",
-                                      borderRadius: 5,
+                                      padding: isNarrowDesktop ? "3px 8px" : "4px 10px",
+                                      borderRadius: 6,
                                       background: rc.bg,
                                       color: rc.color,
                                       textTransform: "uppercase",
@@ -1018,7 +1011,7 @@ export const ReportsPage: React.FC = () => {
                                       {riskLevel} Risk
                                     </span>
                                     <span style={{
-                                      fontSize: 11,
+                                      fontSize: isNarrowDesktop ? 10 : 11,
                                       fontWeight: 700,
                                       color: "#1a2a3a",
                                       fontFamily: POPPINS
@@ -1027,13 +1020,14 @@ export const ReportsPage: React.FC = () => {
                                     </span>
                                   </div>
                                   <h4
-                                    className="truncate text-[13.5px]"
+                                    className="truncate"
                                     style={{
                                       fontFamily: POPPINS,
                                       fontWeight: selectedReport?.id === report.id ? 700 : 500,
                                       color: "#1a2a3a",
                                       letterSpacing: "-0.01em",
-                                      lineHeight: "1.4"
+                                      lineHeight: "1.4",
+                                      fontSize: isNarrowDesktop ? 12.5 : 13.5
                                     }}
                                   >
                                     {report.title}
@@ -1044,7 +1038,7 @@ export const ReportsPage: React.FC = () => {
                                       fontFamily: POPPINS,
                                       fontWeight: 500,
                                       color: "#64748b",
-                                      fontSize: "11px",
+                                      fontSize: isNarrowDesktop ? 10 : 11,
                                       letterSpacing: "0.01em"
                                     }}
                                   >
@@ -1511,11 +1505,7 @@ export const ReportsPage: React.FC = () => {
                 </div>
 
                 {/* Metrics Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                  <div style={{ padding: "16px 14px", borderRadius: 16, background: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-                    <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px 0", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.02em" }}>Total Sites</p>
-                    <p style={{ fontSize: 24, color: "#1a2a3a", margin: 0, fontWeight: 800, fontFamily: POPPINS }}>{selectedReport.summary.totalSites}</p>
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
                   <div style={{ padding: "16px 14px", borderRadius: 16, background: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
                     <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px 0", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.02em" }}>Alerts Logged</p>
                     <p style={{ fontSize: 24, color: "#1a2a3a", margin: 0, fontWeight: 800, fontFamily: POPPINS }}>{selectedReport.summary.alertsGenerated}</p>
