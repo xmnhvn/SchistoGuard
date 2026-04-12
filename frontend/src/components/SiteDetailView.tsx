@@ -54,12 +54,12 @@ export function SiteDetailView({
   const [isExporting, setExporting] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(siteName !== "Site Name" ? siteName : null);
-  const [animationEnabled, setAnimationEnabled] = useState(true);
+  const [animationEnabled] = useState(true);
+  const hasAutoMatched = useRef(false);
 
   useEffect(() => {
-    // Disable entry animation after it's finished to prevent glitches on re-renders
+    // Just mark as first load done after entry animations are likely finished
     const timer = setTimeout(() => {
-      setAnimationEnabled(false);
       _siteDetailFirstLoadDone = true;
     }, 1500);
     return () => clearTimeout(timer);
@@ -251,10 +251,11 @@ export function SiteDetailView({
         setAvailableLocations(cleaned);
 
         const preferredLocation = (address || "").trim();
-        if (selectedLocationFilter === "all" && preferredLocation) {
+        if (selectedLocationFilter === "all" && preferredLocation && !hasAutoMatched.current) {
           const match = cleaned.find((loc) => preferredLocation.toLowerCase().includes(loc.toLowerCase()) || loc.toLowerCase().includes(preferredLocation.toLowerCase()));
           if (match) {
             setSelectedLocationFilter(match);
+            hasAutoMatched.current = true;
           }
         }
       })
