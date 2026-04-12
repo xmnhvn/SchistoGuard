@@ -10,7 +10,10 @@ type AddressParts = {
 
 function clean(value?: string | null): string | null {
   if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
+  const trimmed = value
+    .replace(/\r?\n+/g, ', ')
+    .replace(/\s+/g, ' ')
+    .trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
@@ -18,7 +21,7 @@ function splitAddress(value?: string | null): string[] {
   const cleaned = clean(value);
   if (!cleaned) return [];
   return cleaned
-    .split(',')
+    .split(/[;,]/)
     .map((part) => part.trim())
     .filter(Boolean);
 }
