@@ -3,7 +3,10 @@ const axios = require('axios');
 
 function clean(value) {
   if (typeof value !== 'string') return null;
-  const normalized = value.replace(/\s+/g, ' ').trim();
+  const normalized = value
+    .replace(/\s+/g, ' ')
+    .replace(/\s*\((?:the)\)\s*$/i, '')
+    .trim();
   return normalized.length > 0 ? normalized : null;
 }
 
@@ -13,13 +16,47 @@ function getAdministrativeList(data) {
     : [];
 }
 
+function getInformativeList(data) {
+  return Array.isArray(data?.localityInfo?.informative)
+    ? data.localityInfo.informative
+    : [];
+}
+
+function getBoundaryList(data) {
+  return [...getAdministrativeList(data), ...getInformativeList(data)];
+}
+
 function findAdministrativeByPattern(data, pattern) {
-  const administrative = getAdministrativeList(data);
-  const match = administrative.find((entry) => {
+  const boundaries = getBoundaryList(data);
+  const match = boundaries.find((entry) => {
     const haystack = `${entry?.name || ''} ${entry?.description || ''} ${entry?.adminLevel || ''}`.toLowerCase();
     return pattern.test(haystack);
   });
   return clean(match?.name);
+}
+
+function findGranularLocalArea(data) {
+  const boundaries = getBoundaryList(data)
+    .filter((entry) => clean(entry?.name))
+    .map((entry) => ({
+      name: clean(entry?.name),
+      description: clean(entry?.description),
+      adminLevel: Number.isFinite(Number(entry?.adminLevel)) ? Number(entry.adminLevel) : null,
+    }))
+    .filter((entry) => entry.name);
+
+  if (boundaries.length === 0) return null;
+
+  const excludedPattern = /(philippines|region|province|state|city|municipality|country)/i;
+  const localCandidates = boundaries
+    .filter((entry) => !excludedPattern.test(`${entry.name} ${entry.description || ''}`))
+    .sort((a, b) => {
+      const aLevel = a.adminLevel ?? -1;
+      const bLevel = b.adminLevel ?? -1;
+      return bLevel - aLevel;
+    });
+
+  return localCandidates.length > 0 ? clean(localCandidates[0].name) : null;
 }
 
 function buildBestAvailableAddress(data) {
@@ -35,7 +72,7 @@ function buildBestAvailableAddress(data) {
   const barangayOrVillage = findAdministrativeByPattern(
     data,
     /(barangay|brgy|village|suburb|neighbourhood|neighborhood|hamlet)/i
-  );
+  ) || findGranularLocalArea(data);
 
   const municipalityOrCity =
     clean(data.city) ||
