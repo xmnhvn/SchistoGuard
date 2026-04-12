@@ -584,7 +584,7 @@ export function SiteDetailView({
       <div style={{
         fontFamily: POPPINS,
         background: "#f6f8fb",
-        padding: `${pad}px ${pad}px 0 ${pad}px`,
+        padding: isExporting ? "0" : `${pad}px`,
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -609,7 +609,6 @@ export function SiteDetailView({
         <div style={{
           display: "flex",
           flexDirection: "column",
-          background: "#f6f8fb",
           // Main container no longer animates as a whole; children use staggered animations
         }}>
           <div style={{
