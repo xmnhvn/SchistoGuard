@@ -102,7 +102,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           setDynamicSiteName(data.siteName);
           localStorage.setItem("sg_latest_site_name", data.siteName);
         }
-        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        if (typeof data.address === 'string' && data.address.trim()) {
+          const resolvedAddress = data.address.trim();
+          setAddress(resolvedAddress);
+          localStorage.setItem("sg_latest_address", resolvedAddress);
+        } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(data.latitude, data.longitude).then(addr => {
               if (addr) {
@@ -126,7 +130,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           setDynamicSiteName(latestWithGps.siteName);
           localStorage.setItem("sg_latest_site_name", latestWithGps.siteName);
         }
-        if (!address) {
+        if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+          const resolvedAddress = latestWithGps.address.trim();
+          setAddress(resolvedAddress);
+          localStorage.setItem("sg_latest_address", resolvedAddress);
+        } else if (!address) {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
               if (addr) {

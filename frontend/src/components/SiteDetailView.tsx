@@ -117,12 +117,18 @@ export function SiteDetailView({
           setDynamicSiteName(latestWithGps.siteName);
           localStorage.setItem('sg_global_latest_siteName', latestWithGps.siteName);
         }
-        reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-          if (addr) {
-            setAddress(addr);
-            localStorage.setItem('sg_global_latest_address', addr);
-          }
-        });
+        if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+          const resolvedAddress = latestWithGps.address.trim();
+          setAddress(resolvedAddress);
+          localStorage.setItem('sg_global_latest_address', resolvedAddress);
+        } else {
+          reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+            if (addr) {
+              setAddress(addr);
+              localStorage.setItem('sg_global_latest_address', addr);
+            }
+          });
+        }
       }
     }
   }, [history]);
@@ -135,7 +141,9 @@ export function SiteDetailView({
         if (data.siteName && data.siteName !== "Site Name") {
           setDynamicSiteName(data.siteName);
         }
-        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        if (typeof data.address === 'string' && data.address.trim()) {
+          setAddress(data.address.trim());
+        } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           reverseGeocode(data.latitude, data.longitude).then(addr => {
             if (addr) setAddress(addr);
           });

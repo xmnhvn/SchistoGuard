@@ -155,7 +155,11 @@ export const ReportsPage: React.FC = () => {
           setDynamicSiteName(data.siteName);
           localStorage.setItem('sg_global_latest_siteName', data.siteName);
         }
-        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        if (typeof data.address === 'string' && data.address.trim()) {
+          const resolvedAddress = data.address.trim();
+          setAddress(resolvedAddress);
+          localStorage.setItem('sg_global_latest_address', resolvedAddress);
+        } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           reverseGeocode(data.latitude, data.longitude).then(addr => {
             if (addr) {
               setAddress(addr);
