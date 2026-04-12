@@ -803,10 +803,10 @@ export const ReportsPage: React.FC = () => {
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
-                              height: 34,
+                              height: windowWidth < 1600 ? 30 : 34,
                               borderRadius: 10,
                               fontFamily: POPPINS,
-                              fontSize: 12,
+                              fontSize: windowWidth < 1600 ? 11 : 12,
                               fontWeight: 500,
                               border: "1px solid #e2e5ea",
                               background: "#fff",
@@ -829,10 +829,10 @@ export const ReportsPage: React.FC = () => {
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
-                              height: 34,
+                              height: windowWidth < 1600 ? 30 : 34,
                               borderRadius: 10,
                               fontFamily: POPPINS,
-                              fontSize: 12,
+                              fontSize: windowWidth < 1600 ? 11 : 12,
                               fontWeight: 500,
                               border: "1px solid #e2e5ea",
                               background: "#fff",
@@ -852,21 +852,21 @@ export const ReportsPage: React.FC = () => {
                       </div>
                     </div>
                     <div className={isMobile ? 'w-full' : 'flex-shrink-0'}>
-                      <Button
-                        className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
-                        style={{
-                          height: 34,
-                          borderRadius: 10,
-                          fontFamily: POPPINS,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          backgroundColor: "#357D86",
-                          color: "#ffffff",
-                          flexShrink: 0
-                        }}
-                        size="sm"
-                        onClick={() => setShowCreateReport(true)}
-                      >
+                        <Button
+                          className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
+                          style={{
+                            height: windowWidth < 1600 ? 30 : 34,
+                            borderRadius: 10,
+                            fontFamily: POPPINS,
+                            fontSize: windowWidth < 1600 ? 11 : 12,
+                            fontWeight: 500,
+                            backgroundColor: "#357D86",
+                            color: "#ffffff",
+                            flexShrink: 0
+                          }}
+                          size="sm"
+                          onClick={() => setShowCreateReport(true)}
+                        >
                         <FileText className="h-4 w-4" />
                         Create Report
                       </Button>

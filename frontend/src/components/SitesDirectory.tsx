@@ -698,7 +698,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: mobileResponsive ? 18 : 20,
+              fontSize: mobileResponsive ? 18 : (windowWidth < 1600 ? 16 : 22),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -723,7 +723,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               }}>Real-time water quality readings & risk assessment</span>
             )}
             {!mobileResponsive && (
-              <p style={{ fontSize: 12, color: "#7b8a9a", margin: "2px 0 0 0", fontFamily: POPPINS }}>
+              <p style={{
+                fontSize: windowWidth < 1600 ? 11 : 12,
+                color: "#7b8a9a",
+                margin: windowWidth < 1600 ? "1px 0 0 0" : "2px 0 0 0",
+                fontFamily: POPPINS
+              }}>
                 Real-time water quality readings & risk assessment
               </p>
             )}
@@ -738,9 +743,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
                 <SelectTrigger style={{
-                  width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  width: mobileResponsive ? undefined : (windowWidth < 1600 ? 120 : 148),
+                  flex: mobileResponsive ? 1 : undefined,
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
+                  fontSize: windowWidth < 1600 ? 12 : 13,
+                  border: "1px solid #e2e5ea", background: "#fff",
+                  height: windowWidth < 1600 ? 30 : 38,
                 }}>
                   <SelectValue />
                 </SelectTrigger>
@@ -755,9 +763,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={filterRisk} onValueChange={setFilterRisk}>
                 <SelectTrigger style={{
-                  width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  width: isMobile ? undefined : (windowWidth < 1600 ? 120 : 148),
+                  flex: isMobile ? 1 : undefined,
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
+                  fontSize: windowWidth < 1600 ? 12 : 13,
+                  border: "1px solid #e2e5ea", background: "#fff",
+                  height: windowWidth < 1600 ? 30 : 38,
                 }}>
                   <SelectValue placeholder="Risk Level" />
                 </SelectTrigger>
@@ -772,9 +783,9 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <button
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "0 16px", height: 38, borderRadius: 12,
+                padding: "0 16px", height: windowWidth < 1600 ? 30 : 38, borderRadius: 12,
                 border: "1px solid #e2e5ea",
-                background: "#fff", cursor: "pointer", fontSize: 13,
+                background: "#fff", cursor: "pointer", fontSize: windowWidth < 1600 ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
               }}
@@ -803,11 +814,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div key={card.label} style={{
               background: "#fff",
               borderRadius: 16,
-              padding: 14,
+              padding: windowWidth < 1600 ? 12 : 14,
               display: "flex",
               flexDirection: "column",
               boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
               border: "1px solid rgba(0,0,0,0.03)",
+              height: windowWidth < 1600 ? 80 : "auto",
+              justifyContent: windowWidth < 1600 ? "center" : "flex-start",
               ...(animationEnabled ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.12 + i * 0.07}s both` } : {}),
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>

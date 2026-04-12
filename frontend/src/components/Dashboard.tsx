@@ -63,6 +63,13 @@ export function Dashboard({
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [mapReady, setMapReady] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(!_dashboardFirstLoadDone);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1728);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (visible && !_dashboardFirstLoadDone) {
@@ -212,10 +219,9 @@ export function Dashboard({
   const [isTablet, setIsTablet] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
-  const isNarrowDesktop = vw < 1600;
+  const isNarrowDesktop = windowWidth < 1700;
   // Aggressive shared card height so ALL dashboard cards are uniform
-  const cardH = isNarrowDesktop ? 80 : 140;
+  const cardH = isNarrowDesktop ? 120 : 155;
   const panelWidth = isNarrowDesktop ? "44%" : "40%";
 
   const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
@@ -241,7 +247,7 @@ export function Dashboard({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const dPad = isMobile ? 16 : isTablet ? 24 : 32;
+  const dPad = isMobile ? 16 : isTablet ? 24 : (windowWidth < 1600 ? 20 : 32);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -1006,7 +1012,7 @@ export function Dashboard({
           <div style={{ padding: `${dPad}px ${dPad}px 0`, display: "flex", flexDirection: "column", pointerEvents: "auto", animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
             {/* Site name */}
             <h1 style={{
-              fontSize: isTab ? 30 : 26, fontWeight: 700, color: "#fff", margin: 0,
+              fontSize: windowWidth < 1600 ? 22 : (isTab ? 30 : 26), fontWeight: 700, color: "#fff", margin: 0,
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)"
             }}>
@@ -1014,7 +1020,7 @@ export function Dashboard({
             </h1>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
-              fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)",
+              fontSize: windowWidth < 1600 ? 11.8 : (isTab ? 15 : 13), color: "rgba(255,255,255,0.9)",
               margin: "5px 0 12px",
               fontFamily: POPPINS,
               minHeight: "auto",
@@ -1027,7 +1033,7 @@ export function Dashboard({
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 background: "rgba(255,255,255,0.92)", borderRadius: 999,
-                padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
+                padding: windowWidth < 1600 ? "4px 10px" : "5px 13px", fontSize: windowWidth < 1600 ? 11 : 12, fontWeight: 600, color: "#15803d",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
                 width: "fit-content"
               }}>
@@ -1058,15 +1064,15 @@ export function Dashboard({
           </div>
 
           {/* flex spacer — grows to fill remaining space so cards anchor to bottom */}
-          <div style={{ flex: 1, minHeight: isTab ? 20 : 40 }} />
+          <div style={{ flex: 1, minHeight: windowWidth < 1600 ? 12 : (isTab ? 20 : 40) }} />
 
 
 
           {/* ── CARDS — anchored to bottom, no solid section bg ── */}
-          <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : 20}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
+          <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : (windowWidth < 1600 ? 14 : 20)}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: windowWidth < 1600 ? 16 : 16, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
               {/* Temperature — tablet uses the same SensorMiniCard as desktop */}
               {isTab ? (
                 <SensorMiniCard
@@ -1078,16 +1084,16 @@ export function Dashboard({
                   dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
                   active={!!latestReading}
                   compact
-                  fixedHeight={140}
+                  fixedHeight={150}
                   fadeIn={animationEnabled}
                   isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   position: "relative", display: "flex", flexDirection: "column",
-                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: windowWidth < 1600 ? 145 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <span style={{
                     position: "absolute", top: 14, right: 14,
@@ -1099,13 +1105,13 @@ export function Dashboard({
                   } as React.CSSProperties} />
                   <img src="/icons/icon-temperature.svg" alt="temp"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Temperature</p>
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: windowWidth < 1600 ? 11.5 : 13, color: "#77ABB2" }}>Temperature</p>
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                      <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                      <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 22 : 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.temperature : "—"}
                       </span>
-                      {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
+                      {latestReading && <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 12 : 14, color: "#6b7280" }}> °C</span>}
                     </p>
                     {latestReading && (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
@@ -1127,16 +1133,16 @@ export function Dashboard({
                   dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
                   active={!!latestReading}
                   compact
-                  fixedHeight={140}
+                  fixedHeight={150}
                   fadeIn={animationEnabled}
                   isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   position: "relative", display: "flex", flexDirection: "column",
-                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: windowWidth < 1600 ? 145 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <span style={{
                     position: "absolute", top: 14, right: 14,
@@ -1148,13 +1154,13 @@ export function Dashboard({
                   } as React.CSSProperties} />
                   <img src="/icons/icon-turbidity.svg" alt="turbidity"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Turbidity</p>
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: windowWidth < 1600 ? 11.5 : 13, color: "#77ABB2" }}>Turbidity</p>
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                      <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                      <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 22 : 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.turbidity : "—"}
                       </span>
-                      {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
+                      {latestReading && <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 12 : 14, color: "#6b7280" }}> NTU</span>}
                     </p>
                     {latestReading && (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
@@ -1176,16 +1182,16 @@ export function Dashboard({
                   dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
                   active={!!latestReading}
                   compact
-                  fixedHeight={140}
+                  fixedHeight={150}
                   fadeIn={animationEnabled}
                   isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   position: "relative", display: "flex", flexDirection: "column",
-                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: windowWidth < 1600 ? 145 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <span style={{
                     position: "absolute", top: 14, right: 14,
@@ -1197,10 +1203,10 @@ export function Dashboard({
                   } as React.CSSProperties} />
                   <img src="/icons/icon-ph.svg" alt="ph"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>pH Level</p>
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: windowWidth < 1600 ? 11.5 : 13, color: "#77ABB2" }}>pH Level</p>
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                      <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
+                      <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 22 : 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.ph : "—"}
                       </span>
                     </p>
@@ -1217,12 +1223,12 @@ export function Dashboard({
               {!isTab && (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   display: "flex", flexDirection: "column", justifyContent: "space-between",
-                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: windowWidth < 1600 ? 155 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <div>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: "#337C85", lineHeight: 1.3 }}>
+                    <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: windowWidth < 1600 ? 15 : 18, color: "#337C85", lineHeight: 1.3 }}>
                       Total Parameter Readings
                     </p>
                     <p style={{ margin: "5px 0 0", color: "#9ca3af", fontSize: 10, lineHeight: 1.4 }}>
@@ -1230,7 +1236,7 @@ export function Dashboard({
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                    <span style={{ fontSize: 26, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                    <span style={{ fontSize: windowWidth < 1600 ? 22 : 26, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
                       {readings.length}
                     </span>
                     <img src="/icons/icon-readings.svg" alt="readings"
@@ -1246,24 +1252,24 @@ export function Dashboard({
                 {/* Total Parameter Readings — full width */}
                 <div style={{
                   background: "#fff", borderRadius: 20,
-                  padding: "18px 24px",
+                  padding: windowWidth < 1600 ? "14px 20px" : "18px 24px",
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "stretch", justifyContent: "space-between",
                   fontFamily: POPPINS,
-                  minHeight: 140,
+                  minHeight: windowWidth < 1600 ? 130 : 140,
                   boxSizing: "border-box" as const,
                   animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: 22, color: "#337C85", lineHeight: 1.3 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: windowWidth < 1600 ? 15 : 22, color: "#337C85", lineHeight: 1.3 }}>
                         Total Parameter Readings
                       </p>
-                      <p style={{ margin: "4px 0 10px", color: "#9ca3af", fontSize: 13, lineHeight: 1.4 }}>
+                      <p style={{ margin: "4px 0 10px", color: "#9ca3af", fontSize: windowWidth < 1600 ? 10 : 13, lineHeight: 1.4 }}>
                         Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
                       </p>
                     </div>
-                    <p style={{ margin: 0, fontSize: 44, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                    <p style={{ margin: 0, fontSize: windowWidth < 1600 ? 32 : 44, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
                       {readings.length}
                     </p>
                   </div>
@@ -1276,15 +1282,15 @@ export function Dashboard({
                 {/* Risk Level + Active Alerts — full width */}
                 <div style={{
                   background: "#fff", borderRadius: 24,
-                  padding: "18px 24px",
+                  padding: windowWidth < 1600 ? "14px 20px" : "18px 24px",
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "stretch", gap: 14,
-                  minHeight: 140,
+                  minHeight: windowWidth < 1600 ? 130 : 140,
                   boxSizing: "border-box" as const,
                   animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 22, color: "#337C85", fontFamily: POPPINS }}>
+                    <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: windowWidth < 1600 ? 15 : 22, color: "#337C85", fontFamily: POPPINS }}>
                       Risk Level
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
@@ -1293,26 +1299,26 @@ export function Dashboard({
                       <span style={{
                         background: "transparent", color: riskColor, borderRadius: 999,
                         border: `1.5px solid ${riskColor}`,
-                        padding: "6px 20px",
-                        fontWeight: 700, fontSize: 15,
+                        padding: windowWidth < 1600 ? "4px 14px" : "6px 20px",
+                        fontWeight: 700, fontSize: windowWidth < 1600 ? 13 : 15,
                         fontFamily: POPPINS, textTransform: "capitalize" as const,
                       }}>
                         {getOverallRiskLabel(overallRisk)}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontFamily: POPPINS }}>
+                    <p style={{ margin: 0, fontSize: windowWidth < 1600 ? 10 : 13, color: "#9ca3af", fontFamily: POPPINS }}>
                       Based on temperature, turbidity, and pH
                     </p>
                   </div>
                   <div style={{
                     flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
-                    borderRadius: 18, padding: "16px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                    borderRadius: 18, padding: windowWidth < 1600 ? "12px 12px" : "16px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
                   }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#fff", textAlign: "center", fontFamily: POPPINS, letterSpacing: 0.3 }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: windowWidth < 1600 ? 11 : 15, color: "#fff", textAlign: "center", fontFamily: POPPINS, letterSpacing: 0.3 }}>
                       Active Alerts
                     </p>
-                    <p style={{ margin: 0, fontSize: 52, fontWeight: 700, color: "#fff", lineHeight: 1, fontFamily: POPPINS }}>
+                    <p style={{ margin: 0, fontSize: windowWidth < 1600 ? 36 : 52, fontWeight: 700, color: "#fff", lineHeight: 1, fontFamily: POPPINS }}>
                       {unacknowledgedAlerts}
                     </p>
                   </div>
@@ -1454,7 +1460,7 @@ export function Dashboard({
         </div>
 
         {/* ── 3 Sensor mini-cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: isNarrowDesktop ? 10 : 14, marginBottom: isNarrowDesktop ? 12 : 24, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: isNarrowDesktop ? 10 : 14, marginBottom: isNarrowDesktop ? 12 : 20, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           {/* Temperature */}
           <SensorMiniCard
             label="Temperature"
@@ -1465,9 +1471,7 @@ export function Dashboard({
             dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
             active={!!latestReading}
             compact
-            fixedHeight={cardH}
             fadeIn={animationEnabled}
-            isNarrow={isNarrowDesktop}
           />
           {/* Turbidity */}
           <SensorMiniCard
@@ -1479,9 +1483,7 @@ export function Dashboard({
             dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
             active={!!latestReading}
             compact
-            fixedHeight={cardH}
             fadeIn={animationEnabled}
-            isNarrow={isNarrowDesktop}
           />
           {/* pH */}
           <SensorMiniCard
@@ -1493,9 +1495,7 @@ export function Dashboard({
             dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
             active={!!latestReading}
             compact
-            fixedHeight={cardH}
             fadeIn={animationEnabled}
-            isNarrow={isNarrowDesktop}
           />
         </div>
 
@@ -1517,14 +1517,14 @@ export function Dashboard({
         >
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
             <div>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 16 : 20, color: "#337C85" }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 15 : 20, color: "#337C85" }}>
                 Total Parameter Readings
               </p>
-              <p style={{ margin: isNarrowDesktop ? "0px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 10 : 12 }}>
+              <p style={{ margin: isNarrowDesktop ? "0px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 9.5 : 12 }}>
                 Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
               </p>
             </div>
-            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 28 : 38, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 32 : 38, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
               {readings.length}
             </p>
           </div>
@@ -1553,14 +1553,14 @@ export function Dashboard({
             <p style={{
               margin: isNarrowDesktop ? "0 0 3px" : "0 0 5px",
               fontWeight: 700,
-              fontSize: isNarrowDesktop ? 16 : 20,
+              fontSize: isNarrowDesktop ? 15 : 20,
               color: "#337C85",
               fontFamily: "'Poppins', sans-serif",
             }}>
               Risk Level
             </p>
-            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 6 : 10, marginBottom: isNarrowDesktop ? 4 : 8 }}>
-              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 20 : 28, height: isNarrowDesktop ? 20 : 28, objectFit: "contain" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 8 : 10, marginBottom: isNarrowDesktop ? 4 : 8 }}>
+              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 22 : 28, height: isNarrowDesktop ? 22 : 28, objectFit: "contain" }} />
               <span
                 style={{
                   background: "transparent",
@@ -1569,7 +1569,7 @@ export function Dashboard({
                   borderRadius: 999,
                   padding: isNarrowDesktop ? "3px 10px" : "4px 14px",
                   fontWeight: 700,
-                  fontSize: isNarrowDesktop ? 11 : 13,
+                  fontSize: isNarrowDesktop ? 10.5 : 13,
                   fontFamily: "'Poppins', sans-serif",
                   textTransform: "capitalize",
                 }}
@@ -1577,18 +1577,18 @@ export function Dashboard({
                 {getOverallRiskLabel(overallRisk)}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 10 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
+            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 9.5 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
               Based on temperature, turbidity, and pH
             </p>
           </div>
 
+          {/* RIGHT: Active Alerts Container */}
           <div
             style={{
-              flex: 1,
-              background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
-              borderRadius: isNarrowDesktop ? 10 : 14,
+              flex: "0 0 40%", // Fixed smaller width proportion
+              background: "#337C85", // Solid teal to match reference
+              borderRadius: isNarrowDesktop ? 8 : 12,
               padding: isNarrowDesktop ? "10px 8px" : "14px 16px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -1599,7 +1599,7 @@ export function Dashboard({
             <p style={{
               margin: 0,
               fontWeight: 700,
-              fontSize: isNarrowDesktop ? 12 : 14,
+              fontSize: isNarrowDesktop ? 11 : 14,
               color: "#fff",
               textAlign: "center",
               fontFamily: "'Poppins', sans-serif",
@@ -1609,7 +1609,7 @@ export function Dashboard({
             </p>
             <p style={{
               margin: 0,
-              fontSize: isNarrowDesktop ? 28 : 38,
+              fontSize: isNarrowDesktop ? 32 : 38,
               fontWeight: 700,
               color: "#fff",
               lineHeight: 1,

@@ -356,7 +356,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: isMobile ? 18 : 20,
+              fontSize: isMobile ? 18 : (windowWidth < 1600 ? 16 : 20),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -364,7 +364,12 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             }}>
               Recipients
             </h1>
-            <p style={{ fontSize: isMobile ? 11 : 12, color: "#7b8a9a", margin: "2px 0 0 0", fontFamily: POPPINS }}>
+            <p style={{
+              fontSize: isMobile ? 11 : (windowWidth < 1600 ? 11 : 12),
+              color: "#7b8a9a",
+              margin: (windowWidth < 1600 ? "1px 0 0 0" : "2px 0 0 0"),
+              fontFamily: POPPINS
+            }}>
               Manage alert recipients and their designations
             </p>
           </div>
@@ -390,8 +395,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
                   width: "100%",
-                  borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  borderRadius: 12, fontFamily: POPPINS,
+                  fontSize: windowWidth < 1600 ? 12 : 13,
+                  border: "1px solid #e2e5ea", background: "#fff",
+                  height: windowWidth < 1600 ? 30 : 38,
                   paddingLeft: 34
                 }}
               />
@@ -399,9 +406,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             <div style={{ flex: isCompact ? "1 1 calc(50% - 6px)" : undefined, minWidth: isCompact ? 0 : undefined }}>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger style={{
-                  width: isCompact ? "100%" : 170,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  width: isCompact ? "100%" : (windowWidth < 1600 ? 140 : 170),
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
+                  fontSize: windowWidth < 1600 ? 12 : 13,
+                  border: "1px solid #e2e5ea", background: "#fff",
+                  height: windowWidth < 1600 ? 30 : 38,
                   padding: "0 10px",
                   display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
@@ -431,9 +440,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               htmlFor="csv-upload-input"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: "0 16px", height: 38, borderRadius: 12,
+                padding: "0 16px", height: windowWidth < 1600 ? 30 : 38, borderRadius: 12,
                 border: "1px solid #e2e5ea",
-                background: "#fff", cursor: "pointer", fontSize: 13,
+                background: "#fff", cursor: "pointer", fontSize: windowWidth < 1600 ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 margin: 0, flexShrink: 0,
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
@@ -446,9 +455,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               onClick={() => setIsAddDialogOpen(true)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: "0 16px", height: 38, borderRadius: 12,
+                padding: "0 16px", height: windowWidth < 1600 ? 30 : 38, borderRadius: 12,
                 border: "none", flexShrink: 0,
-                background: "#357D86", cursor: "pointer", fontSize: 13,
+                background: "#357D86", cursor: "pointer", fontSize: windowWidth < 1600 ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
               }}
@@ -476,26 +485,30 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             <div key={card.label} style={{
               background: "#fff",
               borderRadius: 16,
-              padding: 14,
+              padding: (windowWidth < 1600) ? 10 : 14,
               display: "flex",
-              flexDirection: "column",
+              flexDirection: (windowWidth < 1600) ? "row" : "column",
               alignItems: "center",
-              gap: 6,
+              gap: (windowWidth < 1600) ? 10 : 6,
+              height: (windowWidth < 1600) ? 60 : "auto",
               animation: animate ? `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.2 + i * 0.07}s both` : "none",
             }}>
               <div style={{
-                width: 38,
-                height: 38,
+                width: (windowWidth < 1600) ? 32 : 38,
+                height: (windowWidth < 1600) ? 32 : 38,
                 borderRadius: 10,
                 background: card.bg,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}>
                 {card.icon}
               </div>
-              <span style={{ fontSize: isMobile ? 22 : 22, fontWeight: 600, color: card.color, fontFamily: POPPINS, textAlign: "center" }}>{card.value}</span>
-              <span style={{ fontSize: 10, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS, textAlign: "center" }}>{card.label}</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: (windowWidth < 1600) ? "flex-start" : "center" }}>
+                <span style={{ fontSize: (windowWidth < 1600) ? 18 : 22, fontWeight: 600, color: card.color, fontFamily: POPPINS, lineHeight: 1.1 }}>{card.value}</span>
+                <span style={{ fontSize: 10, fontWeight: 500, color: "#7b8a9a", fontFamily: POPPINS }}>{card.label}</span>
+              </div>
             </div>
           ))}
         </div>
