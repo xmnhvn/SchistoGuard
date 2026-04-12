@@ -92,24 +92,24 @@ function buildBestAvailableAddress(data) {
 
   const locality = clean(data.locality);
   const city = clean(data.city);
-  const province = clean(data.principalSubdivision);
+  const region = clean(data.principalSubdivision);
   const country = clean(data.countryName);
 
   const municipalityOrCity =
     city ||
-    locality ||
     findAdministrativeByPattern(data, /(municipality|city|town)/i) ||
-    findAdministrativeByPattern(data, /(county|district)/i);
+    findAdministrativeByPattern(data, /(county)/i) ||
+    locality;
 
   const blockedKeys = new Set(
-    [municipalityOrCity, locality, province, country]
+    [municipalityOrCity, locality, region, country]
       .map((value) => normalizeKey(value))
       .filter(Boolean)
   );
 
-  const purokOrSitio = findAdministrativeByPattern(
+  const purokOrStreet = findAdministrativeByPattern(
     data,
-    /(purok|sitio|zone|block)/i
+    /(purok|sitio|zone|block|street|st\.?|road|rd\.?|avenue|ave\.?|route|highway|hwy\.?)/i
   );
 
   const barangayOrVillage = findAdministrativeByPattern(
@@ -117,15 +117,15 @@ function buildBestAvailableAddress(data) {
     /(barangay|brgy|village|suburb|neighbourhood|neighborhood|hamlet)/i
   ) || findGranularLocalArea(data, blockedKeys);
 
-  const provinceOrState =
-    province ||
+  const regionOrProvince =
+    region ||
     findAdministrativeByPattern(data, /(province|region|state)/i);
 
   const orderedParts = [
-    purokOrSitio,
+    purokOrStreet,
     barangayOrVillage,
     municipalityOrCity,
-    provinceOrState,
+    regionOrProvince,
     country,
   ].filter(Boolean);
 
