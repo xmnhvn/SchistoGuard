@@ -54,12 +54,12 @@ export function SiteDetailView({
   const [isExporting, setExporting] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(siteName !== "Site Name" ? siteName : null);
-  const [animationEnabled, setAnimationEnabled] = useState(true);
+  const [animationEnabled] = useState(true);
+  const hasAutoMatched = useRef(false);
 
   useEffect(() => {
-    // Disable entry animation after it's finished to prevent glitches on re-renders
+    // Just mark as first load done after entry animations are likely finished
     const timer = setTimeout(() => {
-      setAnimationEnabled(false);
       _siteDetailFirstLoadDone = true;
     }, 1500);
     return () => clearTimeout(timer);
@@ -141,9 +141,7 @@ export function SiteDetailView({
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
 
-      const displaySiteName = selectedLocationFilter !== "all"
-        ? selectedLocationFilter
-        : (dynamicSiteName || siteName || "Site Name");
+      const displaySiteName = dynamicSiteName || siteName || "Site Name";
       const displayBarangay = barangay || (address ? address.split(',')[0].trim() : "");
       const filename = `${displaySiteName.replace(/\s+/g, '_')}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
 
@@ -221,9 +219,8 @@ export function SiteDetailView({
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
   const displayAddress = (typeof address === 'string' && address.trim()) ? address.trim() : "Address unavailable";
-  const effectiveSiteName = selectedLocationFilter !== "all"
-    ? selectedLocationFilter
-    : (dynamicSiteName || siteName);
+  const effectiveSiteName = dynamicSiteName || siteName || "Site Name";
+  const headerSubtitle = selectedLocationFilter !== "all" ? selectedLocationFilter : displayAddress;
 
 
 
@@ -249,10 +246,11 @@ export function SiteDetailView({
         setAvailableLocations(cleaned);
 
         const preferredLocation = (address || "").trim();
-        if (selectedLocationFilter === "all" && preferredLocation) {
+        if (selectedLocationFilter === "all" && preferredLocation && !hasAutoMatched.current) {
           const match = cleaned.find((loc) => preferredLocation.toLowerCase().includes(loc.toLowerCase()) || loc.toLowerCase().includes(preferredLocation.toLowerCase()));
           if (match) {
             setSelectedLocationFilter(match);
+            hasAutoMatched.current = true;
           }
         }
       })
@@ -649,7 +647,7 @@ export function SiteDetailView({
                     lineHeight: 1.3,
                     display: "block",
                     whiteSpace: "normal",
-                  }}>{displayAddress}</span>
+                  }}>{headerSubtitle}</span>
                 )}
                 {!mobileResponsive && (
                   <p style={{
@@ -658,7 +656,7 @@ export function SiteDetailView({
                     margin: isNarrowDesktop ? "1px 0 0 0" : "2px 0 0 0",
                     fontFamily: POPPINS,
                     transition: 'opacity 0.3s ease-in-out'
-                  }}>{displayAddress}</p>
+                  }}>{headerSubtitle}</p>
                 )}
               </div>
             </div>
@@ -737,7 +735,7 @@ export function SiteDetailView({
               <PDFHeader
                 dynamicSiteName={effectiveSiteName}
                 siteName={siteName}
-                address={address}
+                address={headerSubtitle}
                 barangay={barangay}
               />
             </div>
