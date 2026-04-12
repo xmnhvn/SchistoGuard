@@ -49,17 +49,17 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
     <aside
       style={{
         position: "fixed",
-        top: expanded ? (isPhone ? 0 : (vw < 1700 ? 64 : 72)) : (isPhone ? 0 : (vw < 1700 ? 64 : 72)),
+        top: expanded ? (isPhone ? 0 : (vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72))) : (isPhone ? 0 : (vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72))),
         left: 0,
         bottom: 0,
-        width: expanded ? 240 : (vw < 1700 ? 72 : 80),
+        width: expanded ? (vw <= 1450 ? 220 : 240) : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80)),
         background: "#fff",
         borderRight: "1px solid #e8e8e8",
         display: "flex",
         flexDirection: "column",
-        paddingTop: 12,
-        paddingBottom: 12,
-        gap: 4,
+        paddingTop: vw <= 1450 ? 10 : 12,
+        paddingBottom: vw <= 1450 ? 10 : 12,
+        gap: vw <= 1450 ? 2 : 4,
         zIndex: 50,
         overflowY: "hidden",
         overflowX: "hidden",
@@ -76,15 +76,15 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
               onClick={() => onNavigate?.(item.view)}
               style={{
                 width: "100%",
-                height: vw < 1700 ? 48 : 54,
-                borderRadius: vw < 1700 ? 12 : 14,
+                height: vw <= 1450 ? 42 : (vw < 1700 ? 48 : 54),
+                borderRadius: vw <= 1450 ? 10 : (vw < 1700 ? 12 : 14),
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start", // Always flex-start for smooth padding transitions
-                gap: vw < 1700 ? 12 : 14, // Keep gap constant so text doesn't snap
+                gap: vw <= 1450 ? 10 : (vw < 1700 ? 12 : 14), // Keep gap constant so text doesn't snap
                 padding: expanded 
-                  ? (vw < 1700 ? "0 0 0 16px" : "0 0 0 20px") 
-                  : (vw < 1700 ? "0 0 0 15px" : "0 0 0 17px"), // Exact padding to perfectly center the icon when collapsed (52px/60px button width)
+                  ? (vw <= 1450 ? "0 0 0 14px" : (vw < 1700 ? "0 0 0 16px" : "0 0 0 20px")) 
+                  : (vw <= 1450 ? "0 0 0 12.5px" : (vw < 1700 ? "0 0 0 15px" : "0 0 0 17px")), // Exact padding to perfectly center the icon when collapsed
                 background: isActive
                   ? "linear-gradient(135deg, #357D86, #026366)"
                   : "transparent",
@@ -97,8 +97,8 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
             >
               <div
                 style={{
-                  width: vw < 1700 ? 22 : 26,
-                  height: vw < 1700 ? 22 : 26,
+                  width: vw <= 1450 ? 19 : (vw < 1700 ? 22 : 26),
+                  height: vw <= 1450 ? 19 : (vw < 1700 ? 22 : 26),
                   flexShrink: 0,
                   background: isActive ? "#fff" : "#ABABAB",
                   WebkitMaskImage: `url('${item.iconSrc}')`,
@@ -114,7 +114,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
               />
               <span
                 style={{
-                  fontSize: 13,
+                  fontSize: vw <= 1450 ? 12.5 : 13,
                   fontWeight: isActive ? 600 : 400,
                   color: isActive ? "#fff" : "#6b7280",
                   fontFamily: "Poppins, sans-serif",
@@ -247,8 +247,8 @@ export function NavigationHeader({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: vw < 1700 ? "0 20px 0 0" : "0 28px 0 0",
-        height: vw < 1700 ? 64 : 72,
+        padding: vw <= 1450 ? "0 16px 0 0" : (vw < 1700 ? "0 20px 0 0" : "0 28px 0 0"),
+        height: vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72),
         position: "fixed",
         top: 0,
         left: 0,
@@ -307,9 +307,9 @@ export function NavigationHeader({
               }} />
             </button>
             {!isNarrowTablet && (
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: vw < 1600 ? 2 : 4 }}>
-                <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: vw < 1600 ? 12 : 14, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.title}</span>
-                <span style={{ color: "#9ca3af", fontSize: vw < 1600 ? 9.5 : 11, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.subtitle}</span>
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: vw <= 1450 ? 1 : (vw < 1600 ? 2 : 4) }}>
+                <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: vw <= 1450 ? 11 : (vw < 1600 ? 12 : 14), lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.title}</span>
+                <span style={{ color: "#9ca3af", fontSize: vw <= 1450 ? 9 : (vw < 1600 ? 9.5 : 11), lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.subtitle}</span>
               </div>
             )}
           </>
@@ -595,8 +595,8 @@ export function NavigationProvider({
       <main
         style={{
           position: "fixed",
-          top: vw < 1700 ? 64 : 72,
-          left: isPhone ? 0 : (drawerOpen ? 240 : (vw < 1700 ? 72 : 80)),
+          top: vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72),
+          left: isPhone ? 0 : (drawerOpen ? (vw <= 1450 ? 220 : 240) : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80))),
           right: 0,
           bottom: 0,
           overflowY: "auto",
