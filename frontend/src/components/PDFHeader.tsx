@@ -1,5 +1,4 @@
 import React from 'react';
-import { formatAddress } from '../utils/addressFormat';
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -19,12 +18,10 @@ export const PDFHeader: React.FC<PDFHeaderProps> = ({
   logoNudge = 0
 }) => {
   const displaySiteName = dynamicSiteName || siteName || 'System Summary Report';
-  const displayAddress = formatAddress({
-    fullAddress: address,
-    locality: address,
-    barangay,
-    fallback: 'Davao City, Davao Region, Philippines',
-  });
+  const displayAddress =
+    (typeof address === 'string' && address.trim())
+      ? address.trim()
+      : ((typeof barangay === 'string' && barangay.trim()) ? barangay.trim() : 'Davao City, Davao Region, Philippines');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%', gap: 6 }}>

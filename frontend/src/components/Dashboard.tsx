@@ -17,7 +17,6 @@ import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
-import { formatAddress } from "../utils/addressFormat";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -228,15 +227,7 @@ export function Dashboard({
     (typeof gpsAddress === "string" && gpsAddress.trim() ? gpsAddress.trim() : null) ||
     null;
 
-  const displayAddress = formatAddress({
-    fullAddress: primaryAddress,
-    locality: primaryAddress,
-    area: siteData?.area,
-    barangay: siteData?.barangay,
-    municipality: siteData?.municipality,
-    province: siteData?.province,
-    fallback: "Address unavailable",
-  });
+  const displayAddress = primaryAddress || "Address unavailable";
 
   useEffect(() => {
     const check = () => {

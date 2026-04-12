@@ -24,7 +24,6 @@ import { PWAInstructionsModal } from "../PWAInstructionsModal";
 import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
 import { reverseGeocode } from "../../utils/reverseGeocode";
-import { formatAddress } from "../../utils/addressFormat";
 
 interface LandingPageProps {
   onViewMap?: () => void;
@@ -158,15 +157,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     (typeof gpsAddress === "string" && gpsAddress.trim() ? gpsAddress.trim() : null) ||
     null;
 
-  const displayAddress = formatAddress({
-    fullAddress: primaryAddress,
-    locality: primaryAddress,
-    area: siteData?.area,
-    barangay: siteData?.barangay,
-    municipality: siteData?.municipality,
-    province: siteData?.province,
-    fallback: "Address unavailable",
-  });
+  const displayAddress = primaryAddress || "Address unavailable";
 
   // Strictly follow real sensor device location (from GSM/GPS data)
   useEffect(() => {

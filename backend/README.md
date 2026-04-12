@@ -61,3 +61,9 @@ Set `DB_TYPE=postgres` or `DB_TYPE=sqlite` in `.env`.
 ## Environment Variables
 
 See `.env.example` for all available configuration options.
+
+### Reverse Geocoding Provider
+
+Backend reverse geocoding uses BigDataCloud reverse-geocode-client.
+
+No API key is required for basic usage.
