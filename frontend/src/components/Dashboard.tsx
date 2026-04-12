@@ -113,18 +113,24 @@ export function Dashboard({
         siteName: siteData.siteName,
         address: typeof latestReading.address === 'string' && latestReading.address.trim()
           ? latestReading.address.trim()
-          : null,
+          : (lastSavedLocation?.address ?? null),
       };
 
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
     }
-    // 2. If no live reading yet, keep map marker empty to avoid fake location pins
+    // 2. If no live reading yet, keep the last valid marker from backend fallback
     else {
-      setGpsSites(undefined);
-      setLastSavedLocation(null);
+      if (lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
+        setGpsSites([{
+          id: 'device-gps',
+          name: lastSavedLocation.siteName || 'Last Known Location',
+          lat: lastSavedLocation.lat,
+          lng: lastSavedLocation.lng,
+        }]);
+      }
     }
-  }, [latestReading, siteData.siteName]);
+  }, [latestReading, siteData.siteName, lastSavedLocation]);
 
   // Reverse geocode the location shown on the map (latestReading or lastSavedLocation)
   useEffect(() => {

@@ -188,18 +188,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         siteName: siteData.siteName,
         address: typeof latestReading.address === 'string' && latestReading.address.trim()
           ? latestReading.address.trim()
-          : null,
+          : (lastSavedLocation?.address ?? null),
       };
 
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
     }
-    // 2. If no live reading yet, keep map marker empty to avoid fake location pins
+    // 2. If no live reading yet, keep the last valid marker from backend fallback
     else {
-      setGpsSites(undefined);
-      setLastSavedLocation(null);
+      if (lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
+        setGpsSites([{
+          id: 'device-gps',
+          name: lastSavedLocation.siteName || 'Last Known Location',
+          lat: lastSavedLocation.lat,
+          lng: lastSavedLocation.lng,
+        }]);
+      }
     }
-  }, [latestReading, siteData.siteName]);
+  }, [latestReading, siteData.siteName, lastSavedLocation]);
 
   // Reverse geocode when GPS changes (sync with dashboard logic)
   useEffect(() => {
@@ -216,15 +222,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
         reverseGeocode(lat, lng).then(addr => {
-          setGpsAddress(addr);
           if (addr) {
+            setGpsAddress(addr);
             setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
           }
         });
       }
-    } else {
-      setGpsAddress(null);
-      lastLatLngRef.current = null;
     }
   }, [gpsSites, latestReading, gpsAddress, siteData.siteName]);
 
@@ -285,7 +288,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 lat: data.latitude,
                 lng: data.longitude,
                 siteName: data.siteName || 'Last Known Location',
-                address: data.address || null,
+                address: (typeof data.address === 'string' && data.address.trim())
+                  ? data.address.trim()
+                  : (lastSavedLocation?.address ?? null),
               };
               setLastSavedLocation(fallbackLoc);
               setGpsSites([
@@ -310,14 +315,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           if (typeof data?.address === 'string' && data.address.trim()) {
             const resolvedAddress = data.address.trim();
             setGpsAddress(resolvedAddress);
-            if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-              setLastSavedLocation({
-                lat: data.latitude,
-                lng: data.longitude,
-                siteName: data.siteName || siteData.siteName || 'Device Location',
-                address: resolvedAddress,
-              });
-            }
+          }
+          if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+            setLastSavedLocation({
+              lat: data.latitude,
+              lng: data.longitude,
+              siteName: data.siteName || siteData.siteName || 'Device Location',
+              address: (typeof data.address === 'string' && data.address.trim())
+                ? data.address.trim()
+                : (lastSavedLocation?.address ?? null),
+            });
           }
           setBackendOk(true);
           setDataOk(true);
