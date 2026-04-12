@@ -33,20 +33,32 @@ const navItems = [
 
 export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDrawer, drawerOpen }: NavigationProps & { onLogout?: () => void; onToggleDrawer?: () => void; drawerOpen?: boolean }) {
   const expanded = !!drawerOpen;
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  const [isPhone, setIsPhone] = useState(typeof window !== "undefined" ? window.innerWidth < 600 : false);
+
+  useEffect(() => {
+    const check = () => {
+      setVw(window.innerWidth);
+      setIsPhone(window.innerWidth < 600);
+    };
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   return (
     <aside
       style={{
         position: "fixed",
-        top: 76,
+        top: expanded ? (isPhone ? 0 : (vw < 1600 ? 48 : 60)) : (isPhone ? 0 : (vw < 1600 ? 48 : 60)),
         left: 0,
         bottom: 0,
-        width: expanded ? 260 : 80,
+        width: expanded ? 240 : (vw < 1600 ? 64 : 70),
         background: "#fff",
         borderRight: "1px solid #e8e8e8",
         display: "flex",
         flexDirection: "column",
-        paddingTop: 18,
-        paddingBottom: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
         gap: 4,
         zIndex: 50,
         overflowY: "hidden",
@@ -64,13 +76,13 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
               onClick={() => onNavigate?.(item.view)}
               style={{
                 width: "100%",
-                height: 52,
-                borderRadius: 12,
+                height: vw < 1600 ? 38 : 44,
+                borderRadius: vw < 1600 ? 8 : 10,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                gap: 14,
-                padding: "0 0 0 19px",
+                gap: vw < 1600 ? 10 : 12,
+                padding: vw < 1600 ? "0 0 0 12px" : "0 0 0 16px",
                 background: isActive
                   ? "linear-gradient(135deg, #357D86, #026366)"
                   : "transparent",
@@ -82,8 +94,8 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
             >
               <div
                 style={{
-                  width: 22,
-                  height: 22,
+                  width: vw < 1600 ? 16 : 22,
+                  height: vw < 1600 ? 16 : 22,
                   flexShrink: 0,
                   background: isActive ? "#fff" : "#ABABAB",
                   WebkitMaskImage: `url('${item.iconSrc}')`,
@@ -99,7 +111,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
               />
               <span
                 style={{
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: isActive ? 600 : 400,
                   color: isActive ? "#fff" : "#6b7280",
                   fontFamily: "Poppins, sans-serif",
@@ -202,11 +214,14 @@ export function NavigationHeader({
 
   const pageInfo = getPageTitle(currentView);
 
-  const [isPhone, setIsPhone] = useState(false);
-  const [isNarrowTablet, setIsNarrowTablet] = useState(false);
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  const [isPhone, setIsPhone] = useState(typeof window !== "undefined" ? window.innerWidth < 600 : false);
+  const [isNarrowTablet, setIsNarrowTablet] = useState(typeof window !== "undefined" ? (window.innerWidth >= 600 && window.innerWidth < 900) : false);
+
   useEffect(() => {
     const check = () => {
       const w = window.innerWidth;
+      setVw(w);
       setIsPhone(w < 600);
       setIsNarrowTablet(w >= 600 && w < 900);
     };
@@ -229,8 +244,8 @@ export function NavigationHeader({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 28px 0 0",
-        height: 76,
+        padding: vw < 1600 ? "0 20px 0 0" : "0 28px 0 0",
+        height: vw < 1600 ? 48 : 60,
         position: "fixed",
         top: 0,
         left: 0,
@@ -262,8 +277,8 @@ export function NavigationHeader({
               }} />
             </button>
             <button onClick={() => onNavigate?.("dashboard")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 26, height: 26, objectFit: "contain" }} />
-              <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 17, color: "#357D86" }}>SchistoGuard</span>
+              <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 22, height: 22, objectFit: "contain" }} />
+              <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 15, color: "#357D86" }}>SchistoGuard</span>
             </button>
           </>
         ) : (
@@ -273,7 +288,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 80, height: 76, flexShrink: 0,
+                width: 70, height: 60, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: 0,
               }}
@@ -289,9 +304,9 @@ export function NavigationHeader({
               }} />
             </button>
             {!isNarrowTablet && (
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 4 }}>
-                <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: 15, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.title}</span>
-                <span style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.subtitle}</span>
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: vw < 1600 ? 2 : 4 }}>
+                <span style={{ fontWeight: 600, color: "#1a3a4a", fontSize: vw < 1600 ? 12 : 14, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.title}</span>
+                <span style={{ color: "#9ca3af", fontSize: vw < 1600 ? 9.5 : 11, lineHeight: 1.2, fontFamily: "Poppins, sans-serif" }}>{pageInfo.subtitle}</span>
               </div>
             )}
           </>
@@ -304,8 +319,8 @@ export function NavigationHeader({
           onClick={() => onNavigate?.("dashboard")}
           style={{ display: "flex", alignItems: "center", gap: 8, position: "absolute", left: "50%", transform: "translateX(-50%)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
         >
-          <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 28, height: 28, objectFit: "contain" }} />
-          <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 18, color: "#357D86" }}>
+          <img src="/schistoguard.png" alt="SchistoGuard" style={{ width: 24, height: 24, objectFit: "contain" }} />
+          <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 600, fontSize: 16, color: "#357D86" }}>
             SchistoGuard
           </span>
         </button>
@@ -367,8 +382,8 @@ export function NavigationHeader({
           <DropdownMenuTrigger asChild>
             <button
               style={{
-                width: 38,
-                height: 38,
+                width: 32,
+                height: 32,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -453,9 +468,13 @@ export function NavigationProvider({
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isPhone, setIsPhone] = useState(false);
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
   useEffect(() => {
-    const check = () => setIsPhone(window.innerWidth < 600);
+    const check = () => {
+      setIsPhone(window.innerWidth < 600);
+      setVw(window.innerWidth);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -485,7 +504,7 @@ export function NavigationProvider({
       <aside
         style={{
           position: "fixed",
-          top: 76, left: 0, bottom: 0,
+          top: 60, left: 0, bottom: 0,
           width: 260,
           background: "#fff",
           borderRight: "1px solid #e8e8e8",
@@ -573,8 +592,8 @@ export function NavigationProvider({
       <main
         style={{
           position: "fixed",
-          top: 76,
-          left: isPhone ? 0 : (drawerOpen ? 260 : 80),
+          top: vw < 1600 ? 48 : 60,
+          left: isPhone ? 0 : (drawerOpen ? 240 : (vw < 1600 ? 64 : 70)),
           right: 0,
           bottom: 0,
           overflowY: "auto",

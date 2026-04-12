@@ -74,7 +74,7 @@ export function Dashboard({
       if (typeof window !== 'undefined') {
         const globalCached = localStorage.getItem('sg_global_latest_address');
         if (globalCached) return globalCached;
-        
+
         // Fallback to searching all geocoding keys in localStorage
         const keys = Object.keys(localStorage);
         const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
@@ -135,12 +135,12 @@ export function Dashboard({
   // Fallback to last known location in localStorage if sensor is not yet available
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
-  
+
   // Update location whenever latestReading changes
   useEffect(() => {
     let sites;
     let lastLoc;
-    
+
     // 1. Prioritize real-time data from latestReading
     if (
       latestReading &&
@@ -156,12 +156,12 @@ export function Dashboard({
         lng: latestReading.longitude,
       }];
       lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
-      
+
       // Persist to localStorage for immediate loading on next visit
       localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
-    } 
+    }
     // 2. Fallback to cached location if no live reading yet
     else {
       let cachedSet = false;
@@ -185,7 +185,7 @@ export function Dashboard({
           } catch { }
         }
       }
-      
+
       // 3. If no live/cached location, keep map marker empty to avoid fake location pins
       if (!cachedSet) {
         setGpsSites(undefined);
@@ -255,7 +255,7 @@ export function Dashboard({
           localStorage.setItem('sg_global_latest_address', cached);
         }
       }
-      
+
       const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
       if (siteNameKey && siteData.siteName === "Site Name") {
         const cachedName = localStorage.getItem(siteNameKey);
@@ -304,12 +304,12 @@ export function Dashboard({
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
   const isNarrowDesktop = vw < 1600;
-  // Shared card height so ALL dashboard cards are uniform
-  const cardH = isNarrowDesktop ? 140 : 190;
-  const panelWidth = isNarrowDesktop ? "46%" : "44%";
+  // Aggressive shared card height so ALL dashboard cards are uniform
+  const cardH = isNarrowDesktop ? 80 : 140;
+  const panelWidth = isNarrowDesktop ? "44%" : "40%";
 
   const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
     .map((v: any) => (typeof v === "string" ? v.trim() : ""))
@@ -676,8 +676,8 @@ export function Dashboard({
         animation: animationEnabled ? "contentSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both" : "none"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <div style={{ 
-            width: 38, height: 38, borderRadius: 12, 
+          <div style={{
+            width: 38, height: 38, borderRadius: 12,
             background: "linear-gradient(135deg, #357D86, #4EA8B1)",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
@@ -692,9 +692,9 @@ export function Dashboard({
         </div>
 
         {/* Current Risk Interpretation */}
-        <div style={{ 
-          padding: "14px", 
-          borderRadius: 16, 
+        <div style={{
+          padding: "14px",
+          borderRadius: 16,
           background: current.bgColor,
           border: `1px solid ${current.borderColor}`,
           marginBottom: 16,
@@ -1025,6 +1025,7 @@ export function Dashboard({
               active={deviceConnected && !!latestReading}
               compact={compactCards}
               fadeIn={animationEnabled}
+              isNarrow={isNarrowDesktop}
             />
 
             <SensorMiniCard
@@ -1037,6 +1038,7 @@ export function Dashboard({
               active={deviceConnected && !!latestReading}
               compact={compactCards}
               fadeIn={animationEnabled}
+              isNarrow={isNarrowDesktop}
             />
 
             <SensorMiniCard
@@ -1049,6 +1051,7 @@ export function Dashboard({
               active={deviceConnected && !!latestReading}
               compact={compactCards}
               fadeIn={animationEnabled}
+              isNarrow={isNarrowDesktop}
             />
           </div>
         </div>
@@ -1108,7 +1111,7 @@ export function Dashboard({
             </h1>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
-              fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", 
+              fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)",
               margin: "5px 0 12px",
               fontFamily: POPPINS,
               minHeight: "auto",
@@ -1174,6 +1177,7 @@ export function Dashboard({
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
+                  isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
@@ -1222,6 +1226,7 @@ export function Dashboard({
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
+                  isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
@@ -1270,6 +1275,7 @@ export function Dashboard({
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
+                  isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
@@ -1522,9 +1528,9 @@ export function Dashboard({
         } as React.CSSProperties}
       >
         {/* Site header */}
-        <div style={{ marginBottom: isNarrowDesktop ? 12 : 20, animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ marginBottom: isNarrowDesktop ? 8 : 12, animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           <h1 style={{
-            fontSize: isNarrowDesktop ? 30 : 36,
+            fontSize: isNarrowDesktop ? 20 : 26,
             fontWeight: 700,
             color: "#fff",
             margin: 0,
@@ -1535,8 +1541,8 @@ export function Dashboard({
           </h1>
           <p style={{
             color: "rgba(255,255,255,0.9)",
-            fontSize: isNarrowDesktop ? 12 : 15,
-            margin: "3px 0 0 0",
+            fontSize: isNarrowDesktop ? 10 : 12,
+            margin: "1px 0 0 0",
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 400,
           }}>
@@ -1558,6 +1564,7 @@ export function Dashboard({
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
+            isNarrow={isNarrowDesktop}
           />
           {/* Turbidity */}
           <SensorMiniCard
@@ -1571,6 +1578,7 @@ export function Dashboard({
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
+            isNarrow={isNarrowDesktop}
           />
           {/* pH */}
           <SensorMiniCard
@@ -1584,6 +1592,7 @@ export function Dashboard({
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
+            isNarrow={isNarrowDesktop}
           />
         </div>
 
@@ -1591,33 +1600,33 @@ export function Dashboard({
         <div
           style={{
             background: "#fff",
-            borderRadius: isNarrowDesktop ? 14 : 20,
-            padding: isNarrowDesktop ? "16px 20px" : "24px 30px",
+            borderRadius: isNarrowDesktop ? 12 : 16,
+            padding: isNarrowDesktop ? "10px 14px" : "14px 18px",
             display: "flex",
             alignItems: "stretch",
             justifyContent: "space-between",
-            marginBottom: isNarrowDesktop ? 12 : 24,
+            marginBottom: isNarrowDesktop ? 8 : 12,
             minHeight: cardH,
             boxSizing: "border-box" as const,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
             animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
             <div>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 22 : 30, color: "#337C85" }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 16 : 20, color: "#337C85" }}>
                 Total Parameter Readings
               </p>
-              <p style={{ margin: isNarrowDesktop ? "2px 0 6px" : "4px 0 10px", color: "#9ca3af", fontSize: isNarrowDesktop ? 13 : 15 }}>
+              <p style={{ margin: isNarrowDesktop ? "0px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 10 : 12 }}>
                 Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
               </p>
             </div>
-            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 40 : 52, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 28 : 38, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
               {readings.length}
             </p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 10, flexShrink: 0 }}>
-            <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 54 : 74, height: isNarrowDesktop ? 54 : 74, objectFit: "contain" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 4, flexShrink: 0 }}>
+            <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 34 : 44, height: isNarrowDesktop ? 34 : 44, objectFit: "contain" }} />
           </div>
         </div>
 
@@ -1625,12 +1634,12 @@ export function Dashboard({
         <div
           style={{
             background: "#fff",
-            borderRadius: isNarrowDesktop ? 14 : 22,
-            padding: isNarrowDesktop ? "16px 20px" : "24px 30px",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            borderRadius: isNarrowDesktop ? 12 : 18,
+            padding: isNarrowDesktop ? "10px 14px" : "14px 18px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
             display: "flex",
             alignItems: "stretch",
-            gap: isNarrowDesktop ? 10 : 16,
+            gap: isNarrowDesktop ? 8 : 12,
             minHeight: cardH,
             boxSizing: "border-box" as const,
             animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
@@ -1639,25 +1648,25 @@ export function Dashboard({
           {/* LEFT: Risk Level */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <p style={{
-              margin: isNarrowDesktop ? "0 0 6px" : "0 0 10px",
+              margin: isNarrowDesktop ? "0 0 3px" : "0 0 5px",
               fontWeight: 700,
-              fontSize: isNarrowDesktop ? 22 : 30,
+              fontSize: isNarrowDesktop ? 16 : 20,
               color: "#337C85",
               fontFamily: "'Poppins', sans-serif",
             }}>
               Risk Level
             </p>
-            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 12 : 18, marginBottom: isNarrowDesktop ? 8 : 14 }}>
-              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 6 : 10, marginBottom: isNarrowDesktop ? 4 : 8 }}>
+              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 20 : 28, height: isNarrowDesktop ? 20 : 28, objectFit: "contain" }} />
               <span
                 style={{
                   background: "transparent",
                   color: riskColor,
-                  border: `1.5px solid ${riskColor}`,
+                  border: `1.2px solid ${riskColor}`,
                   borderRadius: 999,
-                  padding: isNarrowDesktop ? "5px 18px" : "8px 26px",
+                  padding: isNarrowDesktop ? "3px 10px" : "4px 14px",
                   fontWeight: 700,
-                  fontSize: isNarrowDesktop ? 14 : 16,
+                  fontSize: isNarrowDesktop ? 11 : 13,
                   fontFamily: "'Poppins', sans-serif",
                   textTransform: "capitalize",
                 }}
@@ -1665,40 +1674,39 @@ export function Dashboard({
                 {getOverallRiskLabel(overallRisk)}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 12 : 14, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
+            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 10 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
               Based on temperature, turbidity, and pH
             </p>
           </div>
 
-          {/* RIGHT: Active Alerts — inset teal card (display only, no click) */}
           <div
             style={{
               flex: 1,
               background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
-              borderRadius: isNarrowDesktop ? 12 : 16,
-              padding: isNarrowDesktop ? "14px 12px" : "22px 18px",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+              borderRadius: isNarrowDesktop ? 10 : 14,
+              padding: isNarrowDesktop ? "10px 8px" : "14px 16px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: isNarrowDesktop ? 4 : 8,
+              gap: isNarrowDesktop ? 3 : 5,
             }}
           >
             <p style={{
               margin: 0,
               fontWeight: 700,
-              fontSize: isNarrowDesktop ? 14 : 17,
+              fontSize: isNarrowDesktop ? 12 : 14,
               color: "#fff",
               textAlign: "center",
               fontFamily: "'Poppins', sans-serif",
-              letterSpacing: 0.3,
+              letterSpacing: 0.2,
             }}>
               Active Alerts
             </p>
             <p style={{
               margin: 0,
-              fontSize: isNarrowDesktop ? 36 : 50,
+              fontSize: isNarrowDesktop ? 28 : 38,
               fontWeight: 700,
               color: "#fff",
               lineHeight: 1,
@@ -1786,7 +1794,7 @@ export function Dashboard({
       </button>
 
       {/* Alert Details Modal */}
-      <AlertDetailsModal 
+      <AlertDetailsModal
         alert={selectedAlert}
         isOpen={!!selectedAlert}
         onOpenChange={(open) => !open && setSelectedAlert(null)}
@@ -1831,39 +1839,39 @@ const POPPINS = "'Poppins', sans-serif";
 
 const SENSOR_CARD_STYLE = {
   // Card
-  padding: "20px 26px 20px 26px",   // matches bottom cards' 26px sides
+  padding: (isNarrow: boolean) => isNarrow ? "10px 14px 10px 14px" : "20px 26px 20px 26px",
   borderRadius: 20,
-  height: 205,
+  height: (isNarrow: boolean) => isNarrow ? 135 : 205,
 
   // Icon
-  iconSize: 44,
-  iconGap: 12,            // space below icon before label
+  iconSize: (isNarrow: boolean) => isNarrow ? 24 : 44,
+  iconGap: (isNarrow: boolean) => isNarrow ? 8 : 12,
 
-  // Label (e.g. "Temperature")
+  // Label
   labelColor: "#77ABB2",
-  labelSize: 15,
+  labelSize: (isNarrow: boolean) => isNarrow ? 11 : 15,
   labelWeight: 500,
-  labelGap: 6,            // space below label before value
+  labelGap: (isNarrow: boolean) => isNarrow ? 2 : 6,
 
-  // Value number (e.g. "31.19")
+  // Value number
   valueColor: "#6b7280",
-  valueSize: 30,
+  valueSize: (isNarrow: boolean) => isNarrow ? 18 : 30,
   valueWeight: 600,
 
-  // Unit (e.g. "°C", "NTU")
+  // Unit
   unitColor: "#6b7280",
-  unitSize: 20,
+  unitSize: (isNarrow: boolean) => isNarrow ? 12 : 20,
   unitWeight: 700,
-  valueGap: 6,            // space below value before sub-text
+  valueGap: (isNarrow: boolean) => isNarrow ? 2 : 6,
 
-  // Sub-text (e.g. "Moderate Risk")
+  // Sub-text
   subColor: "#8E8B8B",
-  subSize: 13,
+  subSize: (isNarrow: boolean) => isNarrow ? 10 : 13,
   subWeight: 400,
 
   // Status dot
   dotSize: 10,
-  dotInset: 20,           // distance from card corner (more inward = not at very edge)
+  dotInset: (isNarrow: boolean) => isNarrow ? 12 : 20,
 };
 
 function SensorMiniCard({
@@ -1877,6 +1885,7 @@ function SensorMiniCard({
   compact,
   fixedHeight,
   fadeIn,
+  isNarrow,
 }: {
   label: string;
   iconSrc: string;
@@ -1888,20 +1897,22 @@ function SensorMiniCard({
   compact?: boolean;
   fixedHeight?: number;
   fadeIn?: boolean;
+  isNarrow?: boolean;
 }) {
 
   const S = SENSOR_CARD_STYLE;
-  const cardHeight = fixedHeight ? fixedHeight : compact ? "auto" : S.height;
-  const cardPad = compact ? "16px 18px 14px" : S.padding;
-  const iconSize = compact ? 36 : S.iconSize;
-  const iconGap = compact ? 8 : S.iconGap;
-  const labelSize = compact ? 14 : S.labelSize;
-  const labelGap = compact ? 5 : S.labelGap;
-  const valueSize = compact ? 26 : S.valueSize;
-  const unitSize = compact ? 16 : S.unitSize;
-  const valueGap = compact ? 4 : S.valueGap;
-  const subSize = compact ? 11 : S.subSize;
-  const dotInset = compact ? 14 : S.dotInset;
+  const isN = !!isNarrow;
+  const cardHeight = fixedHeight ? fixedHeight : compact ? "auto" : (typeof S.height === 'function' ? S.height(isN) : S.height);
+  const cardPad = compact ? "16px 18px 14px" : (typeof S.padding === 'function' ? S.padding(isN) : S.padding);
+  const iconSize = compact ? 36 : (typeof S.iconSize === 'function' ? S.iconSize(isN) : S.iconSize);
+  const iconGap = compact ? 8 : (typeof S.iconGap === 'function' ? S.iconGap(isN) : S.iconGap);
+  const labelSize = compact ? 14 : (typeof S.labelSize === 'function' ? S.labelSize(isN) : S.labelSize);
+  const labelGap = compact ? 5 : (typeof S.labelGap === 'function' ? S.labelGap(isN) : S.labelGap);
+  const valueSize = compact ? 26 : (typeof S.valueSize === 'function' ? S.valueSize(isN) : S.valueSize);
+  const unitSize = compact ? 16 : (typeof S.unitSize === 'function' ? S.unitSize(isN) : S.unitSize);
+  const valueGap = compact ? 4 : (typeof S.valueGap === 'function' ? S.valueGap(isN) : S.valueGap);
+  const subSize = compact ? 11 : (typeof S.subSize === 'function' ? S.subSize(isN) : S.subSize);
+  const dotInset = compact ? 14 : (typeof S.dotInset === 'function' ? S.dotInset(isN) : S.dotInset);
   return (
     <div
       style={{

@@ -225,7 +225,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <h1 style={{
-            fontSize: isMobile ? 20 : 26,
+            fontSize: isMobile ? 18 : 20,
             fontWeight: 700,
             color: "#1a2a3a",
             margin: 0,
@@ -251,9 +251,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           )}
           {!isMobile && (
             <p style={{
-              fontSize: 14,
+              fontSize: 12,
               color: "#7b8a9a",
-              margin: "4px 0 0",
+              margin: "2px 0 0",
               fontFamily: POPPINS,
             }}>Monitor and manage water quality alerts across all sites</p>
           )}
@@ -268,8 +268,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger style={{
               width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-              minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-              border: "1px solid #e2e5ea", background: "#fff", height: 38,
+              minWidth: 0, borderRadius: 10, fontFamily: POPPINS, fontSize: 12,
+              border: "1px solid #e2e5ea", background: "#fff", height: 34,
             }}>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -282,8 +282,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           <Select value={filterLevel} onValueChange={setFilterLevel}>
             <SelectTrigger style={{
               width: isMobile ? undefined : 140, flex: isMobile ? 1 : undefined,
-              minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-              border: "1px solid #e2e5ea", background: "#fff", height: 38,
+              minWidth: 0, borderRadius: 10, fontFamily: POPPINS, fontSize: 12,
+              border: "1px solid #e2e5ea", background: "#fff", height: 34,
             }}>
               <SelectValue placeholder="All Levels" />
             </SelectTrigger>
@@ -358,7 +358,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         <div
           onClick={() => (isMobile) && setShowMobileAlertList(true)}
           style={{
-            padding: isMobile ? "12px 14px" : "20px 24px 16px",
+            padding: isMobile ? "12px 14px" : "14px 20px 12px",
             background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
             borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
             display: "flex",
@@ -396,7 +396,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             )}
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <h2 style={{
-                fontSize: 15, fontWeight: 700, color: "#1a2a3a",
+                fontSize: 13, fontWeight: 700, color: "#1a2a3a",
                 margin: 0,
                 fontFamily: POPPINS,
                 lineHeight: 1.2,
@@ -442,8 +442,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                   <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
                     Cancel
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Trash2 size={14} /> Delete ({selectedIds.size})
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "5px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 12, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Trash2 size={13} /> Delete ({selectedIds.size})
                   </button>
                 </>
               ) : (
@@ -668,20 +668,20 @@ function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact }: {
   return (
     <div style={{
       background: "#fff",
-      borderRadius: isCompact ? 16 : 20,
-      padding: isCompact ? "14px 16px" : 20,
+      borderRadius: isCompact ? 16 : 16,
+      padding: isCompact ? "14px 16px" : 14,
       display: "flex",
       flexDirection: "column",
       fontFamily: "'Poppins', sans-serif",
       boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
       border: "1px solid rgba(0,0,0,0.03)",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isCompact ? 8 : 12 }}>
-        <span style={{ fontSize: isCompact ? 11 : 13, fontWeight: 500, color: "#8E8B8B", letterSpacing: isCompact ? 0.3 : 0 }}>{label}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isCompact ? 8 : 10 }}>
+        <span style={{ fontSize: isCompact ? 11 : 11, fontWeight: 500, color: "#8E8B8B", letterSpacing: isCompact ? 0.3 : 0 }}>{label}</span>
         <div style={{
-          width: isCompact ? 30 : 36,
-          height: isCompact ? 30 : 36,
-          borderRadius: isCompact ? 8 : 10,
+          width: isCompact ? 30 : 32,
+          height: isCompact ? 30 : 32,
+          borderRadius: isCompact ? 8 : 8,
           background: bgColor,
           display: "flex",
           alignItems: "center",
@@ -690,8 +690,8 @@ function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact }: {
           {icon}
         </div>
       </div>
-      <div style={{ fontSize: isCompact ? 22 : 28, fontWeight: 700, color: valueColor, lineHeight: 1 }}>{value}</div>
-      <span style={{ fontSize: isCompact ? 10 : 12, color: "#8E8B8B", marginTop: isCompact ? 6 : 4, fontWeight: 400 }}>{sub}</span>
+      <div style={{ fontSize: isCompact ? 22 : 22, fontWeight: 700, color: valueColor, lineHeight: 1 }}>{value}</div>
+      <span style={{ fontSize: isCompact ? 10 : 10, color: "#8E8B8B", marginTop: isCompact ? 6 : 3, fontWeight: 400 }}>{sub}</span>
     </div>
   );
 }

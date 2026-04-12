@@ -433,14 +433,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (screenWidth < 480) return '30px'; // Small mobile
     if (screenWidth < 768) return '40px'; // Large mobile
     if (screenWidth < 1024) return '55px'; // Tablet
-    return '44px'; // Desktop (refined for better scaling)
+    if (screenWidth < 1600) return '28px'; // Narrow Desktop (Micro-scaling)
+    return '44px'; // Large Desktop
   };
 
   const getHeroParagraphFontSize = () => {
     if (screenWidth < 480) return '14px'; // Small mobile
     if (screenWidth < 768) return '16px'; // Large mobile
     if (screenWidth < 1024) return '18px'; // Tablet
-    return '17px'; // Desktop (refined)
+    if (screenWidth < 1600) return '13px'; // Narrow Desktop (Micro-scaling)
+    return '17px'; // Large Desktop
   };
 
   // Sample data
@@ -532,80 +534,80 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div style={{
         background: "#fff",
         borderRadius: 20,
-        padding: screenWidth < 600 ? "16px" : screenWidth >= 1100 ? "18px" : "22px",
+        padding: screenWidth < 600 ? "12px" : screenWidth >= 1100 ? "14px" : "18px",
         boxShadow: screenWidth < 600 ? "0 4px 18px rgba(0,0,0,0.11)" : "0 2px 12px rgba(0,0,0,0.09)",
         fontFamily: "'Poppins', sans-serif",
         animation: 'cardFadeIn 0.6s 0.6s ease-out both',
         gridColumn: '1 / -1',
         display: "flex",
         flexDirection: "column",
-        gap: 12,
-        marginTop: 4, // Added margin to separate from the cards above
+        gap: 8,
+        marginTop: 4,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
           <div style={{
-            width: 34, height: 34, borderRadius: 10,
+            width: 26, height: 26, borderRadius: 8,
             background: "linear-gradient(135deg, #357D86, #4EA8B1)",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
-            <Activity size={18} color="#fff" />
+            <Activity size={14} color="#fff" />
           </div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#337C85" }}>
+          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#337C85" }}>
             Data Interpretation
           </h3>
         </div>
 
         {/* Current Risk Interpretation */}
         <div style={{
-          padding: "12px 14px",
-          borderRadius: 14,
+          padding: "8px 10px",
+          borderRadius: 10,
           background: current.bgColor,
           border: `1px solid ${current.borderColor}`,
           display: "flex",
-          gap: 10,
+          gap: 6,
           alignItems: "flex-start"
         }}>
-          <Info size={16} color={current.color} style={{ marginTop: 2, flexShrink: 0 }} />
+          <Info size={12} color={current.color} style={{ marginTop: 2, flexShrink: 0 }} />
           <div>
-            <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: current.color }}>
+            <p style={{ margin: "0 0 1px", fontSize: 11, fontWeight: 700, color: current.color }}>
               {current.title}
             </p>
-            <p style={{ margin: 0, fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
+            <p style={{ margin: 0, fontSize: 10, color: "#475569", lineHeight: 1.4 }}>
               {current.message}
             </p>
           </div>
         </div>
 
         {/* Threshold Quick Guide */}
-        <div style={{ marginTop: 4 }}>
-          <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        <div style={{ marginTop: 2 }}>
+          <p style={{ margin: "0 0 6px", fontSize: 9.5, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>
             Snail Breeding Danger Zones
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Thermometer size={14} color="#77ABB2" />
-                <span style={{ fontSize: 12, color: "#475569" }}>Temperature</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Thermometer size={11} color="#77ABB2" />
+                <span style={{ fontSize: 10, color: "#475569" }}>Temperature</span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "1px 5px", borderRadius: 4 }}>
                 22°C - 30°C
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Droplets size={14} color="#77ABB2" />
-                <span style={{ fontSize: 12, color: "#475569" }}>Turbidity</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Droplets size={11} color="#77ABB2" />
+                <span style={{ fontSize: 10, color: "#475569" }}>Turbidity</span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "1px 5px", borderRadius: 4 }}>
                 Clear (&lt; 5 NTU)
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Info size={14} color="#77ABB2" />
-                <span style={{ fontSize: 12, color: "#475569" }}>pH Levels</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Info size={11} color="#77ABB2" />
+                <span style={{ fontSize: 10, color: "#475569" }}>pH Levels</span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "1px 5px", borderRadius: 4 }}>
                 6.5 - 8.0 pH
               </span>
             </div>
@@ -1064,7 +1066,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   color: '#fff',
                   fontFamily: "'Poppins', sans-serif",
                   fontWeight: 700,
-                  fontSize: isMobileOrTablet ? (screenWidth < 600 ? 26 : 32) : 38,
+                  fontSize: isMobileOrTablet ? (screenWidth < 600 ? 22 : 24) : 26,
                   lineHeight: 1.15,
                   textShadow: '0 1px 6px rgba(0,0,0,0.18)',
                   animation: 'slideInFromRight 0.6s 0.2s ease-out both',
@@ -1077,7 +1079,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   margin: '6px 0 0',
                   color: 'rgba(255,255,255,0.92)',
                   fontFamily: "'Poppins', sans-serif",
-                  fontSize: isMobileOrTablet ? 13 : 16,
+                  fontSize: isMobileOrTablet ? 11 : 12,
                   animation: 'slideInFromRight 0.6s 0.3s ease-out both',
                 }}
               >
@@ -1153,7 +1155,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: 20,
                 pointerEvents: 'auto',
                 marginTop: 20,
-                maxWidth: screenWidth < 1100 ? '100%' : 580, 
+                maxWidth: screenWidth < 1100 ? '100%' : 580,
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
@@ -1162,7 +1164,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '14px 18px' : '20px 26px',
+                  padding: screenWidth < 600 ? '10px 12px' : screenWidth >= 1100 ? '12px 14px' : '14px 18px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1185,16 +1187,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('temperature', latestReading.temperature).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 11.5 : screenWidth >= 1100 ? 12 : 15, color: '#77ABB2' }}>Temperature</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
+                  style={{ width: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, height: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, objectFit: 'contain', marginBottom: screenWidth < 600 ? 4 : 5 }} />
+                <p style={{ margin: '0 0 3px', fontWeight: 500, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 11 : 12, color: '#77ABB2' }}>Temperature</p>
+                <p style={{ margin: '0 0 3px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 16 : screenWidth >= 1100 ? 18 : 22, color: '#6b7280' }}>
                     {latestReading ? latestReading.temperature : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> °C</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 12 : 14, color: '#6b7280' }}> °C</span>}
                 </p>
                 {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 8.5 : 10, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
                     {getSensorStatus('temperature', latestReading.temperature).label}
                   </p>
                 )}
@@ -1205,7 +1207,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 style={{
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
+                  padding: screenWidth < 600 ? '10px 12px' : screenWidth >= 1100 ? '12px 14px' : '14px 18px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1228,16 +1230,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('turbidity', latestReading.turbidity).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>Turbidity</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
+                  style={{ width: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, height: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, objectFit: 'contain', marginBottom: screenWidth < 600 ? 4 : 5 }} />
+                <p style={{ margin: '0 0 3px', fontWeight: 500, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 11 : 12, color: '#77ABB2' }}>Turbidity</p>
+                <p style={{ margin: '0 0 3px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 16 : screenWidth >= 1100 ? 18 : 22, color: '#6b7280' }}>
                     {latestReading ? latestReading.turbidity : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> NTU</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 12 : 14, color: '#6b7280' }}> NTU</span>}
                 </p>
                 {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 8.5 : 10, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
                     {getSensorStatus('turbidity', latestReading.turbidity).label}
                   </p>
                 )}
@@ -1249,7 +1251,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: screenWidth >= 1100 ? 'auto' : '1 / -1',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
+                  padding: screenWidth < 600 ? '10px 12px' : screenWidth >= 1100 ? '12px 14px' : '14px 18px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1272,10 +1274,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('ph', latestReading.ph).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>pH Level</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
+                  style={{ width: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, height: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, objectFit: 'contain', marginBottom: screenWidth < 600 ? 4 : 5 }} />
+                <p style={{ margin: '0 0 3px', fontWeight: 500, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 11 : 12, color: '#77ABB2' }}>pH Level</p>
+                <p style={{ margin: '0 0 3px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 16 : screenWidth >= 1100 ? 18 : 22, color: '#6b7280' }}>
                     {latestReading ? latestReading.ph : '—'}
                   </span>
                 </p>

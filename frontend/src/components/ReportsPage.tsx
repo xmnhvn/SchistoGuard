@@ -104,7 +104,7 @@ export const ReportsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showMobileReportList, setShowMobileReportList] = useState(false);
-  
+
   // Persistent Global Cache for Header Metadata
   const [address, setAddress] = useState<string | null>(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('sg_global_latest_address');
@@ -168,7 +168,7 @@ export const ReportsPage: React.FC = () => {
           });
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
@@ -183,7 +183,7 @@ export const ReportsPage: React.FC = () => {
           localStorage.setItem('sg_global_latest_address', cached);
         }
       }
-      
+
       const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
       if (siteNameKey && !dynamicSiteName) {
         const cachedName = localStorage.getItem(siteNameKey);
@@ -363,9 +363,9 @@ export const ReportsPage: React.FC = () => {
             margin: [10, 10, 10, 10],
             filename: fileName,
             image: { type: 'jpeg', quality: 1.0 },
-            html2canvas: { 
-              scale: 2, 
-              useCORS: true, 
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
               backgroundColor: '#ffffff',
               logging: false,
               letterRendering: true
@@ -441,9 +441,8 @@ export const ReportsPage: React.FC = () => {
   const renderReportArticle = (report: Report, isForCapture: boolean = false) => (
     <article
       ref={isForCapture ? (previewDocumentRef as any) : null}
-      className={`mx-auto w-full max-w-[720px] bg-white text-[13px] leading-relaxed text-slate-800 ${
-        isForCapture ? 'p-10' : 'p-5 sm:p-7'
-      }`}
+      className={`mx-auto w-full max-w-[720px] bg-white text-[13px] leading-relaxed text-slate-800 ${isForCapture ? 'p-10' : 'p-5 sm:p-7'
+        }`}
       style={isForCapture ? { width: '720px', minHeight: '1000px' } : {}}
     >
       <header className="mb-6 border-b border-slate-200 pb-6 text-center">
@@ -477,8 +476,8 @@ export const ReportsPage: React.FC = () => {
                     report.summary.riskLevel === 'high'
                       ? '#EB5757'
                       : report.summary.riskLevel === 'moderate'
-                      ? '#F2994A'
-                      : '#27AE60',
+                        ? '#F2994A'
+                        : '#27AE60',
                   fontWeight: 700,
                 }}
               >
@@ -569,8 +568,8 @@ export const ReportsPage: React.FC = () => {
                 report.summary.riskLevel === 'high'
                   ? '#D14343'
                   : report.summary.riskLevel === 'moderate'
-                  ? '#F1A11A'
-                  : '#23B67E',
+                    ? '#F1A11A'
+                    : '#23B67E',
             }}
           >
             {report.summary.riskLevel}
@@ -627,7 +626,7 @@ export const ReportsPage: React.FC = () => {
           animation: spin 0.8s linear infinite;
         }
       `}</style>
-      
+
       {/* ── Preparing Report Modal ── */}
       {downloading && (
         <div style={{
@@ -665,12 +664,12 @@ export const ReportsPage: React.FC = () => {
 
       {/* ── Hidden Report Source for Capture ── */}
       {selectedReport && (
-        <div style={{ 
-          position: 'fixed', 
-          left: '-9999px', 
-          top: 0, 
-          width: '730px', 
-          zIndex: -1, 
+        <div style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: 0,
+          width: '730px',
+          zIndex: -1,
           visibility: 'hidden',
           pointerEvents: 'none'
         }}>
@@ -838,10 +837,10 @@ export const ReportsPage: React.FC = () => {
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
-                              height: 38,
-                              borderRadius: 12,
+                              height: 34,
+                              borderRadius: 10,
                               fontFamily: POPPINS,
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: 500,
                               border: "1px solid #e2e5ea",
                               background: "#fff",
@@ -864,10 +863,10 @@ export const ReportsPage: React.FC = () => {
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
-                              height: 38,
-                              borderRadius: 12,
+                              height: 34,
+                              borderRadius: 10,
                               fontFamily: POPPINS,
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: 500,
                               border: "1px solid #e2e5ea",
                               background: "#fff",
@@ -890,10 +889,10 @@ export const ReportsPage: React.FC = () => {
                       <Button
                         className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
                         style={{
-                          height: 38,
-                          borderRadius: 12,
+                          height: 34,
+                          borderRadius: 10,
                           fontFamily: POPPINS,
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: 500,
                           backgroundColor: "#357D86",
                           color: "#ffffff",
@@ -1021,8 +1020,8 @@ export const ReportsPage: React.FC = () => {
                                 display: "flex",
                                 overflow: "hidden",
                                 position: "relative",
-                                minHeight: 100,
-                                borderRadius: 15,
+                                minHeight: 80,
+                                borderRadius: 12,
                                 border: selectedReport?.id === report.id ? "1px solid #357D86" : "1px solid #f1f5f9",
                                 boxShadow: selectedReport?.id === report.id ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
                               }}
@@ -1038,10 +1037,10 @@ export const ReportsPage: React.FC = () => {
                                 <div className="flex flex-1 flex-col justify-center overflow-hidden">
                                   <div className="mb-1 flex items-center justify-between">
                                     <span style={{
-                                      fontSize: 10,
+                                      fontSize: 9,
                                       fontWeight: 700,
-                                      padding: "4px 10px",
-                                      borderRadius: 6,
+                                      padding: "3px 8px",
+                                      borderRadius: 5,
                                       background: rc.bg,
                                       color: rc.color,
                                       textTransform: "uppercase",
@@ -1051,7 +1050,7 @@ export const ReportsPage: React.FC = () => {
                                       {riskLevel} Risk
                                     </span>
                                     <span style={{
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       fontWeight: 700,
                                       color: "#1a2a3a",
                                       fontFamily: POPPINS
@@ -1060,7 +1059,7 @@ export const ReportsPage: React.FC = () => {
                                     </span>
                                   </div>
                                   <h4
-                                    className="truncate text-[15.5px]"
+                                    className="truncate text-[13.5px]"
                                     style={{
                                       fontFamily: POPPINS,
                                       fontWeight: selectedReport?.id === report.id ? 700 : 500,
@@ -1077,7 +1076,7 @@ export const ReportsPage: React.FC = () => {
                                       fontFamily: POPPINS,
                                       fontWeight: 500,
                                       color: "#64748b",
-                                      fontSize: "12px",
+                                      fontSize: "11px",
                                       letterSpacing: "0.01em"
                                     }}
                                   >
@@ -1116,9 +1115,9 @@ export const ReportsPage: React.FC = () => {
                 </Card>
               ) : (
                 <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0" style={{ borderRadius: 28 }}>
-                  <div className="flex-shrink-0 border-b bg-white px-6 py-3">
+                  <div className="flex-shrink-0 border-b bg-white px-6 py-2">
                     <div className="flex items-start justify-between gap-3">
-                      <h4 className="text-xl font-semibold text-slate-900">{selectedReport.title}</h4>
+                      <h4 className="text-base font-semibold text-slate-900">{selectedReport.title}</h4>
                       <div className="flex gap-2">
                         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                           <AlertDialogTrigger asChild>
@@ -1184,11 +1183,11 @@ export const ReportsPage: React.FC = () => {
                         </Button>
                       </div>
                     </div>
-                    <div className="mt-1 flex flex-nowrap items-center gap-2 overflow-hidden text-sm">
+                    <div className="mt-1 flex flex-nowrap items-center gap-2 overflow-hidden text-xs">
                       <span className="shrink-0 text-slate-700">
                         Generated {new Date(selectedReport!.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')}
                       </span>
-                      <span className="inline-flex shrink-0">{getRiskBadge(selectedReport!.summary.riskLevel)}</span>
+                      <span className="inline-flex shrink-0 transform scale-90 origin-left">{getRiskBadge(selectedReport!.summary.riskLevel)}</span>
                     </div>
                   </div>
 
@@ -1394,11 +1393,11 @@ export const ReportsPage: React.FC = () => {
                 <p style={{ fontSize: 12, color: "#7b8a9a", fontFamily: POPPINS }}>Annual report uses the current calendar year range.</p>
               )}
 
-              <div style={{ 
-                marginTop: 24, 
-                display: "flex", 
-                flexDirection: "column", 
-                gap: 12 
+              <div style={{
+                marginTop: 24,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12
               }}>
                 <button
                   type="submit"
@@ -1430,7 +1429,7 @@ export const ReportsPage: React.FC = () => {
                     style={{
                       height: 50, width: "100%", padding: "0 24px", borderRadius: 12,
                       fontSize: 16, fontWeight: 500, fontFamily: POPPINS,
-                      background: "#ffffff", color: "#64748b", 
+                      background: "#ffffff", color: "#64748b",
                       border: "1px solid #e2e8f0",
                       flexShrink: 0
                     }}

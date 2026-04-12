@@ -4,39 +4,39 @@ const POPPINS = "'Poppins', sans-serif";
 
 const SENSOR_CARD_STYLE = {
   // Card
-  padding: "20px 26px 20px 26px",
-  borderRadius: 20,
-  height: 205,
+  padding: "12px 16px 12px 16px",
+  borderRadius: 16,
+  height: 155,
 
   // Icon
-  iconSize: 44,
-  iconGap: 12,
+  iconSize: 30,
+  iconGap: 6,
 
   // Label
   labelColor: "#77ABB2",
-  labelSize: 15,
+  labelSize: 11,
   labelWeight: 500,
-  labelGap: 6,
+  labelGap: 3,
 
   // Value
   valueColor: "#6b7280",
-  valueSize: 30,
+  valueSize: 22,
   valueWeight: 600,
 
   // Unit
   unitColor: "#6b7280",
-  unitSize: 20,
+  unitSize: 12,
   unitWeight: 700,
-  valueGap: 6,
+  valueGap: 3,
 
   // Sub-text
   subColor: "#8E8B8B",
-  subSize: 13,
+  subSize: 10,
   subWeight: 400,
 
   // Status dot
-  dotSize: 10,
-  dotInset: 20,
+  dotSize: 8,
+  dotInset: 14,
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -74,15 +74,15 @@ export function SensorMiniCard({
   const S = SENSOR_CARD_STYLE;
   const cardHeight = compact ? "auto" : (S.height as any);
   const cardPad = compact ? "16px 18px 14px" : S.padding;
-  const iconSize = compact ? 36 : S.iconSize;
-  const iconGap = compact ? 8 : S.iconGap;
-  const labelSize = compact ? 14 : S.labelSize;
-  const labelGap = compact ? 5 : S.labelGap;
-  const valueSize = compact ? 26 : S.valueSize;
-  const unitSize = compact ? 16 : S.unitSize;
-  const valueGap = compact ? 4 : S.valueGap;
-  const subSize = compact ? 11 : S.subSize;
-  const dotInset = compact ? 14 : S.dotInset;
+  const iconSize = compact ? 26 : S.iconSize;
+  const iconGap = compact ? 4 : S.iconGap;
+  const labelSize = compact ? 10 : S.labelSize;
+  const labelGap = compact ? 3 : S.labelGap;
+  const valueSize = compact ? 18 : S.valueSize;
+  const unitSize = compact ? 10 : S.unitSize;
+  const valueGap = compact ? 2 : S.valueGap;
+  const subSize = compact ? 9 : S.subSize;
+  const dotInset = compact ? 12 : S.dotInset;
 
   return (
     <div
@@ -121,16 +121,16 @@ export function SensorMiniCard({
       <img
         src={iconSrc}
         alt={label}
-        style={{ 
-          width: iconSize, 
-          height: iconSize, 
-          objectFit: "contain", 
-          marginBottom: iconGap 
+        style={{
+          width: iconSize,
+          height: iconSize,
+          objectFit: "contain",
+          marginBottom: iconGap
         }}
       />
 
       {/* Label */}
-      <p 
+      <p
         style={{
           margin: `0 0 ${labelGap}px`,
           fontFamily: POPPINS,
@@ -145,30 +145,30 @@ export function SensorMiniCard({
 
       {/* Value + Unit + Sub */}
       <div style={{ animation: fadeIn ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
-        <p style={{ 
-          margin: `0 0 ${valueGap}px`, 
-          lineHeight: 1.2, 
-          display: "flex", 
-          alignItems: "baseline", 
-          gap: 3 
+        <p style={{
+          margin: `0 0 ${valueGap}px`,
+          lineHeight: 1.2,
+          display: "flex",
+          alignItems: "baseline",
+          gap: 3
         }}>
-          <span 
-            style={{ 
-              fontFamily: POPPINS, 
-              fontWeight: S.valueWeight, 
-              fontSize: valueSize, 
-              color: S.valueColor 
+          <span
+            style={{
+              fontFamily: POPPINS,
+              fontWeight: S.valueWeight,
+              fontSize: valueSize,
+              color: S.valueColor
             }}
           >
             {value}
           </span>
           {unit && (
-            <span 
-              style={{ 
-                fontFamily: POPPINS, 
-                fontWeight: S.unitWeight, 
-                fontSize: unitSize, 
-                color: S.unitColor 
+            <span
+              style={{
+                fontFamily: POPPINS,
+                fontWeight: S.unitWeight,
+                fontSize: unitSize,
+                color: S.unitColor
               }}
             >
               {" "}{unit}
@@ -177,7 +177,7 @@ export function SensorMiniCard({
         </p>
 
         {sub && (
-          <p 
+          <p
             style={{
               margin: 0,
               fontFamily: POPPINS,

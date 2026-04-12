@@ -79,8 +79,8 @@ export function AlertItem({
           display: "flex",
           overflow: "hidden",
           position: "relative",
-          minHeight: useColumnLayout ? 0 : 110,
-          borderRadius: 15,
+          minHeight: useColumnLayout ? 0 : 80,
+          borderRadius: 12,
           border: isSelected ? `1px solid ${accentColor}` : "1px solid #f1f5f9",
           background: isSelected
             ? (accentColor === "#D14343" ? "#FFF1F1" : accentColor === "#F1A11A" ? "#FFF9E6" : "#F5FBFB")
@@ -101,11 +101,11 @@ export function AlertItem({
             flexDirection: useColumnLayout ? "column" : "row",
             alignItems: useColumnLayout ? "flex-start" : "center",
             justifyContent: "space-between",
-            paddingLeft: compact ? 14 : (useColumnLayout ? 18 : 24), 
-            paddingRight: compact ? 14 : (useColumnLayout ? 18 : 24), 
-            paddingTop: compact ? 16 : (useColumnLayout ? 20 : 24), 
-            paddingBottom: compact ? 16 : (useColumnLayout ? 20 : 24), 
-            gap: compact ? 12 : (useColumnLayout ? 16 : 24) 
+            paddingLeft: compact ? 12 : (useColumnLayout ? 14 : 16), 
+            paddingRight: compact ? 12 : (useColumnLayout ? 14 : 16), 
+            paddingTop: compact ? 12 : (useColumnLayout ? 14 : 16), 
+            paddingBottom: compact ? 12 : (useColumnLayout ? 14 : 16), 
+            gap: compact ? 10 : (useColumnLayout ? 12 : 20) 
           }}
         >
           <div className="flex flex-1 flex-col justify-center overflow-hidden w-full">
@@ -118,7 +118,7 @@ export function AlertItem({
                 letterSpacing: "-0.01em",
                 lineHeight: "1.4",
                 margin: 0,
-                fontSize: compact ? "14px" : (isMobile ? "14.5px" : "15.5px"),
+                fontSize: compact ? "12px" : (isMobile ? "12.5px" : "13.5px"),
                 display: "-webkit-box",
                 WebkitLineClamp: useColumnLayout ? 3 : 2,
                 WebkitBoxOrient: "vertical",
@@ -135,7 +135,7 @@ export function AlertItem({
                 fontFamily: POPPINS,
                 fontWeight: 500,
                 color: "#64748b",
-                fontSize: compact ? "11px" : "12px",
+                fontSize: compact ? "10px" : "11px",
                 letterSpacing: "0.01em"
               }}
             >
@@ -161,7 +161,7 @@ export function AlertItem({
               flexDirection: "row",
               alignItems: "center",
               justifyContent: useColumnLayout ? "space-between" : "flex-end",
-              gap: compact ? 8 : (isMobile ? 12 : 32),
+              gap: compact ? 8 : (isMobile ? 10 : 24),
               marginTop: useColumnLayout ? 8 : 0,
               width: useColumnLayout ? "100%" : "auto"
             }}
