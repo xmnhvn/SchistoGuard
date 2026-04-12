@@ -655,18 +655,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   variant="primary"
                   onClick={onEnterApp}
                   ariaLabel="Start monitoring"
-                  className="flex rounded-full items-center justify-center border-2 transition-all duration-300 shadow-lg"
+                  className="flex rounded-full items-center justify-center border transition-all duration-300 shadow-sm"
                   style={{
                     fontFamily: 'Poppins, sans-serif',
                     fontWeight: 600,
-                    fontSize: '13px',
-                    height: '36px',
-                    padding: '0 16px',
+                    fontSize: '12px',
+                    height: '32px',
+                    padding: '0 14px',
                     backgroundColor: isMonitoringHovered ? '#FFFFFF' : '#357D86',
                     color: isMonitoringHovered ? '#357D86' : '#FFFFFF',
                     borderColor: '#357D86',
-                    boxShadow: isMonitoringHovered ? '0 10px 25px -5px rgba(53, 125, 134, 0.3)' : '0 10px 15px -3px rgba(53, 125, 134, 0.2)',
-                    transform: isMonitoringHovered ? 'translateY(-2px)' : 'translateY(0)'
+                    boxShadow: isMonitoringHovered ? '0 4px 12px rgba(53, 125, 134, 0.2)' : '0 2px 4px rgba(53, 125, 134, 0.1)',
+                    transform: isMonitoringHovered ? 'translateY(-1px)' : 'translateY(0)'
                   }}
                   onMouseEnter={() => setIsMonitoringHovered(true)}
                   onMouseLeave={() => setIsMonitoringHovered(false)}
