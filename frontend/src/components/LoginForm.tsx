@@ -6,8 +6,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Shield, Mail, Lock, User, Phone, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiPost } from "../utils/api";
+
+// Custom hook to handle window resizing and determine scaling
+function useWindowScale() {
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    function handleResize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      // Target 13-inch and smaller desktop screens
+      if (width <= 1440 && height <= 900) {
+        // Base scale calculation on height primarily, with a minimum scale
+        const heightScale = Math.max(0.75, height / 950);
+        const widthScale = Math.max(0.8, width / 1440);
+        setScale(Math.min(heightScale, widthScale));
+      } else {
+        setScale(1); // Default scale for larger screens
+      }
+    }
+    
+    // Initial check
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return scale;
+}
 
 interface LoginFormProps {
   onLogin?: (user: { id: number; email: string; firstName: string; lastName: string; role: string }) => void;
@@ -46,6 +76,7 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
   const [loading, setLoading] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const scaleFactor = useWindowScale();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +117,8 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
       className={`min-h-screen flex items-center justify-center p-4 ${isExiting ? 'animate-fade-out' : 'animate-fade-in'}`} 
       style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}
     >
-      <Card className={`w-full max-w-md min-h-[540px] flex flex-col justify-center shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+      <div style={{ transform: `scale(${scaleFactor})`, transformOrigin: 'center center', width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <Card className={`w-full max-w-md min-h-[540px] flex flex-col justify-center shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
@@ -191,6 +223,7 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
           </form>
         </CardContent>
       </Card>
+      </div>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -227,6 +260,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
   const [isExiting, setIsExiting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const scaleFactor = useWindowScale();
 
   const isStrongPassword = (password: string) => {
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
@@ -285,8 +319,9 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
       className={`min-h-screen flex items-center justify-center p-4 ${isExiting ? 'animate-fade-out' : 'animate-fade-in'}`} 
       style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}
     >
-      <Card className={`w-full max-w-md shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-        <CardHeader className="text-center">
+      <div style={{ transform: `scale(${scaleFactor})`, transformOrigin: 'center center', width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <Card className={`w-full max-w-md shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+          <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/schistoguard.png" alt="SchistoGuard Logo" className="w-12 h-12 object-contain" />
             <h1 className="text-2xl" style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
@@ -440,6 +475,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
           </form>
         </CardContent>
       </Card>
+      </div>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
