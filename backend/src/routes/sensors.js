@@ -54,7 +54,7 @@ async function saveAddressToDB(address) {
 
 async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
   if (typeof latitude !== 'number' || typeof longitude !== 'number' || latitude === null || longitude === null) {
-    return fallback;
+    return fallback || GLOBAL_DEVICE_ADDRESS || null;
   }
 
   if (typeof fallback === 'string' && fallback.trim()) {
@@ -95,7 +95,7 @@ async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
     console.error('[reverseGeocode] Failed in resolveAddressFromCoords:', err.message);
   }
 
-  return fallback;
+  return fallback || GLOBAL_DEVICE_ADDRESS || null;
 }
 
 // API: Get current interval config
