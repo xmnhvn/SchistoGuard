@@ -217,8 +217,8 @@ export function Dashboard({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isNarrowDesktop = windowWidth < 1700;
-  // Aggressive shared card height so ALL dashboard cards are uniform
-  const cardH = isNarrowDesktop ? 120 : 155;
+  // Use a shared padding so ALL dashboard cards align perfectly
+  const sharedPad = isNarrowDesktop ? "14px 18px" : "18px 24px";
   const panelWidth = isNarrowDesktop ? "44%" : "40%";
 
   const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
@@ -1456,95 +1456,111 @@ export function Dashboard({
           </p>
         </div>
 
-        {/* ── 3 Sensor mini-cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: isNarrowDesktop ? 10 : 14, marginBottom: isNarrowDesktop ? 12 : 20, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        {/* ── UNIFIED CARDS GRID (Forces all 5 cards to be identically tall!) ── */}
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))", 
+          gridAutoRows: "1fr", // MAGIC: Forces all implicitly created rows to share exactly the same height as the tallest row.
+          gap: isNarrowDesktop ? 10 : 14, 
+          marginBottom: isNarrowDesktop ? 12 : 20, 
+          animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" 
+        }}>
           {/* Temperature */}
-          <SensorMiniCard
-            label="Temperature"
-            iconSrc="/icons/icon-temperature.svg"
-            value={latestReading ? `${latestReading.temperature}` : "—"}
-            unit="°C"
-            sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-            dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-            active={!!latestReading}
-            compact
-            fadeIn={animationEnabled}
-          />
+          <div style={{ height: "100%" }}>
+            <SensorMiniCard
+              label="Temperature"
+              iconSrc="/icons/icon-temperature.svg"
+              value={latestReading ? `${latestReading.temperature}` : "—"}
+              unit="°C"
+              sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
+              dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
+              active={!!latestReading}
+              compact
+              fadeIn={animationEnabled}
+              style={{ padding: sharedPad, height: "100%", justifyContent: "space-between" }}
+            />
+          </div>
           {/* Turbidity */}
-          <SensorMiniCard
-            label="Turbidity"
-            iconSrc="/icons/icon-turbidity.svg"
-            value={latestReading ? `${latestReading.turbidity}` : "—"}
-            unit="NTU"
-            sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-            dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-            active={!!latestReading}
-            compact
-            fadeIn={animationEnabled}
-          />
+          <div style={{ height: "100%" }}>
+            <SensorMiniCard
+              label="Turbidity"
+              iconSrc="/icons/icon-turbidity.svg"
+              value={latestReading ? `${latestReading.turbidity}` : "—"}
+              unit="NTU"
+              sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
+              dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
+              active={!!latestReading}
+              compact
+              fadeIn={animationEnabled}
+              style={{ padding: sharedPad, height: "100%", justifyContent: "space-between" }}
+            />
+          </div>
           {/* pH */}
-          <SensorMiniCard
-            label="pH Level"
-            iconSrc="/icons/icon-ph.svg"
-            value={latestReading ? `${latestReading.ph}` : "—"}
-            unit=""
-            sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-            dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-            active={!!latestReading}
-            compact
-            fadeIn={animationEnabled}
-          />
-        </div>
+          <div style={{ height: "100%" }}>
+            <SensorMiniCard
+              label="pH Level"
+              iconSrc="/icons/icon-ph.svg"
+              value={latestReading ? `${latestReading.ph}` : "—"}
+              unit=""
+              sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
+              dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
+              active={!!latestReading}
+              compact
+              fadeIn={animationEnabled}
+              style={{ padding: sharedPad, height: "100%", justifyContent: "space-between" }}
+            />
+          </div>
 
-        {/* ── Total Parameter Readings ── */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: isNarrowDesktop ? 12 : 16,
-            padding: isNarrowDesktop ? "10px 14px" : "14px 18px",
-            display: "flex",
-            alignItems: "stretch",
-            justifyContent: "space-between",
-            marginBottom: isNarrowDesktop ? 8 : 12,
-            minHeight: cardH,
-            boxSizing: "border-box" as const,
-            boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-            animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
-            <div>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 15 : 20, color: "#337C85" }}>
-                Total Parameter Readings
-              </p>
-              <p style={{ margin: isNarrowDesktop ? "0px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 9.5 : 12 }}>
-                Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
+          {/* ── Total Parameter Readings ── */}
+          <div
+            style={{
+              gridColumn: "1 / -1", // Span all 3 columns
+              background: "#fff",
+              borderRadius: isNarrowDesktop ? 12 : 16,
+              padding: sharedPad,
+              display: "flex",
+              alignItems: "stretch",
+              justifyContent: "space-between",
+              height: "100%", // Fill its grid row
+              boxSizing: "border-box" as const,
+              boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+              animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 15 : 20, color: "#337C85" }}>
+                  Total Parameter Readings
+                </p>
+                <p style={{ margin: isNarrowDesktop ? "0px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 9.5 : 12 }}>
+                  Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
+                </p>
+              </div>
+              <p style={{ margin: 0, fontSize: isNarrowDesktop ? 32 : 38, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                {readings.length}
               </p>
             </div>
-            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 32 : 38, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
-              {readings.length}
-            </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 4, flexShrink: 0 }}>
+              <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 34 : 44, height: isNarrowDesktop ? 34 : 44, objectFit: "contain" }} />
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 4, flexShrink: 0 }}>
-            <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 34 : 44, height: isNarrowDesktop ? 34 : 44, objectFit: "contain" }} />
-          </div>
-        </div>
 
-        {/* ── Risk Level + Active Alerts (ONE outer white card) ── */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: isNarrowDesktop ? 12 : 18,
-            padding: isNarrowDesktop ? "10px 14px" : "14px 18px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-            display: "flex",
-            alignItems: "stretch",
-            gap: isNarrowDesktop ? 8 : 12,
-            minHeight: cardH,
-            boxSizing: "border-box" as const,
-            animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
-          }}
-        >
+          {/* ── Risk Level + Active Alerts (ONE outer white card) ── */}
+          <div
+            style={{
+              gridColumn: "1 / -1", // Span all 3 columns
+              background: "#fff",
+              borderRadius: isNarrowDesktop ? 12 : 18,
+              padding: sharedPad,
+              boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+              display: "flex",
+              alignItems: "stretch",
+              gap: isNarrowDesktop ? 8 : 12,
+              height: "100%", // Fill its grid row
+              boxSizing: "border-box" as const,
+              animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
+            }}
+          >
           {/* LEFT: Risk Level */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <p style={{
@@ -1616,6 +1632,7 @@ export function Dashboard({
             </p>
           </div>
         </div>
+        </div> {/* ── END OF UNIFIED CARDS GRID ── */}
       </div>
 
       {/* ── MAP LAYER — real MapLibre map ── */}
