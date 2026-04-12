@@ -122,11 +122,15 @@ export function Dashboard({
       latestReading.latitude !== null &&
       latestReading.longitude !== null
     ) {
+      const resolvedAddress = typeof latestReading.address === 'string' && latestReading.address.trim()
+        ? latestReading.address.trim()
+        : null;
       // Save to localStorage
       localStorage.setItem('lastGpsLocation', JSON.stringify({
         lat: latestReading.latitude,
         lng: latestReading.longitude,
         siteName: siteData.siteName || 'Device Location',
+        address: resolvedAddress,
       }));
     }
   }, [latestReading && latestReading.latitude, latestReading && latestReading.longitude, siteData.siteName]);
@@ -155,7 +159,14 @@ export function Dashboard({
         lat: latestReading.latitude,
         lng: latestReading.longitude,
       }];
-      lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
+      lastLoc = {
+        lat: latestReading.latitude,
+        lng: latestReading.longitude,
+        siteName: siteData.siteName,
+        address: typeof latestReading.address === 'string' && latestReading.address.trim()
+          ? latestReading.address.trim()
+          : null,
+      };
 
       // Persist to localStorage for immediate loading on next visit
       localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
@@ -229,8 +240,15 @@ export function Dashboard({
         reverseGeocode(lat, lng).then(addr => {
           if (addr) {
             setGpsAddress(addr);
+            setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
             if (typeof window !== 'undefined') {
               localStorage.setItem('sg_global_latest_address', addr);
+              localStorage.setItem('lastGpsLocation', JSON.stringify({
+                lat,
+                lng,
+                siteName: siteData.siteName || 'Device Location',
+                address: addr,
+              }));
             }
           }
         });
@@ -241,7 +259,7 @@ export function Dashboard({
         lastLatLngRef.current = null;
       }
     }
-  }, [latestReading, lastSavedLocation, gpsAddress]);
+  }, [latestReading, lastSavedLocation, gpsAddress, siteData.siteName]);
 
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {

@@ -204,7 +204,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         lat: latestReading.latitude,
         lng: latestReading.longitude,
       }];
-      lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
+      lastLoc = {
+        lat: latestReading.latitude,
+        lng: latestReading.longitude,
+        siteName: siteData.siteName,
+        address: typeof latestReading.address === 'string' && latestReading.address.trim()
+          ? latestReading.address.trim()
+          : null,
+      };
 
       // Persist to localStorage for immediate loading on next visit
       localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
@@ -262,9 +269,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         lastLatLngRef.current = { lat, lng };
         reverseGeocode(lat, lng).then(addr => {
           setGpsAddress(addr);
+          if (addr) {
+            setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
+          }
           // Sync with dashboard global cache
           if (addr && addr !== "Unnamed Road" && addr !== "Device Address") {
             localStorage.setItem('sg_global_latest_address', addr);
+            localStorage.setItem('lastGpsLocation', JSON.stringify({
+              lat,
+              lng,
+              siteName: gpsSites[0].name || siteData.siteName || 'Device Location',
+              address: addr,
+            }));
           }
         });
       }
@@ -272,7 +288,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       setGpsAddress(null);
       lastLatLngRef.current = null;
     }
-  }, [gpsSites, latestReading, gpsAddress]);
+  }, [gpsSites, latestReading, gpsAddress, siteData.siteName]);
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
     if (!gpsAddress && typeof window !== 'undefined') {
@@ -382,6 +398,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             const resolvedAddress = data.address.trim();
             setGpsAddress(resolvedAddress);
             localStorage.setItem('sg_global_latest_address', resolvedAddress);
+            if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+              localStorage.setItem('lastGpsLocation', JSON.stringify({
+                lat: data.latitude,
+                lng: data.longitude,
+                siteName: data.siteName || siteData.siteName || 'Device Location',
+                address: resolvedAddress,
+              }));
+            }
           }
           setBackendOk(true);
           setDataOk(true);
