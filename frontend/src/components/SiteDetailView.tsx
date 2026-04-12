@@ -43,6 +43,8 @@ export function SiteDetailView({
   const [animate] = useState(!_siteDetailFirstLoadDone);
   const [graphReady, setGraphReady] = useState(false);
   const [timeRange, setTimeRange] = useState("24h");
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState("all");
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -140,7 +142,9 @@ export function SiteDetailView({
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
 
-      const displaySiteName = dynamicSiteName || siteName || "Site Name";
+      const displaySiteName = selectedLocationFilter !== "all"
+        ? selectedLocationFilter
+        : (dynamicSiteName || siteName || "Site Name");
       const displayBarangay = barangay || (address ? address.split(',')[0].trim() : "");
       const filename = `${displaySiteName.replace(/\s+/g, '_')}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
 
@@ -222,12 +226,54 @@ export function SiteDetailView({
     barangay,
     fallback: "Address unavailable",
   });
+  const effectiveSiteName = selectedLocationFilter !== "all"
+    ? selectedLocationFilter
+    : (dynamicSiteName || siteName);
 
 
 
   // Interval config state
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
+
+  // Load recorded locations from backend for Site Details filtering
+  useEffect(() => {
+    let mounted = true;
+
+    apiGet("/api/sensors/locations")
+      .then((data) => {
+        if (!mounted || !Array.isArray(data)) return;
+
+        const cleaned = Array.from(new Set(
+          data
+            .filter((name: unknown): name is string => typeof name === "string")
+            .map((name) => name.trim())
+            .filter((name) => name.length > 0)
+        ));
+
+        setAvailableLocations(cleaned);
+
+        const preferredLocation = (address || "").trim();
+        if (selectedLocationFilter === "all" && preferredLocation) {
+          const match = cleaned.find((loc) => preferredLocation.toLowerCase().includes(loc.toLowerCase()) || loc.toLowerCase().includes(preferredLocation.toLowerCase()));
+          if (match) {
+            setSelectedLocationFilter(match);
+          }
+        }
+      })
+      .catch(() => {
+        if (mounted) setAvailableLocations([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [address, selectedLocationFilter]);
+
+  const historyEndpoint = selectedLocationFilter === "all"
+    ? "/api/sensors/history"
+    : `/api/sensors/history?location=${encodeURIComponent(selectedLocationFilter)}`;
+
   // Load interval config from backend
   useEffect(() => {
     (async () => {
@@ -253,38 +299,39 @@ export function SiteDetailView({
   // Helper to get interval string for label
   const getIntervalString = () => `${intervalValue} ${intervalUnit}`;
 
-  // Auto-refresh readings every 30 seconds
+  // Auto-refresh readings every 30 seconds and whenever selected site changes
   useEffect(() => {
-    const interval = setInterval(() => {
-      apiGet("/api/sensors/history")
+    let mounted = true;
+
+    const loadHistory = () => {
+      apiGet(historyEndpoint)
         .then(data => {
+          if (!mounted) return;
           if (Array.isArray(data)) {
             setHistory(data);
+          } else {
+            setHistory([]);
           }
         })
         .catch(err => {
-          console.error("Auto-refresh error fetching time series data:", err);
+          console.error("Error fetching time series data:", err);
+          if (mounted) {
+            setHistory([]);
+          }
         });
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    };
 
-  // Only fetch if not already cached
-  useEffect(() => {
-    if (history && history.length > 0) return;
-    apiGet("/api/sensors/history")
-      .then(data => {
-        console.log("Site Details time series data:", data);
-        if (Array.isArray(data)) {
-          setHistory(data);
-        } else {
-          setHistory([]);
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching time series data:", err);
-      });
-  }, [history]);
+    loadHistory();
+
+    const interval = setInterval(() => {
+      loadHistory();
+    }, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [historyEndpoint]);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert =>
@@ -596,7 +643,7 @@ export function SiteDetailView({
                   overflow: mobileResponsive ? undefined : "hidden",
                   textOverflow: mobileResponsive ? undefined : "ellipsis",
                   letterSpacing: mobileResponsive ? 0.1 : undefined,
-                }}>{dynamicSiteName || siteName}</h1>
+                }}>{effectiveSiteName}</h1>
                 {mobileResponsive && (
                   <span style={{
                     fontSize: 12.5,
@@ -630,6 +677,29 @@ export function SiteDetailView({
               ...(mobileResponsive ? { width: "100%" } : {}),
               animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both' : 'none'
             }}>
+              <div style={{ flex: mobileResponsive ? 1 : undefined }}>
+                <Select value={selectedLocationFilter} onValueChange={setSelectedLocationFilter}>
+                  <SelectTrigger style={{
+                    width: mobileResponsive ? undefined : 196,
+                    flex: mobileResponsive ? 1 : undefined,
+                    minWidth: 0,
+                    borderRadius: 12,
+                    fontFamily: POPPINS,
+                    fontSize: 13,
+                    border: "1px solid #e2e5ea",
+                    background: "#fff",
+                    height: 38,
+                  }}>
+                    <SelectValue placeholder="All recorded locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All recorded locations</SelectItem>
+                    {availableLocations.map((name) => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div style={{ flex: mobileResponsive ? 1 : undefined }}>
                 <Select value={timeRange} onValueChange={setTimeRange}>
                   <SelectTrigger style={{
@@ -671,7 +741,7 @@ export function SiteDetailView({
           }}>
             <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
               <PDFHeader
-                dynamicSiteName={dynamicSiteName}
+                dynamicSiteName={effectiveSiteName}
                 siteName={siteName}
                 address={address}
                 barangay={barangay}
@@ -865,7 +935,7 @@ export function SiteDetailView({
                   <div style={{ padding: '0 0 16px 0', marginBottom: 16, borderBottom: '1px solid #f0f1f3', display: 'flex', justifyContent: 'space-between' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Report Details</div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>Site: {dynamicSiteName || siteName} {barangay || (address ? `(${address.split(',')[0].trim()})` : "")}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>Site: {effectiveSiteName} {barangay || (address ? `(${address.split(',')[0].trim()})` : "")}</div>
                       <div style={{ fontSize: 13, color: '#43c6b6', marginTop: 4, fontFamily: POPPINS, fontWeight: 600, fontStyle: 'italic' }}>Data sourced from IoT sensors</div>
 
                       <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>Time Range Filter: {timeRange}</div>

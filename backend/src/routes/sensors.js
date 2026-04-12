@@ -613,9 +613,90 @@ router.get("/latest", (req, res) => {
 });
 
 router.get("/history", (req, res) => {
+  const requestedLocation = typeof req.query.location === 'string' ? req.query.location.trim().toLowerCase() : '';
+
   db.all("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows.reverse());
+
+    const normalizedRows = (rows || [])
+      .reverse()
+      .map((row) => ({
+        ...row,
+        siteName: GLOBAL_DEVICE_NAME,
+      }))
+      .filter((row) => {
+        if (!requestedLocation) return true;
+
+        const addressText = typeof row.address === 'string' ? row.address.trim().toLowerCase() : '';
+        const globalAddressText = typeof GLOBAL_DEVICE_ADDRESS === 'string' ? GLOBAL_DEVICE_ADDRESS.trim().toLowerCase() : '';
+        return addressText.includes(requestedLocation) || globalAddressText.includes(requestedLocation);
+      });
+
+    res.json(normalizedRows);
+  });
+});
+
+router.get("/locations", (req, res) => {
+  const query = `
+    SELECT DISTINCT location
+    FROM (
+      SELECT barangay AS location FROM alerts WHERE barangay IS NOT NULL
+      UNION
+      SELECT address AS location FROM readings WHERE address IS NOT NULL
+      UNION
+      SELECT address AS location FROM raw_readings WHERE address IS NOT NULL
+      UNION
+      SELECT value AS location FROM settings WHERE key = 'device_address'
+    ) AS all_locations
+    WHERE TRIM(location) <> ''
+    ORDER BY location ASC
+  `;
+
+  db.all(query, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const parsedLocations = [];
+
+    (rows || []).forEach((row) => {
+      if (typeof row.location !== 'string') return;
+      const raw = row.location.trim();
+      if (!raw) return;
+
+      // Keep full address/location and also add shorter comma-separated segments
+      parsedLocations.push(raw);
+      raw
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .forEach((part) => parsedLocations.push(part));
+    });
+
+    if (typeof GLOBAL_DEVICE_ADDRESS === 'string' && GLOBAL_DEVICE_ADDRESS.trim()) {
+      parsedLocations.push(GLOBAL_DEVICE_ADDRESS.trim());
+      GLOBAL_DEVICE_ADDRESS
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .forEach((part) => parsedLocations.push(part));
+    }
+
+    if (latestData && typeof latestData.address === 'string' && latestData.address.trim()) {
+      parsedLocations.push(latestData.address.trim());
+      latestData.address
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .forEach((part) => parsedLocations.push(part));
+    }
+
+    const locations = Array.from(new Set(
+      parsedLocations
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0)
+        .filter((name) => name.toLowerCase() !== 'unknown')
+    )).sort((a, b) => a.localeCompare(b));
+
+    res.json(locations);
   });
 });
 
