@@ -141,9 +141,7 @@ export function SiteDetailView({
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
 
-      const displaySiteName = selectedLocationFilter !== "all"
-        ? selectedLocationFilter
-        : (dynamicSiteName || siteName || "Site Name");
+      const displaySiteName = dynamicSiteName || siteName || "Site Name";
       const displayBarangay = barangay || (address ? address.split(',')[0].trim() : "");
       const filename = `${displaySiteName.replace(/\s+/g, '_')}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
 
@@ -220,10 +218,14 @@ export function SiteDetailView({
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
-  const displayAddress = (typeof address === 'string' && address.trim()) ? address.trim() : "Address unavailable";
-  const effectiveSiteName = selectedLocationFilter !== "all"
-    ? selectedLocationFilter
-    : (dynamicSiteName || siteName);
+  const displayAddress = formatAddress({
+    fullAddress: address,
+    locality: address,
+    barangay,
+    fallback: "Address unavailable",
+  });
+  const effectiveSiteName = dynamicSiteName || siteName || "Site Name";
+  const headerSubtitle = selectedLocationFilter !== "all" ? selectedLocationFilter : displayAddress;
 
 
 
@@ -649,7 +651,7 @@ export function SiteDetailView({
                     lineHeight: 1.3,
                     display: "block",
                     whiteSpace: "normal",
-                  }}>{displayAddress}</span>
+                  }}>{headerSubtitle}</span>
                 )}
                 {!mobileResponsive && (
                   <p style={{
@@ -658,7 +660,7 @@ export function SiteDetailView({
                     margin: isNarrowDesktop ? "1px 0 0 0" : "2px 0 0 0",
                     fontFamily: POPPINS,
                     transition: 'opacity 0.3s ease-in-out'
-                  }}>{displayAddress}</p>
+                  }}>{headerSubtitle}</p>
                 )}
               </div>
             </div>
@@ -737,7 +739,7 @@ export function SiteDetailView({
               <PDFHeader
                 dynamicSiteName={effectiveSiteName}
                 siteName={siteName}
-                address={address}
+                address={headerSubtitle}
                 barangay={barangay}
               />
             </div>
