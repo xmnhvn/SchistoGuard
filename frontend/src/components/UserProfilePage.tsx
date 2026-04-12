@@ -127,9 +127,9 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
         }
     };
 
-    const pad = isMobile ? 16 : isTablet ? 24 : (windowWidth < 1600 ? 24 : 32);
-    const bannerHeight = isMobile ? 140 : (windowWidth < 1600 ? 150 : 180);
-    const avatarSize = isMobile ? 96 : (windowWidth < 1600 ? 100 : 112);
+    const pad = isMobile ? 16 : isTablet ? 24 : 32;
+    const bannerHeight = isMobile ? 140 : 180;
+    const avatarSize = isMobile ? 96 : 112;
 
     return (
         <div style={{
@@ -286,7 +286,7 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
                     marginBottom: 24,
                 }}>
                     <h1 style={{
-                        fontSize: isMobile ? 22 : (windowWidth < 1600 ? 22 : 28),
+                        fontSize: isMobile ? 22 : 28,
                         fontWeight: 800,
                         color: "#0f172a",
                         margin: "0 0 6px",

@@ -605,7 +605,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     });
   });
 
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const isNarrowDesktop = windowWidth < 1600;
+  const pad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
 
   if (!visible) return null;
   return (
@@ -699,7 +700,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: mobileResponsive ? 18 : (windowWidth < 1600 ? 16 : 22),
+              fontSize: mobileResponsive ? 18 : (isNarrowDesktop ? 19 : 22),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -725,9 +726,9 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             )}
             {!mobileResponsive && (
               <p style={{
-                fontSize: windowWidth < 1600 ? 11 : 12,
+                fontSize: isNarrowDesktop ? 11 : 12,
                 color: "#7b8a9a",
-                margin: windowWidth < 1600 ? "1px 0 0 0" : "2px 0 0 0",
+                margin: isNarrowDesktop ? "1px 0 0 0" : "2px 0 0 0",
                 fontFamily: POPPINS
               }}>
                 Real-time water quality readings & risk assessment
@@ -744,12 +745,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
                 <SelectTrigger style={{
-                  width: mobileResponsive ? undefined : (windowWidth < 1600 ? 120 : 148),
+                  width: mobileResponsive ? undefined : (isNarrowDesktop ? 130 : 148),
                   flex: mobileResponsive ? 1 : undefined,
                   minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
-                  fontSize: windowWidth < 1600 ? 12 : 13,
+                  fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
-                  height: windowWidth < 1600 ? 30 : 38,
+                  height: isNarrowDesktop ? 34 : 38,
                 }}>
                   <SelectValue />
                 </SelectTrigger>
@@ -764,12 +765,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={filterRisk} onValueChange={setFilterRisk}>
                 <SelectTrigger style={{
-                  width: isMobile ? undefined : (windowWidth < 1600 ? 120 : 148),
+                  width: isMobile ? undefined : (isNarrowDesktop ? 130 : 148),
                   flex: isMobile ? 1 : undefined,
                   minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
-                  fontSize: windowWidth < 1600 ? 12 : 13,
+                  fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
-                  height: windowWidth < 1600 ? 30 : 38,
+                  height: isNarrowDesktop ? 34 : 38,
                 }}>
                   <SelectValue placeholder="Risk Level" />
                 </SelectTrigger>
@@ -784,9 +785,9 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <button
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "0 16px", height: windowWidth < 1600 ? 30 : 38, borderRadius: 12,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
                 border: "1px solid #e2e5ea",
-                background: "#fff", cursor: "pointer", fontSize: windowWidth < 1600 ? 12 : 13,
+                background: "#fff", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
               }}
@@ -815,20 +816,20 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div key={card.label} style={{
               background: "#fff",
               borderRadius: 16,
-              padding: windowWidth < 1600 ? 12 : 14,
+              padding: isNarrowDesktop ? 12 : 14,
               display: "flex",
               flexDirection: "column",
               boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
               border: "1px solid rgba(0,0,0,0.03)",
-              height: windowWidth < 1600 ? 80 : "auto",
-              justifyContent: windowWidth < 1600 ? "center" : "flex-start",
+              height: "auto",
+              justifyContent: "flex-start",
               ...(animationEnabled ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.12 + i * 0.07}s both` } : {}),
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "#8E8B8B", fontFamily: POPPINS }}>{card.label}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isNarrowDesktop ? 8 : 12 }}>
+                <span style={{ fontSize: isNarrowDesktop ? 11.5 : 13, fontWeight: 500, color: "#8E8B8B", fontFamily: POPPINS }}>{card.label}</span>
                 <div style={{
-                  width: 36,
-                  height: 36,
+                  width: isNarrowDesktop ? 28 : 36,
+                  height: isNarrowDesktop ? 28 : 36,
                   borderRadius: 10,
                   background: card.bg,
                   display: "flex",
@@ -838,8 +839,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   {card.icon}
                 </div>
               </div>
-              <div style={{ fontSize: isMobile ? 22 : 22, fontWeight: 700, color: card.color, fontFamily: POPPINS, lineHeight: 1 }}>{card.value}</div>
-              <span style={{ fontSize: 10, color: "#8E8B8B", marginTop: 3, fontWeight: 400, fontFamily: POPPINS }}>{card.sub}</span>
+              <div style={{ fontSize: isNarrowDesktop ? 20 : 22, fontWeight: 700, color: card.color, fontFamily: POPPINS, lineHeight: 1 }}>{card.value}</div>
+              <span style={{ fontSize: isNarrowDesktop ? 9 : 10, color: "#8E8B8B", marginTop: 3, fontWeight: 400, fontFamily: POPPINS }}>{card.sub}</span>
             </div>
           ))}
         </div>
@@ -859,7 +860,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           <div
             onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
             style={{
-              padding: (isMobile || isTablet) ? "12px 14px" : "14px 20px 12px",
+              padding: (isMobile || isTablet) ? "12px 14px" : (isNarrowDesktop ? "12px 16px 10px" : "14px 20px 12px"),
               background: (isMobile || isTablet) ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
               borderBottom: (isMobile || isTablet) ? "none" : "1px solid #f0f1f3",
               display: "flex",
@@ -886,7 +887,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               )}
               <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
                 <h2 style={{
-                  fontSize: 13, fontWeight: 700, color: "#1a2a3a",
+                  fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 700, color: "#1a2a3a",
                   margin: 0,
                   fontFamily: POPPINS,
                   whiteSpace: "nowrap" as const,
@@ -926,13 +927,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {deleteMode ? (
                   <>
-                    <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                       Select All
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                       Cancel
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
                       <Trash2 size={14} /> Delete ({selectedIds.size})
                     </button>
                   </>
@@ -969,8 +970,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                     )}
                     {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
                       <th key={h} style={{
-                        padding: h === "Time" && !deleteMode ? "10px 12px 10px 20px" : h === "" ? "10px 20px 10px 12px" : "10px 12px",
-                        fontSize: 11,
+                        padding: h === "Time" && !deleteMode ? (isNarrowDesktop ? "8px 10px 8px 16px" : "10px 12px 10px 20px") : h === "" ? "10px 20px 10px 12px" : (isNarrowDesktop ? "8px 10px" : "10px 12px"),
+                        fontSize: isNarrowDesktop ? 10 : 11,
                         fontWeight: 600,
                         color: "#7b8a9a",
                         textAlign: h === "" ? "right" : (h === "Time" || h === "Date") ? "left" : "center",
@@ -1015,26 +1016,26 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                             </div>
                           </td>
                         )}
-                        <td style={{ padding: deleteMode ? "10px 12px" : "10px 12px 10px 20px", fontSize: 11, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
-                        <td style={{ padding: "10px 12px", fontSize: 11, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
-                        <td style={{ padding: "10px 12px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: deleteMode ? (isNarrowDesktop ? "8px 10px" : "10px 12px") : (isNarrowDesktop ? "8px 10px 8px 16px" : "10px 12px 10px 20px"), fontSize: isNarrowDesktop ? 10 : 11, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
+                        <td style={{ padding: isNarrowDesktop ? "8px 10px" : "10px 12px", fontSize: isNarrowDesktop ? 10 : 11, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
+                        <td style={{ padding: isNarrowDesktop ? "8px 10px" : "10px 12px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <Droplets style={{ width: 12, height: 12, color: "#357D86" }} />
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
+                            <Droplets style={{ width: isNarrowDesktop ? 11 : 12, height: isNarrowDesktop ? 11 : 12, color: "#357D86" }} />
+                            <span style={{ fontSize: isNarrowDesktop ? 10 : 11, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
                           </span>
                         </td>
-                        <td style={{ padding: "10px 12px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: isNarrowDesktop ? "8px 10px" : "10px 12px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <Thermometer style={{ width: 12, height: 12, color: "#357D86" }} />
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
+                            <Thermometer style={{ width: isNarrowDesktop ? 11 : 12, height: isNarrowDesktop ? 11 : 12, color: "#357D86" }} />
+                            <span style={{ fontSize: isNarrowDesktop ? 10 : 11, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
                           </span>
                         </td>
-                        <td style={{ padding: "10px 12px", textAlign: "center", fontSize: 11, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
-                        <td style={{ padding: "10px 12px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: isNarrowDesktop ? "8px 10px" : "10px 12px", textAlign: "center", fontSize: isNarrowDesktop ? 10 : 11, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
+                        <td style={{ padding: isNarrowDesktop ? "8px 10px" : "10px 12px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           <span style={{
-                            fontSize: 10,
+                            fontSize: isNarrowDesktop ? 9 : 10,
                             fontWeight: 600,
-                            padding: "2px 10px",
+                            padding: isNarrowDesktop ? "2px 8px" : "2px 10px",
                             borderRadius: 18,
                             background: rc.bg,
                             color: rc.color,
@@ -1042,7 +1043,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                             fontFamily: POPPINS,
                           }}>{reading.riskLevel}</span>
                         </td>
-                        <td style={{ padding: "10px 20px", textAlign: "right", fontSize: 10, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: isNarrowDesktop ? "8px 16px" : "10px 20px", textAlign: "right", fontSize: isNarrowDesktop ? 9 : 10, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           {formatRelativeTime(reading.timestamp)}
                         </td>
                       </tr>
