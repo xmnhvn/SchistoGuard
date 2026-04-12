@@ -157,9 +157,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     .join(", ");
 
   const displayAddress =
+    gpsAddress ||
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
-    gpsAddress ||
     metaAddress ||
     "Device Address";
 
@@ -209,14 +209,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Reverse geocode when GPS changes (sync with dashboard logic)
   useEffect(() => {
-    if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
-      const resolvedAddress = latestReading.address.trim();
-      if (gpsAddress !== resolvedAddress) {
-        setGpsAddress(resolvedAddress);
-      }
-      return;
-    }
-
     if (gpsSites && gpsSites.length > 0) {
       const { lat, lng } = gpsSites[0];
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
@@ -225,8 +217,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           if (addr) {
             setGpsAddress(addr);
             setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
+          } else if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+            setGpsAddress(latestReading.address.trim());
           }
         });
+      }
+    } else if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+      const resolvedAddress = latestReading.address.trim();
+      if (gpsAddress !== resolvedAddress) {
+        setGpsAddress(resolvedAddress);
       }
     }
   }, [gpsSites, latestReading, gpsAddress, siteData.siteName]);

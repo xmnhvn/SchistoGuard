@@ -45,6 +45,27 @@ async function saveAddressToDB(address) {
   });
 }
 
+async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
+  if (typeof latitude !== 'number' || typeof longitude !== 'number' || latitude === null || longitude === null) {
+    return fallback;
+  }
+
+  try {
+    const geocoded = await reverseGeocode(latitude, longitude);
+    if (geocoded) {
+      GLOBAL_DEVICE_ADDRESS = geocoded;
+      saveAddressToDB(geocoded).catch((err) => {
+        console.error('[settings] Failed to save device_address:', err.message);
+      });
+      return geocoded;
+    }
+  } catch (err) {
+    console.error('[reverseGeocode] Failed in resolveAddressFromCoords:', err.message);
+  }
+
+  return fallback;
+}
+
 // API: Get current interval config
 router.get('/interval-config', async (req, res) => {
   await loadSettingsFromDB();
@@ -461,7 +482,7 @@ router.get("/latest", (req, res) => {
     db.get(
       "SELECT latitude, longitude, address, timestamp FROM raw_readings WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
       [],
-      (dbErr, row) => {
+      async (dbErr, row) => {
         if (dbErr) {
           console.error('[API /latest] Failed to load last GPS location from DB:', dbErr.message);
           return res.json(buildDisconnectedPayload());
@@ -471,7 +492,11 @@ router.get("/latest", (req, res) => {
 
         if (row) {
           console.log('[API /latest] Returning disconnected with fallback coords:', { lat: row.latitude, lng: row.longitude, ts: row.timestamp });
-          const fallbackAddress = row.address || GLOBAL_DEVICE_ADDRESS || null;
+          const fallbackAddress = await resolveAddressFromCoords(
+            row.latitude,
+            row.longitude,
+            row.address || null
+          );
           return res.json({
             deviceConnected: false,
             siteName: GLOBAL_DEVICE_NAME,
@@ -509,13 +534,35 @@ router.get("/latest", (req, res) => {
 
     if (Math.abs(now - ts) < 10000) {
       console.log('[API /latest] Data is fresh, returning as connected');
-      const freshAddress = latestData.address || GLOBAL_DEVICE_ADDRESS || null;
-      res.json({
-        ...latestData,
-        siteName: GLOBAL_DEVICE_NAME,
-        deviceConnected: true,
-        timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
-        address: freshAddress
+      const hasLiveCoords =
+        typeof latestData.latitude === 'number' &&
+        typeof latestData.longitude === 'number' &&
+        latestData.latitude !== null &&
+        latestData.longitude !== null;
+
+      const sendFresh = async () => {
+        const freshAddress = hasLiveCoords
+          ? await resolveAddressFromCoords(latestData.latitude, latestData.longitude, latestData.address || null)
+          : (latestData.address || GLOBAL_DEVICE_ADDRESS || null);
+
+        res.json({
+          ...latestData,
+          siteName: GLOBAL_DEVICE_NAME,
+          deviceConnected: true,
+          timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
+          address: freshAddress
+        });
+      };
+
+      sendFresh().catch((err) => {
+        console.error('[API /latest] Failed to build fresh payload:', err.message);
+        res.json({
+          ...latestData,
+          siteName: GLOBAL_DEVICE_NAME,
+          deviceConnected: true,
+          timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
+          address: hasLiveCoords ? (latestData.address || null) : (latestData.address || GLOBAL_DEVICE_ADDRESS || null)
+        });
       });
     } else {
       console.warn('[API /latest] Device considered disconnected: data too old');

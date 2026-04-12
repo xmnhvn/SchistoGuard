@@ -134,14 +134,6 @@ export function Dashboard({
 
   // Reverse geocode the location shown on the map (latestReading or lastSavedLocation)
   useEffect(() => {
-    if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
-      const resolvedAddress = latestReading.address.trim();
-      if (gpsAddress !== resolvedAddress) {
-        setGpsAddress(resolvedAddress);
-      }
-      return;
-    }
-
     let lat: number | null = null;
     let lng: number | null = null;
     if (
@@ -165,10 +157,18 @@ export function Dashboard({
           if (addr) {
             setGpsAddress(addr);
             setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
+          } else if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+            setGpsAddress(latestReading.address.trim());
           }
         });
       }
     } else {
+      if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+        const resolvedAddress = latestReading.address.trim();
+        if (gpsAddress !== resolvedAddress) {
+          setGpsAddress(resolvedAddress);
+        }
+      }
       // Don't reset to null immediately — let the history fallback below try first
       if (!gpsAddress) {
         lastLatLngRef.current = null;
@@ -189,16 +189,13 @@ export function Dashboard({
       .find((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
 
     if (latestWithGps) {
-      if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
-        const resolvedAddress = latestWithGps.address.trim();
-        setGpsAddress(resolvedAddress);
-      } else {
-        reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-          if (addr) {
-            setGpsAddress(addr);
-          }
-        });
-      }
+      reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+        if (addr) {
+          setGpsAddress(addr);
+        } else if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+          setGpsAddress(latestWithGps.address.trim());
+        }
+      });
     }
   }, [readings, gpsAddress]);
 
@@ -224,9 +221,9 @@ export function Dashboard({
     .join(", ");
 
   const displayAddress =
+    gpsAddress ||
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
-    gpsAddress ||
     metaAddress ||
     "Device Address";
 

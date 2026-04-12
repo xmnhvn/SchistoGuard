@@ -92,17 +92,19 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         if (data.siteName && data.siteName !== "Site Name") {
           setDynamicSiteName(data.siteName);
         }
-        if (typeof data.address === 'string' && data.address.trim()) {
-          const resolvedAddress = data.address.trim();
-          setAddress(resolvedAddress);
-        } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(data.latitude, data.longitude).then(addr => {
               if (addr) {
                 setAddress(addr);
+              } else if (typeof data.address === 'string' && data.address.trim()) {
+                setAddress(data.address.trim());
               }
             });
           });
+        } else if (typeof data.address === 'string' && data.address.trim()) {
+          const resolvedAddress = data.address.trim();
+          setAddress(resolvedAddress);
         }
       }
     }).catch(() => { });
@@ -116,14 +118,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         if (latestWithGps.siteName) {
           setDynamicSiteName(latestWithGps.siteName);
         }
-        if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
-          const resolvedAddress = latestWithGps.address.trim();
-          setAddress(resolvedAddress);
-        } else if (!address) {
+        if (!address) {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
               if (addr) {
                 setAddress(addr);
+              } else if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+                setAddress(latestWithGps.address.trim());
               }
             });
           });
