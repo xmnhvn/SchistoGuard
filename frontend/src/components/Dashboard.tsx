@@ -1516,7 +1516,7 @@ export function Dashboard({
             style={{
               gridColumn: "1 / -1", // Span all 3 columns
               background: "#fff",
-              borderRadius: isNarrowDesktop ? 12 : 16,
+              borderRadius: 16,
               padding: sharedPad,
               display: "flex",
               alignItems: "stretch",
@@ -1529,19 +1529,19 @@ export function Dashboard({
           >
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 15 : 20, color: "#337C85" }}>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 17 : 20, color: "#337C85" }}>
                   Total Parameter Readings
                 </p>
-                <p style={{ margin: isNarrowDesktop ? "0px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 9.5 : 12 }}>
+                <p style={{ margin: isNarrowDesktop ? "2px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 11 : 12 }}>
                   Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
                 </p>
               </div>
-              <p style={{ margin: 0, fontSize: isNarrowDesktop ? 32 : 38, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+              <p style={{ margin: 0, fontSize: isNarrowDesktop ? 38 : 42, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
                 {readings.length}
               </p>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 4, flexShrink: 0 }}>
-              <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 34 : 44, height: isNarrowDesktop ? 34 : 44, objectFit: "contain" }} />
+              <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 38 : 44, height: isNarrowDesktop ? 38 : 44, objectFit: "contain" }} />
             </div>
           </div>
 
@@ -1550,7 +1550,7 @@ export function Dashboard({
             style={{
               gridColumn: "1 / -1", // Span all 3 columns
               background: "#fff",
-              borderRadius: isNarrowDesktop ? 12 : 18,
+              borderRadius: 16,
               padding: sharedPad,
               boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
               display: "flex",
@@ -1564,25 +1564,25 @@ export function Dashboard({
           {/* LEFT: Risk Level */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <p style={{
-              margin: isNarrowDesktop ? "0 0 3px" : "0 0 5px",
+              margin: isNarrowDesktop ? "0 0 4px" : "0 0 5px",
               fontWeight: 700,
-              fontSize: isNarrowDesktop ? 15 : 20,
+              fontSize: isNarrowDesktop ? 17 : 20,
               color: "#337C85",
               fontFamily: "'Poppins', sans-serif",
             }}>
               Risk Level
             </p>
-            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 8 : 10, marginBottom: isNarrowDesktop ? 4 : 8 }}>
-              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 22 : 28, height: isNarrowDesktop ? 22 : 28, objectFit: "contain" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 8 : 10, marginBottom: isNarrowDesktop ? 5 : 8 }}>
+              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 24 : 28, height: isNarrowDesktop ? 24 : 28, objectFit: "contain" }} />
               <span
                 style={{
                   background: "transparent",
                   color: riskColor,
                   border: `1.2px solid ${riskColor}`,
                   borderRadius: 999,
-                  padding: isNarrowDesktop ? "3px 10px" : "4px 14px",
+                  padding: isNarrowDesktop ? "4px 12px" : "4px 14px",
                   fontWeight: 700,
-                  fontSize: isNarrowDesktop ? 10.5 : 13,
+                  fontSize: isNarrowDesktop ? 11.5 : 13,
                   fontFamily: "'Poppins', sans-serif",
                   textTransform: "capitalize",
                 }}
@@ -1590,7 +1590,7 @@ export function Dashboard({
                 {getOverallRiskLabel(overallRisk)}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 9.5 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
+            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 10.5 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
               Based on temperature, turbidity, and pH
             </p>
           </div>
@@ -1600,7 +1600,7 @@ export function Dashboard({
             style={{
               flex: "0 0 40%", // Fixed smaller width proportion
               background: "#337C85", // Solid teal to match reference
-              borderRadius: isNarrowDesktop ? 8 : 12,
+              borderRadius: 12, // Adjusted to pair nicely inside the 16px outer box
               padding: isNarrowDesktop ? "10px 8px" : "14px 16px",
               display: "flex",
               flexDirection: "column",
@@ -1612,7 +1612,7 @@ export function Dashboard({
             <p style={{
               margin: 0,
               fontWeight: 700,
-              fontSize: isNarrowDesktop ? 11 : 14,
+              fontSize: isNarrowDesktop ? 12 : 14,
               color: "#fff",
               textAlign: "center",
               fontFamily: "'Poppins', sans-serif",
@@ -1622,7 +1622,7 @@ export function Dashboard({
             </p>
             <p style={{
               margin: 0,
-              fontSize: isNarrowDesktop ? 32 : 38,
+              fontSize: isNarrowDesktop ? 38 : 42,
               fontWeight: 700,
               color: "#fff",
               lineHeight: 1,
