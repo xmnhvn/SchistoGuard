@@ -10,6 +10,27 @@ function clean(value) {
   return normalized.length > 0 ? normalized : null;
 }
 
+function normalizeKey(value) {
+  const cleaned = clean(value);
+  return cleaned ? cleaned.toLowerCase() : null;
+}
+
+function isInvalidLocalToken(value) {
+  const cleaned = clean(value);
+  if (!cleaned) return true;
+
+  const lower = cleaned.toLowerCase();
+  if (lower.includes('/')) return true;
+
+  if (/^(asia|africa|europe|north america|south america|oceania|antarctica)$/i.test(cleaned)) {
+    return true;
+  }
+
+  if (/^(gmt|utc)\b/i.test(cleaned)) return true;
+
+  return false;
+}
+
 function getAdministrativeList(data) {
   return Array.isArray(data?.localityInfo?.administrative)
     ? data.localityInfo.administrative
@@ -29,13 +50,16 @@ function getBoundaryList(data) {
 function findAdministrativeByPattern(data, pattern) {
   const boundaries = getBoundaryList(data);
   const match = boundaries.find((entry) => {
-    const haystack = `${entry?.name || ''} ${entry?.description || ''} ${entry?.adminLevel || ''}`.toLowerCase();
+    const name = clean(entry?.name);
+    if (!name || isInvalidLocalToken(name)) return false;
+
+    const haystack = `${name} ${entry?.description || ''} ${entry?.adminLevel || ''}`.toLowerCase();
     return pattern.test(haystack);
   });
   return clean(match?.name);
 }
 
-function findGranularLocalArea(data) {
+function findGranularLocalArea(data, blockedKeys = new Set()) {
   const boundaries = getBoundaryList(data)
     .filter((entry) => clean(entry?.name))
     .map((entry) => ({
@@ -43,13 +67,17 @@ function findGranularLocalArea(data) {
       description: clean(entry?.description),
       adminLevel: Number.isFinite(Number(entry?.adminLevel)) ? Number(entry.adminLevel) : null,
     }))
-    .filter((entry) => entry.name);
+    .filter((entry) => entry.name && !isInvalidLocalToken(entry.name));
 
   if (boundaries.length === 0) return null;
 
   const excludedPattern = /(philippines|region|province|state|city|municipality|country)/i;
   const localCandidates = boundaries
     .filter((entry) => !excludedPattern.test(`${entry.name} ${entry.description || ''}`))
+    .filter((entry) => {
+      const key = normalizeKey(entry.name);
+      return key ? !blockedKeys.has(key) : false;
+    })
     .sort((a, b) => {
       const aLevel = a.adminLevel ?? -1;
       const bLevel = b.adminLevel ?? -1;
@@ -63,31 +91,38 @@ function buildBestAvailableAddress(data) {
   if (!data || typeof data !== 'object') return null;
 
   const locality = clean(data.locality);
+  const city = clean(data.city);
+  const province = clean(data.principalSubdivision);
+  const country = clean(data.countryName);
+
+  const municipalityOrCity =
+    city ||
+    locality ||
+    findAdministrativeByPattern(data, /(municipality|city|town)/i) ||
+    findAdministrativeByPattern(data, /(county|district)/i);
+
+  const blockedKeys = new Set(
+    [municipalityOrCity, locality, province, country]
+      .map((value) => normalizeKey(value))
+      .filter(Boolean)
+  );
 
   const purokOrSitio = findAdministrativeByPattern(
     data,
-    /(purok|sitio|zone|district|quarter|block)/i
+    /(purok|sitio|zone|block)/i
   );
 
   const barangayOrVillage = findAdministrativeByPattern(
     data,
     /(barangay|brgy|village|suburb|neighbourhood|neighborhood|hamlet)/i
-  ) || findGranularLocalArea(data);
-
-  const municipalityOrCity =
-    clean(data.city) ||
-    findAdministrativeByPattern(data, /(municipality|city|town)/i) ||
-    findAdministrativeByPattern(data, /(county|district)/i);
+  ) || findGranularLocalArea(data, blockedKeys);
 
   const provinceOrState =
-    clean(data.principalSubdivision) ||
+    province ||
     findAdministrativeByPattern(data, /(province|region|state)/i);
-
-  const country = clean(data.countryName);
 
   const orderedParts = [
     purokOrSitio,
-    locality,
     barangayOrVillage,
     municipalityOrCity,
     provinceOrState,
