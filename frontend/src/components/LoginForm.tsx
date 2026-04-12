@@ -46,14 +46,14 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
   const [loading, setLoading] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
+  const isNarrowDesktop = windowWidth < 1600;
 
-    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1728);
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  const isNarrowDesktop = windowWidth < 1600;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,102 +94,72 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
       className={`min-h-screen flex items-center justify-center p-4 ${isExiting ? 'animate-fade-out' : 'animate-fade-in'}`} 
       style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}
     >
-      <Card 
-        className={`w-full transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-        style={{
-          maxWidth: isNarrowDesktop ? '380px' : '448px',
-          minHeight: isNarrowDesktop ? '480px' : '540px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          borderRadius: isNarrowDesktop ? '16px' : '20px',
-        }}
-      >
-        <CardHeader className={isNarrowDesktop ? "text-center pt-6 pb-2" : "text-center"}>
+      <Card className={`${isNarrowDesktop ? 'w-[380px]' : 'w-full max-w-md'} ${isNarrowDesktop ? 'min-h-[480px]' : 'min-h-[540px]'} flex flex-col justify-center shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+        <CardHeader className={`text-center ${isNarrowDesktop ? 'pb-2 pt-6' : ''}`}>
           <div className={`flex items-center justify-center gap-3 ${isNarrowDesktop ? 'mb-2' : 'mb-4'}`}>
-            <img 
-              src="/schistoguard.png" 
-              alt="SchistoGuard Logo" 
-              style={{ 
-                width: isNarrowDesktop ? 36 : 48, 
-                height: isNarrowDesktop ? 36 : 48, 
-                objectFit: "contain" 
-              }} 
-            />
-            <h1 
-              style={{ 
-                fontFamily: 'Poppins, sans-serif', 
-                color: '#357D86', 
-                fontWeight: 600,
-                fontSize: isNarrowDesktop ? 18 : 24
-              }}
-            >
+            <img src="/schistoguard.png" alt="SchistoGuard Logo" className={`${isNarrowDesktop ? 'w-10 h-10' : 'w-12 h-12'} object-contain`} />
+            <h1 className={`${isNarrowDesktop ? 'text-xl' : 'text-2xl'}`} style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
               SchistoGuard
             </h1>
           </div>
-          <CardTitle style={{ fontSize: isNarrowDesktop ? 18 : 24 }}>Welcome Back</CardTitle>
-          <p className="text-muted-foreground" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>
+          <CardTitle className={isNarrowDesktop ? 'text-lg' : ''}>Welcome Back</CardTitle>
+          <p className={`${isNarrowDesktop ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
             Sign in to access your monitoring dashboard
           </p>
         </CardHeader>
-        <CardContent className={isNarrowDesktop ? "px-6 pb-6 pt-2" : ""}>
-          <form onSubmit={handleSubmit} className={isNarrowDesktop ? "space-y-3" : "space-y-4"}>
-            <div className={isNarrowDesktop ? "space-y-3" : "space-y-4"}>
-              <div className="space-y-1.5">
-                <Label htmlFor="email" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="pl-10"
-                    style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
-                    required
-                  />
-                </div>
+        <CardContent className={isNarrowDesktop ? 'px-6 pb-6 pt-2' : ''}>
+          <form onSubmit={handleSubmit} className={isNarrowDesktop ? 'space-y-3' : 'space-y-4'}>
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="email" className={isNarrowDesktop ? 'text-xs' : ''}>Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className={`pl-10 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
+                  required
+                />
               </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="password" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    className="pl-10 pr-10"
-                    style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-slate-700 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+            </div>
+            
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="password" className={isNarrowDesktop ? 'text-xs' : ''}>Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  className={`pl-10 pr-10 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-slate-700 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="role" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Designation</Label>
-                <Select value={formData.role} onValueChange={(value: string) => setFormData(prev => ({ ...prev, role: value }))}>
-                  <SelectTrigger style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bhw">Barangay Health Worker</SelectItem>
-                    <SelectItem value="lgu">LGU Officer</SelectItem>
-                    <SelectItem value="admin">System Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+            
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="role" className={isNarrowDesktop ? 'text-xs' : ''}>Designation</Label>
+              <Select value={formData.role} onValueChange={(value: string) => setFormData(prev => ({ ...prev, role: value }))}>
+                <SelectTrigger className={isNarrowDesktop ? 'h-9 text-xs' : ''}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bhw" className={isNarrowDesktop ? 'text-xs' : ''}>Barangay Health Worker</SelectItem>
+                  <SelectItem value="lgu" className={isNarrowDesktop ? 'text-xs' : ''}>LGU Officer</SelectItem>
+                  <SelectItem value="admin" className={isNarrowDesktop ? 'text-xs' : ''}>System Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {error && (
@@ -198,34 +168,31 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
               </div>
             )}
             
-            <div className="flex gap-2 pt-2">
+            <div className={`flex gap-2 ${isNarrowDesktop ? 'pt-1' : ''}`}>
               <Button
                 type="button"
-                className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                className={`flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
                 onClick={handleCancel}
                 disabled={loading}
-                style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+                className={`flex-1 bg-schistoguard-teal hover:bg-schistoguard-teal/90 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
                 disabled={loading}
-                style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
               >
                 {loading ? "Signing In..." : "Sign In"}
               </Button>
             </div>
             
-            <div className="text-center space-y-1 mt-2">
+            <div className={`text-center ${isNarrowDesktop ? 'space-y-0' : 'space-y-2'}`}>
               <Button 
                 type="button" 
                 variant="link" 
                 size="sm"
                 onClick={onForgotPassword}
-                className="h-auto p-0"
-                style={{ fontSize: isNarrowDesktop ? 12 : 13 }}
+                className={isNarrowDesktop ? 'text-xs h-8' : ''}
               >
                 Forgot your password?
               </Button>
@@ -254,6 +221,15 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
 }
 
 export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
+  const isNarrowDesktop = windowWidth < 1600;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [formData, setFormData] = useState<SignupData>({
     email: "",
     password: "",
@@ -269,14 +245,6 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
   const [isExiting, setIsExiting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1728);
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  const isNarrowDesktop = windowWidth < 1600;
 
   const isStrongPassword = (password: string) => {
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
@@ -335,70 +303,48 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
       className={`min-h-screen flex items-center justify-center p-4 ${isExiting ? 'animate-fade-out' : 'animate-fade-in'}`} 
       style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #357D86 100%)' }}
     >
-      <Card 
-        className={`w-full transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-        style={{
-          maxWidth: isNarrowDesktop ? '400px' : '448px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          borderRadius: isNarrowDesktop ? '16px' : '20px',
-        }}
-      >
-        <CardHeader className={isNarrowDesktop ? "text-center pt-6 pb-2" : "text-center"}>
+      <Card className={`${isNarrowDesktop ? 'w-[400px]' : 'w-full max-w-md'} shadow-2xl transition-all duration-500 ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+        <CardHeader className={`text-center ${isNarrowDesktop ? 'pb-2 pt-6' : ''}`}>
           <div className={`flex items-center justify-center gap-3 ${isNarrowDesktop ? 'mb-2' : 'mb-4'}`}>
-            <img 
-              src="/schistoguard.png" 
-              alt="SchistoGuard Logo" 
-              style={{ 
-                width: isNarrowDesktop ? 36 : 48, 
-                height: isNarrowDesktop ? 36 : 48, 
-                objectFit: "contain" 
-              }} 
-            />
-            <h1 
-              style={{ 
-                fontFamily: 'Poppins, sans-serif', 
-                color: '#357D86', 
-                fontWeight: 600,
-                fontSize: isNarrowDesktop ? 18 : 24
-              }}
-            >
+            <img src="/schistoguard.png" alt="SchistoGuard Logo" className={`${isNarrowDesktop ? 'w-10 h-10' : 'w-12 h-12'} object-contain`} />
+            <h1 className={`${isNarrowDesktop ? 'text-xl' : 'text-2xl'}`} style={{ fontFamily: 'Poppins, sans-serif', color: '#357D86', fontWeight: 600 }}>
               SchistoGuard
             </h1>
           </div>
-          <CardTitle style={{ fontSize: isNarrowDesktop ? 18 : 24 }}>Create Account</CardTitle>
-          <p className="text-muted-foreground" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>
+          <CardTitle className={isNarrowDesktop ? 'text-lg' : ''}>Create Account</CardTitle>
+          <p className={`${isNarrowDesktop ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
             Join the water quality monitoring network
           </p>
         </CardHeader>
-        <CardContent className={isNarrowDesktop ? "px-6 pb-6 pt-2" : ""}>
-          <form onSubmit={handleSubmit} className={isNarrowDesktop ? "space-y-3" : "space-y-4"}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="firstName" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>First Name</Label>
+        <CardContent className={isNarrowDesktop ? 'px-6 pb-6 pt-2' : ''}>
+          <form onSubmit={handleSubmit} className={isNarrowDesktop ? 'space-y-3' : 'space-y-4'}>
+            <div className={`grid grid-cols-2 ${isNarrowDesktop ? 'gap-3' : 'gap-4'}`}>
+              <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+                <Label htmlFor="firstName" className={isNarrowDesktop ? 'text-xs' : ''}>First Name</Label>
                 <Input
                   id="firstName"
                   placeholder="Juan"
                   value={formData.firstName}
                   onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                  style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
+                  className={isNarrowDesktop ? 'h-9 text-xs' : ''}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="lastName" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Last Name</Label>
+              <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+                <Label htmlFor="lastName" className={isNarrowDesktop ? 'text-xs' : ''}>Last Name</Label>
                 <Input
                   id="lastName"
                   placeholder="Dela Cruz"
                   value={formData.lastName}
                   onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                  style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
+                  className={isNarrowDesktop ? 'h-9 text-xs' : ''}
                   required
                 />
               </div>
             </div>
             
-            <div className="space-y-1.5">
-              <Label htmlFor="email" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Email Address</Label>
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="email" className={isNarrowDesktop ? 'text-xs' : ''}>Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
@@ -407,40 +353,39 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
                   placeholder="your.email@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  className="pl-10"
-                  style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
+                  className={`pl-10 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
                   required
                 />
               </div>
             </div>
             
-            <div className="space-y-1.5">
-              <Label htmlFor="role" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Designation</Label>
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="role" className={isNarrowDesktop ? 'text-xs' : ''}>Designation</Label>
               <Select value={formData.role} onValueChange={(value: string) => setFormData(prev => ({ ...prev, role: value }))}>
-                <SelectTrigger style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}>
+                <SelectTrigger className={isNarrowDesktop ? 'h-9 text-xs' : ''}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bhw">Barangay Health Worker</SelectItem>
-                  <SelectItem value="lgu">LGU Officer</SelectItem>
+                  <SelectItem value="bhw" className={isNarrowDesktop ? 'text-xs' : ''}>Barangay Health Worker</SelectItem>
+                  <SelectItem value="lgu" className={isNarrowDesktop ? 'text-xs' : ''}>LGU Officer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div className="space-y-1.5">
-              <Label htmlFor="organization" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Organization</Label>
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="organization" className={isNarrowDesktop ? 'text-xs' : ''}>Organization</Label>
               <Input
                 id="organization"
                 placeholder="Department of Health - Leyte"
                 value={formData.organization}
                 onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-                style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
+                className={isNarrowDesktop ? 'h-9 text-xs' : ''}
                 required
               />
             </div>
             
-            <div className="space-y-1.5">
-              <Label htmlFor="password" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Password</Label>
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="password" className={isNarrowDesktop ? 'text-xs' : ''}>Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
@@ -449,8 +394,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
                   placeholder="Create a strong password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  className="pl-10 pr-10"
-                  style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
+                  className={`pl-10 pr-10 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
                   required
                 />
                 <button
@@ -463,8 +407,8 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
               </div>
             </div>
             
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" style={{ fontSize: isNarrowDesktop ? 12 : 14 }}>Confirm Password</Label>
+            <div className={isNarrowDesktop ? 'space-y-1' : 'space-y-2'}>
+              <Label htmlFor="confirmPassword" className={isNarrowDesktop ? 'text-xs' : ''}>Confirm Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
@@ -473,8 +417,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  className="pl-10 pr-10"
-                  style={{ height: isNarrowDesktop ? 36 : 40, fontSize: isNarrowDesktop ? 13 : 14 }}
+                  className={`pl-10 pr-10 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
                   required
                 />
                 <button
@@ -495,23 +438,21 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
             
             <Button 
               type="submit" 
-              className="w-full bg-schistoguard-teal hover:bg-schistoguard-teal/90"
+              className={`w-full bg-schistoguard-teal hover:bg-schistoguard-teal/90 ${isNarrowDesktop ? 'h-9 text-xs' : ''}`}
               disabled={loading}
-              style={{ height: isNarrowDesktop ? 40 : 44, fontSize: isNarrowDesktop ? 14 : 15 }}
             >
               {loading ? "Creating Account..." : "Create Account"}
             </Button>
             
-            <div className="text-center mt-2">
-              <div className="text-sm text-muted-foreground" style={{ fontSize: isNarrowDesktop ? 12 : 13 }}>
+            <div className="text-center">
+              <div className={`${isNarrowDesktop ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                 Already have an account?{" "}
                 <Button 
                   type="button" 
                   variant="link" 
                   size="sm" 
                   onClick={handleSwitchToLogin}
-                  className="p-0 h-auto text-schistoguard-teal"
-                  style={{ fontSize: isNarrowDesktop ? 12 : 13 }}
+                  className={`p-0 h-auto text-schistoguard-teal ${isNarrowDesktop ? 'text-xs' : ''}`}
                 >
                   Sign in here
                 </Button>
