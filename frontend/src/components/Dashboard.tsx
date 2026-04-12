@@ -73,12 +73,25 @@ export function Dashboard({
     try {
       if (typeof window !== 'undefined') {
         const globalCached = localStorage.getItem('sg_global_latest_address');
-        if (globalCached) return globalCached;
+        if (globalCached && globalCached !== 'Device Address') return globalCached;
+
+        const lastLocation = localStorage.getItem('lastGpsLocation');
+        if (lastLocation) {
+          try {
+            const parsed = JSON.parse(lastLocation);
+            if (typeof parsed.address === 'string' && parsed.address.trim() && parsed.address.trim() !== 'Device Address') {
+              return parsed.address.trim();
+            }
+          } catch { }
+        }
 
         // Fallback to searching all geocoding keys in localStorage
         const keys = Object.keys(localStorage);
         const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
-        if (addressKey) return localStorage.getItem(addressKey);
+        if (addressKey) {
+          const cached = localStorage.getItem(addressKey);
+          if (cached && cached !== 'Device Address') return cached;
+        }
       }
       return null;
     } catch { return null; }

@@ -107,7 +107,20 @@ export const ReportsPage: React.FC = () => {
 
   // Persistent Global Cache for Header Metadata
   const [address, setAddress] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('sg_global_latest_address');
+    if (typeof window !== 'undefined') {
+      const globalCached = localStorage.getItem('sg_global_latest_address');
+      if (globalCached && globalCached !== 'Device Address') return globalCached;
+
+      const lastLocation = localStorage.getItem('lastGpsLocation');
+      if (lastLocation) {
+        try {
+          const parsed = JSON.parse(lastLocation);
+          if (typeof parsed.address === 'string' && parsed.address.trim() && parsed.address.trim() !== 'Device Address') {
+            return parsed.address.trim();
+          }
+        } catch { }
+      }
+    }
     return null;
   });
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => {

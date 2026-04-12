@@ -70,7 +70,8 @@ export function SiteDetailView({
   // Persistent Address & Dynamic Name Cache per SiteId
   const getCachedData = (key: string) => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(`sg_${siteId}_${key}`);
+      const cached = localStorage.getItem(`sg_${siteId}_${key}`);
+      if (cached && cached !== 'Device Address') return cached;
     }
     return null;
   };

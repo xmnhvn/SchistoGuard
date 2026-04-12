@@ -161,7 +161,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     try {
       if (typeof window !== 'undefined') {
         const cached = localStorage.getItem('sg_global_latest_address');
-        if (cached) return cached;
+        if (cached && cached !== 'Device Address') return cached;
+
+        const lastLocation = localStorage.getItem('lastGpsLocation');
+        if (lastLocation) {
+          try {
+            const parsed = JSON.parse(lastLocation);
+            if (typeof parsed.address === 'string' && parsed.address.trim() && parsed.address.trim() !== 'Device Address') {
+              return parsed.address.trim();
+            }
+          } catch { }
+        }
       }
     } catch { }
     return null;
