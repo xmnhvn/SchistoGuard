@@ -196,6 +196,17 @@ export function Dashboard({
 
   // Reverse geocode the location shown on the map (latestReading or lastSavedLocation)
   useEffect(() => {
+    if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+      const resolvedAddress = latestReading.address.trim();
+      if (gpsAddress !== resolvedAddress) {
+        setGpsAddress(resolvedAddress);
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sg_global_latest_address', resolvedAddress);
+      }
+      return;
+    }
+
     let lat: number | null = null;
     let lng: number | null = null;
     if (
@@ -230,7 +241,7 @@ export function Dashboard({
         lastLatLngRef.current = null;
       }
     }
-  }, [latestReading, lastSavedLocation]);
+  }, [latestReading, lastSavedLocation, gpsAddress]);
 
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
@@ -269,12 +280,18 @@ export function Dashboard({
       .find((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
 
     if (latestWithGps) {
-      reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-        if (addr) {
-          setGpsAddress(addr);
-          localStorage.setItem('sg_global_latest_address', addr);
-        }
-      });
+      if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+        const resolvedAddress = latestWithGps.address.trim();
+        setGpsAddress(resolvedAddress);
+        localStorage.setItem('sg_global_latest_address', resolvedAddress);
+      } else {
+        reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+          if (addr) {
+            setGpsAddress(addr);
+            localStorage.setItem('sg_global_latest_address', addr);
+          }
+        });
+      }
     }
   }, [readings, gpsAddress]);
 
@@ -300,9 +317,9 @@ export function Dashboard({
     .join(", ");
 
   const displayAddress =
-    gpsAddress ||
-    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
+    gpsAddress ||
     metaAddress ||
     "Device Address";
 
@@ -376,6 +393,11 @@ export function Dashboard({
           if (data && data.deviceConnected === false) {
             console.log('[Dashboard] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
             if (data.siteName && data.siteName !== "Site Name") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            if (typeof data.address === 'string' && data.address.trim()) {
+              const resolvedAddress = data.address.trim();
+              setGpsAddress(resolvedAddress);
+              localStorage.setItem('sg_global_latest_address', resolvedAddress);
+            }
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[Dashboard] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
@@ -405,6 +427,11 @@ export function Dashboard({
           }
           console.log('[Dashboard] Device connected, setting latestReading');
           setLatestReading(data);
+          if (typeof data?.address === 'string' && data.address.trim()) {
+            const resolvedAddress = data.address.trim();
+            setGpsAddress(resolvedAddress);
+            localStorage.setItem('sg_global_latest_address', resolvedAddress);
+          }
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);

@@ -178,9 +178,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     .join(", ");
 
   const displayAddress =
-    gpsAddress ||
-    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
+    gpsAddress ||
     metaAddress ||
     "Device Address";
 
@@ -245,11 +245,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Reverse geocode when GPS changes (sync with dashboard logic)
   useEffect(() => {
+    if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+      const resolvedAddress = latestReading.address.trim();
+      if (gpsAddress !== resolvedAddress) {
+        setGpsAddress(resolvedAddress);
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sg_global_latest_address', resolvedAddress);
+      }
+      return;
+    }
+
     if (gpsSites && gpsSites.length > 0) {
       const { lat, lng } = gpsSites[0];
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
-        setGpsAddress(null); // reset while loading
         reverseGeocode(lat, lng).then(addr => {
           setGpsAddress(addr);
           // Sync with dashboard global cache
@@ -262,7 +272,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       setGpsAddress(null);
       lastLatLngRef.current = null;
     }
-  }, [gpsSites]);
+  }, [gpsSites, latestReading, gpsAddress]);
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
     if (!gpsAddress && typeof window !== 'undefined') {
@@ -334,6 +344,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           if (data && data.deviceConnected === false) {
             console.log('[LandingPage] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
             if (data.siteName && data.siteName !== "Site Name") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            if (typeof data.address === 'string' && data.address.trim()) {
+              const resolvedAddress = data.address.trim();
+              setGpsAddress(resolvedAddress);
+              localStorage.setItem('sg_global_latest_address', resolvedAddress);
+            }
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[LandingPage] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
@@ -363,6 +378,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           }
           console.log('[LandingPage] Device connected, setting latestReading');
           setLatestReading(data);
+          if (typeof data?.address === 'string' && data.address.trim()) {
+            const resolvedAddress = data.address.trim();
+            setGpsAddress(resolvedAddress);
+            localStorage.setItem('sg_global_latest_address', resolvedAddress);
+          }
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);
