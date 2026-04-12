@@ -41,13 +41,6 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   const [hiddenAlerts, setHiddenAlerts] = useState<string[]>([]);
   const [animationEnabled, setAnimationEnabled] = useState(!_alertsFirstLoadDone);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("sg_hidden_alerts");
-      if (stored) setHiddenAlerts(JSON.parse(stored));
-    } catch (e) { }
-  }, []);
-
   const toggleSelection = (id: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
@@ -73,9 +66,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   const handleDeleteSelected = () => {
     const ids = Array.from(selectedIds);
     setHiddenAlerts(prev => {
-      const updated = [...prev, ...ids];
-      localStorage.setItem("sg_hidden_alerts", JSON.stringify(updated));
-      return updated;
+      return [...prev, ...ids];
     });
     setDeleteMode(false);
     setSelectedIds(new Set());

@@ -9,6 +9,7 @@ const reverseGeocode = require("../utils/reverseGeocode");
 // Generalized memory interval and global trackers
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "Site Name";
+let GLOBAL_DEVICE_ADDRESS = null;
 
 // Helper to load settings from DB
 async function loadSettingsFromDB() {
@@ -17,7 +18,10 @@ async function loadSettingsFromDB() {
       if (!err && interval) AGGREGATE_INTERVAL_MS = parseInt(interval, 10);
       db.getSetting('device_name', (err, name) => {
         if (!err && name) GLOBAL_DEVICE_NAME = name;
-        resolve();
+        db.getSetting('device_address', (err, address) => {
+          if (!err && address) GLOBAL_DEVICE_ADDRESS = address;
+          resolve();
+        });
       });
     });
   });
@@ -28,6 +32,15 @@ async function saveIntervalToDB(ms) {
   return new Promise((resolve, reject) => {
     db.setSetting('aggregate_interval_ms', String(ms), (err) => {
       if (err) reject(err); else resolve();
+    });
+  });
+}
+
+async function saveAddressToDB(address) {
+  return new Promise((resolve, reject) => {
+    db.setSetting('device_address', address, (err) => {
+      if (err) reject(err);
+      else resolve();
     });
   });
 }
@@ -403,6 +416,12 @@ router.post("/", async (req, res) => {
   let address = null;
   if (typeof latitude === 'number' && typeof longitude === 'number' && latitude !== null && longitude !== null) {
     address = await reverseGeocode(latitude, longitude);
+    if (address) {
+      GLOBAL_DEVICE_ADDRESS = address;
+      saveAddressToDB(address).catch(err => {
+        console.error('[settings] Failed to save device_address:', err.message);
+      });
+    }
   }
   latestData = {
     turbidity,
@@ -430,6 +449,13 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/latest", (req, res) => {
+  const buildDisconnectedPayload = (extra = {}) => ({
+    deviceConnected: false,
+    siteName: GLOBAL_DEVICE_NAME,
+    address: GLOBAL_DEVICE_ADDRESS,
+    ...extra,
+  });
+
   const sendDisconnectedWithLastLocation = () => {
     console.log('[API /latest] Triggered fallback: querying raw_readings for last GPS location...');
     db.get(
@@ -438,25 +464,38 @@ router.get("/latest", (req, res) => {
       (dbErr, row) => {
         if (dbErr) {
           console.error('[API /latest] Failed to load last GPS location from DB:', dbErr.message);
-          return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+          return res.json(buildDisconnectedPayload());
         }
 
         console.log('[API /latest] Fallback query result:', row || 'NO ROW FOUND');
 
         if (row) {
           console.log('[API /latest] Returning disconnected with fallback coords:', { lat: row.latitude, lng: row.longitude, ts: row.timestamp });
+          const fallbackAddress = row.address || GLOBAL_DEVICE_ADDRESS || null;
           return res.json({
             deviceConnected: false,
             siteName: GLOBAL_DEVICE_NAME,
             latitude: row.latitude,
             longitude: row.longitude,
-            address: row.address || null,
+            address: fallbackAddress,
             timestamp: row.timestamp || null,
           });
         }
 
-        console.log('[API /latest] No GPS location found in raw_readings, returning bare disconnected status');
-        return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+        db.get(
+          "SELECT value FROM settings WHERE key = ?",
+          ['device_address'],
+          (settingsErr, settingRow) => {
+            if (settingsErr) {
+              console.error('[API /latest] Failed to load device address from settings:', settingsErr.message);
+              return res.json(buildDisconnectedPayload());
+            }
+
+            const storedAddress = settingRow?.value || GLOBAL_DEVICE_ADDRESS || null;
+            console.log('[API /latest] No GPS location found in raw_readings, returning disconnected status with stored address');
+            return res.json(buildDisconnectedPayload({ address: storedAddress }));
+          }
+        );
       }
     );
   };
@@ -470,12 +509,13 @@ router.get("/latest", (req, res) => {
 
     if (Math.abs(now - ts) < 10000) {
       console.log('[API /latest] Data is fresh, returning as connected');
+      const freshAddress = latestData.address || GLOBAL_DEVICE_ADDRESS || null;
       res.json({
         ...latestData,
         siteName: GLOBAL_DEVICE_NAME,
         deviceConnected: true,
         timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
-        address: latestData.address || null
+        address: freshAddress
       });
     } else {
       console.warn('[API /latest] Device considered disconnected: data too old');

@@ -47,55 +47,15 @@ export function Dashboard({
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
-  const [siteData, setSiteData] = useState<any>(() => {
-    try {
-      if (typeof window !== "undefined") {
-        const cachedName = localStorage.getItem('sg_global_latest_siteName');
-        return {
-          siteName: cachedName || "Site Name",
-          barangay: "",
-          municipality: "",
-          area: "",
-        };
-      }
-    } catch { }
-    return {
-      siteName: "Site Name",
-      barangay: "",
-      municipality: "",
-      area: "",
-    };
+  const [siteData, setSiteData] = useState<any>({
+    siteName: "Site Name",
+    barangay: "",
+    municipality: "",
+    area: "",
   });
   // Device connection state
   const [deviceConnected, setDeviceConnected] = useState(true);
-  // Address from reverse geocoding — initialize from cache to prevent flicker
-  const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const globalCached = localStorage.getItem('sg_global_latest_address');
-        if (globalCached && globalCached !== 'Device Address') return globalCached;
-
-        const lastLocation = localStorage.getItem('lastGpsLocation');
-        if (lastLocation) {
-          try {
-            const parsed = JSON.parse(lastLocation);
-            if (typeof parsed.address === 'string' && parsed.address.trim() && parsed.address.trim() !== 'Device Address') {
-              return parsed.address.trim();
-            }
-          } catch { }
-        }
-
-        // Fallback to searching all geocoding keys in localStorage
-        const keys = Object.keys(localStorage);
-        const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
-        if (addressKey) {
-          const cached = localStorage.getItem(addressKey);
-          if (cached && cached !== 'Device Address') return cached;
-        }
-      }
-      return null;
-    } catch { return null; }
-  });
+  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
   // Cache last lat/lng to avoid unnecessary API calls
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
   // Interval config state
@@ -124,32 +84,7 @@ export function Dashboard({
     }
   }, [visible, mapReady]);
 
-
-
-  // Persist last valid GPS location to localStorage
-  useEffect(() => {
-    if (
-      latestReading &&
-      typeof latestReading.latitude === 'number' &&
-      typeof latestReading.longitude === 'number' &&
-      latestReading.latitude !== null &&
-      latestReading.longitude !== null
-    ) {
-      const resolvedAddress = typeof latestReading.address === 'string' && latestReading.address.trim()
-        ? latestReading.address.trim()
-        : null;
-      // Save to localStorage
-      localStorage.setItem('lastGpsLocation', JSON.stringify({
-        lat: latestReading.latitude,
-        lng: latestReading.longitude,
-        siteName: siteData.siteName || 'Device Location',
-        address: resolvedAddress,
-      }));
-    }
-  }, [latestReading && latestReading.latitude, latestReading && latestReading.longitude, siteData.siteName]);
-
   // Strictly use real sensor device location (from GSM/GPS)
-  // Fallback to last known location in localStorage if sensor is not yet available
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
 
@@ -181,40 +116,13 @@ export function Dashboard({
           : null,
       };
 
-      // Persist to localStorage for immediate loading on next visit
-      localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
     }
-    // 2. Fallback to cached location if no live reading yet
+    // 2. If no live reading yet, keep map marker empty to avoid fake location pins
     else {
-      let cachedSet = false;
-      if (typeof window !== "undefined") {
-        const last = localStorage.getItem('lastGpsLocation');
-        if (last) {
-          try {
-            const parsed = JSON.parse(last);
-            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
-              sites = [{
-                id: 'device-gps',
-                name: parsed.siteName || 'Last Known Location',
-                lat: parsed.lat,
-                lng: parsed.lng,
-              }];
-              lastLoc = parsed;
-              setGpsSites(sites);
-              setLastSavedLocation(lastLoc);
-              cachedSet = true;
-            }
-          } catch { }
-        }
-      }
-
-      // 3. If no live/cached location, keep map marker empty to avoid fake location pins
-      if (!cachedSet) {
-        setGpsSites(undefined);
-        setLastSavedLocation(null);
-      }
+      setGpsSites(undefined);
+      setLastSavedLocation(null);
     }
   }, [latestReading, siteData.siteName]);
 
@@ -224,9 +132,6 @@ export function Dashboard({
       const resolvedAddress = latestReading.address.trim();
       if (gpsAddress !== resolvedAddress) {
         setGpsAddress(resolvedAddress);
-      }
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('sg_global_latest_address', resolvedAddress);
       }
       return;
     }
@@ -254,15 +159,6 @@ export function Dashboard({
           if (addr) {
             setGpsAddress(addr);
             setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('sg_global_latest_address', addr);
-              localStorage.setItem('lastGpsLocation', JSON.stringify({
-                lat,
-                lng,
-                siteName: siteData.siteName || 'Device Location',
-                address: addr,
-              }));
-            }
           }
         });
       }
@@ -273,30 +169,6 @@ export function Dashboard({
       }
     }
   }, [latestReading, lastSavedLocation, gpsAddress, siteData.siteName]);
-
-  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
-  useEffect(() => {
-    if (!gpsAddress && typeof window !== 'undefined') {
-      const keys = Object.keys(localStorage);
-      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
-      if (addressKey) {
-        const cached = localStorage.getItem(addressKey);
-        if (cached) {
-          setGpsAddress(cached);
-          localStorage.setItem('sg_global_latest_address', cached);
-        }
-      }
-
-      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
-      if (siteNameKey && siteData.siteName === "Site Name") {
-        const cachedName = localStorage.getItem(siteNameKey);
-        if (cachedName) {
-          setSiteData((prev: any) => ({ ...prev, siteName: cachedName }));
-          localStorage.setItem('sg_global_latest_siteName', cachedName);
-        }
-      }
-    }
-  }, [gpsAddress, siteData.siteName]);
 
   // Fallback: search history readings for GPS coordinates when latestReading has none
   // This mirrors the logic in SiteDetailView that finds the address from historical data
@@ -314,12 +186,10 @@ export function Dashboard({
       if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
         const resolvedAddress = latestWithGps.address.trim();
         setGpsAddress(resolvedAddress);
-        localStorage.setItem('sg_global_latest_address', resolvedAddress);
       } else {
         reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
           if (addr) {
             setGpsAddress(addr);
-            localStorage.setItem('sg_global_latest_address', addr);
           }
         });
       }
@@ -427,7 +297,6 @@ export function Dashboard({
             if (typeof data.address === 'string' && data.address.trim()) {
               const resolvedAddress = data.address.trim();
               setGpsAddress(resolvedAddress);
-              localStorage.setItem('sg_global_latest_address', resolvedAddress);
             }
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[Dashboard] Fallback coords found, setting gpsSites and lastSavedLocation');
@@ -446,7 +315,6 @@ export function Dashboard({
                   lng: fallbackLoc.lng,
                 },
               ]);
-              localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
             } else {
               console.log('[Dashboard] NO fallback coords, clearing map');
             }
@@ -461,7 +329,6 @@ export function Dashboard({
           if (typeof data?.address === 'string' && data.address.trim()) {
             const resolvedAddress = data.address.trim();
             setGpsAddress(resolvedAddress);
-            localStorage.setItem('sg_global_latest_address', resolvedAddress);
           }
           setBackendOk(true);
           setDataOk(true);
@@ -470,7 +337,6 @@ export function Dashboard({
           // to prevent overwriting custom Admin settings.
           if (data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
-            localStorage.setItem('sg_global_latest_siteName', data.siteName);
           }
         })
         .catch(() => {

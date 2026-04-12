@@ -87,31 +87,19 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   // Fetch metadata for PDF header
   useEffect(() => {
-    // 0. Load from cache first
-    try {
-      const cachedName = localStorage.getItem("sg_latest_site_name");
-      const cachedAddr = localStorage.getItem("sg_latest_address");
-      if (cachedName) setDynamicSiteName(cachedName);
-      if (cachedAddr) setAddress(cachedAddr);
-    } catch (e) { }
-
-    // 1. Try latest reading
     apiGet("/api/sensors/latest").then(data => {
       if (data) {
         if (data.siteName && data.siteName !== "Site Name") {
           setDynamicSiteName(data.siteName);
-          localStorage.setItem("sg_latest_site_name", data.siteName);
         }
         if (typeof data.address === 'string' && data.address.trim()) {
           const resolvedAddress = data.address.trim();
           setAddress(resolvedAddress);
-          localStorage.setItem("sg_latest_address", resolvedAddress);
         } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(data.latitude, data.longitude).then(addr => {
               if (addr) {
                 setAddress(addr);
-                localStorage.setItem("sg_latest_address", addr);
               }
             });
           });
@@ -119,7 +107,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       }
     }).catch(() => { });
 
-    // 2. Try history if readings are loaded
     if (readings && readings.length > 0) {
       const latestWithGps = [...readings]
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -128,18 +115,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       if (latestWithGps) {
         if (latestWithGps.siteName) {
           setDynamicSiteName(latestWithGps.siteName);
-          localStorage.setItem("sg_latest_site_name", latestWithGps.siteName);
         }
         if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
           const resolvedAddress = latestWithGps.address.trim();
           setAddress(resolvedAddress);
-          localStorage.setItem("sg_latest_address", resolvedAddress);
         } else if (!address) {
           import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
             reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
               if (addr) {
                 setAddress(addr);
-                localStorage.setItem("sg_latest_address", addr);
               }
             });
           });
@@ -147,13 +131,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       }
     }
   }, [readings]);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("sg_hidden_readings");
-      if (stored) setHiddenReadings(JSON.parse(stored));
-    } catch (e) { }
-  }, []);
 
   const toggleSelection = (id: string, e?: React.MouseEvent) => {
     if (e) {
@@ -180,9 +157,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const handleDeleteSelected = () => {
     const ids = Array.from(selectedIds);
     setHiddenReadings(prev => {
-      const updated = [...prev, ...ids];
-      localStorage.setItem("sg_hidden_readings", JSON.stringify(updated));
-      return updated;
+      return [...prev, ...ids];
     });
     setDeleteMode(false);
     setSelectedIds(new Set());

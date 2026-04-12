@@ -86,24 +86,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
   const [deviceConnected, setDeviceConnected] = useState(true);
-  const [siteData, setSiteData] = useState<any>(() => {
-    try {
-      if (typeof window !== "undefined") {
-        const cachedName = localStorage.getItem('sg_global_latest_siteName');
-        return {
-          siteName: cachedName || "Matina Site",
-          barangay: "Matina Crossing",
-          municipality: "Davao City",
-          area: "C. Enclabo St",
-        };
-      }
-    } catch { }
-    return {
-      siteName: "Matina Site",
-      barangay: "Matina Crossing",
-      municipality: "Davao City",
-      area: "C. Enclabo St",
-    };
+  const [siteData, setSiteData] = useState<any>({
+    siteName: "Matina Site",
+    barangay: "Matina Crossing",
+    municipality: "Davao City",
+    area: "C. Enclabo St",
   });
 
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
@@ -157,25 +144,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       .catch(console.error);
   }, []);
   // Address from reverse geocoding (sync with dashboard)
-  const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const cached = localStorage.getItem('sg_global_latest_address');
-        if (cached && cached !== 'Device Address') return cached;
-
-        const lastLocation = localStorage.getItem('lastGpsLocation');
-        if (lastLocation) {
-          try {
-            const parsed = JSON.parse(lastLocation);
-            if (typeof parsed.address === 'string' && parsed.address.trim() && parsed.address.trim() !== 'Device Address') {
-              return parsed.address.trim();
-            }
-          } catch { }
-        }
-      }
-    } catch { }
-    return null;
-  });
+  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
   // Cache last lat/lng to avoid unnecessary API calls
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
   // Fallback logic for marker and address (sync with dashboard)
@@ -195,7 +164,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     "Device Address";
 
   // Strictly follow real sensor device location (from GSM/GPS data)
-  // Fallback to last known location in localStorage if sensor is not yet available
   useEffect(() => {
     let sites;
     let lastLoc;
@@ -223,40 +191,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           : null,
       };
 
-      // Persist to localStorage for immediate loading on next visit
-      localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
     }
-    // 2. Fallback to cached location if no live reading yet
+    // 2. If no live reading yet, keep map marker empty to avoid fake location pins
     else {
-      let cachedSet = false;
-      if (typeof window !== "undefined") {
-        const last = localStorage.getItem('lastGpsLocation');
-        if (last) {
-          try {
-            const parsed = JSON.parse(last);
-            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
-              sites = [{
-                id: 'device-gps',
-                name: parsed.siteName || 'Last Known Location',
-                lat: parsed.lat,
-                lng: parsed.lng,
-              }];
-              lastLoc = parsed;
-              setGpsSites(sites);
-              setLastSavedLocation(lastLoc);
-              cachedSet = true;
-            }
-          } catch { }
-        }
-      }
-
-      // 3. If no live/cached location, keep map marker empty to avoid fake location pins
-      if (!cachedSet) {
-        setGpsSites(undefined);
-        setLastSavedLocation(null);
-      }
+      setGpsSites(undefined);
+      setLastSavedLocation(null);
     }
   }, [latestReading, siteData.siteName]);
 
@@ -266,9 +207,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       const resolvedAddress = latestReading.address.trim();
       if (gpsAddress !== resolvedAddress) {
         setGpsAddress(resolvedAddress);
-      }
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('sg_global_latest_address', resolvedAddress);
       }
       return;
     }
@@ -282,16 +220,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           if (addr) {
             setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
           }
-          // Sync with dashboard global cache
-          if (addr && addr !== "Unnamed Road" && addr !== "Device Address") {
-            localStorage.setItem('sg_global_latest_address', addr);
-            localStorage.setItem('lastGpsLocation', JSON.stringify({
-              lat,
-              lng,
-              siteName: gpsSites[0].name || siteData.siteName || 'Device Location',
-              address: addr,
-            }));
-          }
         });
       }
     } else {
@@ -299,29 +227,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       lastLatLngRef.current = null;
     }
   }, [gpsSites, latestReading, gpsAddress, siteData.siteName]);
-  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
-  useEffect(() => {
-    if (!gpsAddress && typeof window !== 'undefined') {
-      const keys = Object.keys(localStorage);
-      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
-      if (addressKey) {
-        const cached = localStorage.getItem(addressKey);
-        if (cached && cached !== "Device Address") {
-          setGpsAddress(cached);
-          localStorage.setItem('sg_global_latest_address', cached);
-        }
-      }
-
-      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
-      if (siteNameKey && siteData.siteName === "Matina Site") {
-        const cachedName = localStorage.getItem(siteNameKey);
-        if (cachedName && cachedName !== "Site Name") {
-          setSiteData((prev: any) => ({ ...prev, siteName: cachedName }));
-          localStorage.setItem('sg_global_latest_siteName', cachedName);
-        }
-      }
-    }
-  }, [gpsAddress, siteData.siteName]);
 
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
@@ -373,7 +278,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             if (typeof data.address === 'string' && data.address.trim()) {
               const resolvedAddress = data.address.trim();
               setGpsAddress(resolvedAddress);
-              localStorage.setItem('sg_global_latest_address', resolvedAddress);
             }
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[LandingPage] Fallback coords found, setting gpsSites and lastSavedLocation');
@@ -392,7 +296,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   lng: fallbackLoc.lng,
                 },
               ]);
-              localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
             } else {
               console.log('[LandingPage] NO fallback coords, clearing map');
             }
@@ -407,14 +310,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           if (typeof data?.address === 'string' && data.address.trim()) {
             const resolvedAddress = data.address.trim();
             setGpsAddress(resolvedAddress);
-            localStorage.setItem('sg_global_latest_address', resolvedAddress);
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-              localStorage.setItem('lastGpsLocation', JSON.stringify({
+              setLastSavedLocation({
                 lat: data.latitude,
                 lng: data.longitude,
                 siteName: data.siteName || siteData.siteName || 'Device Location',
                 address: resolvedAddress,
-              }));
+              });
             }
           }
           setBackendOk(true);

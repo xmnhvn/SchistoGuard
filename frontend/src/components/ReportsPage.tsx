@@ -105,28 +105,8 @@ export const ReportsPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showMobileReportList, setShowMobileReportList] = useState(false);
 
-  // Persistent Global Cache for Header Metadata
-  const [address, setAddress] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      const globalCached = localStorage.getItem('sg_global_latest_address');
-      if (globalCached && globalCached !== 'Device Address') return globalCached;
-
-      const lastLocation = localStorage.getItem('lastGpsLocation');
-      if (lastLocation) {
-        try {
-          const parsed = JSON.parse(lastLocation);
-          if (typeof parsed.address === 'string' && parsed.address.trim() && parsed.address.trim() !== 'Device Address') {
-            return parsed.address.trim();
-          }
-        } catch { }
-      }
-    }
-    return null;
-  });
-  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('sg_global_latest_siteName');
-    return null;
-  });
+  const [address, setAddress] = useState<string | null>(null);
+  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   React.useEffect(() => {
@@ -166,47 +146,20 @@ export const ReportsPage: React.FC = () => {
       if (data) {
         if (data.siteName && data.siteName !== "Site Name") {
           setDynamicSiteName(data.siteName);
-          localStorage.setItem('sg_global_latest_siteName', data.siteName);
         }
         if (typeof data.address === 'string' && data.address.trim()) {
           const resolvedAddress = data.address.trim();
           setAddress(resolvedAddress);
-          localStorage.setItem('sg_global_latest_address', resolvedAddress);
         } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           reverseGeocode(data.latitude, data.longitude).then(addr => {
             if (addr) {
               setAddress(addr);
-              localStorage.setItem('sg_global_latest_address', addr);
             }
           });
         }
       }
     }).catch(() => { });
   }, []);
-
-  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
-  React.useEffect(() => {
-    if (!address && typeof window !== 'undefined') {
-      const keys = Object.keys(localStorage);
-      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
-      if (addressKey) {
-        const cached = localStorage.getItem(addressKey);
-        if (cached) {
-          setAddress(cached);
-          localStorage.setItem('sg_global_latest_address', cached);
-        }
-      }
-
-      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
-      if (siteNameKey && !dynamicSiteName) {
-        const cachedName = localStorage.getItem(siteNameKey);
-        if (cachedName) {
-          setDynamicSiteName(cachedName);
-          localStorage.setItem('sg_global_latest_siteName', cachedName);
-        }
-      }
-    }
-  }, [address, dynamicSiteName]);
 
   const yearOptions = React.useMemo(() => {
     const currentYear = new Date().getFullYear();

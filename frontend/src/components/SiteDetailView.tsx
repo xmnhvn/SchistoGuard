@@ -41,58 +41,18 @@ export function SiteDetailView({
   console.log("SiteDetailView mounted");
   const [animate] = useState(!_siteDetailFirstLoadDone);
   const [graphReady, setGraphReady] = useState(false);
-  // Load last selected timeRange from localStorage if available
-  const getInitialTimeRange = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('sg_timeRange') || "24h";
-    }
-    return "24h";
-  };
-  const [timeRange, setTimeRange] = useState(getInitialTimeRange());
+  const [timeRange, setTimeRange] = useState("24h");
   const [alerts, setAlerts] = useState<any[]>([]);
-  // Cache history in memory and localStorage
-  const [history, setHistory] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('sg_history');
-      if (cached) {
-        try { return JSON.parse(cached); } catch { return []; }
-      }
-    }
-    return [];
-  });
+  const [history, setHistory] = useState<any[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   // Ref for chart container
   const chartRef = useRef<HTMLDivElement>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setExporting] = useState(false);
-
-  // Persistent Address & Dynamic Name Cache per SiteId
-  const getCachedData = (key: string) => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(`sg_${siteId}_${key}`);
-      if (cached && cached !== 'Device Address') return cached;
-    }
-    return null;
-  };
-
-  const [address, setAddress] = useState<string | null>(() => getCachedData('address'));
-  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => getCachedData('siteName'));
+  const [address, setAddress] = useState<string | null>(null);
+  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(siteName !== "Site Name" ? siteName : null);
   const [animationEnabled, setAnimationEnabled] = useState(true);
-
-  // Persistence triggers
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (address) {
-        localStorage.setItem(`sg_${siteId}_address`, address);
-        localStorage.setItem('sg_global_latest_address', address);
-      }
-      if (dynamicSiteName) {
-        localStorage.setItem(`sg_${siteId}_siteName`, dynamicSiteName);
-        localStorage.setItem('sg_global_latest_siteName', dynamicSiteName);
-      }
-    }
-  }, [address, dynamicSiteName, siteId]);
 
   useEffect(() => {
     // Disable entry animation after it's finished to prevent glitches on re-renders
@@ -116,17 +76,14 @@ export function SiteDetailView({
         // to prevent overwriting custom Admin settings.
         if (latestWithGps.siteName && latestWithGps.siteName !== "Site Name") {
           setDynamicSiteName(latestWithGps.siteName);
-          localStorage.setItem('sg_global_latest_siteName', latestWithGps.siteName);
         }
         if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
           const resolvedAddress = latestWithGps.address.trim();
           setAddress(resolvedAddress);
-          localStorage.setItem('sg_global_latest_address', resolvedAddress);
         } else {
           reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
             if (addr) {
               setAddress(addr);
-              localStorage.setItem('sg_global_latest_address', addr);
             }
           });
         }
@@ -295,9 +252,7 @@ export function SiteDetailView({
       apiGet("/api/sensors/history")
         .then(data => {
           if (Array.isArray(data)) {
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('sg_history', JSON.stringify(data));
-            }
+            setHistory(data);
           }
         })
         .catch(err => {
@@ -315,9 +270,6 @@ export function SiteDetailView({
         console.log("Site Details time series data:", data);
         if (Array.isArray(data)) {
           setHistory(data);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('sg_history', JSON.stringify(data));
-          }
         } else {
           setHistory([]);
         }
@@ -450,13 +402,6 @@ export function SiteDetailView({
   };
 
 
-
-  // Save timeRange to localStorage on change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sg_timeRange', timeRange);
-    }
-  }, [timeRange]);
 
   const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : 32;
 

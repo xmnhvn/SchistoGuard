@@ -34,19 +34,7 @@ function getDisplayBarangay(barangay: string, siteName: string) {
   
   if (isUnknown) {
     if (siteName === 'Matina Site') return 'Matina Crossing';
-    
-    // Try to hunt in global cache
-    try {
-      const cachedName = localStorage.getItem('sg_global_latest_siteName');
-      const cachedAddr = localStorage.getItem('sg_global_latest_address');
-      if (cachedName === siteName && cachedAddr) {
-        // Look for the barangay part (usually the second element in OpenStreetMap addresses)
-        const parts = cachedAddr.split(',');
-        if (parts.length > 1) return parts[1].trim();
-        return cachedAddr;
-      }
-    } catch (e) {}
-    
+
     return 'N/A';
   }
   return barangay;
