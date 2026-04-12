@@ -452,6 +452,12 @@ export const ReportsPage: React.FC = () => {
                 {report.summary.riskLevel}
               </td>
             </tr>
+            <tr>
+              <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts Logged</td>
+              <td className="border border-slate-300 px-2 py-1" colSpan={3}>
+                {report.summary.alertsGenerated}
+              </td>
+            </tr>
           </tbody>
         </table>
       </section>
