@@ -13,50 +13,10 @@ let GLOBAL_DEVICE_ADDRESS = null;
 let LAST_GEOCODE_CACHE = {
   latKey: null,
   lngKey: null,
-  latitude: null,
-  longitude: null,
   address: null,
   attemptedAt: 0,
 };
 const GEOCODE_RETRY_COOLDOWN_MS = 60 * 1000;
-const GEOCODE_NEARBY_FALLBACK_METERS = 1200;
-
-function haversineMeters(lat1, lng1, lat2, lng2) {
-  const toRadians = (deg) => (deg * Math.PI) / 180;
-  const earthRadiusMeters = 6371000;
-  const dLat = toRadians(lat2 - lat1);
-  const dLng = toRadians(lng2 - lng1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return earthRadiusMeters * c;
-}
-
-function getNearbyCachedAddress(latitude, longitude) {
-  if (
-    typeof LAST_GEOCODE_CACHE.address !== 'string' ||
-    !LAST_GEOCODE_CACHE.address.trim() ||
-    typeof LAST_GEOCODE_CACHE.latitude !== 'number' ||
-    typeof LAST_GEOCODE_CACHE.longitude !== 'number'
-  ) {
-    return null;
-  }
-
-  const distanceMeters = haversineMeters(
-    latitude,
-    longitude,
-    LAST_GEOCODE_CACHE.latitude,
-    LAST_GEOCODE_CACHE.longitude
-  );
-
-  return distanceMeters <= GEOCODE_NEARBY_FALLBACK_METERS
-    ? LAST_GEOCODE_CACHE.address.trim()
-    : null;
-}
 
 // Helper to load settings from DB
 async function loadSettingsFromDB() {
@@ -117,8 +77,6 @@ async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
   LAST_GEOCODE_CACHE = {
     latKey,
     lngKey,
-    latitude,
-    longitude,
     address: null,
     attemptedAt: now,
   };
@@ -137,11 +95,6 @@ async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
     console.error('[reverseGeocode] Failed in resolveAddressFromCoords:', err.message);
   }
 
-  const nearbyCached = getNearbyCachedAddress(latitude, longitude);
-  if (nearbyCached) {
-    return nearbyCached;
-  }
-
   return fallback || GLOBAL_DEVICE_ADDRESS || null;
 }
 
@@ -149,33 +102,6 @@ async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
 router.get('/interval-config', async (req, res) => {
   await loadSettingsFromDB();
   res.json({ intervalMs: AGGREGATE_INTERVAL_MS, deviceName: GLOBAL_DEVICE_NAME });
-});
-
-router.get('/reverse-geocode', async (req, res) => {
-  const latitude = Number(req.query.lat);
-  const longitude = Number(req.query.lng);
-
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid coordinates',
-      address: null,
-    });
-  }
-
-  try {
-    const address = await resolveAddressFromCoords(latitude, longitude, null);
-    return res.json({
-      success: Boolean(address),
-      address: address || null,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to reverse geocode coordinates',
-      address: null,
-    });
-  }
 });
 
 // API: Update interval config

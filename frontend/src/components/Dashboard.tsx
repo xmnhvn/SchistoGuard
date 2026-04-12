@@ -17,6 +17,7 @@ import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
+import { formatAddress } from "../utils/addressFormat";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -227,7 +228,15 @@ export function Dashboard({
     (typeof gpsAddress === "string" && gpsAddress.trim() ? gpsAddress.trim() : null) ||
     null;
 
-  const displayAddress = primaryAddress || "Address unavailable";
+  const displayAddress = formatAddress({
+    fullAddress: primaryAddress,
+    locality: primaryAddress,
+    area: siteData?.area,
+    barangay: siteData?.barangay,
+    municipality: siteData?.municipality,
+    province: siteData?.province,
+    fallback: "Address unavailable",
+  });
 
   useEffect(() => {
     const check = () => {
@@ -820,7 +829,7 @@ export function Dashboard({
             display: "flex",
             flexDirection: "column",
             gap: 16,
-            overflow: "hidden",
+            overflowY: "auto",
             pointerEvents: "none",
           } as React.CSSProperties}
         >
@@ -1425,7 +1434,7 @@ export function Dashboard({
           display: "flex",
           flexDirection: "column",
           padding: panelPadding,
-          overflow: "hidden",
+          overflowY: "auto",
           zIndex: 2,
         } as React.CSSProperties}
       >
@@ -1799,7 +1808,6 @@ function SensorMiniCard({
   fixedHeight,
   fadeIn,
   isNarrow,
-  style,
 }: {
   label: string;
   iconSrc: string;
@@ -1812,7 +1820,6 @@ function SensorMiniCard({
   fixedHeight?: number;
   fadeIn?: boolean;
   isNarrow?: boolean;
-  style?: React.CSSProperties;
 }) {
 
   const S = SENSOR_CARD_STYLE;
@@ -1841,7 +1848,6 @@ function SensorMiniCard({
         height: cardHeight as any,
         boxSizing: "border-box",
         fontFamily: POPPINS,
-        ...style
       }}
     >
       {/* Status dot — pulses when active, grey+static when no data */}
