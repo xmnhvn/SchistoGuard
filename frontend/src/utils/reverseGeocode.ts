@@ -1,52 +1,22 @@
 // Utility function to reverse geocode lat/lng to address using OpenStreetMap Nominatim API
 function buildBestAvailableAddress(data: any): string | null {
-  const address = data?.address;
-  if (!address || typeof address !== 'object') return null;
+  const locality = typeof data?.locality === 'string' && data.locality.trim() ? data.locality.trim() : null;
+  const city = typeof data?.city === 'string' && data.city.trim() ? data.city.trim() : null;
+  const region = typeof data?.principalSubdivision === 'string' && data.principalSubdivision.trim() ? data.principalSubdivision.trim() : null;
+  const province = Array.isArray(data?.localityInfo?.administrative)
+    ? data.localityInfo.administrative.find((item: any) => item && item.adminLevel === 4 && typeof item.name === 'string' && item.name.trim())?.name?.trim() || null
+    : null;
+  const country = typeof data?.countryName === 'string' && data.countryName.trim()
+    ? data.countryName.trim().replace(/\s*\(the\)\s*$/i, '')
+    : null;
 
-  const pickFirst = (...values: unknown[]): string | null => {
-    for (const value of values) {
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
-      }
-    }
-    return null;
-  };
-
-  const locality = pickFirst(
-    address.barangay,
-    address.village,
-    address.suburb,
-    address.neighbourhood,
-    address.hamlet,
-  );
-
-  const municipality = pickFirst(
-    address.municipality,
-    address.town,
-    address.city,
-    address.county,
-  );
-
-  const region = pickFirst(address.state, address.region);
-  const country = pickFirst(address.country);
-
-  const parts = [
-    locality,
-    municipality,
-    region,
-    country,
-  ]
-    .filter((v: unknown): v is string => typeof v === 'string' && v.trim().length > 0)
-    .map((v) => v.trim());
-
-  if (parts.length === 0) return null;
-
-  return Array.from(new Set(parts)).join(', ');
+  const parts = [locality, city, province, region, country].filter(Boolean) as string[];
+  return parts.length > 0 ? Array.from(new Set(parts)).join(', ') : null;
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${lat}&lon=${lng}`;
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json'
@@ -54,7 +24,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
     });
     if (!response.ok) return null;
     const data = await response.json();
-    return (data?.display_name ?? null) || buildBestAvailableAddress(data);
+    return buildBestAvailableAddress(data);
   } catch (e) {
     return null;
   }
