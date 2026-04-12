@@ -342,10 +342,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         background: rgba(0,0,0,0.02) !important;
         border: 1px solid rgba(0,0,0,0.03) !important;
         border-radius: 14px !important;
-        padding: 12px 16px !important;
-        height: 48px !important;
+        padding: ${windowWidth < 1600 ? "8px 14px" : "12px 16px"} !important;
+        height: ${windowWidth < 1600 ? "38px" : "48px"} !important;
         font-family: ${POPPINS} !important;
-        font-size: 14px !important;
+        font-size: ${windowWidth < 1600 ? "13px" : "14px"} !important;
         transition: all 0.2s ease !important;
       }
       .custom-input:focus {
@@ -478,7 +478,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         }}>
           <div>
             <h1 style={{
-              fontSize: isMobile ? 20 : 26,
+              fontSize: isMobile ? 20 : (windowWidth < 1600 ? 18 : 26),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -488,9 +488,9 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               Admin Settings
             </h1>
             <p style={{
-              fontSize: 12.5,
+              fontSize: windowWidth < 1600 ? 11 : 12.5,
               color: "#7b8a9a",
-              margin: "4px 0 0",
+              margin: windowWidth < 1600 ? "2px 0 0" : "4px 0 0",
               fontFamily: POPPINS,
               fontWeight: 400
             }}>
@@ -509,13 +509,13 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           }}>
             <div className="glass-card premium-shadow" style={{
               borderRadius: 28,
-              padding: 32,
+              padding: windowWidth < 1600 ? 24 : 32,
               border: "1px solid rgba(0,0,0,0.03)",
               minHeight: "100%"
             }}>
-              <div style={{ marginBottom: 28 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
-                <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
+              <div style={{ marginBottom: windowWidth < 1600 ? 20 : 28 }}>
+                <h2 style={{ fontSize: windowWidth < 1600 ? 16 : 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
+                <p style={{ fontSize: windowWidth < 1600 ? 11 : 13, color: "#7b8a9a", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
               </div>
 
               <form
@@ -577,8 +577,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       background: "rgba(0,0,0,0.02)",
                       border: "1px solid rgba(0,0,0,0.03)",
                       borderRadius: 14,
-                      padding: "12px 16px",
-                      height: 48,
+                      padding: windowWidth < 1600 ? "8px 14px" : "12px 16px",
+                      height: windowWidth < 1600 ? 38 : 48,
                       fontFamily: POPPINS
                     }}>
                       <SelectValue />
@@ -660,7 +660,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           }}>
             <div className="glass-card premium-shadow" style={{
               borderRadius: 28,
-              padding: 32,
+              padding: windowWidth < 1600 ? 24 : 32,
               border: "1px solid rgba(0,0,0,0.03)",
               minHeight: "100%"
             }}>

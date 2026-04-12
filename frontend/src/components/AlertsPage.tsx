@@ -216,7 +216,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <h1 style={{
-            fontSize: isMobile ? 18 : 20,
+            fontSize: isMobile ? 18 : (windowWidth < 1600 ? 16 : 22),
             fontWeight: 700,
             color: "#1a2a3a",
             margin: 0,
@@ -242,9 +242,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           )}
           {!isMobile && (
             <p style={{
-              fontSize: 12,
+              fontSize: windowWidth < 1600 ? 11 : 12,
               color: "#7b8a9a",
-              margin: "2px 0 0",
+              margin: windowWidth < 1600 ? "1px 0 0" : "2px 0 0",
               fontFamily: POPPINS,
             }}>Monitor and manage water quality alerts across all sites</p>
           )}
@@ -258,9 +258,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         }}>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger style={{
-              width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-              minWidth: 0, borderRadius: 10, fontFamily: POPPINS, fontSize: 12,
-              border: "1px solid #e2e5ea", background: "#fff", height: 34,
+              width: isMobile ? undefined : (windowWidth < 1600 ? 120 : 148),
+              flex: isMobile ? 1 : undefined,
+              minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
+              fontSize: windowWidth < 1600 ? 11 : 12,
+              border: "1px solid #e2e5ea", background: "#fff",
+              height: windowWidth < 1600 ? 30 : 34,
             }}>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -272,9 +275,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           </Select>
           <Select value={filterLevel} onValueChange={setFilterLevel}>
             <SelectTrigger style={{
-              width: isMobile ? undefined : 140, flex: isMobile ? 1 : undefined,
-              minWidth: 0, borderRadius: 10, fontFamily: POPPINS, fontSize: 12,
-              border: "1px solid #e2e5ea", background: "#fff", height: 34,
+              width: isMobile ? undefined : (windowWidth < 1600 ? 120 : 140),
+              flex: isMobile ? 1 : undefined,
+              minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
+              fontSize: windowWidth < 1600 ? 11 : 12,
+              border: "1px solid #e2e5ea", background: "#fff",
+              height: windowWidth < 1600 ? 30 : 34,
             }}>
               <SelectValue placeholder="All Levels" />
             </SelectTrigger>

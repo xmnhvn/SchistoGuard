@@ -49,10 +49,10 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
     <aside
       style={{
         position: "fixed",
-        top: expanded ? (isPhone ? 0 : (vw < 1600 ? 48 : 60)) : (isPhone ? 0 : (vw < 1600 ? 48 : 60)),
+        top: expanded ? (isPhone ? 0 : (vw < 1700 ? 64 : 72)) : (isPhone ? 0 : (vw < 1700 ? 64 : 72)),
         left: 0,
         bottom: 0,
-        width: expanded ? 240 : (vw < 1600 ? 64 : 70),
+        width: expanded ? 240 : (vw < 1700 ? 72 : 80),
         background: "#fff",
         borderRight: "1px solid #e8e8e8",
         display: "flex",
@@ -76,26 +76,29 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
               onClick={() => onNavigate?.(item.view)}
               style={{
                 width: "100%",
-                height: vw < 1600 ? 38 : 44,
-                borderRadius: vw < 1600 ? 8 : 10,
+                height: vw < 1700 ? 48 : 54,
+                borderRadius: vw < 1700 ? 12 : 14,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "flex-start",
-                gap: vw < 1600 ? 10 : 12,
-                padding: vw < 1600 ? "0 0 0 12px" : "0 0 0 16px",
+                justifyContent: "flex-start", // Always flex-start for smooth padding transitions
+                gap: vw < 1700 ? 12 : 14, // Keep gap constant so text doesn't snap
+                padding: expanded 
+                  ? (vw < 1700 ? "0 0 0 16px" : "0 0 0 20px") 
+                  : (vw < 1700 ? "0 0 0 15px" : "0 0 0 17px"), // Exact padding to perfectly center the icon when collapsed (52px/60px button width)
                 background: isActive
                   ? "linear-gradient(135deg, #357D86, #026366)"
                   : "transparent",
                 border: "none",
                 cursor: "pointer",
                 flexShrink: 0,
-                transition: "background 0.25s",
+                overflow: "hidden", // Ensure expanding text doesn't wrap/glitch during transition
+                transition: "background 0.25s, padding 0.3s cubic-bezier(0.4,0,0.2,1)",
               }}
             >
               <div
                 style={{
-                  width: vw < 1600 ? 16 : 22,
-                  height: vw < 1600 ? 16 : 22,
+                  width: vw < 1700 ? 22 : 26,
+                  height: vw < 1700 ? 22 : 26,
                   flexShrink: 0,
                   background: isActive ? "#fff" : "#ABABAB",
                   WebkitMaskImage: `url('${item.iconSrc}')`,
@@ -244,8 +247,8 @@ export function NavigationHeader({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: vw < 1600 ? "0 20px 0 0" : "0 28px 0 0",
-        height: vw < 1600 ? 48 : 60,
+        padding: vw < 1700 ? "0 20px 0 0" : "0 28px 0 0",
+        height: vw < 1700 ? 64 : 72,
         position: "fixed",
         top: 0,
         left: 0,
@@ -262,7 +265,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 60, height: 76, flexShrink: 0,
+                width: 60, height: vw < 1600 ? 52 : 76, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
@@ -288,7 +291,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 70, height: 60, flexShrink: 0,
+                width: 70, height: vw < 1700 ? 64 : 72, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: 0,
               }}
@@ -592,8 +595,8 @@ export function NavigationProvider({
       <main
         style={{
           position: "fixed",
-          top: vw < 1600 ? 48 : 60,
-          left: isPhone ? 0 : (drawerOpen ? 240 : (vw < 1600 ? 64 : 70)),
+          top: vw < 1700 ? 64 : 72,
+          left: isPhone ? 0 : (drawerOpen ? 240 : (vw < 1700 ? 72 : 80)),
           right: 0,
           bottom: 0,
           overflowY: "auto",

@@ -79,7 +79,7 @@ export function AlertItem({
           display: "flex",
           overflow: "hidden",
           position: "relative",
-          minHeight: useColumnLayout ? 0 : 80,
+          minHeight: useColumnLayout ? 0 : (windowWidth < 1600 ? 70 : 80),
           borderRadius: 12,
           border: isSelected ? `1px solid ${accentColor}` : "1px solid #f1f5f9",
           background: isSelected
@@ -101,11 +101,11 @@ export function AlertItem({
             flexDirection: useColumnLayout ? "column" : "row",
             alignItems: useColumnLayout ? "flex-start" : "center",
             justifyContent: "space-between",
-            paddingLeft: compact ? 12 : (useColumnLayout ? 14 : 16), 
-            paddingRight: compact ? 12 : (useColumnLayout ? 14 : 16), 
-            paddingTop: compact ? 12 : (useColumnLayout ? 14 : 16), 
-            paddingBottom: compact ? 12 : (useColumnLayout ? 14 : 16), 
-            gap: compact ? 10 : (useColumnLayout ? 12 : 20) 
+            paddingLeft: compact ? 12 : (useColumnLayout ? 14 : (windowWidth < 1600 ? 12 : 16)), 
+            paddingRight: compact ? 12 : (useColumnLayout ? 14 : (windowWidth < 1600 ? 12 : 16)), 
+            paddingTop: compact ? 12 : (useColumnLayout ? 14 : (windowWidth < 1600 ? 12 : 16)), 
+            paddingBottom: compact ? 12 : (useColumnLayout ? 14 : (windowWidth < 1600 ? 12 : 16)), 
+            gap: compact ? 10 : (useColumnLayout ? 12 : (windowWidth < 1600 ? 16 : 20)) 
           }}
         >
           <div className="flex flex-1 flex-col justify-center overflow-hidden w-full">
@@ -118,7 +118,7 @@ export function AlertItem({
                 letterSpacing: "-0.01em",
                 lineHeight: "1.4",
                 margin: 0,
-                fontSize: compact ? "12px" : (isMobile ? "12.5px" : "13.5px"),
+                fontSize: compact ? "12px" : (isMobile ? "12.5px" : (windowWidth < 1600 ? "13px" : "13.5px")),
                 display: "-webkit-box",
                 WebkitLineClamp: useColumnLayout ? 3 : 2,
                 WebkitBoxOrient: "vertical",
