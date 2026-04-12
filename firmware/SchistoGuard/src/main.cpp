@@ -486,7 +486,14 @@ void connectWiFiAndSetupOTA() {
       json += "\"turbCalVoltClear\":" + String(turbCalVoltClear, 4) + ",";
       json += "\"turbCalNtuClear\":" + String(turbCalNtuClear, 2) + ",";
       json += "\"turbCalVoltCloudy\":" + String(turbCalVoltCloudy, 4) + ",";
-      json += "\"turbCalNtuCloudy\":" + String(turbCalNtuCloudy, 2);
+      json += "\"turbCalNtuCloudy\":" + String(turbCalNtuCloudy, 2) + ",";
+      if (gpsIsValid()) {
+        json += "\"latitude\":" + String(getLatitude(), 6) + ",";
+        json += "\"longitude\":" + String(getLongitude(), 6);
+      } else {
+        json += "\"latitude\":null,";
+        json += "\"longitude\":null";
+      }
       json += "}";
       server.send(200, "application/json", json);
     });

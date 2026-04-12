@@ -27,18 +27,30 @@ async function fetchAndSaveSensorData() {
       useHostname = false; // Stay on IP
     }
     
+    const latitude = (typeof data.latitude === 'number' && Number.isFinite(data.latitude))
+      ? data.latitude
+      : null;
+    const longitude = (typeof data.longitude === 'number' && Number.isFinite(data.longitude))
+      ? data.longitude
+      : null;
+
     // Prepare sensor data for backend
     const sensorData = {
       temperature: data.tempValid ? data.temperature : null,
       ph: data.phConnected ? data.pH : null,
       turbidity: data.turbConnected ? data.turbidity : null,
       device_ip: useHostname ? ESP32_HOSTNAME : ESP32_IP_FALLBACK,
+      latitude,
+      longitude,
       siteName: SITE_NAME
     };
     
     // Send to backend
     await axios.post(BACKEND_URL, sensorData);
-    console.log(`✓ Sensor data saved: T=${sensorData.temperature}°C pH=${sensorData.ph} Turb=${sensorData.turbidity}NTU`);
+    const gpsTag = latitude !== null && longitude !== null
+      ? ` GPS=${latitude.toFixed(6)},${longitude.toFixed(6)}`
+      : ' GPS=unavailable';
+    console.log(`✓ Sensor data saved: T=${sensorData.temperature}°C pH=${sensorData.ph} Turb=${sensorData.turbidity}NTU${gpsTag}`);
     
   } catch (error) {
     // If hostname fails, try IP fallback
