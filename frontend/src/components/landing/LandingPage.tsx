@@ -653,14 +653,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {screenWidth >= 640 ? (
                 <CTAButton
                   variant="primary"
-                  size="sm"
                   onClick={onEnterApp}
                   ariaLabel="Start monitoring"
-                  className="flex rounded-full px-5 py-2 border-2 transition-all duration-300 shadow-lg"
+                  className="flex rounded-full items-center justify-center border-2 transition-all duration-300 shadow-lg"
                   style={{
                     fontFamily: 'Poppins, sans-serif',
                     fontWeight: 600,
-                    fontSize: '14px',
+                    fontSize: '13px',
+                    height: '36px',
+                    padding: '0 16px',
                     backgroundColor: isMonitoringHovered ? '#FFFFFF' : '#357D86',
                     color: isMonitoringHovered ? '#357D86' : '#FFFFFF',
                     borderColor: '#357D86',
