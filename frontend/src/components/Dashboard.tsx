@@ -231,7 +231,7 @@ export function Dashboard({
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
-    "Device Address";
+    "Address unavailable";
 
   useEffect(() => {
     const check = () => {

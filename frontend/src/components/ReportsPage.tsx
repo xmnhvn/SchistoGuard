@@ -414,7 +414,7 @@ export const ReportsPage: React.FC = () => {
       <header className="mb-6 border-b border-slate-200 pb-6 text-center">
         <PDFHeader
           dynamicSiteName={dynamicSiteName || 'System Summary Report'}
-          address={address || 'Device Address'}
+          address={address || 'Address unavailable'}
         />
       </header>
 

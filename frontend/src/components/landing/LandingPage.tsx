@@ -161,7 +161,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
-    "Device Address";
+    "Address unavailable";
 
   // Strictly follow real sensor device location (from GSM/GPS data)
   useEffect(() => {

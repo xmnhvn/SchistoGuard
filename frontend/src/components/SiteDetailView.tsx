@@ -215,6 +215,10 @@ export function SiteDetailView({
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
+  const displayAddress =
+    (typeof address === "string" && address.trim() ? address.trim() : null) ||
+    (typeof barangay === "string" && barangay.trim() ? barangay.trim() : null) ||
+    "Address unavailable";
 
 
 
@@ -600,7 +604,7 @@ export function SiteDetailView({
                     lineHeight: 1.3,
                     display: "block",
                     whiteSpace: "normal",
-                  }}>{address || "Device Address"}</span>
+                  }}>{displayAddress}</span>
                 )}
                 {!mobileResponsive && (
                   <p style={{
@@ -610,7 +614,7 @@ export function SiteDetailView({
                     fontFamily: POPPINS,
                     minHeight: windowWidth < 1600 ? "16px" : "20px",
                     transition: 'opacity 0.3s ease-in-out'
-                  }}>{address || "Device Address"}</p>
+                  }}>{displayAddress}</p>
                 )}
               </div>
             </div>

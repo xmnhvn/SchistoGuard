@@ -10,6 +10,13 @@ const reverseGeocode = require("../utils/reverseGeocode");
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "Site Name";
 let GLOBAL_DEVICE_ADDRESS = null;
+let LAST_GEOCODE_CACHE = {
+  latKey: null,
+  lngKey: null,
+  address: null,
+  attemptedAt: 0,
+};
+const GEOCODE_RETRY_COOLDOWN_MS = 60 * 1000;
 
 // Helper to load settings from DB
 async function loadSettingsFromDB() {
@@ -50,9 +57,34 @@ async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
     return fallback;
   }
 
+  if (typeof fallback === 'string' && fallback.trim()) {
+    return fallback.trim();
+  }
+
+  const latKey = Number(latitude).toFixed(6);
+  const lngKey = Number(longitude).toFixed(6);
+  const now = Date.now();
+
+  if (LAST_GEOCODE_CACHE.latKey === latKey && LAST_GEOCODE_CACHE.lngKey === lngKey) {
+    if (typeof LAST_GEOCODE_CACHE.address === 'string' && LAST_GEOCODE_CACHE.address.trim()) {
+      return LAST_GEOCODE_CACHE.address;
+    }
+    if (now - LAST_GEOCODE_CACHE.attemptedAt < GEOCODE_RETRY_COOLDOWN_MS) {
+      return null;
+    }
+  }
+
+  LAST_GEOCODE_CACHE = {
+    latKey,
+    lngKey,
+    address: null,
+    attemptedAt: now,
+  };
+
   try {
     const geocoded = await reverseGeocode(latitude, longitude);
     if (geocoded) {
+      LAST_GEOCODE_CACHE.address = geocoded;
       GLOBAL_DEVICE_ADDRESS = geocoded;
       saveAddressToDB(geocoded).catch((err) => {
         console.error('[settings] Failed to save device_address:', err.message);
@@ -438,6 +470,12 @@ router.post("/", async (req, res) => {
   if (typeof latitude === 'number' && typeof longitude === 'number' && latitude !== null && longitude !== null) {
     address = await reverseGeocode(latitude, longitude);
     if (address) {
+      LAST_GEOCODE_CACHE = {
+        latKey: Number(latitude).toFixed(6),
+        lngKey: Number(longitude).toFixed(6),
+        address,
+        attemptedAt: Date.now(),
+      };
       GLOBAL_DEVICE_ADDRESS = address;
       saveAddressToDB(address).catch(err => {
         console.error('[settings] Failed to save device_address:', err.message);
