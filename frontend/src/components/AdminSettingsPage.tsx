@@ -132,9 +132,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const isNarrowDesktop = windowWidth < 1600;
   const isWeb = windowWidth >= 1100;
 
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const pad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
   const gap = isMobile ? 16 : isTablet ? 18 : 24;
 
   const fetchUsers = async () => {
@@ -350,7 +351,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       }
       .custom-select-trigger {
         padding: 12px 16px !important;
-        height: 48px !important;
+        height: isNarrowDesktop ? 40 : 48px !important;
         border-radius: 14px !important;
         font-size: 14px !important;
         border: 1px solid #e2e5ea !important;
@@ -369,6 +370,17 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       .custom-scrollbar::-webkit-scrollbar-thumb {
         background: rgba(0,0,0,0.1);
         border-radius: 10px;
+      }
+      .pill-button {
+        border-radius: 100px !important;
+        transition: all 0.2s ease !important;
+      }
+      .pill-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(53, 125, 134, 0.25);
+      }
+      .pill-button:active {
+        transform: translateY(0);
       }
       .user-card-item {
         transition: all 0.2s ease !important;
@@ -485,7 +497,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         }}>
           <div>
             <h1 style={{
-              fontSize: 26,
+              fontSize: isMobile ? 22 : (isNarrowDesktop ? 19 : 22),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -495,9 +507,9 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               Admin Settings
             </h1>
             <p style={{
-              fontSize: 12.5,
+              fontSize: isNarrowDesktop ? 11 : 12,
               color: "#7b8a9a",
-              margin: "4px 0 0",
+              margin: isNarrowDesktop ? "1px 0 0" : "4px 0 0",
               fontFamily: POPPINS,
               fontWeight: 400
             }}>
@@ -515,15 +527,15 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             animation: animate ? "contentSlideIn 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
           }}>
             <div className="glass-card premium-shadow" style={{
-              borderRadius: 28,
-              padding: 32,
+              borderRadius: isNarrowDesktop ? 24 : 28,
+              padding: isNarrowDesktop ? 24 : 32,
               border: "1px solid rgba(0,0,0,0.03)",
               minHeight: "100%",
               animation: animate ? "cardFadeIn 0.6s cubic-bezier(0.22,1,0.36,1) 0.2s both" : "none"
             }}>
-              <div style={{ marginBottom: 28 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
-                <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
+              <div style={{ marginBottom: isNarrowDesktop ? 20 : 28 }}>
+                <h2 style={{ fontSize: isNarrowDesktop ? 18 : 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
+                <p style={{ fontSize: isNarrowDesktop ? 12 : 13, color: "#7b8a9a", fontFamily: POPPINS, marginTop: 4 }}>Add new users to the system.</p>
               </div>
 
               <form
@@ -531,7 +543,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 name="create_user_form"
                 action="#"
                 onSubmit={handleCreateAccount}
-                className="space-y-6"
+                className={isNarrowDesktop ? "space-y-4" : "space-y-6"}
                 autoComplete="on"
               >
                 <div className="grid grid-cols-2 gap-4">
@@ -643,17 +655,14 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 {error && <div style={{ padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13, fontFamily: POPPINS }}>{error}</div>}
 
 
-                <Button type="submit" className="w-full" disabled={loading} style={{
+                <Button type="submit" className="w-full pill-button" disabled={loading} style={{
                   background: "#357D86",
                   color: "#fff",
-                  borderRadius: 14,
-                  padding: "16px",
-                  height: "auto",
-                  fontSize: 15,
+                  height: isNarrowDesktop ? 34 : 38,
+                  fontSize: isNarrowDesktop ? 12 : 13,
                   fontWeight: 600,
                   fontFamily: POPPINS,
                   border: "none",
-                  boxShadow: "0 4px 12px rgba(53, 125, 134, 0.2)",
                   marginTop: 8
                 }}>
                   {loading ? "Creating Account..." : "Create Account"}
@@ -667,15 +676,15 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             animation: animate ? "contentSlideIn 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
           }}>
             <div className="glass-card premium-shadow" style={{
-              borderRadius: 28,
-              padding: 32,
+              borderRadius: isNarrowDesktop ? 24 : 28,
+              padding: isNarrowDesktop ? 24 : 32,
               border: "1px solid rgba(0,0,0,0.03)",
               minHeight: "100%"
             }}>
               <div style={{ marginBottom: 28 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Existing User Accounts</h2>
+                <h2 style={{ fontSize: isNarrowDesktop ? 18 : 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Existing User Accounts</h2>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 4 }}>
-                  <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS, margin: 0 }}>
+                  <p style={{ fontSize: isNarrowDesktop ? 12 : 13, color: "#7b8a9a", fontFamily: POPPINS, margin: 0 }}>
                     {users.length} user{users.length !== 1 ? "s" : ""} registered
                   </p>
                   {searchQuery && (
@@ -748,7 +757,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       key={item.id}
                       className="group user-card-item"
                       style={{
-                        padding: "16px 20px",
+                        padding: isNarrowDesktop ? "12px 14px" : "16px 20px",
                         borderRadius: 18,
                         border: "1px solid rgba(0,0,0,0.04)",
                         display: "flex",
@@ -761,10 +770,13 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
                         {!isMobile && (
                           <div style={{
-                            width: 44, height: 44, borderRadius: 14,
+                            width: isNarrowDesktop ? 38 : 44, 
+                            height: isNarrowDesktop ? 38 : 44, 
+                            borderRadius: 14,
                             background: "linear-gradient(135deg, #357D86 0%, #2a636b 100%)",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: POPPINS,
+                            color: "#fff", fontSize: isNarrowDesktop ? 14 : 16, 
+                            fontWeight: 700, fontFamily: POPPINS,
                             boxShadow: "0 4px 12px rgba(53, 125, 134, 0.15)",
                             flexShrink: 0
                           }}>
@@ -819,6 +831,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           <DropdownMenuItem
                             onClick={() => openUpdatePasswordModal(item)}
                             className="cursor-pointer"
+                            style={{ fontSize: isNarrowDesktop ? 12 : 13 }}
                           >
                             <KeyRound className="mr-2 h-4 w-4" />
                             <span>Update Password</span>
@@ -827,6 +840,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           <DropdownMenuItem
                             onClick={() => handleDeleteUser(item.id)}
                             className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                            style={{ fontSize: isNarrowDesktop ? 12 : 13 }}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             <span>Delete User</span>
@@ -882,8 +896,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         </Dialog>
 
         <div className="glass-card premium-shadow w-full" style={{
-          borderRadius: 28,
-          padding: 32,
+          borderRadius: isNarrowDesktop ? 24 : 28,
+          padding: isNarrowDesktop ? 24 : 32,
           marginTop: gap,
           border: "1px solid rgba(0,0,0,0.03)",
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
@@ -904,7 +918,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           ) : auditLogs.length === 0 ? (
             <div style={{ marginTop: 16, color: "#94a3b8", fontSize: 13 }}>No audit events yet.</div>
           ) : (
-            <div className="custom-scrollbar" style={{ marginTop: 16, maxHeight: 280, overflowY: "auto", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14 }}>
+            <div className="custom-scrollbar" style={{ marginTop: 16, maxHeight: isNarrowDesktop ? 220 : 280, overflowY: "auto", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14 }}>
               {auditLogs.map((log, idx) => (
                 <div
                   key={log.id}
@@ -927,14 +941,20 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           )}
 
           <div style={{ marginTop: 12 }}>
-            <Button type="button" variant="outline" onClick={fetchAuditLogs}>Refresh Logs</Button>
+            <Button type="button" variant="outline" className="pill-button" onClick={fetchAuditLogs} style={{
+              height: isNarrowDesktop ? 32 : 36,
+              fontSize: isNarrowDesktop ? 11 : 12,
+              borderRadius: 100,
+              fontFamily: POPPINS,
+              padding: "0 16px"
+            }}>Refresh Logs</Button>
           </div>
         </div>
 
         {/* Generalized Interval Settings Section - Moved to bottom */}
         <div className="glass-card premium-shadow w-full" style={{
-          borderRadius: 28,
-          padding: 32,
+          borderRadius: isNarrowDesktop ? 24 : 28,
+          padding: isNarrowDesktop ? 24 : 32,
           marginTop: gap,
           position: "relative",
           border: "1px solid rgba(0,0,0,0.03)",
@@ -950,7 +970,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               value={deviceName}
               onChange={e => setDeviceName(e.target.value)}
               placeholder="e.g. Mang Jose's Fish Pond"
-              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", flex: 1, maxWidth: 260, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, outline: "none" }}
+              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", flex: 1, maxWidth: 260, height: isNarrowDesktop ? 34 : 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, outline: "none" }}
               className="focus:ring-2 focus:ring-[#357D86]/10 focus:border-[#357D86]/40 transition-all duration-200"
             />
           </div>
@@ -963,12 +983,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               step={1}
               value={intervalValue}
               onChange={e => setIntervalValue(Number(e.target.value))}
-              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", width: 70, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS }}
+              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", width: 70, height: isNarrowDesktop ? 34 : 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS }}
             />
             <select
               value={intervalUnit}
               onChange={e => setIntervalUnit(e.target.value)}
-              style={{ padding: "0 8px", borderRadius: 10, border: "1px solid #ddd", width: 110, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
+              style={{ padding: "0 8px", borderRadius: 10, border: "1px solid #ddd", width: 110, height: isNarrowDesktop ? 34 : 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
             >
               <option value="sec">seconds</option>
               <option value="min">minutes</option>
@@ -977,7 +997,19 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           </div>
           <button
             onClick={handleSaveInterval}
-            style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
+            className="pill-button"
+            style={{ 
+              background: "#357D86", 
+              color: "#fff", 
+              borderRadius: 100, 
+              padding: isNarrowDesktop ? "0 20px" : "0 24px", 
+              height: isNarrowDesktop ? 34 : 38,
+              fontWeight: 600, 
+              border: "none", 
+              fontFamily: POPPINS, 
+              fontSize: isNarrowDesktop ? 12.5 : 14,
+              cursor: "pointer"
+            }}
           >
             Save Settings
           </button>
