@@ -51,7 +51,7 @@ interface Resident {
   siteName: string;
   name: string;
   phone: string;
-  role: "resident" | "bhw" | "lgu";
+  role: "resident" | "bhw" | "municipal_health_officer";
   createdAt?: string;
 }
 
@@ -83,7 +83,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const [formData, setFormData] = useState<{
     name: string;
     phone: string;
-    role: "resident" | "bhw" | "lgu";
+    role: "resident" | "bhw" | "municipal_health_officer";
   }>({
     name: "",
     phone: "",
@@ -399,13 +399,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const roleColors = {
     resident: "bg-blue-100 text-blue-800",
     bhw: "bg-green-100 text-green-800",
-    lgu: "bg-purple-100 text-purple-800",
+    municipal_health_officer: "bg-purple-100 text-purple-800",
   };
 
   const roleLabels = {
     resident: "Resident",
     bhw: "BHW",
-    lgu: "LGU",
+    municipal_health_officer: "Municipal Health Officer",
   };
 
   return (
@@ -539,7 +539,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   <SelectItem value="all">All Designations</SelectItem>
                   <SelectItem value="resident">Residents</SelectItem>
                   <SelectItem value="bhw">BHW</SelectItem>
-                  <SelectItem value="lgu">LGU</SelectItem>
+                  <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -659,7 +659,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             { label: "Total Recipients", value: residents.length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
             { label: "Residents", value: residents.filter((r) => r.role === "resident").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#4478f6" }} />, color: "#4478f6", bg: "#ebf2ff" },
             { label: "BHW", value: residents.filter((r) => r.role === "bhw").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#2cc865" }} />, color: "#2cc865", bg: "#eafff1" },
-            { label: "LGU", value: residents.filter((r) => r.role === "lgu").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#a559ea" }} />, color: "#a559ea", bg: "#f6eeff" },
+            { label: "Municipal Health Officer", value: residents.filter((r) => r.role === "municipal_health_officer").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#a559ea" }} />, color: "#a559ea", bg: "#f6eeff" },
           ].map((card, i) => (
             <div key={card.label} style={{
               background: "#fff",
@@ -1094,7 +1094,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   <SelectContent style={{ fontFamily: POPPINS }}>
                     <SelectItem value="resident">Resident</SelectItem>
                     <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                    <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                    <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1237,7 +1237,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   <SelectContent style={{ fontFamily: POPPINS }}>
                     <SelectItem value="resident">Resident</SelectItem>
                     <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                    <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                    <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

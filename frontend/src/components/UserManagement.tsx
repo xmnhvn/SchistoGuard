@@ -16,7 +16,7 @@ interface User {
   name: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'health_worker' | 'resident' | 'lgu_official';
+  role: 'admin' | 'health_worker' | 'resident' | 'municipal_health_officer';
   status: 'active' | 'inactive' | 'pending';
   barangay?: string;
   municipality: string;
@@ -60,7 +60,7 @@ export const UserManagement: React.FC = () => {
       id: 'user-002',
       name: 'Engr. Juan dela Cruz',
       email: 'juan.delacruz@tacloban.gov.ph',
-      role: 'lgu_official',
+      role: 'municipal_health_officer',
       status: 'active',
       municipality: 'Tacloban City',
       joinDate: '2024-10-22',
@@ -104,7 +104,7 @@ export const UserManagement: React.FC = () => {
     admin: 'System Admin',
     health_worker: 'Health Worker',
     resident: 'Community Resident',
-    lgu_official: 'LGU Official'
+    municipal_health_officer: 'Municipal Health Officer'
   };
 
   const stats: UserStats = {
@@ -114,7 +114,7 @@ export const UserManagement: React.FC = () => {
       admin: users.filter(u => u.role === 'admin').length,
       health_worker: users.filter(u => u.role === 'health_worker').length,
       resident: users.filter(u => u.role === 'resident').length,
-      lgu_official: users.filter(u => u.role === 'lgu_official').length,
+      municipal_health_officer: users.filter(u => u.role === 'municipal_health_officer').length,
     },
     recentJoins: users.filter(u => {
       const joinDate = new Date(u.joinDate);
@@ -649,7 +649,7 @@ export const UserManagement: React.FC = () => {
                 <SelectContent style={{ fontFamily: POPPINS }}>
                   <SelectItem value="resident">Community Resident</SelectItem>
                   <SelectItem value="health_worker">Health Worker</SelectItem>
-                  <SelectItem value="lgu_official">LGU Official</SelectItem>
+                  <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                   <SelectItem value="admin">System Admin</SelectItem>
                 </SelectContent>
               </Select>

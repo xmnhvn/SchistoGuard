@@ -180,7 +180,7 @@ export function LoginForm({ onLogin, onForgotPassword, onCancel }: LoginFormProp
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bhw">Barangay Health Worker</SelectItem>
-                  <SelectItem value="lgu">LGU Officer</SelectItem>
+                  <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                   <SelectItem value="admin">System Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -382,7 +382,7 @@ export function SignupForm({ onSignup, onShowLogin }: SignupFormProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bhw">Barangay Health Worker</SelectItem>
-                  <SelectItem value="lgu">LGU Officer</SelectItem>
+                  <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
