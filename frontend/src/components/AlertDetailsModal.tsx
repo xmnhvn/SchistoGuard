@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,9 @@ import {
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { CheckCircle2, Clock } from "lucide-react";
+import { useResponsiveScale } from "../utils/useResponsiveScale";
+import { apiGet } from "../utils/api";
+import { reverseGeocode } from "../utils/reverseGeocode";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -67,24 +70,171 @@ export function AlertDetailsModal({
   onOpenChange,
   onAcknowledge,
 }: AlertDetailsModalProps) {
+  const { isMobile, isTablet, isSmallLaptop } = useResponsiveScale();
+  const smallLaptopModal = !isMobile && !isTablet && isSmallLaptop;
+  const compactDesktopModal = !isMobile && !isTablet;
+  const [resolvedAddress, setResolvedAddress] = useState<string>("");
+  const [resolvedSiteName, setResolvedSiteName] = useState<string>("");
+
+  const isValidAddress = (value: unknown) => {
+    const text = typeof value === "string" ? value.trim() : "";
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    return !["n/a", "unknown", "unnamed road", "device address", "null", "undefined"].includes(lower);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveAddress = async () => {
+      if (!alert) {
+        setResolvedAddress("");
+        setResolvedSiteName("");
+        return;
+      }
+
+      const siteKey = (alert.site_key || alert.siteKey || "").toString().trim();
+      const siteName = (alert.siteName || alert.site_name || "").toString().trim().toLowerCase();
+      const directSiteName = (alert.siteName || alert.site_name || "").toString().trim();
+      if (directSiteName) {
+        setResolvedSiteName(directSiteName);
+      } else {
+        setResolvedSiteName("Unknown Site");
+      }
+
+      const fallbackLabel = getDisplayBarangay(alert.barangay, alert.siteName);
+      const directAddress = isValidAddress(alert.address)
+        ? alert.address
+        : (isValidAddress(fallbackLabel) ? fallbackLabel : "");
+
+      if (directAddress) {
+        setResolvedAddress(directAddress);
+        return;
+      }
+
+      const alertLat = Number(alert.latitude);
+      const alertLng = Number(alert.longitude);
+      if (Number.isFinite(alertLat) && Number.isFinite(alertLng)) {
+        const fromAlertCoords = await reverseGeocode(alertLat, alertLng);
+        if (!cancelled && isValidAddress(fromAlertCoords)) {
+          setResolvedAddress(fromAlertCoords as string);
+          return;
+        }
+      }
+
+      try {
+        const sites = await apiGet("/api/sensors/sites");
+        if (cancelled) return;
+        if (Array.isArray(sites) && sites.length > 0) {
+          const matchedSite = sites.find((site: any) => {
+            const rowKey = (site.site_key || "").toString().trim();
+            const rowName = (site.site_name || "").toString().trim().toLowerCase();
+            return (siteKey && rowKey === siteKey) || (siteName && rowName === siteName);
+          });
+
+          if (matchedSite) {
+            const preferredSiteName = (matchedSite.site_name || matchedSite.address || matchedSite.site_key || "").toString().trim();
+            if (!cancelled && preferredSiteName) {
+              setResolvedSiteName(preferredSiteName);
+            }
+
+            const siteAddress = (matchedSite.address || "").toString().trim();
+            if (isValidAddress(siteAddress)) {
+              setResolvedAddress(siteAddress);
+              return;
+            }
+            const lat = Number(matchedSite.latitude);
+            const lng = Number(matchedSite.longitude);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              const fromSiteCoords = await reverseGeocode(lat, lng);
+              if (!cancelled && isValidAddress(fromSiteCoords)) {
+                setResolvedAddress(fromSiteCoords as string);
+                return;
+              }
+            }
+          }
+        }
+      } catch {
+      }
+
+      if (siteKey) {
+        try {
+          const history = await apiGet(`/api/sensors/history?siteKey=${encodeURIComponent(siteKey)}`);
+          if (cancelled) return;
+          if (Array.isArray(history) && history.length > 0) {
+            const latestWithAddress = [...history].reverse().find((row: any) => isValidAddress(row.address));
+            if (latestWithAddress) {
+              setResolvedAddress((latestWithAddress.address || "").toString().trim());
+              return;
+            }
+            const latestWithCoords = [...history].reverse().find((row: any) =>
+              Number.isFinite(Number(row.latitude)) && Number.isFinite(Number(row.longitude))
+            );
+            if (latestWithCoords) {
+              const fromHistoryCoords = await reverseGeocode(
+                Number(latestWithCoords.latitude),
+                Number(latestWithCoords.longitude)
+              );
+              if (!cancelled && isValidAddress(fromHistoryCoords)) {
+                setResolvedAddress(fromHistoryCoords as string);
+                return;
+              }
+            }
+          }
+        } catch {
+        }
+      }
+
+      if (!cancelled) {
+        setResolvedSiteName((alert.siteName || alert.site_name || "Unknown Site").toString().trim() || "Unknown Site");
+        setResolvedAddress("N/A");
+      }
+    };
+
+    resolveAddress();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    alert?.id,
+    alert?.address,
+    alert?.barangay,
+    alert?.siteName,
+    alert?.site_name,
+    alert?.site_key,
+    alert?.siteKey,
+    alert?.latitude,
+    alert?.longitude,
+  ]);
+
   if (!alert) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl" style={{ fontFamily: POPPINS }}>
+      <DialogContent
+        className="sm:max-w-2xl"
+        style={{
+          fontFamily: POPPINS,
+          width: isMobile ? "92vw" : undefined,
+          maxWidth: smallLaptopModal ? 700 : (compactDesktopModal ? 760 : 960),
+          maxHeight: smallLaptopModal ? "92vh" : (compactDesktopModal ? "90vh" : "calc(100vh - 5rem)"),
+          overflow: "hidden",
+          transform: smallLaptopModal ? "translateY(-50%) scale(0.88)" : (compactDesktopModal ? "translateY(-50%) scale(0.94)" : undefined),
+        }}
+      >
         <DialogHeader>
-          <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: 20, marginBottom: 20 }}>
+          <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: compactDesktopModal ? 10 : 20, marginBottom: compactDesktopModal ? 10 : 20, fontSize: compactDesktopModal ? 24 : undefined }}>
             Alert Details
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 sm:gap-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7">
+        <div className="flex flex-col gap-4 sm:gap-6" style={{ paddingBottom: compactDesktopModal ? 2 : 0 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             <div>
               <h4 className="font-semibold text-[14px] sm:text-[15px] mb-2 sm:mb-3 color-[#1a2a3a]">
                 Alert Information
               </h4>
-              <table style={{ width: "100%", fontSize: 13 }}>
+              <table style={{ width: "100%", fontSize: compactDesktopModal ? 12 : 13 }}>
                 <tbody>
                   <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Alert ID:</td>
@@ -121,15 +271,17 @@ export function AlertDetailsModal({
               <h4 className="font-semibold text-[14px] sm:text-[15px] mb-2 sm:mb-3 color-[#1a2a3a]">
                 Site Information
               </h4>
-              <table style={{ width: "100%", fontSize: 13 }}>
+              <table style={{ width: "100%", fontSize: compactDesktopModal ? 12 : 13 }}>
                 <tbody>
                   <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Site:</td>
-                    <td style={{ fontWeight: 600 }}>{alert.siteName}</td>
+                    <td style={{ fontWeight: 600 }}>{resolvedSiteName || alert.siteName || alert.site_name || "Unknown Site"}</td>
                   </tr>
                   <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Address:</td>
-                    <td style={{ wordBreak: "break-word", fontWeight: 600 }}>{alert.address || getDisplayBarangay(alert.barangay, alert.siteName)}</td>
+                    <td style={{ wordBreak: "break-word", fontWeight: 600 }}>
+                      {resolvedAddress || "N/A"}
+                    </td>
                   </tr>
                   <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
@@ -140,11 +292,11 @@ export function AlertDetailsModal({
             </div>
           </div>
 
-          <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: 12 }}>
-            <h4 style={{ fontWeight: 500, marginBottom: 8, fontSize: 13.5 }}>Alert Message</h4>
+          <div style={{ borderTop: "1px solid #f0f1f3", paddingTop: compactDesktopModal ? 8 : 12 }}>
+            <h4 style={{ fontWeight: 500, marginBottom: 8, fontSize: compactDesktopModal ? 12.5 : 13.5 }}>Alert Message</h4>
             <p style={{
-              fontSize: 12.5, color: "#64748b", background: "#f9fafb",
-              borderRadius: 10, padding: 12, marginBottom: 16,
+              fontSize: compactDesktopModal ? 11.5 : 12.5, color: "#64748b", background: "#f9fafb",
+              borderRadius: 10, padding: compactDesktopModal ? 9 : 12, marginBottom: compactDesktopModal ? 10 : 16,
               lineHeight: "1.5",
               wordBreak: "break-word"
             }}>
@@ -163,6 +315,7 @@ export function AlertDetailsModal({
               <Button
                 onClick={() => onAcknowledge(alert.id, alert)}
                 className="bg-schistoguard-teal hover:bg-schistoguard-teal/90 px-6 py-5 sm:px-8 sm:py-6 rounded-xl flex items-center gap-3 shadow-md transition-all active:scale-95 text-sm sm:text-base font-semibold"
+                style={{ minHeight: compactDesktopModal ? 40 : undefined }}
               >
                 <CheckCircle2 className="w-5 h-5" />
                 <span>Acknowledge Alert</span>
@@ -176,7 +329,7 @@ export function AlertDetailsModal({
                 animation: "scaleInModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both"
               }}>
                 <CheckCircle2 className="w-6 h-6" />
-                <span style={{ fontSize: 16, fontWeight: 700 }}>Acknowledged</span>
+                <span style={{ fontSize: compactDesktopModal ? 14 : 16, fontWeight: 700 }}>Acknowledged</span>
               </div>
             )}
           </div>

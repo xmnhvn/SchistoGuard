@@ -129,10 +129,12 @@ export const ReportsPage: React.FC = () => {
   const {
     isMobile,
     isTablet,
+    isSmallLaptop,
     pad,
     controlFontSize,
     controlHeight,
   } = useResponsiveScale();
+  const smallLaptopModal = !isMobile && !isTablet && isSmallLaptop;
 
   const previewDocumentRef = React.useRef<HTMLElement | null>(null);
 
@@ -1226,32 +1228,34 @@ export const ReportsPage: React.FC = () => {
           style={{
             width: isMobile ? "90vw" : 420,
             maxWidth: isMobile ? "90vw" : 420,
-            borderRadius: 24,
+            borderRadius: smallLaptopModal ? 20 : 24,
             padding: 0,
             overflow: "hidden",
             border: "none",
             fontFamily: POPPINS,
+            maxHeight: smallLaptopModal ? "95vh" : undefined,
+            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
           }}
           className="p-0"
         >
           {/* Modal Header */}
           <div style={{
-            padding: "16px 20px",
+            padding: smallLaptopModal ? "14px 18px" : "16px 20px",
             borderBottom: "1px solid #eef0f2",
             display: "flex", justifyContent: "space-between", alignItems: "center",
             flexShrink: 0,
           }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+            <h2 style={{ fontSize: smallLaptopModal ? 15 : 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
               Create New Report
             </h2>
             <DialogClose asChild>
               <button
                 onClick={() => setShowCreateReport(false)}
                 style={{
-                  width: 32,
-                  height: 32,
-                  minWidth: 32,
-                  minHeight: 32,
+                  width: smallLaptopModal ? 30 : 32,
+                  height: smallLaptopModal ? 30 : 32,
+                  minWidth: smallLaptopModal ? 30 : 32,
+                  minHeight: smallLaptopModal ? 30 : 32,
                   borderRadius: "50%",
                   border: "none",
                   background: "#f3f4f6",
@@ -1269,28 +1273,28 @@ export const ReportsPage: React.FC = () => {
                 }}
                 className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
-                <X size={18} />
+                  <X size={smallLaptopModal ? 16 : 18} />
               </button>
             </DialogClose>
           </div>
 
-          <div style={{ padding: "20px", overflowY: "auto", maxHeight: "80vh" }}>
-            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24, fontFamily: POPPINS }}>
+          <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
+            <p style={{ fontSize: smallLaptopModal ? 12 : 13, color: "#64748b", marginBottom: smallLaptopModal ? 18 : 24, fontFamily: POPPINS }}>
               Select the type of report you want to generate.
             </p>
 
-            <form className="space-y-6" onSubmit={handleCreateReport}>
-              <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Type</div>
+            <form className="space-y-6" style={{ rowGap: smallLaptopModal ? 16 : undefined }} onSubmit={handleCreateReport}>
+              <div style={{ marginBottom: smallLaptopModal ? 10 : 12, fontSize: smallLaptopModal ? 12 : 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Type</div>
               <div className="flex flex-wrap gap-2">
                 {['weekly', 'monthly', 'quarterly', 'annual'].map((type) => (
                   <button
                     key={type}
                     type="button"
                     style={{
-                      height: 50,
-                      padding: "0 20px",
+                      height: smallLaptopModal ? 44 : 50,
+                      padding: smallLaptopModal ? "0 16px" : "0 20px",
                       borderRadius: 100,
-                      fontSize: 14,
+                      fontSize: smallLaptopModal ? 13 : 14,
                       fontWeight: 600,
                       fontFamily: POPPINS,
                       transition: "all 0.2s",
@@ -1316,8 +1320,8 @@ export const ReportsPage: React.FC = () => {
                 <Select value={selectedSiteKey || undefined} onValueChange={setSelectedSiteKey} disabled={creating}>
                   <SelectTrigger
                     style={{
-                      height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                      padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
+                      height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                      padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
                       boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                     }}
                     className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
@@ -1337,7 +1341,7 @@ export const ReportsPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS, marginTop: 24 }}>Report Period</div>
+              <div style={{ marginBottom: smallLaptopModal ? 10 : 12, fontSize: smallLaptopModal ? 12 : 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS, marginTop: smallLaptopModal ? 16 : 24 }}>Report Period</div>
 
               {reportType === 'weekly' && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1346,8 +1350,8 @@ export const ReportsPage: React.FC = () => {
                     <input
                       type="date"
                       style={{
-                        height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
+                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
                       className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
@@ -1361,8 +1365,8 @@ export const ReportsPage: React.FC = () => {
                     <input
                       type="date"
                       style={{
-                        height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
+                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
                       className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
@@ -1380,8 +1384,8 @@ export const ReportsPage: React.FC = () => {
                   <input
                     type="month"
                     style={{
-                      height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                      padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
+                      height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                      padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
                       boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                     }}
                     className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-semibold"
@@ -1397,8 +1401,8 @@ export const ReportsPage: React.FC = () => {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Year</label>
                     <select
                       style={{
-                        height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
+                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
                       className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
@@ -1416,8 +1420,8 @@ export const ReportsPage: React.FC = () => {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Quarter</label>
                     <select
                       style={{
-                        height: 42, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: "0 14px", fontSize: 13, fontFamily: POPPINS, outline: "none",
+                        height: smallLaptopModal ? 40 : 42, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 12 : 13, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
                       className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
@@ -1438,7 +1442,7 @@ export const ReportsPage: React.FC = () => {
               )}
 
               <div style={{ 
-                marginTop: 24, 
+                marginTop: smallLaptopModal ? 16 : 24, 
                 display: "flex", 
                 flexDirection: "column", 
                 gap: 12 
@@ -1446,8 +1450,8 @@ export const ReportsPage: React.FC = () => {
                 <button
                   type="submit"
                   style={{
-                    height: 50, width: "100%", padding: "0 24px", borderRadius: 100,
-                    fontSize: 16, fontWeight: 600, fontFamily: POPPINS,
+                    height: smallLaptopModal ? 44 : 50, width: "100%", padding: smallLaptopModal ? "0 18px" : "0 24px", borderRadius: 100,
+                    fontSize: smallLaptopModal ? 14 : 16, fontWeight: 600, fontFamily: POPPINS,
                     background: "#357D86", color: "#fff", border: "none",
                     flexShrink: 0,
                     boxShadow: "0 4px 14px rgba(53, 125, 134, 0.25)"
@@ -1471,8 +1475,8 @@ export const ReportsPage: React.FC = () => {
                   <button
                     type="button"
                     style={{
-                      height: 50, width: "100%", padding: "0 24px", borderRadius: 100,
-                      fontSize: 16, fontWeight: 500, fontFamily: POPPINS,
+                      height: smallLaptopModal ? 44 : 50, width: "100%", padding: smallLaptopModal ? "0 18px" : "0 24px", borderRadius: 100,
+                      fontSize: smallLaptopModal ? 14 : 16, fontWeight: 500, fontFamily: POPPINS,
                       background: "#ffffff", color: "#64748b", 
                       border: "1px solid #e2e8f0",
                       flexShrink: 0

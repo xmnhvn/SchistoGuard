@@ -95,8 +95,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     isMobile,
     isNarrowDesktop,
     isCompact,
+    isSmallLaptop,
     pad,
   } = useResponsiveScale();
+  const smallLaptopModal = !isMobile && isSmallLaptop;
 
   // Fetch residents
   useEffect(() => {
@@ -796,32 +798,34 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           style={{
             width: isMobile ? "90vw" : 420,
             maxWidth: isMobile ? "90vw" : 420,
-            borderRadius: 24,
+            borderRadius: smallLaptopModal ? 20 : 24,
             padding: 0,
             overflow: "hidden",
             border: "none",
             fontFamily: POPPINS,
+            maxHeight: smallLaptopModal ? "95vh" : undefined,
+            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
           }}
           className="p-0"
         >
           {/* Modal Header */}
           <div style={{
-            padding: "16px 20px",
+            padding: smallLaptopModal ? "14px 18px" : "16px 20px",
             borderBottom: "1px solid #eef0f2",
             display: "flex", justifyContent: "space-between", alignItems: "center",
             flexShrink: 0,
           }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+            <h2 style={{ fontSize: smallLaptopModal ? 15 : 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
               Add Alert Recipient
             </h2>
             <DialogClose asChild>
               <button
                 onClick={() => setIsAddDialogOpen(false)}
                 style={{
-                  width: 32,
-                  height: 32,
-                  minWidth: 32,
-                  minHeight: 32,
+                  width: smallLaptopModal ? 30 : 32,
+                  height: smallLaptopModal ? 30 : 32,
+                  minWidth: smallLaptopModal ? 30 : 32,
+                  minHeight: smallLaptopModal ? 30 : 32,
                   borderRadius: "50%",
                   border: "none",
                   background: "#f3f4f6",
@@ -839,15 +843,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 }}
                 className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
-                <X size={18} />
+                <X size={smallLaptopModal ? 16 : 18} />
               </button>
             </DialogClose>
           </div>
 
-          <div style={{ padding: "20px", overflowY: "auto", maxHeight: "80vh" }}>
+          <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Name</Label>
+                <Label htmlFor="name-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Name</Label>
                 <Input
                   id="name-add"
                   value={formData.name}
@@ -855,11 +859,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g., Maria Santos"
-                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
                 />
               </div>
               <div>
-                <Label htmlFor="phone-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Phone Number</Label>
+                <Label htmlFor="phone-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Phone Number</Label>
                 <Input
                   id="phone-add"
                   value={formData.phone}
@@ -867,21 +871,21 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, phone: e.target.value }))
                   }
                   placeholder="e.g., +639171234567"
-                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
                 />
-                <p style={{ fontSize: 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
+                <p style={{ fontSize: smallLaptopModal ? 10.5 : 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
                   Format: +639XXXXXXXXX / 09XXXXXXXXX
                 </p>
               </div>
               <div>
-                <Label htmlFor="role-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Designation</Label>
+                <Label htmlFor="role-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Designation</Label>
                 <Select
                   value={formData.role}
                   onValueChange={(value: any) =>
                     setFormData((prev) => ({ ...prev, role: value }))
                   }
                 >
-                  <SelectTrigger id="role-add" style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                  <SelectTrigger id="role-add" style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent style={{ fontFamily: POPPINS }}>
@@ -893,16 +897,17 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </div>
             </div>
 
-            <div style={{ marginTop: 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
+            <div style={{ marginTop: smallLaptopModal ? 16 : 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
               <Button
                 onClick={handleAddResident}
                 style={{
                   backgroundColor: "#357D86",
                   color: "#fff",
                   borderRadius: 100,
-                  height: 42,
+                  height: smallLaptopModal ? 40 : 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
+                  fontSize: smallLaptopModal ? 13 : undefined,
                   flex: 1
                 }}
               >
@@ -913,9 +918,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 onClick={() => setIsAddDialogOpen(false)}
                 style={{
                   borderRadius: 100,
-                  height: 42,
+                  height: smallLaptopModal ? 40 : 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
+                  fontSize: smallLaptopModal ? 13 : undefined,
                   flex: 1,
                   border: "1px solid #e2e5ea",
                   color: "#64748b"
@@ -935,32 +941,34 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           style={{
             width: isMobile ? "90vw" : 420,
             maxWidth: isMobile ? "90vw" : 420,
-            borderRadius: 24,
+            borderRadius: smallLaptopModal ? 20 : 24,
             padding: 0,
             overflow: "hidden",
             border: "none",
             fontFamily: POPPINS,
+            maxHeight: smallLaptopModal ? "95vh" : undefined,
+            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
           }}
           className="p-0"
         >
           {/* Modal Header */}
           <div style={{
-            padding: "16px 20px",
+            padding: smallLaptopModal ? "14px 18px" : "16px 20px",
             borderBottom: "1px solid #eef0f2",
             display: "flex", justifyContent: "space-between", alignItems: "center",
             flexShrink: 0,
           }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+            <h2 style={{ fontSize: smallLaptopModal ? 15 : 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
               Edit Alert Recipient
             </h2>
             <DialogClose asChild>
               <button
                 onClick={() => setIsEditDialogOpen(false)}
                 style={{
-                  width: 32,
-                  height: 32,
-                  minWidth: 32,
-                  minHeight: 32,
+                  width: smallLaptopModal ? 30 : 32,
+                  height: smallLaptopModal ? 30 : 32,
+                  minWidth: smallLaptopModal ? 30 : 32,
+                  minHeight: smallLaptopModal ? 30 : 32,
                   borderRadius: "50%",
                   border: "none",
                   background: "#f3f4f6",
@@ -978,15 +986,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 }}
                 className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
-                <X size={18} />
+                <X size={smallLaptopModal ? 16 : 18} />
               </button>
             </DialogClose>
           </div>
 
-          <div style={{ padding: "20px", overflowY: "auto", maxHeight: "80vh" }}>
+          <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Name</Label>
+                <Label htmlFor="name-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Name</Label>
                 <Input
                   id="name-edit"
                   value={formData.name}
@@ -994,11 +1002,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g., Maria Santos"
-                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
                 />
               </div>
               <div>
-                <Label htmlFor="phone-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Phone Number</Label>
+                <Label htmlFor="phone-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Phone Number</Label>
                 <Input
                   id="phone-edit"
                   value={formData.phone}
@@ -1006,21 +1014,21 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, phone: e.target.value }))
                   }
                   placeholder="e.g., +639171234567"
-                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
                 />
-                <p style={{ fontSize: 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
+                <p style={{ fontSize: smallLaptopModal ? 10.5 : 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
                   Format: +639XXXXXXXXX
                 </p>
               </div>
               <div>
-                <Label htmlFor="role-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 8, display: "block" }}>Designation</Label>
+                <Label htmlFor="role-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Designation</Label>
                 <Select
                   value={formData.role}
                   onValueChange={(value: any) =>
                     setFormData((prev) => ({ ...prev, role: value }))
                   }
                 >
-                  <SelectTrigger id="role-edit" style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                  <SelectTrigger id="role-edit" style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent style={{ fontFamily: POPPINS }}>
@@ -1032,16 +1040,17 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </div>
             </div>
 
-            <div style={{ marginTop: 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
+            <div style={{ marginTop: smallLaptopModal ? 16 : 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
               <Button
                 onClick={handleEditResident}
                 style={{
                   backgroundColor: "#357D86",
                   color: "#fff",
                   borderRadius: 100,
-                  height: 42,
+                  height: smallLaptopModal ? 40 : 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
+                  fontSize: smallLaptopModal ? 13 : undefined,
                   flex: 1
                 }}
               >
@@ -1052,9 +1061,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 onClick={() => setIsEditDialogOpen(false)}
                 style={{
                   borderRadius: 100,
-                  height: 42,
+                  height: smallLaptopModal ? 40 : 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
+                  fontSize: smallLaptopModal ? 13 : undefined,
                   flex: 1,
                   border: "1px solid #e2e5ea",
                   color: "#64748b"
@@ -1074,32 +1084,34 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           style={{
             width: isMobile ? "90vw" : 420,
             maxWidth: isMobile ? "90vw" : 420,
-            borderRadius: 24,
+            borderRadius: smallLaptopModal ? 20 : 24,
             padding: 0,
             overflow: "hidden",
             border: "none",
             fontFamily: POPPINS,
+            maxHeight: smallLaptopModal ? "95vh" : undefined,
+            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
           }}
           className="p-0"
         >
           {/* Modal Header */}
           <div style={{
-            padding: "16px 20px",
+            padding: smallLaptopModal ? "14px 18px" : "16px 20px",
             borderBottom: "1px solid #eef0f2",
             display: "flex", justifyContent: "space-between", alignItems: "center",
             flexShrink: 0,
           }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+            <h2 style={{ fontSize: smallLaptopModal ? 15 : 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
               Delete Alert Recipient?
             </h2>
             <DialogClose asChild>
               <button
                 onClick={() => setIsDeleteDialogOpen(false)}
                 style={{
-                  width: 32,
-                  height: 32,
-                  minWidth: 32,
-                  minHeight: 32,
+                  width: smallLaptopModal ? 30 : 32,
+                  height: smallLaptopModal ? 30 : 32,
+                  minWidth: smallLaptopModal ? 30 : 32,
+                  minHeight: smallLaptopModal ? 30 : 32,
                   borderRadius: "50%",
                   border: "none",
                   background: "#f3f4f6",
@@ -1117,13 +1129,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 }}
                 className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
               >
-                <X size={18} />
+                <X size={smallLaptopModal ? 16 : 18} />
               </button>
             </DialogClose>
           </div>
 
-          <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ fontSize: 14, color: "#64748b", lineHeight: "1.5", fontFamily: POPPINS }}>
+          <div style={{ padding: smallLaptopModal ? "16px" : "20px", display: "flex", flexDirection: "column", gap: smallLaptopModal ? 12 : 16 }}>
+            <p style={{ fontSize: smallLaptopModal ? 13 : 14, color: "#64748b", lineHeight: "1.5", fontFamily: POPPINS }}>
               This will remove <span style={{ fontWeight: 700, color: "#1a2a3a" }}>{selectedResident?.name}</span> from the alert list. This action cannot be undone.
             </p>
 
@@ -1134,9 +1146,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   backgroundColor: "#eb5757",
                   color: "#fff",
                   borderRadius: 12,
-                  height: 42,
+                  height: smallLaptopModal ? 40 : 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
+                  fontSize: smallLaptopModal ? 13 : undefined,
                   flex: 1
                 }}
               >
@@ -1147,9 +1160,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 onClick={() => setIsDeleteDialogOpen(false)}
                 style={{
                   borderRadius: 12,
-                  height: 42,
+                  height: smallLaptopModal ? 40 : 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
+                  fontSize: smallLaptopModal ? 13 : undefined,
                   flex: 1,
                   border: "1px solid #e2e5ea",
                   color: "#64748b"
@@ -1171,17 +1185,19 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               style={{
                 width: isMobile ? "90vw" : 420,
                 maxWidth: isMobile ? "90vw" : 420,
-                borderRadius: 24,
+                borderRadius: smallLaptopModal ? 20 : 24,
                 padding: 0,
                 overflow: "hidden",
                 border: "none",
                 fontFamily: POPPINS,
+                maxHeight: smallLaptopModal ? "95vh" : undefined,
+                transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
               }}
               className="p-0"
             >
               {/* Modal Header */}
               <div style={{
-                padding: "16px 20px",
+                padding: smallLaptopModal ? "14px 18px" : "16px 20px",
                 borderBottom: "1px solid #eef0f2",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 flexShrink: 0,
@@ -1192,7 +1208,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   ) : (
                     <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
                   )}
-                  <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
+                  <h2 style={{ fontSize: smallLaptopModal ? 15 : 16, fontWeight: 700, color: "#1a2a3a", margin: 0, fontFamily: POPPINS }}>
                     {uploadResult.success ? "Upload Successful" : "Upload Failed"}
                   </h2>
                 </div>
@@ -1200,10 +1216,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   <button
                     onClick={() => setUploadResultOpen(false)}
                     style={{
-                      width: 32,
-                      height: 32,
-                      minWidth: 32,
-                      minHeight: 32,
+                      width: smallLaptopModal ? 30 : 32,
+                      height: smallLaptopModal ? 30 : 32,
+                      minWidth: smallLaptopModal ? 30 : 32,
+                      minHeight: smallLaptopModal ? 30 : 32,
                       borderRadius: "50%",
                       border: "none",
                       background: "#f3f4f6",
@@ -1221,7 +1237,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     }}
                     className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
                   >
-                    <X size={18} />
+                      <X size={smallLaptopModal ? 16 : 18} />
                   </button>
                 </DialogClose>
               </div>
