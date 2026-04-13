@@ -43,13 +43,17 @@ export default function App() {
     if (incomingAlerts.length === 0 || typeof window === 'undefined') return;
 
     const criticalCount = incomingAlerts.filter((alert) => alert.level === 'critical').length;
-    const title = criticalCount > 0 ? 'Critical water quality alert' : 'New water quality alert';
-    const body =
+    const rawTitle = criticalCount > 0 ? 'Critical water quality alert' : 'New water quality alert';
+    const rawBody =
       incomingAlerts.length === 1
         ? (incomingAlerts[0].message || 'A new alert was detected by SchistoGuard.')
         : `${incomingAlerts.length} new alerts detected${criticalCount > 0 ? `, including ${criticalCount} critical.` : '.'}`;
 
+    const title = (rawTitle || '').toString().trim() || 'Water quality alert';
+    const body = (rawBody || '').toString().trim() || 'A new alert was detected by SchistoGuard.';
+
     toast.error(title, {
+      id: 'sg-alert-stream-toast',
       description: body,
       duration: 7000,
     });
