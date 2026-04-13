@@ -321,7 +321,7 @@ export function Dashboard({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const dPad = isMobile ? 16 : isTablet ? 24 : 32;
+  const dPad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
 
   useEffect(() => {
     const handler = (e: Event) => {
