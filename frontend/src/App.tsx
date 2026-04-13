@@ -191,12 +191,9 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-
-    const loadingTimeout = window.setTimeout(() => {
-      if (!cancelled) {
-        setLoading(false);
-      }
-    }, 1200);
+    let revealTimeout: number | null = null;
+    const bootStart = Date.now();
+    const MIN_LOADING_MS = 700;
 
     (async () => {
       setLoading(true);
@@ -230,15 +227,22 @@ export default function App() {
         }
       } finally {
         if (!cancelled) {
-          window.clearTimeout(loadingTimeout);
-          setLoading(false);
+          const elapsed = Date.now() - bootStart;
+          const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+          revealTimeout = window.setTimeout(() => {
+            if (!cancelled) {
+              setLoading(false);
+            }
+          }, remaining);
         }
       }
     })();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(loadingTimeout);
+      if (revealTimeout !== null) {
+        window.clearTimeout(revealTimeout);
+      }
     };
   }, []);
 
