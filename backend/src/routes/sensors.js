@@ -488,7 +488,7 @@ router.get("/latest", (req, res) => {
   const sendDisconnectedWithLastLocation = () => {
     console.log('[API /latest] Triggered fallback: querying raw_readings for last GPS location...');
     db.get(
-      "SELECT latitude, longitude, address, timestamp FROM raw_readings WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+      "SELECT latitude, longitude, address, timestamp, site_key FROM raw_readings WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
       [],
       (dbErr, row) => {
         if (dbErr) {
@@ -503,6 +503,7 @@ router.get("/latest", (req, res) => {
           return res.json({
             deviceConnected: false,
             siteName: GLOBAL_DEVICE_NAME,
+            siteKey: row.site_key || null,
             latitude: row.latitude,
             longitude: row.longitude,
             address: row.address || null,
@@ -528,6 +529,7 @@ router.get("/latest", (req, res) => {
       res.json({
         ...latestData,
         siteName: GLOBAL_DEVICE_NAME,
+        siteKey: latestData.siteKey || null,
         deviceConnected: true,
         timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
         address: latestData.address || null

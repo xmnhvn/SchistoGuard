@@ -17,6 +17,7 @@ import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
+import { normalizeSiteMapItems, type SiteMapItem } from "../utils/siteStatus";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -135,6 +136,7 @@ export function Dashboard({
   // Fallback to last known location in localStorage if sensor is not yet available
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
+  const [registeredSites, setRegisteredSites] = useState<SiteMapItem[]>([]);
   
   // Update location whenever latestReading changes
   useEffect(() => {
@@ -255,6 +257,49 @@ export function Dashboard({
       }
     }
   }, [gpsAddress, siteData.siteName]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRegisteredSites = async () => {
+      try {
+        const data = await apiGet('/api/sensors/sites');
+        if (cancelled) return;
+
+        const activeSiteKey = latestReading?.siteKey || null;
+        const items = normalizeSiteMapItems(
+          Array.isArray(data) ? data : [],
+          activeSiteKey,
+          siteData.siteName,
+          latestReading && typeof latestReading.latitude === 'number' && typeof latestReading.longitude === 'number'
+            ? { lat: latestReading.latitude, lng: latestReading.longitude }
+            : lastSavedLocation
+              ? { lat: lastSavedLocation.lat, lng: lastSavedLocation.lng }
+              : null
+        );
+
+        setRegisteredSites(items);
+      } catch {
+        if (!cancelled) setRegisteredSites([]);
+      }
+    };
+
+    fetchRegisteredSites();
+    const interval = setInterval(fetchRegisteredSites, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [latestReading, siteData.siteName, lastSavedLocation]);
+
+  const mapSites = registeredSites.length > 0
+    ? registeredSites
+    : gpsSites?.map((site) => ({
+        ...site,
+        status: deviceConnected ? 'active' as const : 'down' as const,
+        isDevice: true,
+      }));
 
   // Fallback: search history readings for GPS coordinates when latestReading has none
   // This mirrors the logic in SiteDetailView that finds the address from historical data
@@ -867,9 +912,9 @@ export function Dashboard({
       >
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           {compactCards ? (
-            <DashboardMap ref={mapRef} mobileMode={true} interactive={true} sites={gpsSites} />
+            <DashboardMap ref={mapRef} mobileMode={true} interactive={true} sites={mapSites} />
           ) : (
-            <DashboardMap ref={mapRef} sites={gpsSites} />
+            <DashboardMap ref={mapRef} sites={mapSites} />
           )}
         </div>
 
@@ -1050,7 +1095,7 @@ export function Dashboard({
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.8s ease" }}>
-          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={gpsSites} latOffset={-0.00099} />
+          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={mapSites} latOffset={-0.00099} />
         </div>
 
         {/* ── GRADIENT OVERLAY — matches desktop: upper-left teal fading to transparent ── */}
