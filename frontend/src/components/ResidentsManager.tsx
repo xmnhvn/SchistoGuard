@@ -55,6 +55,11 @@ interface Resident {
   createdAt?: string;
 }
 
+interface SiteOption {
+  siteKey: string;
+  siteName: string;
+}
+
 interface ResidentsManagerProps {
   siteName?: string;
   refreshTrigger?: number;
@@ -63,6 +68,9 @@ interface ResidentsManagerProps {
 export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }: ResidentsManagerProps) {
   const animate = !_recipientsFirstLoadDone;
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [siteOptions, setSiteOptions] = useState<SiteOption[]>([]);
+  const [selectedSiteFilter, setSelectedSiteFilter] = useState<string>("all");
+  const [showSiteSelectionWarning, setShowSiteSelectionWarning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showMobileViewAll, setShowMobileViewAll] = useState(false);
@@ -104,21 +112,80 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const smallLaptopModal = !isMobile && isSmallLaptop;
   const sectionSpacing = isNarrowDesktop ? 20 : 24;
 
+  // Keep the local site filter aligned with the current app/site context.
+  useEffect(() => {
+    const incoming = (siteName || "").toString().trim();
+    if (!incoming || incoming === "All Sites") {
+      setSelectedSiteFilter("all");
+      return;
+    }
+
+    const matchedByKey = siteOptions.find((site) => site.siteKey === incoming);
+    if (matchedByKey) {
+      setSelectedSiteFilter(matchedByKey.siteName);
+      return;
+    }
+
+    const matchedByName = siteOptions.find((site) => site.siteName === incoming);
+    if (matchedByName) {
+      setSelectedSiteFilter(matchedByName.siteName);
+      return;
+    }
+
+    // Fallback for not-yet-loaded site lists.
+    setSelectedSiteFilter(incoming);
+  }, [siteName, siteOptions]);
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const data = await apiGet("/api/sensors/sites");
+        if (!Array.isArray(data)) {
+          setSiteOptions([]);
+          return;
+        }
+
+        const options: SiteOption[] = data
+          .map((site: any) => ({
+            siteKey: (site.site_key || "").toString().trim(),
+            siteName: (site.site_name || site.address || site.site_key || "").toString().trim(),
+          }))
+          .filter((site: SiteOption) => site.siteKey && site.siteName)
+          .sort((a: SiteOption, b: SiteOption) => a.siteName.localeCompare(b.siteName));
+
+        setSiteOptions(options);
+      } catch {
+        setSiteOptions([]);
+      }
+    };
+
+    fetchSites();
+  }, []);
+
+  const selectedSiteForOps = selectedSiteFilter === "all" ? null : selectedSiteFilter;
+  const needsSiteSelection = !selectedSiteForOps;
+
+  useEffect(() => {
+    if (!needsSiteSelection) {
+      setShowSiteSelectionWarning(false);
+    }
+  }, [needsSiteSelection]);
+
   // Fetch residents
   useEffect(() => {
     fetchResidents();
     if (!_recipientsFirstLoadDone) {
       setTimeout(() => { _recipientsFirstLoadDone = true; }, 50);
     }
-  }, [siteName, refreshTrigger]);
+  }, [selectedSiteFilter, refreshTrigger]);
 
   const fetchResidents = async () => {
     setLoading(true);
     setError(""); // Clear previous errors
     try {
       let endpoint = "/api/sensors/residents";
-      if (siteName && siteName !== "All Sites") {
-        endpoint += `?siteName=${encodeURIComponent(siteName)}`;
+      if (selectedSiteForOps) {
+        endpoint += `?siteName=${encodeURIComponent(selectedSiteForOps)}`;
       }
 
       console.log("Fetching residents from:", endpoint);
@@ -136,6 +203,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   };
 
   const handleAddResident = async () => {
+    if (!selectedSiteForOps) {
+      setError("Please select a site before adding a recipient");
+      return;
+    }
+
     if (!formData.name || !formData.phone) {
       setError("Name and phone are required");
       return;
@@ -143,7 +215,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
     try {
       await apiPost("/api/sensors/residents", {
-        siteName: siteName === "All Sites" ? "Default" : siteName,
+        siteName: selectedSiteForOps,
         ...formData,
       });
 
@@ -215,6 +287,19 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!selectedSiteForOps) {
+      setUploadResult({
+        success: false,
+        inserted: 0,
+        updated: 0,
+        failed: 0,
+        error: "Please select a site before importing CSV"
+      });
+      setUploadResultOpen(true);
+      e.target.value = '';
+      return;
+    }
+
     setIsUploadingCSV(true);
     try {
       let csvContent = await file.text();
@@ -265,7 +350,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
       try {
         const data = await apiPost('/api/sensors/upload-csv', {
-          siteName: siteName === "All Sites" ? "Default" : siteName,
+          siteName: selectedSiteForOps,
           csv: cleanCsv
         });
 
@@ -458,38 +543,86 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 </SelectContent>
               </Select>
             </div>
+            <div style={{ flex: isCompact ? "1 1 calc(50% - 6px)" : undefined, minWidth: isCompact ? 0 : undefined }}>
+              <Select
+                value={selectedSiteFilter}
+                onValueChange={(value) => {
+                  setSelectedSiteFilter(value);
+                  if (value !== "all") {
+                    setShowSiteSelectionWarning(false);
+                  }
+                }}
+              >
+                <SelectTrigger style={{
+                  width: isCompact ? "100%" : (isNarrowDesktop ? 170 : 186),
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS,
+                  fontSize: controlFontSize,
+                  border: "1px solid #e2e5ea", background: "#fff",
+                  height: controlHeight,
+                  padding: "0 10px",
+                  display: "flex", justifyContent: "space-between", alignItems: "center"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <SelectValue placeholder="All Sites" />
+                    </span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent style={{ fontFamily: POPPINS }}>
+                  <SelectItem value="all">All Sites</SelectItem>
+                  {siteOptions.map((site) => (
+                    <SelectItem key={site.siteKey} value={site.siteName}>{site.siteName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Input
               type="file"
               accept=".csv,.xlsx,.xls"
               onChange={handleCSVUpload}
               className="hidden"
               id="csv-upload-input"
-              disabled={isUploadingCSV}
+              disabled={isUploadingCSV || needsSiteSelection}
             />
             <Label
-              htmlFor="csv-upload-input"
+              htmlFor={needsSiteSelection ? undefined : "csv-upload-input"}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                 padding: isNarrowDesktop ? "0 12px" : "0 16px", height: controlHeight, borderRadius: 100,
                 border: "1px solid #e2e5ea",
-                background: "#fff", cursor: "pointer", fontSize: controlFontSize,
+                background: "#fff", cursor: needsSiteSelection ? "not-allowed" : "pointer", fontSize: controlFontSize,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 margin: 0, flexShrink: 0,
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
+                opacity: needsSiteSelection ? 0.6 : 1,
+              }}
+              onClick={(event) => {
+                if (needsSiteSelection) {
+                  event.preventDefault();
+                  setShowSiteSelectionWarning(true);
+                }
               }}
             >
               <Upload size={14} />
               {isCompact ? "Import CSV" : (isUploadingCSV ? "Wait..." : "Import CSV")}
             </Label>
             <button
-              onClick={() => setIsAddDialogOpen(true)}
+              onClick={() => {
+                if (needsSiteSelection) {
+                  setShowSiteSelectionWarning(true);
+                  return;
+                }
+                setIsAddDialogOpen(true);
+              }}
+              aria-disabled={needsSiteSelection}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                 padding: isNarrowDesktop ? "0 12px" : "0 16px", height: controlHeight, borderRadius: 100,
                 border: "none", flexShrink: 0,
-                background: "#357D86", cursor: "pointer", fontSize: controlFontSize,
+                background: "#357D86", cursor: needsSiteSelection ? "not-allowed" : "pointer", fontSize: controlFontSize,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
+                opacity: needsSiteSelection ? 0.6 : 1,
               }}
             >
               <Plus size={15} />
@@ -497,6 +630,22 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </button>
           </div>
         </div>
+
+        {needsSiteSelection && showSiteSelectionWarning && (
+          <div style={{
+            marginBottom: sectionSpacing,
+            padding: isNarrowDesktop ? "10px 12px" : "12px 14px",
+            borderRadius: 12,
+            border: "1px solid #fbd38d",
+            background: "#fffaf0",
+            color: "#9c4221",
+            fontFamily: POPPINS,
+            fontSize: isNarrowDesktop ? 12 : 13,
+            fontWeight: 500,
+          }}>
+            Please select a site in the site filter before using Import CSV or Add Recipient.
+          </div>
+        )}
 
         {/* Stat Cards */}
         <div style={{
@@ -902,6 +1051,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
             <div className="space-y-4">
               <div>
+                <p style={{ fontSize: 11, color: "#7b8a9a", margin: "0 0 10px", fontFamily: POPPINS }}>
+                  Site: {selectedSiteForOps || "Please choose a site from the filter above"}
+                </p>
                 <Label htmlFor="name-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Name</Label>
                 <Input
                   id="name-add"

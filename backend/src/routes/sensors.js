@@ -91,6 +91,33 @@ function buildSiteIdentity(data) {
   };
 }
 
+function resolveResidentSiteName(siteIdentifier, callback) {
+  const raw = (siteIdentifier || '').toString().trim();
+  if (!raw) {
+    return callback(new Error('siteName is required'));
+  }
+
+  db.get(
+    `SELECT site_name, address
+     FROM site_registry
+     WHERE site_key = ? OR site_name = ? OR address = ?
+     ORDER BY last_seen DESC
+     LIMIT 1`,
+    [raw, raw, raw],
+    (err, row) => {
+      if (err) return callback(err);
+
+      const resolvedName = (
+        (row && (row.site_name || row.address))
+          ? (row.site_name || row.address)
+          : raw
+      ).toString().trim();
+
+      callback(null, resolvedName || raw);
+    }
+  );
+}
+
 function upsertSiteRegistry(data, nowIso) {
   const identity = buildSiteIdentity(data);
   db.run(
@@ -695,93 +722,99 @@ router.post("/upload-csv", (req, res) => {
     return res.status(400).json({ error: "siteName and csv are required" });
   }
 
-  // Parse CSV - expects format: name,phone
-  // Note: CSV uploads always create residents. LGU and BHW roles must be set manually in UI.
-  const lines = csv.trim().split('\n');
-  const residents = [];
-
-  for (const line of lines) {
-    const parts = line.split(',').map(s => s.trim());
-    const [name, phone] = parts;
-    
-    if (name && phone) {
-      // Validate phone number
-      if (!validatePhoneNumber(phone)) {
-        continue; // Skip invalid phone numbers
-      }
-      // Format phone number
-      const formattedPhone = formatPhoneNumber(phone);
-      
-      // CSV uploads always create residents; LGU/BHW must be set manually
-      residents.push({ name, phone: formattedPhone, role: 'resident' });
+  resolveResidentSiteName(siteName, (resolveErr, resolvedSiteName) => {
+    if (resolveErr) {
+      return res.status(400).json({ error: resolveErr.message || 'Invalid siteName' });
     }
-  }
 
-  if (residents.length === 0) {
-    return res.status(400).json({ error: "No valid residents found in CSV" });
-  }
+    // Parse CSV - expects format: name,phone
+    // Note: CSV uploads always create residents. LGU and BHW roles must be set manually in UI.
+    const lines = csv.trim().split('\n');
+    const residents = [];
 
-  // Insert or update residents (prevent duplicates)
-  let inserted = 0;
-  let updated = 0;
-  let failed = 0;
+    for (const line of lines) {
+      const parts = line.split(',').map(s => s.trim());
+      const [name, phone] = parts;
 
-  residents.forEach(({ name, phone, role }) => {
-    // Check if resident with same siteName and phone exists
-    db.get(
-      "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
-      [siteName, phone],
-      (err, existingResident) => {
-        if (err) {
-          failed++;
-        } else if (existingResident) {
-          // Update existing resident
-          db.run(
-            "UPDATE residents SET name = ?, role = ? WHERE id = ?",
-            [name, role, existingResident.id],
-            (err) => {
-              if (err) failed++;
-              else updated++;
-              
-              // Respond after all operations complete
-              if (inserted + updated + failed === residents.length) {
-                res.json({
-                  success: true,
-                  inserted,
-                  updated,
-                  failed,
-                  message: `${inserted} new residents added, ${updated} updated`
-                });
-              }
-            }
-          );
-        } else {
-          // Insert new resident
-          db.run(
-            "INSERT INTO residents (siteName, name, phone, role) VALUES (?, ?, ?, ?)",
-            [siteName, name, phone, role],
-            (err) => {
-              if (err) {
-                failed++;
-              } else {
-                inserted++;
-              }
-
-              // Respond after all operations complete
-              if (inserted + updated + failed === residents.length) {
-                res.json({
-                  success: true,
-                  inserted,
-                  updated,
-                  failed,
-                  message: `${inserted} new residents added, ${updated} updated`
-                });
-              }
-            }
-          );
+      if (name && phone) {
+        // Validate phone number
+        if (!validatePhoneNumber(phone)) {
+          continue; // Skip invalid phone numbers
         }
+        // Format phone number
+        const formattedPhone = formatPhoneNumber(phone);
+
+        // CSV uploads always create residents; LGU/BHW must be set manually
+        residents.push({ name, phone: formattedPhone, role: 'resident' });
       }
-    );
+    }
+
+    if (residents.length === 0) {
+      return res.status(400).json({ error: "No valid residents found in CSV" });
+    }
+
+    // Insert or update residents (prevent duplicates)
+    let inserted = 0;
+    let updated = 0;
+    let failed = 0;
+
+    residents.forEach(({ name, phone, role }) => {
+      // Check if resident with same siteName and phone exists
+      db.get(
+        "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
+        [resolvedSiteName, phone],
+        (err, existingResident) => {
+          if (err) {
+            failed++;
+          } else if (existingResident) {
+            // Update existing resident
+            db.run(
+              "UPDATE residents SET name = ?, role = ? WHERE id = ?",
+              [name, role, existingResident.id],
+              (err) => {
+                if (err) failed++;
+                else updated++;
+
+                // Respond after all operations complete
+                if (inserted + updated + failed === residents.length) {
+                  res.json({
+                    success: true,
+                    inserted,
+                    updated,
+                    failed,
+                    message: `${inserted} new residents added, ${updated} updated`
+                  });
+                }
+              }
+            );
+          } else {
+            // Insert new resident
+            db.run(
+              "INSERT INTO residents (siteName, name, phone, role) VALUES (?, ?, ?, ?)",
+              [resolvedSiteName, name, phone, role],
+              (err) => {
+                if (err) {
+                  failed++;
+                } else {
+                  inserted++;
+                }
+
+                // Respond after all operations complete
+                if (inserted + updated + failed === residents.length) {
+                  res.json({
+                    success: true,
+                    inserted,
+                    updated,
+                    failed,
+                    message: `${inserted} new residents added, ${updated} updated`
+                  });
+                }
+              }
+            );
+          }
+        }
+      );
+    });
   });
 });
 
@@ -819,51 +852,57 @@ router.post("/residents", (req, res) => {
   const formattedPhone = formatPhoneNumber(phone);
   const validRoles = ["resident", "bhw", "lgu"];
   const finalRole = validRoles.includes(role) ? role : "resident";
-  
-  // Check if resident with same siteName and phone already exists
-  db.get(
-    "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
-    [siteName, formattedPhone],
-    (err, existingResident) => {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      if (existingResident) {
-        // Update existing resident
-        db.run(
-          "UPDATE residents SET name = ?, role = ? WHERE id = ?",
-          [name, finalRole, existingResident.id],
-          function(err) {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({
-              id: existingResident.id,
-              siteName,
-              name,
-              phone: formattedPhone,
-              role: finalRole,
-              message: "Resident updated (duplicate prevented)"
-            });
-          }
-        );
-      } else {
-        // Create new resident
-        db.run(
-          "INSERT INTO residents (siteName, name, phone, role) VALUES (?, ?, ?, ?)",
-          [siteName, name, formattedPhone, finalRole],
-          function(err) {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(201).json({
-              id: this.lastID,
-              siteName,
-              name,
-              phone: formattedPhone,
-              role: finalRole,
-              message: "Resident added"
-            });
-          }
-        );
-      }
+
+  resolveResidentSiteName(siteName, (resolveErr, resolvedSiteName) => {
+    if (resolveErr) {
+      return res.status(400).json({ error: resolveErr.message || 'Invalid siteName' });
     }
-  );
+
+    // Check if resident with same siteName and phone already exists
+    db.get(
+      "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
+      [resolvedSiteName, formattedPhone],
+      (err, existingResident) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        if (existingResident) {
+          // Update existing resident
+          db.run(
+            "UPDATE residents SET name = ?, role = ? WHERE id = ?",
+            [name, finalRole, existingResident.id],
+            function(err) {
+              if (err) return res.status(500).json({ error: err.message });
+              res.json({
+                id: existingResident.id,
+                siteName: resolvedSiteName,
+                name,
+                phone: formattedPhone,
+                role: finalRole,
+                message: "Resident updated (duplicate prevented)"
+              });
+            }
+          );
+        } else {
+          // Create new resident
+          db.run(
+            "INSERT INTO residents (siteName, name, phone, role) VALUES (?, ?, ?, ?)",
+            [resolvedSiteName, name, formattedPhone, finalRole],
+            function(err) {
+              if (err) return res.status(500).json({ error: err.message });
+              res.status(201).json({
+                id: this.lastID,
+                siteName: resolvedSiteName,
+                name,
+                phone: formattedPhone,
+                role: finalRole,
+                message: "Resident added"
+              });
+            }
+          );
+        }
+      }
+    );
+  });
 });
 
 // PUT - Update a resident
@@ -942,31 +981,44 @@ router.get("/residents", (req, res) => {
   let query = "SELECT id, siteName, name, phone, role, createdAt FROM residents WHERE 1=1";
   const params = [];
   
+  const runQuery = (resolvedSiteName) => {
+    if (resolvedSiteName) {
+      query += " AND siteName = ?";
+      params.push(resolvedSiteName);
+    }
+
+    if (role) {
+      const validRoles = ["resident", "bhw", "lgu"];
+      if (!validRoles.includes(role)) {
+        console.log("Invalid role:", role);
+        return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });
+      }
+      query += " AND role = ?";
+      params.push(role);
+    }
+
+    query += " ORDER BY siteName, role, name";
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      console.log("Residents found:", rows ? rows.length : 0);
+      res.json(rows || []);
+    });
+  };
+
   if (siteName) {
-    query += " AND siteName = ?";
-    params.push(siteName);
+    return resolveResidentSiteName(siteName, (resolveErr, resolvedSiteName) => {
+      if (resolveErr) {
+        return res.status(400).json({ error: resolveErr.message || 'Invalid siteName' });
+      }
+      runQuery(resolvedSiteName);
+    });
   }
-  
-  if (role) {
-    const validRoles = ["resident", "bhw", "lgu"];
-    if (!validRoles.includes(role)) {
-      console.log("Invalid role:", role);
-      return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });
-    }
-    query += " AND role = ?";
-    params.push(role);
-  }
-  
-  query += " ORDER BY siteName, role, name";
-  
-  db.all(query, params, (err, rows) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-    console.log("Residents found:", rows ? rows.length : 0);
-    res.json(rows || []);
-  });
+
+  runQuery(null);
 });
 
 module.exports = router;
