@@ -578,6 +578,23 @@ export function NavigationProvider({
           });
         }}
       />
+      {currentView === "dashboard" && (
+        <style>{`
+          html, body, main, .dashboard-main-container, * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+          html::-webkit-scrollbar,
+          body::-webkit-scrollbar,
+          main::-webkit-scrollbar,
+          .dashboard-main-container::-webkit-scrollbar,
+          *::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+          }
+        `}</style>
+      )}
       {/* Mobile overlay drawer */}
       {mobileDrawer}
       {/* Desktop/tablet: single expanding sidebar */}
@@ -602,7 +619,12 @@ export function NavigationProvider({
           overflowY: "auto",
           overflowX: "hidden",
           transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          ...(currentView === "dashboard" ? {
+            msOverflowStyle: "none",
+            scrollbarWidth: "none",
+          } : {}),
         }}
+        className={currentView === "dashboard" ? "dashboard-main-container" : ""}
       >
         {children}
       </main>
