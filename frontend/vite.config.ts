@@ -96,8 +96,7 @@ export default defineConfig({
     },
   },
   build: {
-    // Safari can white-screen on esnext-only bundles when newer syntax is emitted.
-    target: 'es2020',
+    target: 'esnext',
     outDir: 'build',
   },
   server: {
