@@ -593,6 +593,7 @@ export function NavigationProvider({
       )}
       {/* Main content — full width on phone, offset by sidebar on tablet/desktop */}
       <main
+        className={currentView === "dashboard" ? "scrollbar-hide" : ""}
         style={{
           position: "fixed",
           top: vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80),
