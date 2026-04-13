@@ -104,6 +104,8 @@ export function SiteDetailView({
     return selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
   };
 
+  const isAllSitesSelected = selectedSite === 'all';
+
   // Persistence triggers
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -266,8 +268,8 @@ export function SiteDetailView({
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
 
-      const displaySiteName = dynamicSiteName || siteName || "Site Name";
-      const displayBarangay = barangay || (address ? address.split(',')[0].trim() : "");
+      const displaySiteName = isAllSitesSelected ? "All Sites" : (dynamicSiteName || siteName || "Site Name");
+      const displayBarangay = isAllSitesSelected ? "All Locations" : (barangay || (address ? address.split(',')[0].trim() : ""));
       const filename = `${displaySiteName.replace(/\s+/g, '_')}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
 
       const originalTransform = chartRef.current.style.transform;
@@ -550,7 +552,10 @@ export function SiteDetailView({
   );
   const cleanAddress = normalizeAddress(address);
   const historyAddress = normalizeAddress(history?.[history.length - 1]?.address);
-  const siteLocationLabel = cleanAddress || historyAddress || selectedSiteAddress || barangay || "Address unavailable";
+  const siteLocationLabel = isAllSitesSelected
+    ? "All Locations"
+    : (cleanAddress || historyAddress || selectedSiteAddress || barangay || "Address unavailable");
+  const siteTitleLabel = isAllSitesSelected ? "All Sites" : (dynamicSiteName || siteName);
 
   const getInterpretation = () => {
     if (!chartData || chartData.length === 0) return "No data available.";
@@ -737,7 +742,7 @@ export function SiteDetailView({
                   overflow: mobileResponsive ? undefined : "hidden",
                   textOverflow: mobileResponsive ? undefined : "ellipsis",
                   letterSpacing: mobileResponsive ? 0.1 : undefined,
-                }}>{dynamicSiteName || siteName}</h1>
+                }}>{siteTitleLabel}</h1>
                 {mobileResponsive && (
                   <span style={{
                     fontSize: 12.5,
@@ -829,10 +834,10 @@ export function SiteDetailView({
           }}>
             <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
               <PDFHeader
-                dynamicSiteName={dynamicSiteName}
+                dynamicSiteName={isAllSitesSelected ? "All Sites" : dynamicSiteName}
                 siteName={siteName}
-                address={address}
-                barangay={barangay}
+                address={isAllSitesSelected ? "All Locations" : address}
+                barangay={isAllSitesSelected ? "All Locations" : barangay}
               />
             </div>
             <div className="flex flex-col w-full">
