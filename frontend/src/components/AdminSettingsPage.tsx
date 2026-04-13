@@ -4,7 +4,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { apiPost, apiGet, apiCall } from "../utils/api";
+import { apiPost, apiGet, apiCall, apiPut } from "../utils/api";
 import { Trash2, MoreHorizontal, Search, CheckCircle2, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
@@ -38,6 +38,16 @@ interface AuditLog {
   timestamp?: string;
 }
 
+interface RegisteredSite {
+  site_key: string;
+  site_name?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+}
+
 interface AdminSettingsPageProps {
   user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
 }
@@ -59,16 +69,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [intervalMsg, setIntervalMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [deviceName, setDeviceName] = useState("Site Name");
   // Load interval from backend
   useEffect(() => {
     (async () => {
       try {
         const data = await apiGet("/api/sensors/interval-config");
         let ms = data.intervalMs || 300000;
-        if (data.deviceName) {
-          setDeviceName(data.deviceName);
-        }
         if (ms % 3600000 === 0) {
           setIntervalValue(ms / 3600000);
           setIntervalUnit("hr");
@@ -97,7 +103,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     setIntervalMsg("");
     try {
       const ms = getIntervalMs();
-      await apiPost("/api/sensors/interval-config", { intervalMs: ms, deviceName });
+      await apiPost("/api/sensors/interval-config", { intervalMs: ms });
 
       // Trigger success animation
       setShowSuccess(true);
@@ -122,6 +128,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loadingAuditLogs, setLoadingAuditLogs] = useState(true);
   const [auditLogsError, setAuditLogsError] = useState("");
+  const [registeredSites, setRegisteredSites] = useState<RegisteredSite[]>([]);
+  const [loadingSites, setLoadingSites] = useState(true);
+  const [sitesError, setSitesError] = useState("");
+  const [siteNameDrafts, setSiteNameDrafts] = useState<Record<string, string>>({});
+  const [savingSiteKey, setSavingSiteKey] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -184,9 +195,57 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     }
   };
 
+  const fetchRegisteredSites = async () => {
+    try {
+      setLoadingSites(true);
+      setSitesError("");
+      const result = await apiGet("/api/sensors/sites");
+      const sites = Array.isArray(result) ? result : [];
+      setRegisteredSites(sites);
+      setSiteNameDrafts((prev) => {
+        const next = { ...prev };
+        sites.forEach((site: RegisteredSite) => {
+          if (!next[site.site_key]) {
+            next[site.site_key] = site.site_name || site.address || site.site_key;
+          }
+        });
+        return next;
+      });
+    } catch (err: any) {
+      setSitesError(err?.message || "Failed to fetch registered sites");
+      setRegisteredSites([]);
+    } finally {
+      setLoadingSites(false);
+    }
+  };
+
+  const handleSaveSiteName = async (siteKey: string) => {
+    const nextName = (siteNameDrafts[siteKey] || "").trim();
+    if (!nextName) {
+      setError("Site name cannot be empty");
+      return;
+    }
+
+    try {
+      setSavingSiteKey(siteKey);
+      setError("");
+      setSuccess("");
+      const result = await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
+        siteName: nextName,
+      });
+      setSuccess(result?.success ? "Site name updated successfully" : "Site name updated");
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      setError(err?.message || "Failed to update site name");
+    } finally {
+      setSavingSiteKey(null);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchAuditLogs();
+    fetchRegisteredSites();
     if (!_adminSettingsFirstLoadDone) {
       setTimeout(() => { _adminSettingsFirstLoadDone = true; }, 50);
     }
@@ -892,6 +951,81 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           border: "1px solid rgba(0,0,0,0.03)",
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
         }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>Registered Sites</h2>
+          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>
+            Rename registered sites here. This updates the persistent site registry label used by the system.
+          </p>
+
+          {sitesError && (
+            <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13 }}>
+              {sitesError}
+            </div>
+          )}
+
+          {loadingSites ? (
+            <div style={{ marginTop: 16, color: "#94a3b8", fontSize: 13 }}>Loading registered sites...</div>
+          ) : registeredSites.length === 0 ? (
+            <div style={{ marginTop: 16, color: "#94a3b8", fontSize: 13 }}>No registered sites yet.</div>
+          ) : (
+            <div className="custom-scrollbar" style={{ marginTop: 16, maxHeight: 360, overflowY: "auto", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18 }}>
+              {registeredSites.map((site, idx) => {
+                const currentLabel = site.site_name || site.address || site.site_key;
+                const draftValue = siteNameDrafts[site.site_key] ?? currentLabel;
+                return (
+                  <div
+                    key={site.site_key}
+                    style={{
+                      padding: 16,
+                      borderBottom: idx === registeredSites.length - 1 ? "none" : "1px solid rgba(0,0,0,0.05)",
+                      background: idx % 2 === 0 ? "rgba(0,0,0,0.01)" : "#fff",
+                      display: "grid",
+                      gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr auto",
+                      gap: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1e293b" }}>{currentLabel}</div>
+                      <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 2, wordBreak: "break-word" }}>
+                        Key: {site.site_key}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Site Name</Label>
+                      <Input
+                        value={draftValue}
+                        onChange={(e) => setSiteNameDrafts((prev) => ({ ...prev, [site.site_key]: e.target.value }))}
+                        className="custom-input"
+                        style={{ marginTop: 6 }}
+                        placeholder="Enter site name"
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, justifyContent: isMobile ? "flex-start" : "flex-end" }}>
+                      <Button
+                        type="button"
+                        onClick={() => handleSaveSiteName(site.site_key)}
+                        disabled={savingSiteKey === site.site_key}
+                        style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 18px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 13 }}
+                      >
+                        {savingSiteKey === site.site_key ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="glass-card premium-shadow w-full" style={{
+          borderRadius: 28,
+          padding: 32,
+          marginTop: gap,
+          border: "1px solid rgba(0,0,0,0.03)",
+          animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
+        }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>Security Audit Logs</h2>
           <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>
             Recent sensitive actions for accountability and incident tracing.
@@ -945,19 +1079,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
         }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Settings</h2>
-          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the active device name and the broadcast interval for sensor logging and SMS reporting. All related processes will track this globally.</p>
-          
-          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86", width: 115 }}>Device Name:</label>
-            <input
-              type="text"
-              value={deviceName}
-              onChange={e => setDeviceName(e.target.value)}
-              placeholder="e.g. Mang Jose's Fish Pond"
-              style={{ padding: "0 12px", borderRadius: 100, border: "1px solid #ddd", flex: 1, maxWidth: 260, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, outline: "none" }}
-              className="focus:ring-2 focus:ring-[#357D86]/10 focus:border-[#357D86]/40 transition-all duration-200"
-            />
-          </div>
+          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the broadcast interval for sensor logging and SMS reporting. The site name now follows the registered site name, which is managed in Registered Sites.</p>
 
           <div style={{ marginTop: 14, marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
             <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86", width: 115 }}>General Interval:</label>

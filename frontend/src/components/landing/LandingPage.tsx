@@ -146,7 +146,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     };
   }, []);
 
-  // Fetch device name from global config
+  // Fetch site name from global config
   useEffect(() => {
     apiGet("/api/sensors/interval-config")
       .then((data: any) => {

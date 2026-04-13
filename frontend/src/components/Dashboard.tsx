@@ -431,7 +431,7 @@ export function Dashboard({
 
 
 
-  // Load interval config from backend
+  // Load interval config and current site name from backend
   useEffect(() => {
     let lastIntervalMs: number | null = null;
     const fetchIntervalConfig = async () => {

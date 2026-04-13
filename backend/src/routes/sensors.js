@@ -32,16 +32,18 @@ function buildSiteIdentity(data) {
 function upsertSiteRegistry(data, nowIso) {
   const identity = buildSiteIdentity(data);
   db.run(
-    `INSERT INTO site_registry (site_key, address, latitude, longitude, first_seen, last_seen)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO site_registry (site_key, site_name, address, latitude, longitude, first_seen, last_seen)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (site_key)
      DO UPDATE SET
+       site_name = COALESCE(site_registry.site_name, EXCLUDED.site_name),
        address = EXCLUDED.address,
        latitude = EXCLUDED.latitude,
        longitude = EXCLUDED.longitude,
        last_seen = EXCLUDED.last_seen`,
     [
       identity.siteKey,
+      identity.siteName,
       identity.address,
       typeof data.latitude === 'number' ? data.latitude : null,
       typeof data.longitude === 'number' ? data.longitude : null,
@@ -93,7 +95,7 @@ router.post('/interval-config', (req, res) => {
     return res.status(400).json({ error: 'Invalid intervalMs' });
   }
 
-  const newName = deviceName || "Site Name";
+  const newName = (deviceName && deviceName.trim()) || GLOBAL_DEVICE_NAME || "Site Name";
   
   db.setSetting('aggregate_interval_ms', String(intervalMs), (err) => {
     if (err) return res.status(500).json({ error: 'Failed to save interval' });
@@ -570,13 +572,53 @@ router.get("/alerts", (req, res) => {
 
 router.get('/sites', (req, res) => {
   db.all(
-    `SELECT site_key, address, latitude, longitude, first_seen, last_seen
+    `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen
      FROM site_registry
      ORDER BY last_seen DESC`,
     [],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(rows || []);
+    }
+  );
+});
+
+router.put('/sites/:siteKey', (req, res) => {
+  const { siteKey } = req.params;
+  const { siteName } = req.body;
+  const trimmedSiteName = (siteName || '').toString().trim();
+
+  if (!trimmedSiteName) {
+    return res.status(400).json({ error: 'siteName is required' });
+  }
+
+  db.run(
+    `UPDATE site_registry
+     SET site_name = ?
+     WHERE site_key = ?`,
+    [trimmedSiteName, siteKey],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Site not found' });
+      }
+
+      db.setSetting('device_name', trimmedSiteName, (settingErr) => {
+        if (settingErr) return res.status(500).json({ error: settingErr.message });
+
+        GLOBAL_DEVICE_NAME = trimmedSiteName;
+
+        db.get(
+          `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen
+           FROM site_registry
+           WHERE site_key = ?`,
+          [siteKey],
+          (selectErr, row) => {
+            if (selectErr) return res.status(500).json({ error: selectErr.message });
+            res.json({ success: true, deviceName: trimmedSiteName, site: row });
+          }
+        );
+      });
     }
   );
 });

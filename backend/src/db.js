@@ -130,6 +130,7 @@ const initPostgresTables = async () => {
       CREATE TABLE IF NOT EXISTS site_registry (
         id SERIAL PRIMARY KEY,
         site_key TEXT UNIQUE NOT NULL,
+        site_name TEXT,
         address TEXT,
         latitude REAL,
         longitude REAL,
@@ -137,6 +138,7 @@ const initPostgresTables = async () => {
         last_seen TEXT
       )
     `);
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS site_name TEXT');
     await db.query('ALTER TABLE alerts ADD COLUMN IF NOT EXISTS address TEXT');
     await db.query('ALTER TABLE raw_readings ADD COLUMN IF NOT EXISTS site_key TEXT');
     await db.query('ALTER TABLE readings ADD COLUMN IF NOT EXISTS site_key TEXT');
