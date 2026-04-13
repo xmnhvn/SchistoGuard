@@ -49,7 +49,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
     <aside
       style={{
         position: "fixed",
-        top: expanded ? (isPhone ? 0 : (vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72))) : (isPhone ? 0 : (vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72))),
+        top: expanded ? (isPhone ? 0 : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80))) : (isPhone ? 0 : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80))),
         left: 0,
         bottom: 0,
         width: expanded ? (vw <= 1450 ? 220 : 240) : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80)),
@@ -248,7 +248,7 @@ export function NavigationHeader({
         alignItems: "center",
         justifyContent: "space-between",
         padding: vw <= 1450 ? "0 16px 0 0" : (vw < 1700 ? "0 20px 0 0" : "0 28px 0 0"),
-        height: vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72),
+        height: vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80),
         position: "fixed",
         top: 0,
         left: 0,
@@ -265,7 +265,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 60, height: vw < 1600 ? 52 : 76, flexShrink: 0,
+                width: 60, height: vw < 1600 ? 64 : 80, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
@@ -291,7 +291,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 70, height: vw < 1700 ? 64 : 72, flexShrink: 0,
+                width: 70, height: vw < 1700 ? 72 : 80, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: 0,
               }}
@@ -595,7 +595,7 @@ export function NavigationProvider({
       <main
         style={{
           position: "fixed",
-          top: vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72),
+          top: vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80),
           left: isPhone ? 0 : (drawerOpen ? (vw <= 1450 ? 220 : 240) : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80))),
           right: 0,
           bottom: 0,

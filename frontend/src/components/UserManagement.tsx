@@ -652,7 +652,7 @@ export const UserManagement: React.FC = () => {
             <div>
               <Label style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: 13, marginBottom: 6, display: "block" }}>Designation</Label>
               <Select defaultValue={profileUser.role}>
-                <SelectTrigger style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                <SelectTrigger style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: 38 }}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent style={{ fontFamily: POPPINS }}>
@@ -669,7 +669,7 @@ export const UserManagement: React.FC = () => {
               style={{
                 width: "100%",
                 padding: "12px 0",
-                borderRadius: 12,
+                borderRadius: 100,
                 border: "none",
                 background: "#357D86",
                 color: "#fff",
