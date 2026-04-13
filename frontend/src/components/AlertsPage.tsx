@@ -20,6 +20,11 @@ const POPPINS = "'Poppins', sans-serif";
 
 let _alertsFirstLoadDone = false;
 
+interface SiteOption {
+  siteKey: string;
+  siteName: string;
+}
+
 export function AlertsPage({ onNavigate, visible = true, user, deviceConnected = true }: { onNavigate?: (view: string) => void; visible?: boolean; user?: any; deviceConnected?: boolean }) {
   // Use logged-in user for acknowledge
   const userName = user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown";
@@ -102,12 +107,12 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   const [filterBarangay, setFilterBarangay] = useState("all");
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const [showMobileAlertList, setShowMobileAlertList] = useState(false);
-  const [availableSites, setAvailableSites] = useState<string[]>([]);
+  const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSite, setSelectedSite] = useState("all");
 
   useEffect(() => {
     const fetchAlerts = () => {
-      const query = selectedSite !== 'all' ? `?site=${encodeURIComponent(selectedSite)}` : '';
+      const query = selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
       apiGet(`/api/sensors/alerts${query}`)
         .then((data) => {
           console.log('Fetched alerts:', data); // DEBUG LOG
@@ -136,10 +141,17 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       try {
         const sites = await apiGet('/api/sensors/sites');
         if (Array.isArray(sites)) {
-          const names = sites
-            .map((s: any) => (s.address || s.site_key || '').toString().trim())
-            .filter((v: string) => v.length > 0);
-          setAvailableSites(Array.from(new Set(names)));
+          const uniqueSites = new Map<string, SiteOption>();
+          sites.forEach((s: any) => {
+            const siteKey = (s.site_key || '').toString().trim();
+            const siteName = (s.site_name || s.address || s.site_key || '').toString().trim();
+            if (siteKey && siteName && !uniqueSites.has(siteKey)) {
+              uniqueSites.set(siteKey, { siteKey, siteName });
+            }
+          });
+          setAvailableSites(
+            Array.from(uniqueSites.values()).sort((a, b) => a.siteName.localeCompare(b.siteName))
+          );
         } else {
           setAvailableSites([]);
         }
@@ -151,6 +163,20 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     fetchSites();
   }, []);
 
+  // Validate selectedSite against availableSites to prevent Select rendering blank
+  useEffect(() => {
+    if (availableSites.length > 0) {
+      if (selectedSite !== 'all') {
+        // Check if selectedSite exists in availableSites
+        const siteExists = availableSites.some((site) => site.siteKey === selectedSite);
+        if (!siteExists) {
+          // Site does not exist, reset to 'all'
+          console.warn(`Selected site "${selectedSite}" not found in available sites, resetting to "all"`);
+          setSelectedSite('all');
+        }
+      }
+    }
+  }, [availableSites, selectedSite]);
 
   const handleAcknowledgeAlert = (alertId: string, fullAlert?: any) => {
     if (fullAlert) setSelectedAlert(fullAlert);
@@ -180,9 +206,13 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
 
   const filteredAlerts = alerts.filter(alert => {
     if (hiddenAlerts.includes(alert.id)) return false;
-    const matchesSearch = alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      alert.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      alert.parameter.toLowerCase().includes(searchTerm.toLowerCase());
+    const messageText = (alert.message || '').toString().toLowerCase();
+    const siteNameText = (alert.siteName || alert.site_name || '').toString().toLowerCase();
+    const parameterText = (alert.parameter || '').toString().toLowerCase();
+    const searchText = searchTerm.toLowerCase();
+    const matchesSearch = messageText.includes(searchText) ||
+      siteNameText.includes(searchText) ||
+      parameterText.includes(searchText);
     const matchesStatus = filterStatus === "all" ||
       (filterStatus === "acknowledged" && alert.isAcknowledged) ||
       (filterStatus === "unacknowledged" && !alert.isAcknowledged);
@@ -287,7 +317,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             <SelectContent>
               <SelectItem value="all">All Sites</SelectItem>
               {availableSites.map((site) => (
-                <SelectItem key={site} value={site}>{site}</SelectItem>
+                <SelectItem key={site.siteKey} value={site.siteKey}>{site.siteName}</SelectItem>
               ))}
             </SelectContent>
           </Select>

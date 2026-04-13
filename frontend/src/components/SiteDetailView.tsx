@@ -20,6 +20,11 @@ const POPPINS = "'Poppins', sans-serif";
 
 let _siteDetailFirstLoadDone = false;
 
+interface SiteOption {
+  siteKey: string;
+  siteName: string;
+}
+
 
 
 export interface SiteDetailViewProps {
@@ -50,7 +55,7 @@ export function SiteDetailView({
     return "24h";
   };
   const [timeRange, setTimeRange] = useState(getInitialTimeRange());
-  const [availableSites, setAvailableSites] = useState<string[]>([]);
+  const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSite, setSelectedSite] = useState<string>(siteId && siteId !== 'site-1' ? siteId : 'all');
   const [alerts, setAlerts] = useState<any[]>([]);
   // Cache history in memory and localStorage
@@ -89,7 +94,7 @@ export function SiteDetailView({
   } = useResponsiveScale();
 
   const buildSiteQuery = () => {
-    return selectedSite !== 'all' ? `?site=${encodeURIComponent(selectedSite)}` : '';
+    return selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
   };
 
   // Persistence triggers
@@ -162,10 +167,17 @@ export function SiteDetailView({
       try {
         const sites = await apiGet('/api/sensors/sites');
         if (Array.isArray(sites)) {
-          const names = sites
-            .map((s: any) => (s.address || s.site_key || '').toString().trim())
-            .filter((v: string) => v.length > 0);
-          setAvailableSites(Array.from(new Set(names)));
+          const uniqueSites = new Map<string, SiteOption>();
+          sites.forEach((s: any) => {
+            const siteKey = (s.site_key || '').toString().trim();
+            const siteName = (s.site_name || s.address || s.site_key || '').toString().trim();
+            if (siteKey && siteName && !uniqueSites.has(siteKey)) {
+              uniqueSites.set(siteKey, { siteKey, siteName });
+            }
+          });
+          setAvailableSites(
+            Array.from(uniqueSites.values()).sort((a, b) => a.siteName.localeCompare(b.siteName))
+          );
         } else {
           setAvailableSites([]);
         }
@@ -177,11 +189,29 @@ export function SiteDetailView({
     fetchSites();
   }, []);
 
+  // Validate selectedSite against availableSites to prevent Select rendering blank
+  useEffect(() => {
+    if (availableSites.length > 0) {
+      if (selectedSite !== 'all') {
+        // Check if selectedSite exists in availableSites
+        const siteExists = availableSites.some((site) => site.siteKey === selectedSite);
+        if (!siteExists) {
+          // Site does not exist, reset to 'all'
+          console.warn(`Selected site "${selectedSite}" not found in available sites, resetting to "all"`);
+          setSelectedSite('all');
+        }
+      }
+    }
+  }, [availableSites, selectedSite]);
+
   useEffect(() => {
     if (selectedSite !== 'all') {
-      setDynamicSiteName(selectedSite);
+      const selected = availableSites.find((site) => site.siteKey === selectedSite);
+      if (selected?.siteName) {
+        setDynamicSiteName(selected.siteName);
+      }
     }
-  }, [selectedSite]);
+  }, [selectedSite, availableSites]);
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
@@ -723,7 +753,7 @@ export function SiteDetailView({
                   <SelectContent>
                     <SelectItem value="all">All Sites</SelectItem>
                     {availableSites.map((site) => (
-                      <SelectItem key={site} value={site}>{site}</SelectItem>
+                      <SelectItem key={site.siteKey} value={site.siteKey}>{site.siteName}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -12,9 +12,14 @@ const POPPINS = "'Poppins', sans-serif";
 
 let _sitesFirstLoadDone = false;
 
+interface SiteOption {
+  siteKey: string;
+  siteName: string;
+}
+
 const fetchReadings = async (selectedSite: string = 'all') => {
   try {
-    const query = selectedSite !== 'all' ? `?site=${encodeURIComponent(selectedSite)}` : '';
+    const query = selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
     const data = await apiGet(`/api/sensors/history${query}`);
     return Array.isArray(data)
       ? data
@@ -73,7 +78,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(!_sitesFirstLoadDone);
-  const [availableSites, setAvailableSites] = useState<string[]>([]);
+  const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSite, setSelectedSite] = useState<string>('all');
   const headerRef = React.useRef<HTMLDivElement>(null);
 
@@ -82,10 +87,17 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       try {
         const sites = await apiGet('/api/sensors/sites');
         if (Array.isArray(sites)) {
-          const names = sites
-            .map((s: any) => (s.address || s.site_key || '').toString().trim())
-            .filter((v: string) => v.length > 0);
-          setAvailableSites(Array.from(new Set(names)));
+          const uniqueSites = new Map<string, SiteOption>();
+          sites.forEach((s: any) => {
+            const siteKey = (s.site_key || '').toString().trim();
+            const siteName = (s.site_name || s.address || s.site_key || '').toString().trim();
+            if (siteKey && siteName && !uniqueSites.has(siteKey)) {
+              uniqueSites.set(siteKey, { siteKey, siteName });
+            }
+          });
+          setAvailableSites(
+            Array.from(uniqueSites.values()).sort((a, b) => a.siteName.localeCompare(b.siteName))
+          );
         } else {
           setAvailableSites([]);
         }
@@ -96,6 +108,21 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
     fetchSites();
   }, []);
+
+  // Validate selectedSite against availableSites to prevent Select rendering blank
+  useEffect(() => {
+    if (availableSites.length > 0) {
+      if (selectedSite !== 'all') {
+        // Check if selectedSite exists in availableSites
+        const siteExists = availableSites.some((site) => site.siteKey === selectedSite);
+        if (!siteExists) {
+          // Site does not exist, reset to 'all'
+          console.warn(`Selected site "${selectedSite}" not found in available sites, resetting to "all"`);
+          setSelectedSite('all');
+        }
+      }
+    }
+  }, [availableSites, selectedSite]);
 
   useEffect(() => {
     if (visible && !_sitesFirstLoadDone) {
@@ -787,7 +814,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 <SelectContent>
                   <SelectItem value="all">All Sites</SelectItem>
                   {availableSites.map((site) => (
-                    <SelectItem key={site} value={site}>{site}</SelectItem>
+                    <SelectItem key={site.siteKey} value={site.siteKey}>{site.siteName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
