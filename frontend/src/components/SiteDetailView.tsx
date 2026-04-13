@@ -75,9 +75,32 @@ export function SiteDetailView({
     return null;
   };
 
-  const [address, setAddress] = useState<string | null>(() => getCachedData('address'));
-  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => getCachedData('siteName'));
+  const getInitialAddress = () => {
+    if (typeof window === 'undefined') return null;
+    return (
+      localStorage.getItem(`sg_${siteId}_address`) ||
+      localStorage.getItem('sg_global_latest_address') ||
+      localStorage.getItem('sg_latest_address')
+    );
+  };
+
+  const getInitialSiteName = () => {
+    if (typeof window === 'undefined') return null;
+    return (
+      localStorage.getItem(`sg_${siteId}_siteName`) ||
+      localStorage.getItem('sg_global_latest_siteName') ||
+      localStorage.getItem('sg_latest_site_name')
+    );
+  };
+
+  const [address, setAddress] = useState<string | null>(() => getInitialAddress());
+  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => getInitialSiteName());
   const [animationEnabled, setAnimationEnabled] = useState(true);
+
+  useEffect(() => {
+    setAddress(getInitialAddress());
+    setDynamicSiteName(getInitialSiteName());
+  }, [siteId]);
 
   // Persistence triggers
   useEffect(() => {
@@ -117,12 +140,17 @@ export function SiteDetailView({
           setDynamicSiteName(latestWithGps.siteName);
           localStorage.setItem('sg_global_latest_siteName', latestWithGps.siteName);
         }
-        reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-          if (addr) {
-            setAddress(addr);
-            localStorage.setItem('sg_global_latest_address', addr);
-          }
-        });
+        if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+          setAddress(latestWithGps.address);
+          localStorage.setItem('sg_global_latest_address', latestWithGps.address);
+        } else {
+          reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+            if (addr) {
+              setAddress(addr);
+              localStorage.setItem('sg_global_latest_address', addr);
+            }
+          });
+        }
       }
     }
   }, [history]);
@@ -135,7 +163,9 @@ export function SiteDetailView({
         if (data.siteName && data.siteName !== "Site Name") {
           setDynamicSiteName(data.siteName);
         }
-        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        if (typeof data.address === 'string' && data.address.trim()) {
+          setAddress(data.address);
+        } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           reverseGeocode(data.latitude, data.longitude).then(addr => {
             if (addr) setAddress(addr);
           });
@@ -286,6 +316,7 @@ export function SiteDetailView({
       apiGet("/api/sensors/history")
         .then(data => {
           if (Array.isArray(data)) {
+            setHistory(data);
             if (typeof window !== 'undefined') {
               localStorage.setItem('sg_history', JSON.stringify(data));
             }
