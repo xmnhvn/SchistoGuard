@@ -16,7 +16,6 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { toast } from "sonner";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
@@ -364,54 +363,6 @@ export function Dashboard({
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
   const alertsPanelRef = useRef<HTMLDivElement>(null);
-  const knownUnacknowledgedAlertIdsRef = useRef<Set<string>>(new Set());
-  const alertFeedInitializedRef = useRef(false);
-
-  const sendSystemAlertNotification = async (incomingAlerts: Alert[]) => {
-    if (incomingAlerts.length === 0 || typeof window === "undefined") return;
-
-    const criticalCount = incomingAlerts.filter((alert) => alert.level === "critical").length;
-    const title = criticalCount > 0 ? "Critical water quality alert" : "New water quality alert";
-    const body =
-      incomingAlerts.length === 1
-        ? (incomingAlerts[0].message || "A new alert was detected by SchistoGuard.")
-        : `${incomingAlerts.length} new alerts detected${criticalCount > 0 ? `, including ${criticalCount} critical.` : "."}`;
-
-    toast.error(title, {
-      description: body,
-      duration: 7000,
-    });
-
-    if (!("Notification" in window)) return;
-
-    try {
-      let permission = Notification.permission;
-      if (permission === "default") {
-        permission = await Notification.requestPermission();
-      }
-      if (permission !== "granted") return;
-
-      const options: NotificationOptions = {
-        body,
-        icon: "/schistoguard.png",
-        badge: "/SchistoGuard.ico",
-        tag: "schistoguard-alert-stream",
-        renotify: true,
-      };
-
-      if ("serviceWorker" in navigator) {
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration) {
-          await registration.showNotification(title, options);
-          return;
-        }
-      }
-
-      new Notification(title, options);
-    } catch (error) {
-      console.warn("Unable to display system notification for alerts:", error);
-    }
-  };
 
   const calcPanelPos = () => {
     const w = window.innerWidth;
@@ -686,22 +637,6 @@ export function Dashboard({
                   ? "Matina Crossing"
                   : (alert.barangay === "Unknown" ? "N/A" : alert.barangay)
               }));
-
-            const currentUnacknowledged = sanitized.filter((alert) => !alert.isAcknowledged);
-            const currentUnackIds = new Set(currentUnacknowledged.map((alert) => alert.id));
-
-            if (!alertFeedInitializedRef.current) {
-              knownUnacknowledgedAlertIdsRef.current = currentUnackIds;
-              alertFeedInitializedRef.current = true;
-            } else {
-              const newIncoming = currentUnacknowledged.filter(
-                (alert) => !knownUnacknowledgedAlertIdsRef.current.has(alert.id)
-              );
-              if (newIncoming.length > 0) {
-                void sendSystemAlertNotification(newIncoming);
-              }
-              knownUnacknowledgedAlertIdsRef.current = currentUnackIds;
-            }
 
             setAlerts(sanitized);
           }

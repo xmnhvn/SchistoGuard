@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { NavigationProvider } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
@@ -17,6 +17,7 @@ import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { apiGet, apiPost, apiPut } from './utils/api';
+import { toast } from 'sonner';
 
 type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings' | 'user-profile';
 
@@ -34,7 +35,50 @@ export default function App() {
   const [adminUnlockError, setAdminUnlockError] = useState('');
   const [adminUnlockLoading, setAdminUnlockLoading] = useState(false);
   const [pendingAdminView, setPendingAdminView] = useState<ViewType | null>(null);
+  const knownUnacknowledgedAlertIdsRef = useRef<Set<string>>(new Set());
+  const alertFeedInitializedRef = useRef(false);
   const pwaInstallPrompt = <PWAInstallPrompt />;
+
+  const sendSystemAlertNotification = async (incomingAlerts: any[]) => {
+    if (incomingAlerts.length === 0 || typeof window === 'undefined') return;
+
+    const criticalCount = incomingAlerts.filter((alert) => alert.level === 'critical').length;
+    const title = criticalCount > 0 ? 'Critical water quality alert' : 'New water quality alert';
+    const body =
+      incomingAlerts.length === 1
+        ? (incomingAlerts[0].message || 'A new alert was detected by SchistoGuard.')
+        : `${incomingAlerts.length} new alerts detected${criticalCount > 0 ? `, including ${criticalCount} critical.` : '.'}`;
+
+    toast.error(title, {
+      description: body,
+      duration: 7000,
+    });
+
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+      const options: NotificationOptions = {
+        body,
+        icon: '/schistoguard.png',
+        badge: '/SchistoGuard.ico',
+        tag: 'schistoguard-alert-stream',
+        renotify: true,
+      };
+
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.showNotification(title, options);
+          return;
+        }
+      }
+
+      new Notification(title, options);
+    } catch (error) {
+      console.warn('Unable to display system notification for alerts:', error);
+    }
+  };
 
   useEffect(() => {
     const check = () => {
@@ -44,6 +88,69 @@ export default function App() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === 'undefined' || !("Notification" in window)) return;
+    if (Notification.permission !== 'default') return;
+
+    const requestPermissionOnInteraction = () => {
+      Notification.requestPermission().catch(() => { });
+    };
+
+    window.addEventListener('click', requestPermissionOnInteraction, { once: true });
+    window.addEventListener('touchstart', requestPermissionOnInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', requestPermissionOnInteraction);
+      window.removeEventListener('touchstart', requestPermissionOnInteraction);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      knownUnacknowledgedAlertIdsRef.current = new Set();
+      alertFeedInitializedRef.current = false;
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchAlerts = () => {
+      apiGet('/api/sensors/alerts')
+        .then((data) => {
+          if (cancelled || !Array.isArray(data)) return;
+
+          const sanitized = data.filter((alert) => ['Temperature', 'Turbidity', 'pH'].includes(alert.parameter));
+          const currentUnacknowledged = sanitized.filter((alert) => !alert.isAcknowledged);
+          const currentIds = new Set(currentUnacknowledged.map((alert) => alert.id));
+
+          if (!alertFeedInitializedRef.current) {
+            knownUnacknowledgedAlertIdsRef.current = currentIds;
+            alertFeedInitializedRef.current = true;
+            return;
+          }
+
+          const newIncoming = currentUnacknowledged.filter(
+            (alert) => !knownUnacknowledgedAlertIdsRef.current.has(alert.id)
+          );
+
+          knownUnacknowledgedAlertIdsRef.current = currentIds;
+
+          if (newIncoming.length > 0) {
+            void sendSystemAlertNotification(newIncoming);
+          }
+        })
+        .catch(() => { });
+    };
+
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 10000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
   const isViewType = (view: string | null): view is ViewType => {
     return (
       view === 'landing' ||
