@@ -333,6 +333,7 @@ export function SiteDetailView({
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
+  const compactHeaderControls = mobileResponsive || tabletResponsive || isNarrowDesktop;
 
 
 
@@ -723,7 +724,8 @@ export function SiteDetailView({
           }}>
             <div style={{
               minWidth: 0,
-              width: (mobileResponsive || tabletResponsive) ? "100%" : "auto",
+              width: (mobileResponsive || tabletResponsive) ? "100%" : "min(64%, 980px)",
+              flex: (mobileResponsive || tabletResponsive) ? undefined : "1 1 auto",
               animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both' : 'none'
             }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
@@ -756,6 +758,8 @@ export function SiteDetailView({
                     color: "#7b8a9a",
                     margin: "2px 0 0",
                     fontFamily: POPPINS,
+                    whiteSpace: "normal",
+                    overflowWrap: "anywhere",
                     minHeight: "20px", // Reserve space to prevent layout jump
                     transition: 'opacity 0.3s ease-in-out'
                   }}>{siteLocationLabel}</p>
@@ -767,7 +771,9 @@ export function SiteDetailView({
               display: "flex",
               alignItems: "center",
               gap: mobileResponsive ? 8 : 10,
-              flexWrap: mobileResponsive ? "nowrap" : "wrap",
+              flexWrap: compactHeaderControls ? "wrap" : "nowrap",
+              justifyContent: compactHeaderControls ? "flex-start" : "flex-end",
+              flexShrink: 0,
               ...(mobileResponsive ? { width: "100%" } : {}),
               animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both' : 'none'
             }}>
