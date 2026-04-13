@@ -208,16 +208,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     if (!gpsAddress && lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
       if (!lastSavedLocation.address) {
-        console.log('[LandingPage] lastSavedLocation has no address, reverse geocoding:', { lat: lastSavedLocation.lat, lng: lastSavedLocation.lng });
-        reverseGeocode(lastSavedLocation.lat, lastSavedLocation.lng).then(addr => {
-          if (addr) {
-            console.log('[LandingPage] Reverse geocode from lastSavedLocation successful:', addr);
-            setGpsAddress(addr);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('sg_global_latest_address', addr);
-            }
-          }
-        }).catch(err => console.error('[LandingPage] Reverse geocode failed:', err));
+        console.log('[LandingPage] DEBUG: lastSavedLocation has no address, but frontend reverse-geocode disabled (use backend instead)');
+        console.log('[LandingPage] Set address from backend or wait for metaAddress fallback');
       }
     }
   }, [gpsAddress, lastSavedLocation]);
