@@ -442,10 +442,10 @@ function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime })
       : (stats.latestReading?.status || 'low-risk');
 
   const riskLabel = riskValue === 'high' || riskValue === 'high-risk'
-    ? 'High'
+    ? 'High Possible Risk'
     : riskValue === 'moderate' || riskValue === 'possible-risk'
-      ? 'Moderate'
-      : 'Low';
+      ? 'Moderate Risk'
+      : 'Safe/Low Risk';
 
   const readingLine = stats.latestReading
     ? `Latest: T ${Number(stats.latestReading.temperature || 0).toFixed(1)} C | pH ${Number(stats.latestReading.ph || 0).toFixed(2)} | Turbidity ${Number(stats.latestReading.turbidity || 0).toFixed(1)} NTU`
@@ -456,20 +456,22 @@ function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime })
     : 'Averages: No readings recorded for this window';
 
   const alertLine = `Alerts: ${stats.totalAlerts} total (${stats.criticalAlerts} critical, ${stats.warningAlerts} warning)`;
-  const advice = riskLabel === 'High'
+  const advice = riskLabel === 'High Possible Risk'
     ? 'Action: Verify on site immediately and monitor closely.'
-    : riskLabel === 'Moderate'
+    : riskLabel === 'Moderate Risk'
       ? 'Action: Continue monitoring and validate the readings.'
       : 'Action: Continue routine monitoring.';
 
   return [
-    'SchistoGuard SMS Summary',
+    'SchistoGuard SMS Alert Summary',
     `Site: ${siteName}`,
-    `Slot: ${slotTime}`,
+    '',
     `Window: ${startLabel} - ${endLabel}`,
     `Overall Risk: ${riskLabel}`,
+    '',
     avgLine,
     readingLine,
+    '',
     alertLine,
     advice,
   ].join('\n');
