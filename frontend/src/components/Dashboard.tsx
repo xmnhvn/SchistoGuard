@@ -868,6 +868,10 @@ export function Dashboard({
     if (risk === "warning") return "Moderate Possible Risk";
     return "Safe";
   };
+  const overallRiskLabel = getOverallRiskLabel(overallRisk);
+  const isLongRiskLabel = overallRiskLabel.length > 16;
+  const mobileRiskPillFontSize = vw <= 360 ? (isLongRiskLabel ? 9.5 : 10.5) : vw <= 430 ? (isLongRiskLabel ? 10.5 : 11.5) : 12;
+  const tabletRiskPillFontSize = vw <= 900 ? (isLongRiskLabel ? 12.5 : 13.5) : (isLongRiskLabel ? 13 : 15);
 
   const dashboardOperational = !!selectedSiteKey && backendOk && dataOk && selectedSiteOnline;
 
@@ -1516,14 +1520,21 @@ export function Dashboard({
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
                       <img src="/icons/icon-risk.svg" alt="risk"
                         style={{ width: 38, height: 38, objectFit: "contain" }} />
-                      <span style={{
-                        background: "transparent", color: riskColor, borderRadius: 999,
-                        border: `1.5px solid ${riskColor}`,
-                        padding: "6px 20px",
-                        fontWeight: 700, fontSize: 15,
-                        fontFamily: POPPINS, textTransform: "capitalize" as const,
-                      }}>
-                        {getOverallRiskLabel(overallRisk)}
+                    <span style={{
+                      background: "transparent", color: riskColor, borderRadius: 999,
+                      border: `1.5px solid ${riskColor}`,
+                      padding: "6px 20px",
+                      fontWeight: 700, fontSize: tabletRiskPillFontSize,
+                      fontFamily: POPPINS, textTransform: "capitalize" as const,
+                      textAlign: "center" as const,
+                      whiteSpace: "normal" as const,
+                      lineHeight: 1.15,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      maxWidth: "100%",
+                    }}>
+                        {overallRiskLabel}
                       </span>
                     </div>
                     <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -1566,10 +1577,17 @@ export function Dashboard({
                     <span style={{
                       background: "transparent", color: riskColor, borderRadius: 999,
                       border: `1.5px solid ${riskColor}`,
-                      padding: "5px 16px", fontWeight: 700, fontSize: 13,
+                      padding: "5px 12px", fontWeight: 700, fontSize: mobileRiskPillFontSize,
                       fontFamily: POPPINS, textTransform: "capitalize" as const,
+                      textAlign: "center" as const,
+                      whiteSpace: "normal" as const,
+                      lineHeight: 1.15,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      maxWidth: "100%",
                     }}>
-                      {getOverallRiskLabel(overallRisk)}
+                      {overallRiskLabel}
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontFamily: POPPINS }}>
