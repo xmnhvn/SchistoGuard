@@ -214,6 +214,9 @@ export function Dashboard({
     if (lat !== null && lng !== null) {
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
+        if (!(typeof latestReading?.address === 'string' && latestReading.address.trim())) {
+          setGpsAddress(null);
+        }
         // Don't reset gpsAddress to null — keep old address visible while loading new one
         reverseGeocode(lat, lng).then(addr => {
           if (addr) {
@@ -232,19 +235,20 @@ export function Dashboard({
     }
   }, [latestReading, lastSavedLocation]);
 
+  useEffect(() => {
+    if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+      const resolved = latestReading.address.trim();
+      setGpsAddress(resolved);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sg_global_latest_address', resolved);
+      }
+    }
+  }, [latestReading?.address]);
+
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
-    if (!gpsAddress && typeof window !== 'undefined') {
+    if (!gpsAddress && !latestReading && typeof window !== 'undefined') {
       const keys = Object.keys(localStorage);
-      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
-      if (addressKey) {
-        const cached = localStorage.getItem(addressKey);
-        if (cached) {
-          setGpsAddress(cached);
-          localStorage.setItem('sg_global_latest_address', cached);
-        }
-      }
-      
       const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
       if (siteNameKey && siteData.siteName === "Site Name") {
         const cachedName = localStorage.getItem(siteNameKey);
@@ -254,7 +258,7 @@ export function Dashboard({
         }
       }
     }
-  }, [gpsAddress, siteData.siteName]);
+  }, [gpsAddress, latestReading, siteData.siteName]);
 
   // Fallback: search history readings for GPS coordinates when latestReading has none
   // This mirrors the logic in SiteDetailView that finds the address from historical data
@@ -300,8 +304,8 @@ export function Dashboard({
     .join(", ");
 
   const displayAddress =
+    (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     gpsAddress ||
-    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
     "Device Address";

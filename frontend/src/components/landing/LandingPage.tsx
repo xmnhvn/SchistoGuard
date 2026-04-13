@@ -178,11 +178,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     .join(", ");
 
   const displayAddress =
+    (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     gpsAddress ||
-    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
     "Device Address";
+
+  useEffect(() => {
+    if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
+      const resolved = latestReading.address.trim();
+      setGpsAddress(resolved);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sg_global_latest_address', resolved);
+      }
+    }
+  }, [latestReading?.address]);
 
   // Strictly follow real sensor device location (from GSM/GPS data)
   // Fallback to last known location in localStorage if sensor is not yet available
@@ -265,17 +275,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   }, [gpsSites]);
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
-    if (!gpsAddress && typeof window !== 'undefined') {
+    if (!gpsAddress && !latestReading && typeof window !== 'undefined') {
       const keys = Object.keys(localStorage);
-      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
-      if (addressKey) {
-        const cached = localStorage.getItem(addressKey);
-        if (cached && cached !== "Device Address") {
-          setGpsAddress(cached);
-          localStorage.setItem('sg_global_latest_address', cached);
-        }
-      }
-
       const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
       if (siteNameKey && siteData.siteName === "Matina Site") {
         const cachedName = localStorage.getItem(siteNameKey);
@@ -285,7 +286,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
     }
-  }, [gpsAddress, siteData.siteName]);
+  }, [gpsAddress, latestReading, siteData.siteName]);
 
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
