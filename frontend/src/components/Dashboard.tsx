@@ -1892,7 +1892,7 @@ export function Dashboard({
             }}>
               Risk Level
             </p>
-            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 12 : 18, marginBottom: isNarrowDesktop ? 8 : 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 12 : 18, marginBottom: isNarrowDesktop ? 8 : 14, flexWrap: "wrap" }}>
               <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain" }} />
               <span
                 style={{
@@ -1900,7 +1900,7 @@ export function Dashboard({
                   color: riskColor,
                   border: `1.5px solid ${riskColor}`,
                   borderRadius: 999,
-                  padding: isNarrowDesktop ? "5px 18px" : "8px 26px",
+                  padding: isNarrowDesktop ? "6px 14px" : "8px 20px",
                   fontWeight: 700,
                   fontSize: isNarrowDesktop ? 14 : 16,
                   fontFamily: "'Poppins', sans-serif",
@@ -1908,10 +1908,12 @@ export function Dashboard({
                   textAlign: "center",
                   whiteSpace: "normal",
                   lineHeight: 1.15,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  display: "inline-grid",
+                  placeItems: "center",
+                  width: isNarrowDesktop ? 138 : 172,
+                  minHeight: isNarrowDesktop ? 38 : 44,
                   maxWidth: "100%",
+                  overflowWrap: "break-word",
                 }}
               >
                 {getOverallRiskLabel(overallRisk)}
@@ -2212,7 +2214,7 @@ function SensorMiniCard({
 
       {/* Value + Unit + Sub — fade in on first data load */}
       <div style={{ animation: fadeIn ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
-        <p style={{ margin: `0 0 ${valueGap}px`, lineHeight: 1.2, display: "flex", alignItems: "baseline", gap: 3 }}>
+        <p style={{ margin: `0 0 ${valueGap}px`, lineHeight: 1.2, display: "flex", alignItems: "baseline", gap: 3, flexWrap: "wrap" }}>
           <span style={{ fontFamily: POPPINS, fontWeight: S.valueWeight, fontSize: valueSize, color: S.valueColor }}>
             {value}
           </span>
@@ -2232,6 +2234,8 @@ function SensorMiniCard({
             fontSize: subSize,
             color: S.subColor,
             lineHeight: 1.3,
+            maxWidth: "100%",
+            overflowWrap: "break-word",
           }}>
             {sub}
           </p>
