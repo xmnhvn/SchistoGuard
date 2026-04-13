@@ -236,14 +236,33 @@ export function Dashboard({
   }, [latestReading, lastSavedLocation]);
 
   useEffect(() => {
+    console.log('[Dashboard] latestReading.address check:', { address: latestReading?.address, type: typeof latestReading?.address });
     if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
       const resolved = latestReading.address.trim();
+      console.log('[Dashboard] Setting gpsAddress from latestReading.address:', resolved);
       setGpsAddress(resolved);
       if (typeof window !== 'undefined') {
         localStorage.setItem('sg_global_latest_address', resolved);
       }
     }
   }, [latestReading?.address]);
+
+  useEffect(() => {
+    if (!gpsAddress && lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
+      if (!lastSavedLocation.address) {
+        console.log('[Dashboard] lastSavedLocation has no address, reverse geocoding:', { lat: lastSavedLocation.lat, lng: lastSavedLocation.lng });
+        reverseGeocode(lastSavedLocation.lat, lastSavedLocation.lng).then(addr => {
+          if (addr) {
+            console.log('[Dashboard] Reverse geocode from lastSavedLocation successful:', addr);
+            setGpsAddress(addr);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('sg_global_latest_address', addr);
+            }
+          }
+        }).catch(err => console.error('[Dashboard] Reverse geocode failed:', err));
+      }
+    }
+  }, [gpsAddress, lastSavedLocation]);
 
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
@@ -303,10 +322,19 @@ export function Dashboard({
     .filter(Boolean)
     .join(", ");
 
+  useEffect(() => {
+    console.log('[Dashboard] displayAddress calc inputs:', {
+      latestReadingAddr: latestReading?.address,
+      gpsAddress,
+      lastSavedAddr: lastSavedLocation?.address,
+      metaAddress
+    });
+  }, [latestReading?.address, gpsAddress, lastSavedLocation?.address, metaAddress]);
+
   const displayAddress =
     (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     gpsAddress ||
-    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
+    (typeof lastSavedLocation?.address === "string" && lastSavedLocation.address.trim() ? lastSavedLocation.address.trim() : null) ||
     metaAddress ||
     "Device Address";
 
