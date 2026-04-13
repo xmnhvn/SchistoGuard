@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
+import { Toaster } from "sonner";
 import App from "./App.tsx";
 import "./index.css";
 import 'leaflet/dist/leaflet.css';
@@ -27,7 +28,12 @@ try {
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
-  createRoot(rootElement).render(<App />);
+  createRoot(rootElement).render(
+    <>
+      <App />
+      <Toaster position="top-right" richColors closeButton />
+    </>
+  );
 } else {
   console.error('Root element not found');
   document.body.innerHTML = '<div style="padding: 20px; color: #d14343; font-family: sans-serif"><h2>Error: Application root element missing</h2></div>';
