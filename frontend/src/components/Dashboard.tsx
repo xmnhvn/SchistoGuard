@@ -217,7 +217,7 @@ export function Dashboard({
   const [isTablet, setIsTablet] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const isNarrowDesktop = windowWidth < 1700;
+  const isNarrowDesktop = windowWidth < 1600;
   // Use a shared padding so ALL dashboard cards align perfectly
   const sharedPad = isNarrowDesktop ? "14px 18px" : "18px 24px";
   const panelWidth = isNarrowDesktop ? "44%" : "40%";
@@ -249,7 +249,7 @@ export function Dashboard({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const dPad = isMobile ? 16 : isTablet ? 24 : (windowWidth < 1600 ? 20 : 32);
+  const dPad = isMobile ? 16 : isTablet ? 24 : (windowWidth < 1600 ? 24 : 32);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -825,7 +825,7 @@ export function Dashboard({
             zIndex: 2,
             width: compactCards ? "100%" : "46%",
             height: "100%",
-            padding: `${isMobile ? 18 : 30}px ${dPad}px ${isMobile ? 18 : 30}px`,
+            padding: dPad,
             display: "flex",
             flexDirection: "column",
             gap: 16,
@@ -1071,7 +1071,7 @@ export function Dashboard({
 
 
           {/* ── CARDS — anchored to bottom, no solid section bg ── */}
-          <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : (windowWidth < 1600 ? 14 : 20)}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
+          <div style={{ padding: `0 ${dPad}px ${dPad}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
             <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: windowWidth < 1600 ? 16 : 16, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
@@ -1406,7 +1406,7 @@ export function Dashboard({
   }
 
   // ─── Full dashboard ──────────────────────────────────────────────────────
-  const panelPadding = `${isNarrowDesktop ? dPad : 40}px ${dPad}px ${isNarrowDesktop ? dPad : 40}px ${dPad}px`;
+  const panelPadding = dPad;
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
 
@@ -1808,6 +1808,7 @@ function SensorMiniCard({
   fixedHeight,
   fadeIn,
   isNarrow,
+  style,
 }: {
   label: string;
   iconSrc: string;
@@ -1820,6 +1821,7 @@ function SensorMiniCard({
   fixedHeight?: number;
   fadeIn?: boolean;
   isNarrow?: boolean;
+  style?: React.CSSProperties;
 }) {
 
   const S = SENSOR_CARD_STYLE;
@@ -1848,6 +1850,7 @@ function SensorMiniCard({
         height: cardHeight as any,
         boxSizing: "border-box",
         fontFamily: POPPINS,
+        ...style,
       }}
     >
       {/* Status dot — pulses when active, grey+static when no data */}
