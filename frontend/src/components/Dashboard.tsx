@@ -1905,6 +1905,13 @@ export function Dashboard({
                   fontSize: isNarrowDesktop ? 14 : 16,
                   fontFamily: "'Poppins', sans-serif",
                   textTransform: "capitalize",
+                  textAlign: "center",
+                  whiteSpace: "normal",
+                  lineHeight: 1.15,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  maxWidth: "100%",
                 }}
               >
                 {getOverallRiskLabel(overallRisk)}
