@@ -278,12 +278,6 @@ export function AlertDetailsModal({
                     <td style={{ fontWeight: 600 }}>{resolvedSiteName || alert.siteName || alert.site_name || "Unknown Site"}</td>
                   </tr>
                   <tr>
-                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Address:</td>
-                    <td style={{ wordBreak: "break-word", fontWeight: 600 }}>
-                      {resolvedAddress || "N/A"}
-                    </td>
-                  </tr>
-                  <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>
                     <td style={{ wordBreak: "break-all", fontSize: 12 }}>{formatDateTime(alert.timestamp)}</td>
                   </tr>

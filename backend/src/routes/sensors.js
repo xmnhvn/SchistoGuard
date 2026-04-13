@@ -134,7 +134,7 @@ function upsertSiteRegistry(data, nowIso) {
      ON CONFLICT (site_key)
      DO UPDATE SET
        site_name = COALESCE(site_registry.site_name, EXCLUDED.site_name),
-       address = COALESCE(EXCLUDED.address, site_registry.address),
+       address = EXCLUDED.address,
        latitude = EXCLUDED.latitude,
        longitude = EXCLUDED.longitude,
        last_seen = EXCLUDED.last_seen`,
@@ -155,90 +155,6 @@ function upsertSiteRegistry(data, nowIso) {
   );
 
   return identity;
-}
-
-async function backfillMissingSiteRegistryAddresses() {
-  const invalidAddressCondition = `
-    (sr.address IS NULL
-      OR BTRIM(sr.address) = ''
-      OR LOWER(BTRIM(sr.address)) IN ('n/a', 'unknown', 'unnamed road', 'null', 'undefined'))
-  `;
-
-  const sources = [
-    {
-      name: 'raw_readings',
-      query: `
-        UPDATE site_registry sr
-        SET address = src.address
-        FROM (
-          SELECT DISTINCT ON (site_key)
-            site_key,
-            address
-          FROM raw_readings
-          WHERE site_key IS NOT NULL
-            AND address IS NOT NULL
-            AND BTRIM(address) <> ''
-            AND LOWER(BTRIM(address)) NOT IN ('n/a', 'unknown', 'unnamed road', 'null', 'undefined')
-          ORDER BY site_key, "timestamp" DESC
-        ) src
-        WHERE sr.site_key = src.site_key
-          AND ${invalidAddressCondition}
-      `,
-    },
-    {
-      name: 'readings',
-      query: `
-        UPDATE site_registry sr
-        SET address = src.address
-        FROM (
-          SELECT DISTINCT ON (site_key)
-            site_key,
-            address
-          FROM readings
-          WHERE site_key IS NOT NULL
-            AND address IS NOT NULL
-            AND BTRIM(address) <> ''
-            AND LOWER(BTRIM(address)) NOT IN ('n/a', 'unknown', 'unnamed road', 'null', 'undefined')
-          ORDER BY site_key, "timestamp" DESC
-        ) src
-        WHERE sr.site_key = src.site_key
-          AND ${invalidAddressCondition}
-      `,
-    },
-    {
-      name: 'alerts',
-      query: `
-        UPDATE site_registry sr
-        SET address = src.address
-        FROM (
-          SELECT DISTINCT ON (site_key)
-            site_key,
-            address
-          FROM alerts
-          WHERE site_key IS NOT NULL
-            AND address IS NOT NULL
-            AND BTRIM(address) <> ''
-            AND LOWER(BTRIM(address)) NOT IN ('n/a', 'unknown', 'unnamed road', 'null', 'undefined')
-          ORDER BY site_key, "timestamp" DESC
-        ) src
-        WHERE sr.site_key = src.site_key
-          AND ${invalidAddressCondition}
-      `,
-    },
-  ];
-
-  try {
-    let totalUpdated = 0;
-    for (const source of sources) {
-      const result = await db.query(source.query);
-      totalUpdated += Number(result?.rowCount || 0);
-    }
-    if (totalUpdated > 0) {
-      console.log(`[site_registry] Backfilled ${totalUpdated} missing address row(s)`);
-    }
-  } catch (error) {
-    console.error('[site_registry] Address backfill failed:', error.message);
-  }
 }
 
 // Helper to load settings from DB
@@ -816,7 +732,6 @@ let latestData = null;
 // Load initial settings on startup
 loadSettingsFromDB().then(() => {
   console.log('✓ Initial sensor settings loaded from DB:', { AGGREGATE_INTERVAL_MS, GLOBAL_DEVICE_NAME });
-  backfillMissingSiteRegistryAddresses();
   
   // Also check file for backwards compatibility if needed
   try {
@@ -1131,30 +1046,9 @@ router.get("/history", (req, res) => {
 router.get("/alerts", (req, res) => {
   const site = (req.query.site || req.query.siteKey || req.query.address || '').toString().trim();
   const siteKey = site ? normalizeSiteKey(site) : null;
-
-  const baseQuery = `
-    SELECT
-      a.id,
-      a.level,
-      a.message,
-      a.parameter,
-      a.value,
-      a.timestamp,
-      a.isAcknowledged,
-      COALESCE(NULLIF(a.siteName, ''), sr.site_name, sr.address) AS siteName,
-      a.barangay,
-      a.duration,
-      a.acknowledgedBy,
-      a.acknowledgedAt,
-      COALESCE(NULLIF(a.address, ''), sr.address) AS address,
-      a.site_key
-    FROM alerts a
-    LEFT JOIN site_registry sr ON sr.site_key = a.site_key
-  `;
-
   const query = siteKey
-    ? `${baseQuery} WHERE a.site_key = ? ORDER BY a.timestamp DESC LIMIT 100`
-    : `${baseQuery} ORDER BY a.timestamp DESC LIMIT 100`;
+    ? "SELECT * FROM alerts WHERE site_key = ? ORDER BY timestamp DESC LIMIT 100"
+    : "SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100";
   const params = siteKey ? [siteKey] : [];
 
   db.all(query, params, (err, rows) => {
