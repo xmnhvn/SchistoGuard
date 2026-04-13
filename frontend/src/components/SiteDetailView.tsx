@@ -23,6 +23,7 @@ let _siteDetailFirstLoadDone = false;
 interface SiteOption {
   siteKey: string;
   siteName: string;
+  address?: string | null;
 }
 
 
@@ -193,8 +194,9 @@ export function SiteDetailView({
           sites.forEach((s: any) => {
             const siteKey = (s.site_key || '').toString().trim();
             const siteName = (s.site_name || s.address || s.site_key || '').toString().trim();
+            const siteAddress = normalizeAddress(s.address);
             if (siteKey && siteName && !uniqueSites.has(siteKey)) {
-              uniqueSites.set(siteKey, { siteKey, siteName });
+              uniqueSites.set(siteKey, { siteKey, siteName, address: siteAddress || null });
             }
           });
           setAvailableSites(
@@ -543,9 +545,12 @@ export function SiteDetailView({
   }, [timeRange]);
 
   const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : 32;
+  const selectedSiteAddress = normalizeAddress(
+    selectedSite !== 'all' ? availableSites.find((site) => site.siteKey === selectedSite)?.address : ''
+  );
   const cleanAddress = normalizeAddress(address);
   const historyAddress = normalizeAddress(history?.[history.length - 1]?.address);
-  const siteLocationLabel = cleanAddress || historyAddress || barangay || (selectedSite !== 'all' ? selectedSite : siteId) || "Address unavailable";
+  const siteLocationLabel = cleanAddress || historyAddress || selectedSiteAddress || barangay || "Address unavailable";
 
   const getInterpretation = () => {
     if (!chartData || chartData.length === 0) return "No data available.";
