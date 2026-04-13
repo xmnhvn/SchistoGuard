@@ -45,7 +45,7 @@ const initPostgresTables = async () => {
         "firstName" TEXT NOT NULL,
         "lastName" TEXT NOT NULL,
         "profilePhoto" TEXT,
-        role TEXT NOT NULL CHECK(role IN ('admin', 'bhw', 'lgu')),
+        role TEXT NOT NULL CHECK(role IN ('admin', 'bhw', 'municipal_health_officer')),
         organization TEXT NOT NULL,
         "isProtected" BOOLEAN DEFAULT FALSE,
         "failedLoginAttempts" INTEGER DEFAULT 0,
@@ -60,8 +60,9 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "failedLoginAttempts" INTEGER DEFAULT 0');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "lockUntil" BIGINT DEFAULT 0');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "profilePhoto" TEXT');
+    await db.query("UPDATE users SET role = 'municipal_health_officer' WHERE role = 'lgu'");
     await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
-    await db.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'bhw', 'lgu'))");
+    await db.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'bhw', 'municipal_health_officer'))");
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
@@ -162,6 +163,7 @@ const initPostgresTables = async () => {
       )
     `);
     await db.query('ALTER TABLE residents DROP COLUMN IF EXISTS verified');
+    await db.query("UPDATE residents SET role = 'municipal_health_officer' WHERE role = 'lgu'");
     await db.query(`
       CREATE TABLE IF NOT EXISTS reports (
         id SERIAL PRIMARY KEY,

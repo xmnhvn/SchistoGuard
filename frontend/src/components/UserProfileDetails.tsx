@@ -25,7 +25,7 @@ export const UserProfileDetails: React.FC<UserProfileDetailsProps> = ({ user, on
     ? 'System Admin'
     : user?.role === 'bhw'
       ? 'Barangay Health Worker'
-      : 'LGU Officer';
+      : 'Municipal Health Officer';
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);

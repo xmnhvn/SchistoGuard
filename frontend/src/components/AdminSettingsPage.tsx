@@ -384,7 +384,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
   const getRoleDisplay = (role: string) => {
     if (role === "admin") return "System Admin";
-    return role === "bhw" ? "Barangay Health Worker" : "LGU Officer";
+    return role === "bhw" ? "Barangay Health Worker" : "Municipal Health Officer";
   };
 
   const POPPINS = "'Poppins', sans-serif";
@@ -696,7 +696,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="bhw" style={{ fontFamily: POPPINS }}>Barangay Health Worker</SelectItem>
-                      <SelectItem value="lgu" style={{ fontFamily: POPPINS }}>LGU Officer</SelectItem>
+                      <SelectItem value="municipal_health_officer" style={{ fontFamily: POPPINS }}>Municipal Health Officer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

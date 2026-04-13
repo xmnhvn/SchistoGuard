@@ -511,7 +511,7 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
 
   const recipients = await new Promise((resolve, reject) => {
     db.all(
-      "SELECT phone FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
+      "SELECT phone FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='municipal_health_officer' THEN 2 ELSE 3 END",
       [siteName],
       (err, rows) => {
         if (err) return reject(err);
@@ -1122,7 +1122,7 @@ router.post("/upload-csv", (req, res) => {
     }
 
     // Parse CSV - expects format: name,phone
-    // Note: CSV uploads always create residents. LGU and BHW roles must be set manually in UI.
+    // Note: CSV uploads always create residents. Municipal Health Officer and BHW roles must be set manually in UI.
     const lines = csv.trim().split('\n');
     const residents = [];
 
@@ -1138,7 +1138,7 @@ router.post("/upload-csv", (req, res) => {
         // Format phone number
         const formattedPhone = formatPhoneNumber(phone);
 
-        // CSV uploads always create residents; LGU/BHW must be set manually
+        // CSV uploads always create residents; Municipal Health Officer/BHW must be set manually
         residents.push({ name, phone: formattedPhone, role: 'resident' });
       }
     }
@@ -1244,7 +1244,7 @@ router.post("/residents", (req, res) => {
   }
   
   const formattedPhone = formatPhoneNumber(phone);
-  const validRoles = ["resident", "bhw", "lgu"];
+  const validRoles = ["resident", "bhw", "municipal_health_officer"];
   const finalRole = validRoles.includes(role) ? role : "resident";
 
   resolveResidentSiteName(siteName, (resolveErr, resolvedSiteName) => {
@@ -1315,7 +1315,7 @@ router.put("/residents/:id", (req, res) => {
     
     const newName = name || resident.name;
     const newPhone = phone ? formatPhoneNumber(phone) : resident.phone;
-    const validRoles = ["resident", "bhw", "lgu"];
+    const validRoles = ["resident", "bhw", "municipal_health_officer"];
     const newRole = role ? (validRoles.includes(role) ? role : resident.role) : resident.role;
     
     // Validate phone if updated
@@ -1354,7 +1354,7 @@ router.delete("/residents/:id", (req, res) => {
 // GET - Get residents by role
 router.get("/residents-by-role/:role", (req, res) => {
   const { role } = req.params;
-  const validRoles = ["resident", "bhw", "lgu"];
+  const validRoles = ["resident", "bhw", "municipal_health_officer"];
   
   if (!validRoles.includes(role)) {
     return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });
@@ -1382,7 +1382,7 @@ router.get("/residents", (req, res) => {
     }
 
     if (role) {
-      const validRoles = ["resident", "bhw", "lgu"];
+      const validRoles = ["resident", "bhw", "municipal_health_officer"];
       if (!validRoles.includes(role)) {
         console.log("Invalid role:", role);
         return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });

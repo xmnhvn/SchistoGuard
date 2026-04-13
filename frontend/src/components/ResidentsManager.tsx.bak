@@ -41,7 +41,7 @@ interface Resident {
   siteName: string;
   name: string;
   phone: string;
-  role: "resident" | "bhw" | "lgu";
+  role: "resident" | "bhw" | "municipal_health_officer";
   verified: number;
   createdAt?: string;
 }
@@ -64,7 +64,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const [formData, setFormData] = useState<{
     name: string;
     phone: string;
-    role: "resident" | "bhw" | "lgu";
+    role: "resident" | "bhw" | "municipal_health_officer";
   }>({
     name: "",
     phone: "",
@@ -287,13 +287,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const roleColors = {
     resident: "bg-blue-100 text-blue-800",
     bhw: "bg-green-100 text-green-800",
-    lgu: "bg-purple-100 text-purple-800",
+    municipal_health_officer: "bg-purple-100 text-purple-800",
   };
 
   const roleLabels = {
     resident: "Resident",
     bhw: "BHW",
-    lgu: "LGU",
+    municipal_health_officer: "Municipal Health Officer",
   };
 
   return (
@@ -328,7 +328,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     <SelectItem value="all">All Designations</SelectItem>
                     <SelectItem value="resident">Residents</SelectItem>
                     <SelectItem value="bhw">Barangay Health Workers (BHW)</SelectItem>
-                    <SelectItem value="lgu">Local Government Units (LGU)</SelectItem>
+                    <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -457,11 +457,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </Card>
               <Card>
                 <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-sm font-medium">LGU</CardTitle>
+                  <CardTitle className="text-sm font-medium">Municipal Health Officer</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center justify-center">
                   <div className="text-2xl font-bold text-purple-600">
-                    {residents.filter((r) => r.role === "lgu").length}
+                    {residents.filter((r) => r.role === "municipal_health_officer").length}
                   </div>
                   <p className="text-xs text-muted-foreground">Local government</p>
                 </CardContent>
@@ -517,7 +517,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 <SelectContent>
                   <SelectItem value="resident">Resident</SelectItem>
                   <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                  <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                  <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -577,7 +577,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 <SelectContent>
                   <SelectItem value="resident">Resident</SelectItem>
                   <SelectItem value="bhw">Barangay Health Worker (BHW)</SelectItem>
-                  <SelectItem value="lgu">Local Government Unit (LGU)</SelectItem>
+                  <SelectItem value="municipal_health_officer">Municipal Health Officer</SelectItem>
                 </SelectContent>
               </Select>
             </div>

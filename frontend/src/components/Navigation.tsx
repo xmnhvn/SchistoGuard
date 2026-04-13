@@ -144,7 +144,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
             {user.firstName} {user.lastName}
           </p>
           <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: "Poppins, sans-serif", whiteSpace: "nowrap" }}>
-            {user.role === 'bhw' ? 'Barangay Health Worker' : user.role === 'lgu' ? 'Local Government Unit Personnel' : user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+            {user.role === 'bhw' ? 'Barangay Health Worker' : user.role === 'municipal_health_officer' ? 'Municipal Health Officer' : user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
           </p>
         </div>
       )}
@@ -553,7 +553,7 @@ export function NavigationProvider({
         {user && (
           <div style={{ padding: "16px 22px", borderTop: "1px solid #f0f0f0" }}>
             <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#1a3a4a", fontFamily: POPPINS_NAV }}>{user.firstName} {user.lastName}</p>
-            <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: POPPINS_NAV }}>{user.role === 'bhw' ? 'Barangay Health Worker' : user.role === 'lgu' ? 'Local Government Unit Personnel' : user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+            <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af", fontFamily: POPPINS_NAV }}>{user.role === 'bhw' ? 'Barangay Health Worker' : user.role === 'municipal_health_officer' ? 'Municipal Health Officer' : user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
           </div>
         )}
       </aside>

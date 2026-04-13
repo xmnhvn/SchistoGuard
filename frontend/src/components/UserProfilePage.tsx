@@ -45,8 +45,8 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
         ? "Barangay Health Worker"
         : user?.role === "admin"
             ? "System Admin"
-        : user?.role === "lgu"
-            ? "Local Government Unit Personnel"
+        : user?.role === "municipal_health_officer"
+            ? "Municipal Health Officer"
             : user?.role?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "User";
 
     const displayPhoto = pendingPhoto === "" ? null : (pendingPhoto ?? savedPhoto);

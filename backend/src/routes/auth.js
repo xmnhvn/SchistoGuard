@@ -189,10 +189,10 @@ router.post("/login", (req, res) => {
   const { email, password, role } = req.body;
 
   // Validate role for login
-  if (!["admin", "bhw", "lgu"].includes(role)) {
+  if (!["admin", "bhw", "municipal_health_officer"].includes(role)) {
     return res.status(403).json({ 
       success: false, 
-      message: "Invalid role. Allowed roles: admin, bhw, lgu" 
+      message: "Invalid role. Allowed roles: admin, bhw, municipal_health_officer" 
     });
   }
 
@@ -304,11 +304,11 @@ router.post("/signup", (req, res) => {
 
   const { email, password, confirmPassword, role, firstName, lastName, organization } = req.body;
 
-  // Validate role - only BHW and LGU allowed
-  if (!["bhw", "lgu"].includes(role)) {
+  // Validate role - only BHW and Municipal Health Officer allowed
+  if (!["bhw", "municipal_health_officer"].includes(role)) {
     return res.status(403).json({ 
       success: false, 
-      message: "Only Barangay Health Workers and LGU Officers can create accounts" 
+      message: "Only Barangay Health Workers and Municipal Health Officers can create accounts" 
     });
   }
 
@@ -405,14 +405,14 @@ router.post("/signup", (req, res) => {
   });
 });
 
-// Admin create user endpoint (both LGU and BHW - does not change current session)
+// Admin create user endpoint (both Municipal Health Officer and BHW - does not change current session)
 router.post("/admin/create-user", isAdmin, (req, res) => {
   const { email, password, confirmPassword, role, firstName, lastName, organization } = req.body;
 
-  if (!["bhw", "lgu"].includes(role)) {
+  if (!["bhw", "municipal_health_officer"].includes(role)) {
     return res.status(403).json({
       success: false,
-      message: "Only Barangay Health Workers and LGU Officers can be created"
+      message: "Only Barangay Health Workers and Municipal Health Officers can be created"
     });
   }
 
@@ -721,7 +721,7 @@ router.put("/profile-photo", isAuthenticated, (req, res) => {
   );
 });
 
-// Get all users (admin endpoint - both LGU and BHW)
+// Get all users (admin endpoint - both Municipal Health Officer and BHW)
 router.get("/users", isAdmin, (req, res) => {
   debugLog("GET /users endpoint hit");
   
@@ -744,7 +744,7 @@ router.get("/users", isAdmin, (req, res) => {
   );
 });
 
-// Delete user (admin endpoint - both LGU and BHW)
+// Delete user (admin endpoint - both Municipal Health Officer and BHW)
 router.delete("/users/:id", isAdmin, (req, res) => {
   const userId = req.params.id;
   
