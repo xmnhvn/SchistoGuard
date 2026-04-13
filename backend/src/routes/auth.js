@@ -46,19 +46,7 @@ function ensureCsrfToken(req) {
   return req.session.csrfToken;
 }
 
-function writeAuditLog(req, action, targetUserId = null, metadata = null) {
-  const actorUserId = req.session?.userId || null;
-  const ipAddress = req.ip || req.headers["x-forwarded-for"] || null;
-  const userAgent = req.headers["user-agent"] || null;
-  const metadataText = metadata ? JSON.stringify(metadata) : null;
 
-  db.run(
-    `INSERT INTO audit_logs (actorUserId, action, targetUserId, ipAddress, userAgent, metadata)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [actorUserId, action, targetUserId, ipAddress, userAgent, metadataText],
-    () => {}
-  );
-}
 
 router.get("/csrf-token", (req, res) => {
   if (!req.session || !req.session.userId) {
@@ -161,11 +149,6 @@ const handleAdminUnlock = (req, res) => {
           if (saveErr) {
             return res.status(500).json({ success: false, message: "Failed to save admin unlock session" });
           }
-
-          writeAuditLog(req, "admin_unlock", adminUser.id, {
-            unlockedUntil: unlockUntil,
-            unlockMinutes: Math.max(1, ADMIN_UNLOCK_MINUTES)
-          });
 
           return res.json({
             success: true,
@@ -469,11 +452,6 @@ router.post("/admin/create-user", isAdmin, (req, res) => {
           }
 
           const createdUserId = result?.lastID ?? this?.lastID;
-          writeAuditLog(req, "admin_create_user", createdUserId, {
-            email,
-            role,
-            organization
-          });
           return res.json({
             success: true,
             message: "User account created successfully",
@@ -535,10 +513,6 @@ router.post("/admin/users/:id/password", isAdmin, (req, res) => {
         if (updateErr) {
           return res.status(500).json({ success: false, message: updateErr.message });
         }
-
-        writeAuditLog(req, "admin_update_password", Number(userId), {
-          targetUserId: Number(userId)
-        });
 
         return res.json({
           success: true,
@@ -787,51 +761,12 @@ router.delete("/users/:id", isAdmin, (req, res) => {
         });
       }
 
-      writeAuditLog(req, "admin_delete_user", Number(userId), {
-        deletedEmail: targetUser.email
-      });
-
       res.json({
         success: true,
         message: "User deleted successfully"
       });
     });
   });
-});
-
-// Get recent security audit logs (admin endpoint)
-router.get("/admin/audit-logs", isAdmin, (req, res) => {
-  const requestedLimit = parseInt(String(req.query.limit || "50"), 10);
-  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 200) : 50;
-
-  db.all(
-    `SELECT id, actorUserId, action, targetUserId, ipAddress, userAgent, metadata, timestamp
-     FROM audit_logs
-     ORDER BY timestamp DESC
-     LIMIT ?`,
-    [limit],
-    (err, logs) => {
-      if (err) {
-        return res.status(500).json({ success: false, message: err.message });
-      }
-
-      const safeLogs = (logs || []).map((log) => {
-        let parsedMetadata = null;
-        try {
-          parsedMetadata = log.metadata ? JSON.parse(log.metadata) : null;
-        } catch {
-          parsedMetadata = null;
-        }
-
-        return {
-          ...log,
-          metadata: parsedMetadata,
-        };
-      });
-
-      return res.json({ success: true, logs: safeLogs });
-    }
-  );
 });
 
 module.exports = router;

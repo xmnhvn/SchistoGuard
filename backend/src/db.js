@@ -64,18 +64,7 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
     await db.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'bhw', 'municipal_health_officer'))");
 
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS audit_logs (
-        id SERIAL PRIMARY KEY,
-        "actorUserId" INTEGER,
-        action TEXT NOT NULL,
-        "targetUserId" INTEGER,
-        "ipAddress" TEXT,
-        "userAgent" TEXT,
-        metadata TEXT,
-        "timestamp" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+
     await db.query(`
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
