@@ -93,6 +93,12 @@ export function SiteDetailView({
     subtitleSize,
   } = useResponsiveScale();
 
+  const normalizeAddress = (value: unknown) => {
+    const text = typeof value === "string" ? value.trim() : "";
+    if (!text || text === "Device Address" || text === "Unnamed Road") return "";
+    return text;
+  };
+
   const buildSiteQuery = () => {
     return selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
   };
@@ -123,6 +129,18 @@ export function SiteDetailView({
   // Fetch address based on GPS from the latest history reading
   useEffect(() => {
     if (history && history.length > 0) {
+      const latestWithAddress = [...history]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .find(r => normalizeAddress(r.address));
+
+      if (latestWithAddress) {
+        const addr = normalizeAddress(latestWithAddress.address);
+        if (addr) {
+          setAddress(addr);
+          localStorage.setItem('sg_global_latest_address', addr);
+        }
+      }
+
       // Find latest valid GPS in history
       const latestWithGps = [...history]
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -152,6 +170,10 @@ export function SiteDetailView({
         // Only update if not the generic default
         if (data.siteName && data.siteName !== "Site Name") {
           setDynamicSiteName(data.siteName);
+        }
+        const latestAddress = normalizeAddress(data.address);
+        if (latestAddress) {
+          setAddress(latestAddress);
         }
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           reverseGeocode(data.latitude, data.longitude).then(addr => {
@@ -521,8 +543,9 @@ export function SiteDetailView({
   }, [timeRange]);
 
   const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : 32;
-  const cleanAddress = address && address !== "Device Address" ? address : "";
-  const siteLocationLabel = cleanAddress || barangay || "Address unavailable";
+  const cleanAddress = normalizeAddress(address);
+  const historyAddress = normalizeAddress(history?.[history.length - 1]?.address);
+  const siteLocationLabel = cleanAddress || historyAddress || barangay || (selectedSite !== 'all' ? selectedSite : siteId) || "Address unavailable";
 
   const getInterpretation = () => {
     if (!chartData || chartData.length === 0) return "No data available.";
