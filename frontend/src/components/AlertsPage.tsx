@@ -286,7 +286,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
               width: isMobile ? undefined : (isNarrowDesktop ? 180 : 210),
               flex: isMobile ? 1 : undefined,
               minWidth: 0,
-              borderRadius: 10,
+              borderRadius: 100,
               fontFamily: POPPINS,
               fontSize: isNarrowDesktop ? 12 : 13,
               border: "1px solid #e2e5ea",
@@ -419,7 +419,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
               <div style={{
                 width: 38,
                 height: 38,
-                borderRadius: 12,
+                borderRadius: 100,
                 background: "#f0f8f9",
                 display: "flex",
                 alignItems: "center",
@@ -728,7 +728,7 @@ function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact, isN
         <div style={{
           width: isNarrowDesktop ? 28 : 36,
           height: isNarrowDesktop ? 28 : 36,
-          borderRadius: 10,
+          borderRadius: 100,
           background: bgColor,
           display: "flex",
           alignItems: "center",

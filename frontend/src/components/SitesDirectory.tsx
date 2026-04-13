@@ -787,7 +787,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <Select value={selectedSite} onValueChange={setSelectedSite}>
                 <SelectTrigger style={{
                   width: isMobile ? undefined : 190, flex: isMobile ? 1 : undefined,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
                   border: "1px solid #e2e5ea", background: "#fff", height: 38,
                 }}>
                   <SelectValue placeholder="All Sites" />
@@ -946,7 +946,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   width: 38,
                   height: 38,
                   minWidth: 38,
-                  borderRadius: 12,
+                  borderRadius: 100,
                   background: "#f0f8f9",
                   display: "flex",
                   alignItems: "center",
@@ -1202,7 +1202,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   return (
                     <div key={reading.id} style={{
                       background: "#fff",
-                      borderRadius: 12,
+                      borderRadius: 100,
                       border: "1px solid #f0f1f3",
                       display: "flex",
                       flexDirection: "row",
