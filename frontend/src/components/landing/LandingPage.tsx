@@ -342,11 +342,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Lazy-mount map to reduce initial landing page jank
   React.useEffect(() => {
-    if (isSafariBrowser) {
-      setShouldRenderMap(false);
-      return;
-    }
-
     if (showLiveUpdates) {
       setShouldRenderMap(true);
       return;
@@ -369,7 +364,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       }
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [showLiveUpdates, isSafariBrowser]);
+  }, [showLiveUpdates]);
 
   // Fetch sensor data when live updates is shown
   useEffect(() => {
@@ -648,7 +643,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Map loads behind gradient, fades in when ready - Dashboard style */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
-          {!isSafariBrowser && shouldRenderMap && (
+          {shouldRenderMap && (
             <DashboardMap
               ref={mapRef}
               interactive={showLiveUpdates && screenWidth >= 600}
