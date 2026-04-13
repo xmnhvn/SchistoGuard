@@ -24,7 +24,6 @@ import { PWAInstructionsModal } from "../PWAInstructionsModal";
 import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
 import { reverseGeocode } from "../../utils/reverseGeocode";
-import { normalizeSiteMapItems, type SiteMapItem } from "../../utils/siteStatus";
 
 interface LandingPageProps {
   onViewMap?: () => void;
@@ -172,7 +171,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Fallback logic for marker and address (sync with dashboard)
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
-  const [registeredSites, setRegisteredSites] = useState<SiteMapItem[]>([]);
 
   const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
     .map((v: any) => (typeof v === "string" ? v.trim() : ""))
@@ -288,49 +286,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       }
     }
   }, [gpsAddress, siteData.siteName]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchRegisteredSites = async () => {
-      try {
-        const data = await apiGet('/api/sensors/sites');
-        if (cancelled) return;
-
-        const activeSiteKey = latestReading?.siteKey || null;
-        const items = normalizeSiteMapItems(
-          Array.isArray(data) ? data : [],
-          activeSiteKey,
-          siteData.siteName,
-          latestReading && typeof latestReading.latitude === 'number' && typeof latestReading.longitude === 'number'
-            ? { lat: latestReading.latitude, lng: latestReading.longitude }
-            : lastSavedLocation
-              ? { lat: lastSavedLocation.lat, lng: lastSavedLocation.lng }
-              : null
-        );
-
-        setRegisteredSites(items);
-      } catch {
-        if (!cancelled) setRegisteredSites([]);
-      }
-    };
-
-    fetchRegisteredSites();
-    const interval = setInterval(fetchRegisteredSites, 15000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [latestReading, siteData.siteName, lastSavedLocation]);
-
-  const mapSites = registeredSites.length > 0
-    ? registeredSites
-    : gpsSites?.map((site) => ({
-        ...site,
-        status: deviceConnected ? 'active' as const : 'down' as const,
-        isDevice: true,
-      }));
 
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
@@ -652,7 +607,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ref={mapRef}
               interactive={showLiveUpdates && screenWidth >= 600}
               mobileMode={isMobileOrTablet}
-              sites={mapSites}
+              sites={gpsSites}
               // On desktop preview, shift pin further right (-0.0032) to match Pic 2 framing
               lngOffset={!isMobileOrTablet ? (isPreviewActive ? -0.0020 : -0.0015) : undefined}
               latOffset={

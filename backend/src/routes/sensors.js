@@ -9,6 +9,23 @@ const reverseGeocode = require("../utils/reverseGeocode");
 // Generalized memory interval and global trackers
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "Site Name";
+const SAME_SITE_DISTANCE_DEG = 0.0025;
+const deviceSiteCache = new Map();
+
+function isFiniteCoordinate(value) {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isNearbyCoordinate(a, b) {
+  if (!a || !b) return false;
+  if (!isFiniteCoordinate(a.lat) || !isFiniteCoordinate(a.lng)) return false;
+  if (!isFiniteCoordinate(b.lat) || !isFiniteCoordinate(b.lng)) return false;
+
+  const dLat = a.lat - b.lat;
+  const dLng = a.lng - b.lng;
+  const distance = Math.sqrt((dLat * dLat) + (dLng * dLng));
+  return distance <= SAME_SITE_DISTANCE_DEG;
+}
 
 function normalizeSiteKey(address, fallback = "unknown-site") {
   const source = (address || fallback || "unknown-site").toString().trim().toLowerCase();
@@ -19,13 +36,58 @@ function normalizeSiteKey(address, fallback = "unknown-site") {
 }
 
 function buildSiteIdentity(data) {
+  const deviceId = (data.device_ip || data.deviceId || 'default-device').toString().trim();
   const address = (data.address || "").toString().trim() || null;
   const fallbackName = data.siteName || data.device_ip || GLOBAL_DEVICE_NAME || "Unknown Site";
+  const currentCoords = {
+    lat: isFiniteCoordinate(data.latitude) ? data.latitude : null,
+    lng: isFiniteCoordinate(data.longitude) ? data.longitude : null,
+  };
+
+  const cached = deviceSiteCache.get(deviceId);
+  if (
+    cached &&
+    isNearbyCoordinate(
+      { lat: cached.latitude, lng: cached.longitude },
+      { lat: currentCoords.lat, lng: currentCoords.lng }
+    )
+  ) {
+    const stableIdentity = {
+      siteName: cached.siteName,
+      address: cached.address || address,
+      siteKey: cached.siteKey
+    };
+
+    deviceSiteCache.set(deviceId, {
+      siteKey: stableIdentity.siteKey,
+      siteName: stableIdentity.siteName,
+      address: stableIdentity.address,
+      latitude: currentCoords.lat,
+      longitude: currentCoords.lng,
+    });
+
+    return stableIdentity;
+  }
+
   const siteName = address || fallbackName;
-  return {
+  const identity = {
     siteName,
     address,
     siteKey: normalizeSiteKey(siteName, fallbackName)
+  };
+
+  deviceSiteCache.set(deviceId, {
+    siteKey: identity.siteKey,
+    siteName: identity.siteName,
+    address: identity.address,
+    latitude: currentCoords.lat,
+    longitude: currentCoords.lng,
+  });
+
+  return {
+    siteName: identity.siteName,
+    address: identity.address,
+    siteKey: identity.siteKey
   };
 }
 

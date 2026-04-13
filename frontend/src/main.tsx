@@ -5,11 +5,17 @@ import "./index.css";
 import 'leaflet/dist/leaflet.css';
 
 try {
-  registerSW({
+  const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      // Don't auto-reload; let user decide or reload manually
-      console.log('PWA update available');
+      // Force-apply updated service worker so stale bundles are replaced quickly.
+      updateSW(true)
+        .then(() => {
+          window.location.reload();
+        })
+        .catch((err) => {
+          console.error('Failed to apply PWA update:', err);
+        });
     },
     onOfflineReady() {
       console.log('SchistoGuard PWA is ready for offline use');

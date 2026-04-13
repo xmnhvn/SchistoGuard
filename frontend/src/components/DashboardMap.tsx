@@ -9,9 +9,6 @@ interface DashboardMapProps {
     name: string;
     lat: number;
     lng: number;
-    status?: 'active' | 'down' | 'unknown';
-    lastSeen?: string | null;
-    isDevice?: boolean;
   }>;
   /** When true, centers the map on the pin (for mobile/tablet fixed backgrounds) */
   mobileMode?: boolean;
@@ -38,14 +35,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const previousSitesJson = useRef<string>('');
-
-  const escapeHtml = (value: string) =>
-    value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
 
   useImperativeHandle(ref, () => ({
     resetView: (center?: { lat: number; lng: number }) => {
@@ -176,32 +165,15 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
           if (!map.current) return;
           sitesToShow.forEach((site) => {
             const el = document.createElement('div');
-            const status = site.status || 'unknown';
-            el.className = `site-marker-container site-marker-container--${status}`;
-            el.setAttribute('data-status', status);
-            const safeName = escapeHtml(site.name);
+            el.className = 'site-marker-container';
             el.innerHTML = `
               <div class="site-marker">
                 <div class="site-marker__pulse"></div>
                 <div class="site-marker__ring"></div>
                 <div class="site-marker__dot"></div>
-                <div class="site-marker__label">${safeName}</div>
               </div>`;
-            const popupStatusLabel = status === 'active' ? 'Connected' : status === 'down' ? 'Down' : 'Unknown';
-            const popupLastSeen = site.lastSeen
-              ? new Date(site.lastSeen).toLocaleString()
-              : status === 'active'
-                ? 'Live signal'
-                : 'No recent signal';
             const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
               .setLngLat([site.lng, site.lat])
-              .setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setHTML(`
-                <div style="min-width: 180px; font-family: Poppins, sans-serif; text-align: left;">
-                  <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">${safeName}</div>
-                  <div style="font-size: 12px; color: ${status === 'active' ? '#16a34a' : status === 'down' ? '#dc2626' : '#64748b'}; font-weight: 600; margin-bottom: 4px;">${popupStatusLabel}</div>
-                  <div style="font-size: 11px; color: #64748b;">Lat: ${site.lat.toFixed(5)}<br/>Lng: ${site.lng.toFixed(5)}<br/>Last seen: ${popupLastSeen}</div>
-                </div>
-              `))
               .addTo(map.current!);
             markers.current.push(marker);
           });
