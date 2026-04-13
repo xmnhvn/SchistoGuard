@@ -14,6 +14,7 @@ import { apiGet } from "../utils/api";
 import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from "../utils/loadHtml2Pdf";
 import { reverseGeocode } from "../utils/reverseGeocode";
 import { PDFHeader } from "./PDFHeader";
+import { useResponsiveScale } from "../utils/useResponsiveScale";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -62,8 +63,6 @@ export function SiteDetailView({
     }
     return [];
   });
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-
   // Ref for chart container
   const chartRef = useRef<HTMLDivElement>(null);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -80,6 +79,14 @@ export function SiteDetailView({
   const [address, setAddress] = useState<string | null>(() => getCachedData('address'));
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => getCachedData('siteName'));
   const [animationEnabled, setAnimationEnabled] = useState(true);
+  const {
+    isMobile,
+    isTablet,
+    isNarrowDesktop,
+    controlFontSize,
+    controlHeight,
+    subtitleSize,
+  } = useResponsiveScale();
 
   const buildSiteQuery = () => {
     return selectedSite !== 'all' ? `?site=${encodeURIComponent(selectedSite)}` : '';
@@ -268,15 +275,6 @@ export function SiteDetailView({
       setExporting(false);
     }
   };
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
 
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
@@ -670,7 +668,7 @@ export function SiteDetailView({
             }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
                 <h1 style={{
-                  fontSize: mobileResponsive ? 20 : 26,
+                  fontSize: mobileResponsive ? 18 : (isNarrowDesktop ? 24 : 26),
                   fontWeight: 700,
                   color: "#1a2a3a",
                   margin: 0,
@@ -694,9 +692,9 @@ export function SiteDetailView({
                 )}
                 {!mobileResponsive && (
                   <p style={{
-                    fontSize: 14,
+                    fontSize: subtitleSize,
                     color: "#7b8a9a",
-                    margin: "4px 0 0",
+                    margin: "2px 0 0",
                     fontFamily: POPPINS,
                     minHeight: "20px", // Reserve space to prevent layout jump
                     transition: 'opacity 0.3s ease-in-out'
@@ -716,9 +714,9 @@ export function SiteDetailView({
               <div style={{ flex: mobileResponsive ? 1 : undefined }}>
                 <Select value={selectedSite} onValueChange={setSelectedSite}>
                   <SelectTrigger style={{
-                    width: mobileResponsive ? undefined : 210, flex: mobileResponsive ? 1 : undefined,
-                    minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
-                    border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                    width: mobileResponsive ? undefined : (isNarrowDesktop ? 180 : 210), flex: mobileResponsive ? 1 : undefined,
+                    minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: controlFontSize,
+                    border: "1px solid #e2e5ea", background: "#fff", height: controlHeight,
                   }}>
                     <SelectValue placeholder="All Sites" />
                   </SelectTrigger>
@@ -733,9 +731,9 @@ export function SiteDetailView({
               <div style={{ flex: mobileResponsive ? 1 : undefined }}>
                 <Select value={timeRange} onValueChange={setTimeRange}>
                   <SelectTrigger style={{
-                    width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
-                    minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
-                    border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                    width: mobileResponsive ? undefined : (isNarrowDesktop ? 130 : 148), flex: mobileResponsive ? 1 : undefined,
+                    minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: controlFontSize,
+                    border: "1px solid #e2e5ea", background: "#fff", height: controlHeight,
                   }}>
                     <SelectValue />
                   </SelectTrigger>
@@ -751,9 +749,9 @@ export function SiteDetailView({
                 <button
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "0 16px", height: 38, borderRadius: 100,
+                    padding: isNarrowDesktop ? "0 12px" : "0 16px", height: controlHeight, borderRadius: 100,
                     border: "1px solid #e2e5ea",
-                    background: "#fff", cursor: "pointer", fontSize: 13,
+                    background: "#fff", cursor: "pointer", fontSize: controlFontSize,
                     fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                     whiteSpace: "nowrap",
                     width: mobileResponsive ? "100%" : undefined

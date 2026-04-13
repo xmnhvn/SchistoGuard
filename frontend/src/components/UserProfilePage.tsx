@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Camera, Mail, Shield, CheckCircle, Trash2, Save, MoreHorizontal, MapPin, Phone, Calendar } from "lucide-react";
 import { apiCall } from "../utils/api";
+import { useResponsiveScale } from "../utils/useResponsiveScale";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -24,15 +25,7 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
     const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-    useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    const isMobile = windowWidth < 600;
-    const isTablet = windowWidth >= 600 && windowWidth < 1100;
+    const { isMobile, isTablet, pad } = useResponsiveScale();
 
     useEffect(() => {
         if (!_profileFirstLoadDone) {
@@ -127,7 +120,6 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
         }
     };
 
-    const pad = isMobile ? 16 : isTablet ? 24 : 32;
     const bannerHeight = isMobile ? 140 : 180;
     const avatarSize = isMobile ? 96 : 112;
 

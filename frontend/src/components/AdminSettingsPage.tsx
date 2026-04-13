@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { useResponsiveScale } from "../utils/useResponsiveScale";
 
 let _adminSettingsFirstLoadDone = false;
 
@@ -133,20 +134,13 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [sitesError, setSitesError] = useState("");
   const [siteNameDrafts, setSiteNameDrafts] = useState<Record<string, string>>({});
   const [savingSiteKey, setSavingSiteKey] = useState<string | null>(null);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
-  const isNarrowDesktop = windowWidth < 1600;
-  const isWeb = windowWidth >= 1100;
-
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const {
+    isMobile,
+    isTablet,
+    isCompact,
+    isNarrowDesktop,
+    pad,
+  } = useResponsiveScale();
   const gap = isMobile ? 16 : isTablet ? 18 : 24;
 
   const fetchUsers = async () => {
@@ -541,14 +535,16 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         {/* Synchronized Header Section */}
         <div style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          flexDirection: isCompact ? "column" : "row",
+          justifyContent: isCompact ? "flex-start" : "space-between",
+          alignItems: isCompact ? "flex-start" : "center",
           marginBottom: 32,
+          gap: isCompact ? 12 : 0,
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
         }}>
           <div>
             <h1 style={{
-              fontSize: isMobile ? 20 : (isNarrowDesktop ? 24 : 26),
+              fontSize: isMobile ? 18 : (isNarrowDesktop ? 24 : 26),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -558,9 +554,9 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               Admin Settings
             </h1>
             <p style={{
-              fontSize: isNarrowDesktop ? 11.5 : 12.5,
+              fontSize: isNarrowDesktop ? 11 : 12,
               color: "#7b8a9a",
-              margin: "4px 0 0",
+              margin: "2px 0 0",
               fontFamily: POPPINS,
               fontWeight: 400
             }}>

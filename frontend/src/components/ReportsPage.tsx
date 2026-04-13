@@ -31,6 +31,7 @@ import { apiGet, apiPost, apiDelete } from '../utils/api';
 import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from '../utils/loadHtml2Pdf';
 import { reverseGeocode } from '../utils/reverseGeocode';
 import { PDFHeader } from './PDFHeader';
+import { useResponsiveScale } from '../utils/useResponsiveScale';
 
 let _reportsFirstLoadDone = false;
 
@@ -114,19 +115,13 @@ export const ReportsPage: React.FC = () => {
     if (typeof window !== 'undefined') return localStorage.getItem('sg_global_latest_siteName');
     return null;
   });
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-
-  React.useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
-  const isWeb = windowWidth >= 1100;
-  const isNarrowDesktop = windowWidth < 1600;
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const {
+    isMobile,
+    isTablet,
+    pad,
+    controlFontSize,
+    controlHeight,
+  } = useResponsiveScale();
 
   const previewDocumentRef = React.useRef<HTMLElement | null>(null);
 
@@ -836,10 +831,10 @@ export const ReportsPage: React.FC = () => {
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
-                              height: 38,
+                              height: controlHeight,
                               borderRadius: 100,
                               fontFamily: POPPINS,
-                              fontSize: 13,
+                              fontSize: controlFontSize,
                               fontWeight: 500,
                               border: "1px solid #e2e5ea",
                               background: "#fff",
@@ -862,10 +857,10 @@ export const ReportsPage: React.FC = () => {
                           <SelectTrigger
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
-                              height: 38,
+                              height: controlHeight,
                               borderRadius: 100,
                               fontFamily: POPPINS,
-                              fontSize: 13,
+                              fontSize: controlFontSize,
                               fontWeight: 500,
                               border: "1px solid #e2e5ea",
                               background: "#fff",
@@ -888,10 +883,10 @@ export const ReportsPage: React.FC = () => {
                       <Button
                         className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
                         style={{
-                          height: 38,
+                          height: controlHeight,
                           borderRadius: 100,
                           fontFamily: POPPINS,
-                          fontSize: 13,
+                          fontSize: controlFontSize,
                           fontWeight: 500,
                           backgroundColor: "#357D86",
                           color: "#ffffff",

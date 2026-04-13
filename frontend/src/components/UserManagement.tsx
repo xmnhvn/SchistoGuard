@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogClose } from './ui/dialog';
+import { useResponsiveScale } from '../utils/useResponsiveScale';
 
 let _userMgmtFirstLoadDone = false;
 
@@ -34,17 +35,7 @@ interface UserStats {
 export const UserManagement: React.FC = () => {
   const animate = !_userMgmtFirstLoadDone;
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const { isMobile, pad } = useResponsiveScale();
 
   React.useEffect(() => {
     if (!_userMgmtFirstLoadDone) {

@@ -6,6 +6,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { apiGet } from '../utils/api';
 import { PDFHeader } from './PDFHeader';
+import { useResponsiveScale } from '../utils/useResponsiveScale';
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -67,7 +68,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hiddenReadings, setHiddenReadings] = useState<string[]>([]);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [showMobileViewAll, setShowMobileViewAll] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
@@ -534,19 +534,20 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     }
   };
 
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
-  const isNarrowDesktop = windowWidth < 1600;
+  const {
+    isMobile,
+    isTablet,
+    isNarrowDesktop,
+    pad,
+    controlFontSize,
+    controlHeight,
+    subtitleSize,
+  } = useResponsiveScale();
 
   // PDF Export stability variables: Force desktop-caliber layout during captures
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
+  const compactFilterLayout = mobileResponsive || tabletResponsive;
 
 
 
@@ -644,8 +645,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       else if (risk === 'critical') criticalCount++;
     });
   });
-
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
 
   if (!visible) return null;
   return (
@@ -764,7 +763,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               }}>Real-time water quality readings & risk assessment</span>
             )}
             {!mobileResponsive && (
-              <p style={{ fontSize: 14, color: "#7b8a9a", margin: "4px 0 0 0", fontFamily: POPPINS }}>
+              <p style={{ fontSize: subtitleSize, color: "#7b8a9a", margin: "2px 0 0 0", fontFamily: POPPINS }}>
                 Real-time water quality readings & risk assessment
               </p>
             )}
@@ -773,15 +772,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             display: "flex",
             alignItems: "center",
             gap: mobileResponsive ? 8 : 10,
-            flexWrap: mobileResponsive ? "nowrap" as const : "wrap",
-            ...(mobileResponsive ? { width: "100%" } : {}),
+            flexWrap: compactFilterLayout ? "wrap" as const : "nowrap",
+            ...(compactFilterLayout ? { width: "100%" } : {}),
           }}>
-            <div style={{ flex: isMobile ? 1 : undefined }}>
+            <div style={{ flex: compactFilterLayout ? "1 1 calc(50% - 5px)" : undefined, minWidth: compactFilterLayout ? 0 : undefined }}>
               <Select value={selectedSite} onValueChange={setSelectedSite}>
                 <SelectTrigger style={{
-                  width: isMobile ? undefined : 190, flex: isMobile ? 1 : undefined,
-                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  width: compactFilterLayout ? undefined : (isNarrowDesktop ? 180 : 190), flex: compactFilterLayout ? 1 : undefined,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: controlFontSize,
+                  border: "1px solid #e2e5ea", background: "#fff", height: controlHeight,
                 }}>
                   <SelectValue placeholder="All Sites" />
                 </SelectTrigger>
@@ -793,12 +792,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 </SelectContent>
               </Select>
             </div>
-            <div style={{ flex: isMobile ? 1 : undefined }}>
+            <div style={{ flex: compactFilterLayout ? "1 1 calc(50% - 5px)" : undefined, minWidth: compactFilterLayout ? 0 : undefined }}>
               <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
                 <SelectTrigger style={{
-                  width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
-                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  width: compactFilterLayout ? undefined : (isNarrowDesktop ? 130 : 148), flex: compactFilterLayout ? 1 : undefined,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: controlFontSize,
+                  border: "1px solid #e2e5ea", background: "#fff", height: controlHeight,
                 }}>
                   <SelectValue />
                 </SelectTrigger>
@@ -810,12 +809,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 </SelectContent>
               </Select>
             </div>
-            <div style={{ flex: isMobile ? 1 : undefined }}>
+            <div style={{ flex: compactFilterLayout ? "1 1 calc(50% - 5px)" : undefined, minWidth: compactFilterLayout ? 0 : undefined }}>
               <Select value={filterRisk} onValueChange={setFilterRisk}>
                 <SelectTrigger style={{
-                  width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
-                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  width: compactFilterLayout ? undefined : (isNarrowDesktop ? 130 : 148), flex: compactFilterLayout ? 1 : undefined,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: controlFontSize,
+                  border: "1px solid #e2e5ea", background: "#fff", height: controlHeight,
                 }}>
                   <SelectValue placeholder="Risk Level" />
                 </SelectTrigger>
@@ -830,11 +829,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <button
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "0 16px", height: 38, borderRadius: 100,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: controlHeight, borderRadius: 100,
                 border: "1px solid #e2e5ea",
-                background: "#fff", cursor: "pointer", fontSize: 13,
+                background: "#fff", cursor: "pointer", fontSize: controlFontSize,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
-                ...(isMobile ? { flex: 1, minWidth: 0, padding: "0 10px" } : {}),
+                ...(compactFilterLayout ? { flex: "1 1 calc(50% - 5px)", minWidth: 0, width: "100%", padding: "0 10px" } : {}),
               }}
               onClick={handleExportPDF}
             >
@@ -861,19 +860,19 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div key={card.label} style={{
               background: "#fff",
               borderRadius: 16,
-              padding: 20,
+              padding: isNarrowDesktop ? 12 : 14,
               display: "flex",
               flexDirection: "column",
               boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
               border: "1px solid rgba(0,0,0,0.03)",
               ...(animationEnabled ? { animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.12 + i * 0.07}s both` } : {}),
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "#8E8B8B", fontFamily: POPPINS }}>{card.label}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isNarrowDesktop ? 8 : 10 }}>
+                <span style={{ fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#8E8B8B", fontFamily: POPPINS }}>{card.label}</span>
                 <div style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
+                  width: isNarrowDesktop ? 30 : 36,
+                  height: isNarrowDesktop ? 30 : 36,
+                  borderRadius: 100,
                   background: card.bg,
                   display: "flex",
                   alignItems: "center",
@@ -882,8 +881,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   {card.icon}
                 </div>
               </div>
-              <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: card.color, fontFamily: POPPINS, lineHeight: 1 }}>{card.value}</div>
-              <span style={{ fontSize: 12, color: "#8E8B8B", marginTop: 4, fontWeight: 400, fontFamily: POPPINS }}>{card.sub}</span>
+              <div style={{ fontSize: isNarrowDesktop ? 22 : 24, fontWeight: 700, color: card.color, fontFamily: POPPINS, lineHeight: 1 }}>{card.value}</div>
+              <span style={{ fontSize: isNarrowDesktop ? 9 : 10, color: "#8E8B8B", marginTop: 3, fontWeight: 400, fontFamily: POPPINS }}>{card.sub}</span>
             </div>
           ))}
         </div>
@@ -891,7 +890,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         {/* Time-Series Data Card */}
         <div style={{
           background: "#fff",
-          borderRadius: 20,
+          borderRadius: 28,
           border: "1px solid #e2e5ea",
           overflow: "hidden",
           flex: isMobile ? "0 0 auto" : 1,
@@ -901,15 +900,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div
-            onClick={() => (isMobile || isTablet) && setShowMobileViewAll(true)}
+            onClick={() => (isMobile) && setShowMobileViewAll(true)}
             style={{
-              padding: (isMobile || isTablet) ? "12px 14px" : "20px 24px 16px",
-              background: (isMobile || isTablet) ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
-              borderBottom: (isMobile || isTablet) ? "none" : "1px solid #f0f1f3",
+              padding: isMobile ? "12px 14px" : (isNarrowDesktop ? "12px 16px 10px" : "14px 20px 12px"),
+              background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
+              borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              cursor: (isMobile || isTablet) ? "pointer" : "default",
+              cursor: isMobile ? "pointer" : "default",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
@@ -930,12 +929,12 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               )}
               <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
                 <h2 style={{
-                  fontSize: 15, fontWeight: 700, color: "#1a2a3a",
+                  fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 700, color: "#1a2a3a",
                   margin: 0,
                   fontFamily: POPPINS,
-                  whiteSpace: "nowrap" as const,
+                  lineHeight: 1.2,
                 }}>
-                  Time-Series Data
+                  {isMobile ? "Time-Series Summary" : "Time-Series Data"}
                 </h2>
                 {isMobile && (
                   <span style={{
@@ -970,14 +969,14 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {deleteMode ? (
                   <>
-                    <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 100, padding: isNarrowDesktop ? "4px 10px" : "6px 16px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                       Select All
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 100, padding: isNarrowDesktop ? "4px 10px" : "6px 16px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                       Cancel
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
-                      <Trash2 size={14} /> Delete ({selectedIds.size})
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 100, padding: isNarrowDesktop ? "4px 10px" : "6px 16px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Trash2 size={13} /> Delete ({selectedIds.size})
                     </button>
                   </>
                 ) : (
@@ -1001,7 +1000,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               minHeight: 0,
               overflowX: "auto",
               overflowY: "auto",
-              padding: "0 24px 24px", // Removed top padding to stabilize sticky header
+              padding: "20px",
             }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
                 <thead>

@@ -14,6 +14,7 @@ import {
   Check,
 } from "lucide-react";
 import { apiGet, apiPost } from "../utils/api";
+import { useResponsiveScale } from "../utils/useResponsiveScale";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -76,16 +77,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     setDeleteMode(false);
     setSelectedIds(new Set());
   };
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 600;
-  const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const { isMobile, isTablet, isNarrowDesktop, pad } = useResponsiveScale();
 
   useEffect(() => {
     if (visible && !_alertsFirstLoadDone) {
@@ -216,9 +208,6 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     return avgMin < 1 ? "<1m" : `${avgMin}m`;
   }
   const avgResponseTime = getAverageResponseTime(alerts);
-  const isNarrowDesktop = windowWidth < 1600;
-  const pad = isMobile ? 16 : isTablet ? 24 : 32;
-
   return (
     <div style={{
       fontFamily: POPPINS,
