@@ -9,14 +9,6 @@ const reverseGeocode = require("../utils/reverseGeocode");
 // Generalized memory interval and global trackers
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "Site Name";
-let GLOBAL_DEVICE_ADDRESS = null;
-let LAST_GEOCODE_CACHE = {
-  latKey: null,
-  lngKey: null,
-  address: null,
-  attemptedAt: 0,
-};
-const GEOCODE_RETRY_COOLDOWN_MS = 60 * 1000;
 
 // Helper to load settings from DB
 async function loadSettingsFromDB() {
@@ -25,10 +17,7 @@ async function loadSettingsFromDB() {
       if (!err && interval) AGGREGATE_INTERVAL_MS = parseInt(interval, 10);
       db.getSetting('device_name', (err, name) => {
         if (!err && name) GLOBAL_DEVICE_NAME = name;
-        db.getSetting('device_address', (err, address) => {
-          if (!err && address) GLOBAL_DEVICE_ADDRESS = address;
-          resolve();
-        });
+        resolve();
       });
     });
   });
@@ -41,61 +30,6 @@ async function saveIntervalToDB(ms) {
       if (err) reject(err); else resolve();
     });
   });
-}
-
-async function saveAddressToDB(address) {
-  return new Promise((resolve, reject) => {
-    db.setSetting('device_address', address, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-async function resolveAddressFromCoords(latitude, longitude, fallback = null) {
-  if (typeof latitude !== 'number' || typeof longitude !== 'number' || latitude === null || longitude === null) {
-    return fallback || GLOBAL_DEVICE_ADDRESS || null;
-  }
-
-  if (typeof fallback === 'string' && fallback.trim()) {
-    return fallback.trim();
-  }
-
-  const latKey = Number(latitude).toFixed(6);
-  const lngKey = Number(longitude).toFixed(6);
-  const now = Date.now();
-
-  if (LAST_GEOCODE_CACHE.latKey === latKey && LAST_GEOCODE_CACHE.lngKey === lngKey) {
-    if (typeof LAST_GEOCODE_CACHE.address === 'string' && LAST_GEOCODE_CACHE.address.trim()) {
-      return LAST_GEOCODE_CACHE.address;
-    }
-    if (now - LAST_GEOCODE_CACHE.attemptedAt < GEOCODE_RETRY_COOLDOWN_MS) {
-      return null;
-    }
-  }
-
-  LAST_GEOCODE_CACHE = {
-    latKey,
-    lngKey,
-    address: null,
-    attemptedAt: now,
-  };
-
-  try {
-    const geocoded = await reverseGeocode(latitude, longitude);
-    if (geocoded) {
-      LAST_GEOCODE_CACHE.address = geocoded;
-      GLOBAL_DEVICE_ADDRESS = geocoded;
-      saveAddressToDB(geocoded).catch((err) => {
-        console.error('[settings] Failed to save device_address:', err.message);
-      });
-      return geocoded;
-    }
-  } catch (err) {
-    console.error('[reverseGeocode] Failed in resolveAddressFromCoords:', err.message);
-  }
-
-  return fallback || GLOBAL_DEVICE_ADDRESS || null;
 }
 
 // API: Get current interval config
@@ -334,8 +268,8 @@ function generateAlertsFromData(data, now = new Date()) {
     const message = buildAlertMessage(parameter, level);
 
     db.run(
-      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, address, duration, acknowledgedBy)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         level,
         message,
@@ -345,7 +279,6 @@ function generateAlertsFromData(data, now = new Date()) {
         0,
         data.siteName || GLOBAL_DEVICE_NAME,
         data.barangay || "Unknown",
-        data.address || null,
         "-",
         null
       ],
@@ -405,11 +338,11 @@ function buildAlertMessage(parameter, level) {
   if (level === "critical") {
     return `High possible risk: ${parameter} is within the early-warning range for possible schistosomiasis risk. Please verify on site.`;
   }
-  return `Moderate risk: ${parameter} is showing an early-warning signal. Please continue monitoring and validate the reading.`;
+  return `Moderate possible risk: ${parameter} is showing an early-warning signal. Please continue monitoring and validate the reading.`;
 }
 
 function buildSmsLine(parameter, value, level) {
-  const levelText = level === "critical" ? "High Possible Risk" : "Moderate Risk";
+  const levelText = level === "critical" ? "High Possible Risk" : "Moderate Possible Risk";
   return `${parameter}: ${value} (${levelText})`;
 }
 
@@ -470,18 +403,6 @@ router.post("/", async (req, res) => {
   let address = null;
   if (typeof latitude === 'number' && typeof longitude === 'number' && latitude !== null && longitude !== null) {
     address = await reverseGeocode(latitude, longitude);
-    if (address) {
-      LAST_GEOCODE_CACHE = {
-        latKey: Number(latitude).toFixed(6),
-        lngKey: Number(longitude).toFixed(6),
-        address,
-        attemptedAt: Date.now(),
-      };
-      GLOBAL_DEVICE_ADDRESS = address;
-      saveAddressToDB(address).catch(err => {
-        console.error('[settings] Failed to save device_address:', err.message);
-      });
-    }
   }
   latestData = {
     turbidity,
@@ -509,57 +430,33 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/latest", (req, res) => {
-  const buildDisconnectedPayload = (extra = {}) => ({
-    deviceConnected: false,
-    siteName: GLOBAL_DEVICE_NAME,
-    address: GLOBAL_DEVICE_ADDRESS,
-    ...extra,
-  });
-
   const sendDisconnectedWithLastLocation = () => {
     console.log('[API /latest] Triggered fallback: querying raw_readings for last GPS location...');
     db.get(
       "SELECT latitude, longitude, address, timestamp FROM raw_readings WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
       [],
-      async (dbErr, row) => {
+      (dbErr, row) => {
         if (dbErr) {
           console.error('[API /latest] Failed to load last GPS location from DB:', dbErr.message);
-          return res.json(buildDisconnectedPayload());
+          return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
         }
 
         console.log('[API /latest] Fallback query result:', row || 'NO ROW FOUND');
 
         if (row) {
           console.log('[API /latest] Returning disconnected with fallback coords:', { lat: row.latitude, lng: row.longitude, ts: row.timestamp });
-          const fallbackAddress = await resolveAddressFromCoords(
-            row.latitude,
-            row.longitude,
-            row.address || null
-          );
           return res.json({
             deviceConnected: false,
             siteName: GLOBAL_DEVICE_NAME,
             latitude: row.latitude,
             longitude: row.longitude,
-            address: fallbackAddress,
+            address: row.address || null,
             timestamp: row.timestamp || null,
           });
         }
 
-        db.get(
-          "SELECT value FROM settings WHERE key = ?",
-          ['device_address'],
-          (settingsErr, settingRow) => {
-            if (settingsErr) {
-              console.error('[API /latest] Failed to load device address from settings:', settingsErr.message);
-              return res.json(buildDisconnectedPayload());
-            }
-
-            const storedAddress = settingRow?.value || GLOBAL_DEVICE_ADDRESS || null;
-            console.log('[API /latest] No GPS location found in raw_readings, returning disconnected status with stored address');
-            return res.json(buildDisconnectedPayload({ address: storedAddress }));
-          }
-        );
+        console.log('[API /latest] No GPS location found in raw_readings, returning bare disconnected status');
+        return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
       }
     );
   };
@@ -573,35 +470,12 @@ router.get("/latest", (req, res) => {
 
     if (Math.abs(now - ts) < 10000) {
       console.log('[API /latest] Data is fresh, returning as connected');
-      const hasLiveCoords =
-        typeof latestData.latitude === 'number' &&
-        typeof latestData.longitude === 'number' &&
-        latestData.latitude !== null &&
-        latestData.longitude !== null;
-
-      const sendFresh = async () => {
-        const freshAddress = hasLiveCoords
-          ? await resolveAddressFromCoords(latestData.latitude, latestData.longitude, latestData.address || null)
-          : (latestData.address || GLOBAL_DEVICE_ADDRESS || null);
-
-        res.json({
-          ...latestData,
-          siteName: GLOBAL_DEVICE_NAME,
-          deviceConnected: true,
-          timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
-          address: freshAddress
-        });
-      };
-
-      sendFresh().catch((err) => {
-        console.error('[API /latest] Failed to build fresh payload:', err.message);
-        res.json({
-          ...latestData,
-          siteName: GLOBAL_DEVICE_NAME,
-          deviceConnected: true,
-          timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
-          address: hasLiveCoords ? (latestData.address || null) : (latestData.address || GLOBAL_DEVICE_ADDRESS || null)
-        });
+      res.json({
+        ...latestData,
+        siteName: GLOBAL_DEVICE_NAME,
+        deviceConnected: true,
+        timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
+        address: latestData.address || null
       });
     } else {
       console.warn('[API /latest] Device considered disconnected: data too old');
@@ -614,90 +488,9 @@ router.get("/latest", (req, res) => {
 });
 
 router.get("/history", (req, res) => {
-  const requestedLocation = typeof req.query.location === 'string' ? req.query.location.trim().toLowerCase() : '';
-
   db.all("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-
-    const normalizedRows = (rows || [])
-      .reverse()
-      .map((row) => ({
-        ...row,
-        siteName: GLOBAL_DEVICE_NAME,
-      }))
-      .filter((row) => {
-        if (!requestedLocation) return true;
-
-        const addressText = typeof row.address === 'string' ? row.address.trim().toLowerCase() : '';
-        const globalAddressText = typeof GLOBAL_DEVICE_ADDRESS === 'string' ? GLOBAL_DEVICE_ADDRESS.trim().toLowerCase() : '';
-        return addressText.includes(requestedLocation) || globalAddressText.includes(requestedLocation);
-      });
-
-    res.json(normalizedRows);
-  });
-});
-
-router.get("/locations", (req, res) => {
-  const query = `
-    SELECT DISTINCT location
-    FROM (
-      SELECT barangay AS location FROM alerts WHERE barangay IS NOT NULL
-      UNION
-      SELECT address AS location FROM readings WHERE address IS NOT NULL
-      UNION
-      SELECT address AS location FROM raw_readings WHERE address IS NOT NULL
-      UNION
-      SELECT value AS location FROM settings WHERE key = 'device_address'
-    ) AS all_locations
-    WHERE TRIM(location) <> ''
-    ORDER BY location ASC
-  `;
-
-  db.all(query, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-
-    const parsedLocations = [];
-
-    (rows || []).forEach((row) => {
-      if (typeof row.location !== 'string') return;
-      const raw = row.location.trim();
-      if (!raw) return;
-
-      // Keep full address/location and also add shorter comma-separated segments
-      parsedLocations.push(raw);
-      raw
-        .split(',')
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .forEach((part) => parsedLocations.push(part));
-    });
-
-    if (typeof GLOBAL_DEVICE_ADDRESS === 'string' && GLOBAL_DEVICE_ADDRESS.trim()) {
-      parsedLocations.push(GLOBAL_DEVICE_ADDRESS.trim());
-      GLOBAL_DEVICE_ADDRESS
-        .split(',')
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .forEach((part) => parsedLocations.push(part));
-    }
-
-    if (latestData && typeof latestData.address === 'string' && latestData.address.trim()) {
-      parsedLocations.push(latestData.address.trim());
-      latestData.address
-        .split(',')
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .forEach((part) => parsedLocations.push(part));
-    }
-
-    const locations = Array.from(new Set(
-      parsedLocations
-        .map((name) => name.trim())
-        .filter((name) => name.length > 0)
-        .filter((name) => name.toLowerCase() !== 'unknown')
-    )).sort((a, b) => a.localeCompare(b));
-
-    res.json(locations);
+    res.json(rows.reverse());
   });
 });
 

@@ -1,26 +1,19 @@
-// Backend utility to reverse geocode lat/lng to address using BigDataCloud reverse geocoding
+// Backend utility to reverse geocode lat/lng to address using OpenStreetMap Nominatim API
 const axios = require('axios');
-
-function buildBestAvailableAddress(data) {
-  if (!data) return null;
-  const parts = [];
-  if (data.locality) parts.push(data.locality);
-  if (data.city && data.city !== data.locality) parts.push(data.city);
-  if (data.principalSubdivision) parts.push(data.principalSubdivision);
-  
-  const address = parts.join(', ').trim();
-  return address || null;
-}
 
 async function reverseGeocode(lat, lng) {
   try {
-    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
     const response = await axios.get(url, {
       headers: {
         'Accept': 'application/json',
+        'User-Agent': 'SchistoGuard/1.0 (contact@example.com)'
       }
     });
-    return buildBestAvailableAddress(response.data);
+    if (response.data && response.data.display_name) {
+      return response.data.display_name;
+    }
+    return null;
   } catch (e) {
     return null;
   }

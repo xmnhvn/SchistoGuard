@@ -17,7 +17,6 @@ import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
-import { formatAddress } from "../utils/addressFormat";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -48,15 +47,42 @@ export function Dashboard({
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
-  const [siteData, setSiteData] = useState<any>({
-    siteName: "Site Name",
-    barangay: "",
-    municipality: "",
-    area: "",
+  const [siteData, setSiteData] = useState<any>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const cachedName = localStorage.getItem('sg_global_latest_siteName');
+        return {
+          siteName: cachedName || "Site Name",
+          barangay: "",
+          municipality: "",
+          area: "",
+        };
+      }
+    } catch { }
+    return {
+      siteName: "Site Name",
+      barangay: "",
+      municipality: "",
+      area: "",
+    };
   });
   // Device connection state
   const [deviceConnected, setDeviceConnected] = useState(true);
-  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
+  // Address from reverse geocoding — initialize from cache to prevent flicker
+  const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const globalCached = localStorage.getItem('sg_global_latest_address');
+        if (globalCached) return globalCached;
+        
+        // Fallback to searching all geocoding keys in localStorage
+        const keys = Object.keys(localStorage);
+        const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+        if (addressKey) return localStorage.getItem(addressKey);
+      }
+      return null;
+    } catch { return null; }
+  });
   // Cache last lat/lng to avoid unnecessary API calls
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
   // Interval config state
@@ -64,13 +90,6 @@ export function Dashboard({
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [mapReady, setMapReady] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(!_dashboardFirstLoadDone);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1728);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     if (visible && !_dashboardFirstLoadDone) {
@@ -92,15 +111,36 @@ export function Dashboard({
     }
   }, [visible, mapReady]);
 
+
+
+  // Persist last valid GPS location to localStorage
+  useEffect(() => {
+    if (
+      latestReading &&
+      typeof latestReading.latitude === 'number' &&
+      typeof latestReading.longitude === 'number' &&
+      latestReading.latitude !== null &&
+      latestReading.longitude !== null
+    ) {
+      // Save to localStorage
+      localStorage.setItem('lastGpsLocation', JSON.stringify({
+        lat: latestReading.latitude,
+        lng: latestReading.longitude,
+        siteName: siteData.siteName || 'Device Location',
+      }));
+    }
+  }, [latestReading && latestReading.latitude, latestReading && latestReading.longitude, siteData.siteName]);
+
   // Strictly use real sensor device location (from GSM/GPS)
+  // Fallback to last known location in localStorage if sensor is not yet available
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
-
+  
   // Update location whenever latestReading changes
   useEffect(() => {
     let sites;
     let lastLoc;
-
+    
     // 1. Prioritize real-time data from latestReading
     if (
       latestReading &&
@@ -115,30 +155,44 @@ export function Dashboard({
         lat: latestReading.latitude,
         lng: latestReading.longitude,
       }];
-      lastLoc = {
-        lat: latestReading.latitude,
-        lng: latestReading.longitude,
-        siteName: siteData.siteName,
-        address: typeof latestReading.address === 'string' && latestReading.address.trim()
-          ? latestReading.address.trim()
-          : (lastSavedLocation?.address ?? null),
-      };
-
+      lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
+      
+      // Persist to localStorage for immediate loading on next visit
+      localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
-    }
-    // 2. If no live reading yet, keep the last valid marker from backend fallback
+    } 
+    // 2. Fallback to cached location if no live reading yet
     else {
-      if (lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
-        setGpsSites([{
-          id: 'device-gps',
-          name: lastSavedLocation.siteName || 'Last Known Location',
-          lat: lastSavedLocation.lat,
-          lng: lastSavedLocation.lng,
-        }]);
+      let cachedSet = false;
+      if (typeof window !== "undefined") {
+        const last = localStorage.getItem('lastGpsLocation');
+        if (last) {
+          try {
+            const parsed = JSON.parse(last);
+            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+              sites = [{
+                id: 'device-gps',
+                name: parsed.siteName || 'Last Known Location',
+                lat: parsed.lat,
+                lng: parsed.lng,
+              }];
+              lastLoc = parsed;
+              setGpsSites(sites);
+              setLastSavedLocation(lastLoc);
+              cachedSet = true;
+            }
+          } catch { }
+        }
+      }
+      
+      // 3. If no live/cached location, keep map marker empty to avoid fake location pins
+      if (!cachedSet) {
+        setGpsSites(undefined);
+        setLastSavedLocation(null);
       }
     }
-  }, [latestReading, siteData.siteName, lastSavedLocation]);
+  }, [latestReading, siteData.siteName]);
 
   // Reverse geocode the location shown on the map (latestReading or lastSavedLocation)
   useEffect(() => {
@@ -164,25 +218,43 @@ export function Dashboard({
         reverseGeocode(lat, lng).then(addr => {
           if (addr) {
             setGpsAddress(addr);
-            setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
-          } else if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
-            setGpsAddress(latestReading.address.trim());
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('sg_global_latest_address', addr);
+            }
           }
         });
       }
     } else {
-      if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
-        const resolvedAddress = latestReading.address.trim();
-        if (gpsAddress !== resolvedAddress) {
-          setGpsAddress(resolvedAddress);
-        }
-      }
       // Don't reset to null immediately — let the history fallback below try first
       if (!gpsAddress) {
         lastLatLngRef.current = null;
       }
     }
-  }, [latestReading, lastSavedLocation, gpsAddress, siteData.siteName]);
+  }, [latestReading, lastSavedLocation]);
+
+  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
+  useEffect(() => {
+    if (!gpsAddress && typeof window !== 'undefined') {
+      const keys = Object.keys(localStorage);
+      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+      if (addressKey) {
+        const cached = localStorage.getItem(addressKey);
+        if (cached) {
+          setGpsAddress(cached);
+          localStorage.setItem('sg_global_latest_address', cached);
+        }
+      }
+      
+      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
+      if (siteNameKey && siteData.siteName === "Site Name") {
+        const cachedName = localStorage.getItem(siteNameKey);
+        if (cachedName) {
+          setSiteData((prev: any) => ({ ...prev, siteName: cachedName }));
+          localStorage.setItem('sg_global_latest_siteName', cachedName);
+        }
+      }
+    }
+  }, [gpsAddress, siteData.siteName]);
 
   // Fallback: search history readings for GPS coordinates when latestReading has none
   // This mirrors the logic in SiteDetailView that finds the address from historical data
@@ -200,8 +272,7 @@ export function Dashboard({
       reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
         if (addr) {
           setGpsAddress(addr);
-        } else if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
-          setGpsAddress(latestWithGps.address.trim());
+          localStorage.setItem('sg_global_latest_address', addr);
         }
       });
     }
@@ -216,27 +287,24 @@ export function Dashboard({
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const isNarrowDesktop = vw < 1600;
+  // Shared card height so ALL dashboard cards are uniform
+  const cardH = isNarrowDesktop ? 140 : 190;
+  const panelWidth = isNarrowDesktop ? "46%" : "44%";
 
-  const isNarrowDesktop = windowWidth < 1600;
-  // Use a shared padding so ALL dashboard cards align perfectly
-  const sharedPad = isNarrowDesktop ? "14px 18px" : "18px 24px";
-  const panelWidth = isNarrowDesktop ? "44%" : "40%";
+  const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
+    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean)
+    .join(", ");
 
-  const primaryAddress =
-    (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
-    (typeof lastSavedLocation?.address === "string" && lastSavedLocation.address.trim() ? lastSavedLocation.address.trim() : null) ||
-    (typeof gpsAddress === "string" && gpsAddress.trim() ? gpsAddress.trim() : null) ||
-    null;
-
-  const displayAddress = formatAddress({
-    fullAddress: primaryAddress,
-    locality: primaryAddress,
-    area: siteData?.area,
-    barangay: siteData?.barangay,
-    municipality: siteData?.municipality,
-    province: siteData?.province,
-    fallback: "Address unavailable",
-  });
+  const displayAddress =
+    gpsAddress ||
+    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
+    metaAddress ||
+    "Device Address";
 
   useEffect(() => {
     const check = () => {
@@ -249,7 +317,7 @@ export function Dashboard({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const dPad = isMobile ? 16 : isTablet ? 24 : (windowWidth < 1600 ? 24 : 32);
+  const dPad = isMobile ? 16 : isTablet ? 24 : 32;
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -308,10 +376,6 @@ export function Dashboard({
           if (data && data.deviceConnected === false) {
             console.log('[Dashboard] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
             if (data.siteName && data.siteName !== "Site Name") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
-            if (typeof data.address === 'string' && data.address.trim()) {
-              const resolvedAddress = data.address.trim();
-              setGpsAddress(resolvedAddress);
-            }
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[Dashboard] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
@@ -329,6 +393,7 @@ export function Dashboard({
                   lng: fallbackLoc.lng,
                 },
               ]);
+              localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
             } else {
               console.log('[Dashboard] NO fallback coords, clearing map');
             }
@@ -340,10 +405,6 @@ export function Dashboard({
           }
           console.log('[Dashboard] Device connected, setting latestReading');
           setLatestReading(data);
-          if (typeof data?.address === 'string' && data.address.trim()) {
-            const resolvedAddress = data.address.trim();
-            setGpsAddress(resolvedAddress);
-          }
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);
@@ -351,6 +412,7 @@ export function Dashboard({
           // to prevent overwriting custom Admin settings.
           if (data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            localStorage.setItem('sg_global_latest_siteName', data.siteName);
           }
         })
         .catch(() => {
@@ -587,8 +649,8 @@ export function Dashboard({
         animation: animationEnabled ? "contentSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both" : "none"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 12,
+          <div style={{ 
+            width: 38, height: 38, borderRadius: 12, 
             background: "linear-gradient(135deg, #357D86, #4EA8B1)",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
@@ -603,9 +665,9 @@ export function Dashboard({
         </div>
 
         {/* Current Risk Interpretation */}
-        <div style={{
-          padding: "14px",
-          borderRadius: 16,
+        <div style={{ 
+          padding: "14px", 
+          borderRadius: 16, 
           background: current.bgColor,
           border: `1px solid ${current.borderColor}`,
           marginBottom: 16,
@@ -679,7 +741,7 @@ export function Dashboard({
 
   const getOverallRiskLabel = (risk: "critical" | "warning" | "safe") => {
     if (risk === "critical") return "High Possible Risk";
-    if (risk === "warning") return "Moderate Risk";
+    if (risk === "warning") return "Moderate Possible Risk";
     return "Safe";
   };
 
@@ -825,7 +887,7 @@ export function Dashboard({
             zIndex: 2,
             width: compactCards ? "100%" : "46%",
             height: "100%",
-            padding: dPad,
+            padding: `${isMobile ? 18 : 30}px ${dPad}px ${isMobile ? 18 : 30}px`,
             display: "flex",
             flexDirection: "column",
             gap: 16,
@@ -936,7 +998,6 @@ export function Dashboard({
               active={deviceConnected && !!latestReading}
               compact={compactCards}
               fadeIn={animationEnabled}
-              isNarrow={isNarrowDesktop}
             />
 
             <SensorMiniCard
@@ -949,7 +1010,6 @@ export function Dashboard({
               active={deviceConnected && !!latestReading}
               compact={compactCards}
               fadeIn={animationEnabled}
-              isNarrow={isNarrowDesktop}
             />
 
             <SensorMiniCard
@@ -962,7 +1022,6 @@ export function Dashboard({
               active={deviceConnected && !!latestReading}
               compact={compactCards}
               fadeIn={animationEnabled}
-              isNarrow={isNarrowDesktop}
             />
           </div>
         </div>
@@ -1014,7 +1073,7 @@ export function Dashboard({
           <div style={{ padding: `${dPad}px ${dPad}px 0`, display: "flex", flexDirection: "column", pointerEvents: "auto", animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
             {/* Site name */}
             <h1 style={{
-              fontSize: windowWidth < 1600 ? 22 : (isTab ? 30 : 26), fontWeight: 700, color: "#fff", margin: 0,
+              fontSize: isTab ? 30 : 26, fontWeight: 700, color: "#fff", margin: 0,
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)"
             }}>
@@ -1022,7 +1081,7 @@ export function Dashboard({
             </h1>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
-              fontSize: windowWidth < 1600 ? 11.8 : (isTab ? 15 : 13), color: "rgba(255,255,255,0.9)",
+              fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", 
               margin: "5px 0 12px",
               fontFamily: POPPINS,
               minHeight: "auto",
@@ -1035,7 +1094,7 @@ export function Dashboard({
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 background: "rgba(255,255,255,0.92)", borderRadius: 999,
-                padding: windowWidth < 1600 ? "4px 10px" : "5px 13px", fontSize: windowWidth < 1600 ? 11 : 12, fontWeight: 600, color: "#15803d",
+                padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
                 width: "fit-content"
               }}>
@@ -1066,15 +1125,15 @@ export function Dashboard({
           </div>
 
           {/* flex spacer — grows to fill remaining space so cards anchor to bottom */}
-          <div style={{ flex: 1, minHeight: windowWidth < 1600 ? 12 : (isTab ? 20 : 40) }} />
+          <div style={{ flex: 1, minHeight: isTab ? 20 : 40 }} />
 
 
 
           {/* ── CARDS — anchored to bottom, no solid section bg ── */}
-          <div style={{ padding: `0 ${dPad}px ${dPad}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
+          <div style={{ padding: `0 ${dPad}px ${isTab || isMobile ? 28 : 20}px`, display: "flex", flexDirection: "column", gap: 16, pointerEvents: "auto" }}>
 
             {/* 3-col on tablet, 2x2 on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: windowWidth < 1600 ? 16 : 16, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isTab ? "1fr 1fr 1fr" : "1fr 1fr", gap: isTab ? 16 : 16, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
               {/* Temperature — tablet uses the same SensorMiniCard as desktop */}
               {isTab ? (
                 <SensorMiniCard
@@ -1086,16 +1145,15 @@ export function Dashboard({
                   dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
                   active={!!latestReading}
                   compact
-                  fixedHeight={150}
+                  fixedHeight={140}
                   fadeIn={animationEnabled}
-                  isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   position: "relative", display: "flex", flexDirection: "column",
-                  minHeight: windowWidth < 1600 ? 145 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <span style={{
                     position: "absolute", top: 14, right: 14,
@@ -1107,13 +1165,13 @@ export function Dashboard({
                   } as React.CSSProperties} />
                   <img src="/icons/icon-temperature.svg" alt="temp"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: windowWidth < 1600 ? 11.5 : 13, color: "#77ABB2" }}>Temperature</p>
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Temperature</p>
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                      <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 22 : 26, color: "#6b7280" }}>
+                      <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.temperature : "—"}
                       </span>
-                      {latestReading && <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 12 : 14, color: "#6b7280" }}> °C</span>}
+                      {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
                     </p>
                     {latestReading && (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
@@ -1135,16 +1193,15 @@ export function Dashboard({
                   dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
                   active={!!latestReading}
                   compact
-                  fixedHeight={150}
+                  fixedHeight={140}
                   fadeIn={animationEnabled}
-                  isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   position: "relative", display: "flex", flexDirection: "column",
-                  minHeight: windowWidth < 1600 ? 145 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <span style={{
                     position: "absolute", top: 14, right: 14,
@@ -1156,13 +1213,13 @@ export function Dashboard({
                   } as React.CSSProperties} />
                   <img src="/icons/icon-turbidity.svg" alt="turbidity"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: windowWidth < 1600 ? 11.5 : 13, color: "#77ABB2" }}>Turbidity</p>
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>Turbidity</p>
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                      <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 22 : 26, color: "#6b7280" }}>
+                      <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.turbidity : "—"}
                       </span>
-                      {latestReading && <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 12 : 14, color: "#6b7280" }}> NTU</span>}
+                      {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
                     </p>
                     {latestReading && (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
@@ -1184,16 +1241,15 @@ export function Dashboard({
                   dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
                   active={!!latestReading}
                   compact
-                  fixedHeight={150}
+                  fixedHeight={140}
                   fadeIn={animationEnabled}
-                  isNarrow={isNarrowDesktop}
                 />
               ) : (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   position: "relative", display: "flex", flexDirection: "column",
-                  minHeight: windowWidth < 1600 ? 145 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <span style={{
                     position: "absolute", top: 14, right: 14,
@@ -1205,10 +1261,10 @@ export function Dashboard({
                   } as React.CSSProperties} />
                   <img src="/icons/icon-ph.svg" alt="ph"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
-                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: windowWidth < 1600 ? 11.5 : 13, color: "#77ABB2" }}>pH Level</p>
+                  <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 13, color: "#77ABB2" }}>pH Level</p>
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
-                      <span style={{ fontWeight: 700, fontSize: windowWidth < 1600 ? 22 : 26, color: "#6b7280" }}>
+                      <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
                         {latestReading ? latestReading.ph : "—"}
                       </span>
                     </p>
@@ -1225,12 +1281,12 @@ export function Dashboard({
               {!isTab && (
                 <div style={{
                   background: "rgba(255,255,255,0.96)", borderRadius: 20,
-                  padding: windowWidth < 1600 ? "12px 12px 10px" : "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
+                  padding: "16px 16px 14px", boxShadow: "0 4px 18px rgba(0,0,0,0.11)",
                   display: "flex", flexDirection: "column", justifyContent: "space-between",
-                  minHeight: windowWidth < 1600 ? 155 : 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
+                  minHeight: 170, boxSizing: "border-box" as const, fontFamily: POPPINS,
                 }}>
                   <div>
-                    <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: windowWidth < 1600 ? 15 : 18, color: "#337C85", lineHeight: 1.3 }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: "#337C85", lineHeight: 1.3 }}>
                       Total Parameter Readings
                     </p>
                     <p style={{ margin: "5px 0 0", color: "#9ca3af", fontSize: 10, lineHeight: 1.4 }}>
@@ -1238,7 +1294,7 @@ export function Dashboard({
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                    <span style={{ fontSize: windowWidth < 1600 ? 22 : 26, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                    <span style={{ fontSize: 26, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
                       {readings.length}
                     </span>
                     <img src="/icons/icon-readings.svg" alt="readings"
@@ -1254,24 +1310,24 @@ export function Dashboard({
                 {/* Total Parameter Readings — full width */}
                 <div style={{
                   background: "#fff", borderRadius: 20,
-                  padding: windowWidth < 1600 ? "14px 20px" : "18px 24px",
+                  padding: "18px 24px",
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "stretch", justifyContent: "space-between",
                   fontFamily: POPPINS,
-                  minHeight: windowWidth < 1600 ? 130 : 140,
+                  minHeight: 140,
                   boxSizing: "border-box" as const,
                   animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: windowWidth < 1600 ? 15 : 22, color: "#337C85", lineHeight: 1.3 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: 22, color: "#337C85", lineHeight: 1.3 }}>
                         Total Parameter Readings
                       </p>
-                      <p style={{ margin: "4px 0 10px", color: "#9ca3af", fontSize: windowWidth < 1600 ? 10 : 13, lineHeight: 1.4 }}>
+                      <p style={{ margin: "4px 0 10px", color: "#9ca3af", fontSize: 13, lineHeight: 1.4 }}>
                         Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
                       </p>
                     </div>
-                    <p style={{ margin: 0, fontSize: windowWidth < 1600 ? 32 : 44, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                    <p style={{ margin: 0, fontSize: 44, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
                       {readings.length}
                     </p>
                   </div>
@@ -1284,15 +1340,15 @@ export function Dashboard({
                 {/* Risk Level + Active Alerts — full width */}
                 <div style={{
                   background: "#fff", borderRadius: 24,
-                  padding: windowWidth < 1600 ? "14px 20px" : "18px 24px",
+                  padding: "18px 24px",
                   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                   display: "flex", alignItems: "stretch", gap: 14,
-                  minHeight: windowWidth < 1600 ? 130 : 140,
+                  minHeight: 140,
                   boxSizing: "border-box" as const,
                   animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
                 }}>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: windowWidth < 1600 ? 15 : 22, color: "#337C85", fontFamily: POPPINS }}>
+                    <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 22, color: "#337C85", fontFamily: POPPINS }}>
                       Risk Level
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
@@ -1301,26 +1357,26 @@ export function Dashboard({
                       <span style={{
                         background: "transparent", color: riskColor, borderRadius: 999,
                         border: `1.5px solid ${riskColor}`,
-                        padding: windowWidth < 1600 ? "4px 14px" : "6px 20px",
-                        fontWeight: 700, fontSize: windowWidth < 1600 ? 13 : 15,
+                        padding: "6px 20px",
+                        fontWeight: 700, fontSize: 15,
                         fontFamily: POPPINS, textTransform: "capitalize" as const,
                       }}>
                         {getOverallRiskLabel(overallRisk)}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: windowWidth < 1600 ? 10 : 13, color: "#9ca3af", fontFamily: POPPINS }}>
+                    <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontFamily: POPPINS }}>
                       Based on temperature, turbidity, and pH
                     </p>
                   </div>
                   <div style={{
                     flex: 1, background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
-                    borderRadius: 18, padding: windowWidth < 1600 ? "12px 12px" : "16px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+                    borderRadius: 18, padding: "16px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
                   }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: windowWidth < 1600 ? 11 : 15, color: "#fff", textAlign: "center", fontFamily: POPPINS, letterSpacing: 0.3 }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#fff", textAlign: "center", fontFamily: POPPINS, letterSpacing: 0.3 }}>
                       Active Alerts
                     </p>
-                    <p style={{ margin: 0, fontSize: windowWidth < 1600 ? 36 : 52, fontWeight: 700, color: "#fff", lineHeight: 1, fontFamily: POPPINS }}>
+                    <p style={{ margin: 0, fontSize: 52, fontWeight: 700, color: "#fff", lineHeight: 1, fontFamily: POPPINS }}>
                       {unacknowledgedAlerts}
                     </p>
                   </div>
@@ -1406,7 +1462,7 @@ export function Dashboard({
   }
 
   // ─── Full dashboard ──────────────────────────────────────────────────────
-  const panelPadding = dPad;
+  const panelPadding = `${isNarrowDesktop ? dPad : 40}px ${dPad}px ${isNarrowDesktop ? dPad : 40}px ${dPad}px`;
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
 
@@ -1439,9 +1495,9 @@ export function Dashboard({
         } as React.CSSProperties}
       >
         {/* Site header */}
-        <div style={{ marginBottom: isNarrowDesktop ? 8 : 12, animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
+        <div style={{ marginBottom: isNarrowDesktop ? 12 : 20, animation: animationEnabled ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           <h1 style={{
-            fontSize: isNarrowDesktop ? 20 : 26,
+            fontSize: isNarrowDesktop ? 30 : 36,
             fontWeight: 700,
             color: "#fff",
             margin: 0,
@@ -1452,8 +1508,8 @@ export function Dashboard({
           </h1>
           <p style={{
             color: "rgba(255,255,255,0.9)",
-            fontSize: isNarrowDesktop ? 10 : 12,
-            margin: "1px 0 0 0",
+            fontSize: isNarrowDesktop ? 12 : 15,
+            margin: "3px 0 0 0",
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 400,
           }}>
@@ -1461,183 +1517,170 @@ export function Dashboard({
           </p>
         </div>
 
-        {/* ── UNIFIED CARDS GRID (Forces all 5 cards to be identically tall!) ── */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gridAutoRows: "1fr", // MAGIC: Forces all implicitly created rows to share exactly the same height as the tallest row.
-          gap: isNarrowDesktop ? 10 : 14,
-          marginBottom: isNarrowDesktop ? 12 : 20,
-          animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none"
-        }}>
+        {/* ── 3 Sensor mini-cards ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: isNarrowDesktop ? 10 : 14, marginBottom: isNarrowDesktop ? 12 : 24, animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" }}>
           {/* Temperature */}
-          <div style={{ height: "100%" }}>
-            <SensorMiniCard
-              label="Temperature"
-              iconSrc="/icons/icon-temperature.svg"
-              value={latestReading ? `${latestReading.temperature}` : "—"}
-              unit="°C"
-              sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-              dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-              active={!!latestReading}
-              compact
-              fadeIn={animationEnabled}
-              style={{ padding: sharedPad, height: "100%", justifyContent: "space-between" }}
-            />
-          </div>
+          <SensorMiniCard
+            label="Temperature"
+            iconSrc="/icons/icon-temperature.svg"
+            value={latestReading ? `${latestReading.temperature}` : "—"}
+            unit="°C"
+            sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
+            dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
+            active={!!latestReading}
+            compact
+            fixedHeight={cardH}
+            fadeIn={animationEnabled}
+          />
           {/* Turbidity */}
-          <div style={{ height: "100%" }}>
-            <SensorMiniCard
-              label="Turbidity"
-              iconSrc="/icons/icon-turbidity.svg"
-              value={latestReading ? `${latestReading.turbidity}` : "—"}
-              unit="NTU"
-              sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-              dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-              active={!!latestReading}
-              compact
-              fadeIn={animationEnabled}
-              style={{ padding: sharedPad, height: "100%", justifyContent: "space-between" }}
-            />
-          </div>
+          <SensorMiniCard
+            label="Turbidity"
+            iconSrc="/icons/icon-turbidity.svg"
+            value={latestReading ? `${latestReading.turbidity}` : "—"}
+            unit="NTU"
+            sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
+            dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
+            active={!!latestReading}
+            compact
+            fixedHeight={cardH}
+            fadeIn={animationEnabled}
+          />
           {/* pH */}
-          <div style={{ height: "100%" }}>
-            <SensorMiniCard
-              label="pH Level"
-              iconSrc="/icons/icon-ph.svg"
-              value={latestReading ? `${latestReading.ph}` : "—"}
-              unit=""
-              sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-              dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-              active={!!latestReading}
-              compact
-              fadeIn={animationEnabled}
-              style={{ padding: sharedPad, height: "100%", justifyContent: "space-between" }}
-            />
+          <SensorMiniCard
+            label="pH Level"
+            iconSrc="/icons/icon-ph.svg"
+            value={latestReading ? `${latestReading.ph}` : "—"}
+            unit=""
+            sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
+            dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
+            active={!!latestReading}
+            compact
+            fixedHeight={cardH}
+            fadeIn={animationEnabled}
+          />
+        </div>
+
+        {/* ── Total Parameter Readings ── */}
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: isNarrowDesktop ? 14 : 20,
+            padding: isNarrowDesktop ? "16px 20px" : "24px 30px",
+            display: "flex",
+            alignItems: "stretch",
+            justifyContent: "space-between",
+            marginBottom: isNarrowDesktop ? 12 : 24,
+            minHeight: cardH,
+            boxSizing: "border-box" as const,
+            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 22 : 30, color: "#337C85" }}>
+                Total Parameter Readings
+              </p>
+              <p style={{ margin: isNarrowDesktop ? "2px 0 6px" : "4px 0 10px", color: "#9ca3af", fontSize: isNarrowDesktop ? 13 : 15 }}>
+                Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
+              </p>
+            </div>
+            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 40 : 52, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+              {readings.length}
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 10, flexShrink: 0 }}>
+            <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 54 : 74, height: isNarrowDesktop ? 54 : 74, objectFit: "contain" }} />
+          </div>
+        </div>
+
+        {/* ── Risk Level + Active Alerts (ONE outer white card) ── */}
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: isNarrowDesktop ? 14 : 22,
+            padding: isNarrowDesktop ? "16px 20px" : "24px 30px",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            display: "flex",
+            alignItems: "stretch",
+            gap: isNarrowDesktop ? 10 : 16,
+            minHeight: cardH,
+            boxSizing: "border-box" as const,
+            animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
+          }}
+        >
+          {/* LEFT: Risk Level */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <p style={{
+              margin: isNarrowDesktop ? "0 0 6px" : "0 0 10px",
+              fontWeight: 700,
+              fontSize: isNarrowDesktop ? 22 : 30,
+              color: "#337C85",
+              fontFamily: "'Poppins', sans-serif",
+            }}>
+              Risk Level
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 12 : 18, marginBottom: isNarrowDesktop ? 8 : 14 }}>
+              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain" }} />
+              <span
+                style={{
+                  background: "transparent",
+                  color: riskColor,
+                  border: `1.5px solid ${riskColor}`,
+                  borderRadius: 999,
+                  padding: isNarrowDesktop ? "5px 18px" : "8px 26px",
+                  fontWeight: 700,
+                  fontSize: isNarrowDesktop ? 14 : 16,
+                  fontFamily: "'Poppins', sans-serif",
+                  textTransform: "capitalize",
+                }}
+              >
+                {getOverallRiskLabel(overallRisk)}
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 12 : 14, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
+              Based on temperature, turbidity, and pH
+            </p>
           </div>
 
-          {/* ── Total Parameter Readings ── */}
+          {/* RIGHT: Active Alerts — inset teal card (display only, no click) */}
           <div
             style={{
-              gridColumn: "1 / -1", // Span all 3 columns
-              background: "#fff",
-              borderRadius: 16,
-              padding: sharedPad,
+              flex: 1,
+              background: "linear-gradient(160deg, #2a7d8c, #3a9aad)",
+              borderRadius: isNarrowDesktop ? 12 : 16,
+              padding: isNarrowDesktop ? "14px 12px" : "22px 18px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
               display: "flex",
-              alignItems: "stretch",
-              justifyContent: "space-between",
-              height: "100%", // Fill its grid row
-              boxSizing: "border-box" as const,
-              boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-              animation: animationEnabled ? "contentSlideIn 0.7s 0.35s cubic-bezier(0.22,1,0.36,1) both" : "none",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: isNarrowDesktop ? 4 : 8,
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: isNarrowDesktop ? 17 : 20, color: "#337C85" }}>
-                  Total Parameter Readings
-                </p>
-                <p style={{ margin: isNarrowDesktop ? "2px 0 2px" : "1px 0 4px", color: "#9ca3af", fontSize: isNarrowDesktop ? 11 : 12 }}>
-                  Total readings ({intervalValue} {intervalUnit} interval, last 24 hours)
-                </p>
-              </div>
-              <p style={{ margin: 0, fontSize: isNarrowDesktop ? 38 : 42, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
-                {readings.length}
-              </p>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 4, flexShrink: 0 }}>
-              <img src="/icons/icon-readings.svg" alt="readings" style={{ width: isNarrowDesktop ? 38 : 44, height: isNarrowDesktop ? 38 : 44, objectFit: "contain" }} />
-            </div>
+            <p style={{
+              margin: 0,
+              fontWeight: 700,
+              fontSize: isNarrowDesktop ? 14 : 17,
+              color: "#fff",
+              textAlign: "center",
+              fontFamily: "'Poppins', sans-serif",
+              letterSpacing: 0.3,
+            }}>
+              Active Alerts
+            </p>
+            <p style={{
+              margin: 0,
+              fontSize: isNarrowDesktop ? 36 : 50,
+              fontWeight: 700,
+              color: "#fff",
+              lineHeight: 1,
+              fontFamily: "'Poppins', sans-serif",
+            }}>
+              {unacknowledgedAlerts}
+            </p>
           </div>
-
-          {/* ── Risk Level + Active Alerts (ONE outer white card) ── */}
-          <div
-            style={{
-              gridColumn: "1 / -1", // Span all 3 columns
-              background: "#fff",
-              borderRadius: 16,
-              padding: sharedPad,
-              boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-              display: "flex",
-              alignItems: "stretch",
-              gap: isNarrowDesktop ? 8 : 12,
-              height: "100%", // Fill its grid row
-              boxSizing: "border-box" as const,
-              animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
-            }}
-          >
-            {/* LEFT: Risk Level */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <p style={{
-                margin: isNarrowDesktop ? "0 0 4px" : "0 0 5px",
-                fontWeight: 700,
-                fontSize: isNarrowDesktop ? 17 : 20,
-                color: "#337C85",
-                fontFamily: "'Poppins', sans-serif",
-              }}>
-                Risk Level
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 8 : 10, marginBottom: isNarrowDesktop ? 5 : 8 }}>
-                <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 24 : 28, height: isNarrowDesktop ? 24 : 28, objectFit: "contain" }} />
-                <span
-                  style={{
-                    background: "transparent",
-                    color: riskColor,
-                    border: `1.2px solid ${riskColor}`,
-                    borderRadius: 999,
-                    padding: isNarrowDesktop ? "4px 12px" : "4px 14px",
-                    fontWeight: 700,
-                    fontSize: isNarrowDesktop ? 11.5 : 13,
-                    fontFamily: "'Poppins', sans-serif",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {getOverallRiskLabel(overallRisk)}
-                </span>
-              </div>
-              <p style={{ margin: 0, fontSize: isNarrowDesktop ? 10.5 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
-                Based on temperature, turbidity, and pH
-              </p>
-            </div>
-
-            {/* RIGHT: Active Alerts Container */}
-            <div
-              style={{
-                flex: "0 0 40%", // Fixed smaller width proportion
-                background: "#337C85", // Solid teal to match reference
-                borderRadius: 12, // Adjusted to pair nicely inside the 16px outer box
-                padding: isNarrowDesktop ? "10px 8px" : "14px 16px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: isNarrowDesktop ? 3 : 5,
-              }}
-            >
-              <p style={{
-                margin: 0,
-                fontWeight: 700,
-                fontSize: isNarrowDesktop ? 12 : 14,
-                color: "#fff",
-                textAlign: "center",
-                fontFamily: "'Poppins', sans-serif",
-                letterSpacing: 0.2,
-              }}>
-                Active Alerts
-              </p>
-              <p style={{
-                margin: 0,
-                fontSize: isNarrowDesktop ? 38 : 42,
-                fontWeight: 700,
-                color: "#fff",
-                lineHeight: 1,
-                fontFamily: "'Poppins', sans-serif",
-              }}>
-                {unacknowledgedAlerts}
-              </p>
-            </div>
-          </div>
-        </div> {/* ── END OF UNIFIED CARDS GRID ── */}
+        </div>
       </div>
 
       {/* ── MAP LAYER — real MapLibre map ── */}
@@ -1716,7 +1759,7 @@ export function Dashboard({
       </button>
 
       {/* Alert Details Modal */}
-      <AlertDetailsModal
+      <AlertDetailsModal 
         alert={selectedAlert}
         isOpen={!!selectedAlert}
         onOpenChange={(open) => !open && setSelectedAlert(null)}
@@ -1761,39 +1804,39 @@ const POPPINS = "'Poppins', sans-serif";
 
 const SENSOR_CARD_STYLE = {
   // Card
-  padding: (isNarrow: boolean) => isNarrow ? "10px 14px 10px 14px" : "20px 26px 20px 26px",
+  padding: "20px 26px 20px 26px",   // matches bottom cards' 26px sides
   borderRadius: 20,
-  height: (isNarrow: boolean) => isNarrow ? 135 : 205,
+  height: 205,
 
   // Icon
-  iconSize: (isNarrow: boolean) => isNarrow ? 24 : 44,
-  iconGap: (isNarrow: boolean) => isNarrow ? 8 : 12,
+  iconSize: 44,
+  iconGap: 12,            // space below icon before label
 
-  // Label
+  // Label (e.g. "Temperature")
   labelColor: "#77ABB2",
-  labelSize: (isNarrow: boolean) => isNarrow ? 11 : 15,
+  labelSize: 15,
   labelWeight: 500,
-  labelGap: (isNarrow: boolean) => isNarrow ? 2 : 6,
+  labelGap: 6,            // space below label before value
 
-  // Value number
+  // Value number (e.g. "31.19")
   valueColor: "#6b7280",
-  valueSize: (isNarrow: boolean) => isNarrow ? 18 : 30,
+  valueSize: 30,
   valueWeight: 600,
 
-  // Unit
+  // Unit (e.g. "°C", "NTU")
   unitColor: "#6b7280",
-  unitSize: (isNarrow: boolean) => isNarrow ? 12 : 20,
+  unitSize: 20,
   unitWeight: 700,
-  valueGap: (isNarrow: boolean) => isNarrow ? 2 : 6,
+  valueGap: 6,            // space below value before sub-text
 
-  // Sub-text
+  // Sub-text (e.g. "Moderate Risk")
   subColor: "#8E8B8B",
-  subSize: (isNarrow: boolean) => isNarrow ? 10 : 13,
+  subSize: 13,
   subWeight: 400,
 
   // Status dot
   dotSize: 10,
-  dotInset: (isNarrow: boolean) => isNarrow ? 12 : 20,
+  dotInset: 20,           // distance from card corner (more inward = not at very edge)
 };
 
 function SensorMiniCard({
@@ -1807,8 +1850,6 @@ function SensorMiniCard({
   compact,
   fixedHeight,
   fadeIn,
-  isNarrow,
-  style,
 }: {
   label: string;
   iconSrc: string;
@@ -1820,23 +1861,20 @@ function SensorMiniCard({
   compact?: boolean;
   fixedHeight?: number;
   fadeIn?: boolean;
-  isNarrow?: boolean;
-  style?: React.CSSProperties;
 }) {
 
   const S = SENSOR_CARD_STYLE;
-  const isN = !!isNarrow;
-  const cardHeight = fixedHeight ? fixedHeight : compact ? "auto" : (typeof S.height === 'function' ? S.height(isN) : S.height);
-  const cardPad = compact ? "16px 18px 14px" : (typeof S.padding === 'function' ? S.padding(isN) : S.padding);
-  const iconSize = compact ? 36 : (typeof S.iconSize === 'function' ? S.iconSize(isN) : S.iconSize);
-  const iconGap = compact ? 8 : (typeof S.iconGap === 'function' ? S.iconGap(isN) : S.iconGap);
-  const labelSize = compact ? 14 : (typeof S.labelSize === 'function' ? S.labelSize(isN) : S.labelSize);
-  const labelGap = compact ? 5 : (typeof S.labelGap === 'function' ? S.labelGap(isN) : S.labelGap);
-  const valueSize = compact ? 26 : (typeof S.valueSize === 'function' ? S.valueSize(isN) : S.valueSize);
-  const unitSize = compact ? 16 : (typeof S.unitSize === 'function' ? S.unitSize(isN) : S.unitSize);
-  const valueGap = compact ? 4 : (typeof S.valueGap === 'function' ? S.valueGap(isN) : S.valueGap);
-  const subSize = compact ? 11 : (typeof S.subSize === 'function' ? S.subSize(isN) : S.subSize);
-  const dotInset = compact ? 14 : (typeof S.dotInset === 'function' ? S.dotInset(isN) : S.dotInset);
+  const cardHeight = fixedHeight ? fixedHeight : compact ? "auto" : S.height;
+  const cardPad = compact ? "16px 18px 14px" : S.padding;
+  const iconSize = compact ? 36 : S.iconSize;
+  const iconGap = compact ? 8 : S.iconGap;
+  const labelSize = compact ? 14 : S.labelSize;
+  const labelGap = compact ? 5 : S.labelGap;
+  const valueSize = compact ? 26 : S.valueSize;
+  const unitSize = compact ? 16 : S.unitSize;
+  const valueGap = compact ? 4 : S.valueGap;
+  const subSize = compact ? 11 : S.subSize;
+  const dotInset = compact ? 14 : S.dotInset;
   return (
     <div
       style={{
@@ -1850,7 +1888,6 @@ function SensorMiniCard({
         height: cardHeight as any,
         boxSizing: "border-box",
         fontFamily: POPPINS,
-        ...style,
       }}
     >
       {/* Status dot — pulses when active, grey+static when no data */}
@@ -1929,18 +1966,18 @@ function getSensorStatus(
     if (value >= 22 && value <= 30)
       return { label: "High Possible Risk", color: "#ef4444" };
     if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
-      return { label: "Moderate Risk", color: "#E7B213" };
+      return { label: "Moderate Possible Risk", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "turbidity") {
     if (value < 5) return { label: "High Possible Risk", color: "#ef4444" };
-    if (value <= 15) return { label: "Moderate Risk", color: "#E7B213" };
+    if (value <= 15) return { label: "Moderate Possible Risk", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "ph") {
     if (value >= 6.5 && value <= 8.0) return { label: "High Possible Risk", color: "#ef4444" };
     if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
-      return { label: "Moderate Risk", color: "#f59e0b" };
+      return { label: "Moderate Possible Risk", color: "#f59e0b" };
     return { label: "Safe", color: "#22c55e" };
   }
   return { label: "", color: "#9ca3af" };

@@ -24,7 +24,6 @@ import { PWAInstructionsModal } from "../PWAInstructionsModal";
 import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
 import { reverseGeocode } from "../../utils/reverseGeocode";
-import { formatAddress } from "../../utils/addressFormat";
 
 interface LandingPageProps {
   onViewMap?: () => void;
@@ -41,7 +40,7 @@ function getSensorStatus(
     if (value >= 22 && value <= 30)
       return { label: "High Possible Risk", color: "#ef4444" };
     if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
-      return { label: "Moderate Risk", color: "#E7B213" };
+      return { label: "Moderate Possible Risk", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "turbidity") {
@@ -52,7 +51,7 @@ function getSensorStatus(
   if (type === "ph") {
     if (value >= 6.5 && value <= 8.0) return { label: "High Possible Risk", color: "#ef4444" };
     if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
-      return { label: "Moderate Risk", color: "#f59e0b" };
+      return { label: "Moderate Possible Risk", color: "#f59e0b" };
     return { label: "Safe", color: "#22c55e" };
   }
   return { label: "", color: "#9ca3af" };
@@ -87,11 +86,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
   const [deviceConnected, setDeviceConnected] = useState(true);
-  const [siteData, setSiteData] = useState<any>({
-    siteName: "Matina Site",
-    barangay: "Matina Crossing",
-    municipality: "Davao City",
-    area: "C. Enclabo St",
+  const [siteData, setSiteData] = useState<any>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const cachedName = localStorage.getItem('sg_global_latest_siteName');
+        return {
+          siteName: cachedName || "Matina Site",
+          barangay: "Matina Crossing",
+          municipality: "Davao City",
+          area: "C. Enclabo St",
+        };
+      }
+    } catch { }
+    return {
+      siteName: "Matina Site",
+      barangay: "Matina Crossing",
+      municipality: "Davao City",
+      area: "C. Enclabo St",
+    };
   });
 
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
@@ -145,30 +157,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       .catch(console.error);
   }, []);
   // Address from reverse geocoding (sync with dashboard)
-  const [gpsAddress, setGpsAddress] = useState<string | null>(null);
+  const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('sg_global_latest_address');
+        if (cached) return cached;
+      }
+    } catch { }
+    return null;
+  });
   // Cache last lat/lng to avoid unnecessary API calls
   const lastLatLngRef = useRef<{ lat: number, lng: number } | null>(null);
   // Fallback logic for marker and address (sync with dashboard)
   const [gpsSites, setGpsSites] = useState<Array<{ id: string; name: string; lat: number; lng: number }> | undefined>(undefined);
   const [lastSavedLocation, setLastSavedLocation] = useState<{ lat: number; lng: number; siteName?: string; address?: string | null } | null>(null);
 
-  const primaryAddress =
-    (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
-    (typeof lastSavedLocation?.address === "string" && lastSavedLocation.address.trim() ? lastSavedLocation.address.trim() : null) ||
-    (typeof gpsAddress === "string" && gpsAddress.trim() ? gpsAddress.trim() : null) ||
-    null;
+  const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
+    .map((v: any) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean)
+    .join(", ");
 
-  const displayAddress = formatAddress({
-    fullAddress: primaryAddress,
-    locality: primaryAddress,
-    area: siteData?.area,
-    barangay: siteData?.barangay,
-    municipality: siteData?.municipality,
-    province: siteData?.province,
-    fallback: "Address unavailable",
-  });
+  const displayAddress =
+    gpsAddress ||
+    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
+    metaAddress ||
+    "Device Address";
 
   // Strictly follow real sensor device location (from GSM/GPS data)
+  // Fallback to last known location in localStorage if sensor is not yet available
   useEffect(() => {
     let sites;
     let lastLoc;
@@ -187,30 +204,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         lat: latestReading.latitude,
         lng: latestReading.longitude,
       }];
-      lastLoc = {
-        lat: latestReading.latitude,
-        lng: latestReading.longitude,
-        siteName: siteData.siteName,
-        address: typeof latestReading.address === 'string' && latestReading.address.trim()
-          ? latestReading.address.trim()
-          : (lastSavedLocation?.address ?? null),
-      };
+      lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
 
+      // Persist to localStorage for immediate loading on next visit
+      localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
     }
-    // 2. If no live reading yet, keep the last valid marker from backend fallback
+    // 2. Fallback to cached location if no live reading yet
     else {
-      if (lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
-        setGpsSites([{
-          id: 'device-gps',
-          name: lastSavedLocation.siteName || 'Last Known Location',
-          lat: lastSavedLocation.lat,
-          lng: lastSavedLocation.lng,
-        }]);
+      let cachedSet = false;
+      if (typeof window !== "undefined") {
+        const last = localStorage.getItem('lastGpsLocation');
+        if (last) {
+          try {
+            const parsed = JSON.parse(last);
+            if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+              sites = [{
+                id: 'device-gps',
+                name: parsed.siteName || 'Last Known Location',
+                lat: parsed.lat,
+                lng: parsed.lng,
+              }];
+              lastLoc = parsed;
+              setGpsSites(sites);
+              setLastSavedLocation(lastLoc);
+              cachedSet = true;
+            }
+          } catch { }
+        }
+      }
+
+      // 3. If no live/cached location, keep map marker empty to avoid fake location pins
+      if (!cachedSet) {
+        setGpsSites(undefined);
+        setLastSavedLocation(null);
       }
     }
-  }, [latestReading, siteData.siteName, lastSavedLocation]);
+  }, [latestReading, siteData.siteName]);
 
   // Reverse geocode when GPS changes (sync with dashboard logic)
   useEffect(() => {
@@ -218,22 +249,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       const { lat, lng } = gpsSites[0];
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
+        setGpsAddress(null); // reset while loading
         reverseGeocode(lat, lng).then(addr => {
-          if (addr) {
-            setGpsAddress(addr);
-            setLastSavedLocation(prev => prev ? { ...prev, address: addr } : prev);
-          } else if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
-            setGpsAddress(latestReading.address.trim());
+          setGpsAddress(addr);
+          // Sync with dashboard global cache
+          if (addr && addr !== "Unnamed Road" && addr !== "Device Address") {
+            localStorage.setItem('sg_global_latest_address', addr);
           }
         });
       }
-    } else if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
-      const resolvedAddress = latestReading.address.trim();
-      if (gpsAddress !== resolvedAddress) {
-        setGpsAddress(resolvedAddress);
+    } else {
+      setGpsAddress(null);
+      lastLatLngRef.current = null;
+    }
+  }, [gpsSites]);
+  // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
+  useEffect(() => {
+    if (!gpsAddress && typeof window !== 'undefined') {
+      const keys = Object.keys(localStorage);
+      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+      if (addressKey) {
+        const cached = localStorage.getItem(addressKey);
+        if (cached && cached !== "Device Address") {
+          setGpsAddress(cached);
+          localStorage.setItem('sg_global_latest_address', cached);
+        }
+      }
+
+      const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
+      if (siteNameKey && siteData.siteName === "Matina Site") {
+        const cachedName = localStorage.getItem(siteNameKey);
+        if (cachedName && cachedName !== "Site Name") {
+          setSiteData((prev: any) => ({ ...prev, siteName: cachedName }));
+          localStorage.setItem('sg_global_latest_siteName', cachedName);
+        }
       }
     }
-  }, [gpsSites, latestReading, gpsAddress, siteData.siteName]);
+  }, [gpsAddress, siteData.siteName]);
 
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
@@ -282,19 +334,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           if (data && data.deviceConnected === false) {
             console.log('[LandingPage] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
             if (data.siteName && data.siteName !== "Site Name") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
-            if (typeof data.address === 'string' && data.address.trim()) {
-              const resolvedAddress = data.address.trim();
-              setGpsAddress(resolvedAddress);
-            }
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[LandingPage] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
                 lat: data.latitude,
                 lng: data.longitude,
                 siteName: data.siteName || 'Last Known Location',
-                address: (typeof data.address === 'string' && data.address.trim())
-                  ? data.address.trim()
-                  : (lastSavedLocation?.address ?? null),
+                address: data.address || null,
               };
               setLastSavedLocation(fallbackLoc);
               setGpsSites([
@@ -305,6 +351,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   lng: fallbackLoc.lng,
                 },
               ]);
+              localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
             } else {
               console.log('[LandingPage] NO fallback coords, clearing map');
             }
@@ -316,20 +363,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           }
           console.log('[LandingPage] Device connected, setting latestReading');
           setLatestReading(data);
-          if (typeof data?.address === 'string' && data.address.trim()) {
-            const resolvedAddress = data.address.trim();
-            setGpsAddress(resolvedAddress);
-          }
-          if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-            setLastSavedLocation({
-              lat: data.latitude,
-              lng: data.longitude,
-              siteName: data.siteName || siteData.siteName || 'Device Location',
-              address: (typeof data.address === 'string' && data.address.trim())
-                ? data.address.trim()
-                : (lastSavedLocation?.address ?? null),
-            });
-          }
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);
@@ -380,16 +413,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (screenWidth < 480) return '30px'; // Small mobile
     if (screenWidth < 768) return '40px'; // Large mobile
     if (screenWidth < 1024) return '55px'; // Tablet
-    if (screenWidth < 1600) return '28px'; // Narrow Desktop (Micro-scaling)
-    return '44px'; // Large Desktop
+    return '44px'; // Desktop (refined for better scaling)
   };
 
   const getHeroParagraphFontSize = () => {
     if (screenWidth < 480) return '14px'; // Small mobile
     if (screenWidth < 768) return '16px'; // Large mobile
     if (screenWidth < 1024) return '18px'; // Tablet
-    if (screenWidth < 1600) return '13px'; // Narrow Desktop (Micro-scaling)
-    return '17px'; // Large Desktop
+    return '17px'; // Desktop (refined)
   };
 
   // Sample data
@@ -403,7 +434,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     {
       id: "2",
-      title: "Temperature Moderate Risk",
+      title: "Temperature Moderate Possible Risk",
       details: "Water temp 32°C — Barangay Riverside",
       level: "warning" as const,
       timestamp: "2025-09-15 13:45",
@@ -481,80 +512,80 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div style={{
         background: "#fff",
         borderRadius: 20,
-        padding: screenWidth < 600 ? "12px" : screenWidth >= 1100 ? "14px" : "18px",
+        padding: screenWidth < 600 ? "16px" : screenWidth >= 1100 ? "18px" : "22px",
         boxShadow: screenWidth < 600 ? "0 4px 18px rgba(0,0,0,0.11)" : "0 2px 12px rgba(0,0,0,0.09)",
         fontFamily: "'Poppins', sans-serif",
         animation: 'cardFadeIn 0.6s 0.6s ease-out both',
         gridColumn: '1 / -1',
         display: "flex",
         flexDirection: "column",
-        gap: 8,
-        marginTop: 4,
+        gap: 12,
+        marginTop: 4, // Added margin to separate from the cards above
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <div style={{
-            width: 26, height: 26, borderRadius: 8,
+            width: 34, height: 34, borderRadius: 10,
             background: "linear-gradient(135deg, #357D86, #4EA8B1)",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
-            <Activity size={14} color="#fff" />
+            <Activity size={18} color="#fff" />
           </div>
-          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#337C85" }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#337C85" }}>
             Data Interpretation
           </h3>
         </div>
 
         {/* Current Risk Interpretation */}
         <div style={{
-          padding: "8px 10px",
-          borderRadius: 10,
+          padding: "12px 14px",
+          borderRadius: 14,
           background: current.bgColor,
           border: `1px solid ${current.borderColor}`,
           display: "flex",
-          gap: 6,
+          gap: 10,
           alignItems: "flex-start"
         }}>
-          <Info size={12} color={current.color} style={{ marginTop: 2, flexShrink: 0 }} />
+          <Info size={16} color={current.color} style={{ marginTop: 2, flexShrink: 0 }} />
           <div>
-            <p style={{ margin: "0 0 1px", fontSize: 11, fontWeight: 700, color: current.color }}>
+            <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: current.color }}>
               {current.title}
             </p>
-            <p style={{ margin: 0, fontSize: 10, color: "#475569", lineHeight: 1.4 }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
               {current.message}
             </p>
           </div>
         </div>
 
         {/* Threshold Quick Guide */}
-        <div style={{ marginTop: 2 }}>
-          <p style={{ margin: "0 0 6px", fontSize: 9.5, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        <div style={{ marginTop: 4 }}>
+          <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>
             Snail Breeding Danger Zones
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <Thermometer size={11} color="#77ABB2" />
-                <span style={{ fontSize: 10, color: "#475569" }}>Temperature</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Thermometer size={14} color="#77ABB2" />
+                <span style={{ fontSize: 12, color: "#475569" }}>Temperature</span>
               </div>
-              <span style={{ fontSize: 9, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
                 22°C - 30°C
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <Droplets size={11} color="#77ABB2" />
-                <span style={{ fontSize: 10, color: "#475569" }}>Turbidity</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Droplets size={14} color="#77ABB2" />
+                <span style={{ fontSize: 12, color: "#475569" }}>Turbidity</span>
               </div>
-              <span style={{ fontSize: 9, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
                 Clear (&lt; 5 NTU)
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <Info size={11} color="#77ABB2" />
-                <span style={{ fontSize: 10, color: "#475569" }}>pH Levels</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Info size={14} color="#77ABB2" />
+                <span style={{ fontSize: 12, color: "#475569" }}>pH Levels</span>
               </div>
-              <span style={{ fontSize: 9, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
                 6.5 - 8.0 pH
               </span>
             </div>
@@ -616,7 +647,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </div>
 
       <header
-        className="relative z-50 border-b border-gray-100 flex items-center"
+        className="relative z-50 border-b border-gray-100"
         style={{
           backgroundColor: '#FFFFFF',
           transform: showLiveUpdates ? 'translateY(-100%)' : 'translateY(0)',
@@ -625,23 +656,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             ? 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out'
             : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
           pointerEvents: showLiveUpdates ? 'none' : 'auto',
-          height: screenWidth < 1700 ? 64 : 72,
         }}
       >
-        <div className="w-full" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
-          <div className="flex justify-between items-center w-full">
+        <div className="w-full py-6" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
+          <div className="flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <img
                 src="/schistoguard.png"
                 alt="SchistoGuard Logo"
-                style={{ width: 24, height: 24, objectFit: "contain" }}
+                style={{ width: 28, height: 28, objectFit: "contain" }}
               />
               <h1
                 style={{
                   fontFamily: "Poppins, sans-serif",
                   color: "#357D86",
                   fontWeight: 600,
-                  fontSize: 16,
+                  fontSize: 18,
                 }}
               >
                 SchistoGuard
@@ -653,20 +683,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {screenWidth >= 640 ? (
                 <CTAButton
                   variant="primary"
+                  size="sm"
                   onClick={onEnterApp}
                   ariaLabel="Start monitoring"
-                  className="flex rounded-full items-center justify-center border transition-all duration-300 shadow-sm"
+                  className="flex rounded-full px-5 py-2 border-2 transition-all duration-300 shadow-lg"
                   style={{
                     fontFamily: 'Poppins, sans-serif',
                     fontWeight: 600,
-                    fontSize: '12px',
-                    height: '32px',
-                    padding: '0 14px',
+                    fontSize: '14px',
                     backgroundColor: isMonitoringHovered ? '#FFFFFF' : '#357D86',
                     color: isMonitoringHovered ? '#357D86' : '#FFFFFF',
                     borderColor: '#357D86',
-                    boxShadow: isMonitoringHovered ? '0 4px 12px rgba(53, 125, 134, 0.2)' : '0 2px 4px rgba(53, 125, 134, 0.1)',
-                    transform: isMonitoringHovered ? 'translateY(-1px)' : 'translateY(0)'
+                    boxShadow: isMonitoringHovered ? '0 10px 25px -5px rgba(53, 125, 134, 0.3)' : '0 10px 15px -3px rgba(53, 125, 134, 0.2)',
+                    transform: isMonitoringHovered ? 'translateY(-2px)' : 'translateY(0)'
                   }}
                   onMouseEnter={() => setIsMonitoringHovered(true)}
                   onMouseLeave={() => setIsMonitoringHovered(false)}
@@ -1015,7 +1044,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   color: '#fff',
                   fontFamily: "'Poppins', sans-serif",
                   fontWeight: 700,
-                  fontSize: isMobileOrTablet ? (screenWidth < 600 ? 22 : 24) : 26,
+                  fontSize: isMobileOrTablet ? (screenWidth < 600 ? 26 : 32) : 38,
                   lineHeight: 1.15,
                   textShadow: '0 1px 6px rgba(0,0,0,0.18)',
                   animation: 'slideInFromRight 0.6s 0.2s ease-out both',
@@ -1028,7 +1057,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   margin: '6px 0 0',
                   color: 'rgba(255,255,255,0.92)',
                   fontFamily: "'Poppins', sans-serif",
-                  fontSize: isMobileOrTablet ? 11 : 12,
+                  fontSize: isMobileOrTablet ? 13 : 16,
                   animation: 'slideInFromRight 0.6s 0.3s ease-out both',
                 }}
               >
@@ -1104,7 +1133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: 20,
                 pointerEvents: 'auto',
                 marginTop: 20,
-                maxWidth: screenWidth < 1100 ? '100%' : 580,
+                maxWidth: screenWidth < 1100 ? '100%' : 580, 
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
@@ -1113,7 +1142,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '10px 12px' : screenWidth >= 1100 ? '12px 14px' : '14px 18px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '14px 18px' : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1136,16 +1165,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('temperature', latestReading.temperature).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, height: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, objectFit: 'contain', marginBottom: screenWidth < 600 ? 4 : 5 }} />
-                <p style={{ margin: '0 0 3px', fontWeight: 500, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 11 : 12, color: '#77ABB2' }}>Temperature</p>
-                <p style={{ margin: '0 0 3px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 2 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 16 : screenWidth >= 1100 ? 18 : 22, color: '#6b7280' }}>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 11.5 : screenWidth >= 1100 ? 12 : 15, color: '#77ABB2' }}>Temperature</p>
+                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.temperature : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 12 : 14, color: '#6b7280' }}> °C</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> °C</span>}
                 </p>
                 {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 8.5 : 10, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
                     {getSensorStatus('temperature', latestReading.temperature).label}
                   </p>
                 )}
@@ -1156,7 +1185,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 style={{
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '10px 12px' : screenWidth >= 1100 ? '12px 14px' : '14px 18px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1179,16 +1208,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('turbidity', latestReading.turbidity).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, height: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, objectFit: 'contain', marginBottom: screenWidth < 600 ? 4 : 5 }} />
-                <p style={{ margin: '0 0 3px', fontWeight: 500, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 11 : 12, color: '#77ABB2' }}>Turbidity</p>
-                <p style={{ margin: '0 0 3px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 2 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 16 : screenWidth >= 1100 ? 18 : 22, color: '#6b7280' }}>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>Turbidity</p>
+                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.turbidity : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 12 : 14, color: '#6b7280' }}> NTU</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> NTU</span>}
                 </p>
                 {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 8.5 : 10, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
                     {getSensorStatus('turbidity', latestReading.turbidity).label}
                   </p>
                 )}
@@ -1200,7 +1229,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: screenWidth >= 1100 ? 'auto' : '1 / -1',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '10px 12px' : screenWidth >= 1100 ? '12px 14px' : '14px 18px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1223,10 +1252,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('ph', latestReading.ph).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, height: screenWidth < 600 ? 24 : screenWidth >= 1100 ? 28 : 32, objectFit: 'contain', marginBottom: screenWidth < 600 ? 4 : 5 }} />
-                <p style={{ margin: '0 0 3px', fontWeight: 500, fontSize: screenWidth < 600 ? 10 : screenWidth >= 1100 ? 11 : 12, color: '#77ABB2' }}>pH Level</p>
-                <p style={{ margin: '0 0 3px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 2 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 16 : screenWidth >= 1100 ? 18 : 22, color: '#6b7280' }}>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>pH Level</p>
+                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.ph : '—'}
                   </span>
                 </p>
