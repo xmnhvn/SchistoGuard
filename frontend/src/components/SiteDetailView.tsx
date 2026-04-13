@@ -356,8 +356,6 @@ export function SiteDetailView({
             }
           } else {
             setHistory([]);
-          } else {
-            setHistory([]);
           }
         })
         .catch(err => {
