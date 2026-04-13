@@ -5,10 +5,10 @@ import {
   Info,
   FileText,
   LogOut,
+  User,
   Settings,
   Users,
   AlignJustify,
-  User
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -507,7 +507,7 @@ export function NavigationProvider({
       <aside
         style={{
           position: "fixed",
-          top: 60, left: 0, bottom: 0,
+          top: 76, left: 0, bottom: 0,
           width: 260,
           background: "#fff",
           borderRight: "1px solid #e8e8e8",
@@ -618,6 +618,7 @@ export function NavigationProvider({
           bottom: 0,
           overflowY: "auto",
           overflowX: "hidden",
+          paddingTop: 0,
           transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           ...(currentView === "dashboard" ? {
             msOverflowStyle: "none",
