@@ -132,6 +132,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const isNarrowDesktop = windowWidth < 1600;
   const isWeb = windowWidth >= 1100;
 
   const pad = isMobile ? 16 : isTablet ? 24 : 32;
@@ -480,12 +481,15 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       <div className={`mx-auto flex h-full min-h-0 flex-col ${isMobile ? 'w-full' : 'w-full max-w-[1700px]'}`}>
         {/* Synchronized Header Section */}
         <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: 32,
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
         }}>
           <div>
             <h1 style={{
-              fontSize: 26,
+              fontSize: isMobile ? 20 : (isNarrowDesktop ? 24 : 26),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
@@ -495,7 +499,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               Admin Settings
             </h1>
             <p style={{
-              fontSize: 12.5,
+              fontSize: isNarrowDesktop ? 11.5 : 12.5,
               color: "#7b8a9a",
               margin: "4px 0 0",
               fontFamily: POPPINS,

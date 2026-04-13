@@ -746,7 +746,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: mobileResponsive ? 20 : 26,
+              fontSize: mobileResponsive ? 18 : (isNarrowDesktop ? 24 : 26),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,

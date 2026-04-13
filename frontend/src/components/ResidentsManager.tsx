@@ -100,9 +100,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
-  const isCompact = windowWidth < 1100;
   const isNarrowDesktop = windowWidth < 1600;
-  const pad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
+  const isCompact = windowWidth < 1100;
 
   // Fetch residents
   useEffect(() => {
@@ -333,6 +333,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         padding: pad,
         display: "flex",
         flexDirection: "column",
+        gap: 20
       }}>
         <style>{`
           *::-webkit-scrollbar { display: none; }
@@ -348,31 +349,28 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Header */}
         <div style={{
           display: "flex",
-          flexDirection: isCompact ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: isCompact ? "flex-start" : "center",
-          gap: 16,
-          marginBottom: 24,
+          alignItems: "center",
+          marginBottom: 4,
           animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
             <h1 style={{
-              fontSize: isMobile ? 18 : (isNarrowDesktop ? 19 : 22),
+              fontSize: isMobile ? 18 : (isNarrowDesktop ? 24 : 26),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
               fontFamily: POPPINS,
+              letterSpacing: "-0.02em",
             }}>
               Recipients
             </h1>
             <p style={{
-              fontSize: isMobile ? 11 : (isNarrowDesktop ? 11 : 12),
-              color: "#7b8a9a",
-              margin: "2px 0 0 0",
-              fontFamily: POPPINS
-            }}>
-              Manage alert recipients and their designations
-            </p>
+              fontSize: isNarrowDesktop ? 11 : 12,
+              color: "#74828f",
+              margin: "2px 0 0",
+              fontFamily: POPPINS,
+            }}>Manage residents and personnel for {siteName}</p>
           </div>
           <div style={{
             display: "flex",

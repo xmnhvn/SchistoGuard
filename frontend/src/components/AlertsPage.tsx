@@ -217,7 +217,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   }
   const avgResponseTime = getAverageResponseTime(alerts);
   const isNarrowDesktop = windowWidth < 1600;
-  const pad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
+  const pad = isMobile ? 16 : isTablet ? 24 : 32;
 
   return (
     <div style={{
@@ -241,7 +241,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <h1 style={{
-            fontSize: isMobile ? 18 : (isNarrowDesktop ? 19 : 22),
+            fontSize: isMobile ? 18 : (isNarrowDesktop ? 24 : 26),
             fontWeight: 700,
             color: "#1a2a3a",
             margin: 0,
@@ -723,11 +723,11 @@ function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact, isN
       boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
       border: "1px solid rgba(0,0,0,0.03)",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isNarrowDesktop ? 8 : 12 }}>
-        <span style={{ fontSize: isNarrowDesktop ? 11.5 : 13, fontWeight: 500, color: "#8E8B8B", letterSpacing: 0 }}>{label}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isNarrowDesktop ? 8 : 10 }}>
+        <span style={{ fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#8E8B8B", letterSpacing: 0 }}>{label}</span>
         <div style={{
-          width: isNarrowDesktop ? 28 : 36,
-          height: isNarrowDesktop ? 28 : 36,
+          width: isNarrowDesktop ? 30 : 36,
+          height: isNarrowDesktop ? 30 : 36,
           borderRadius: 100,
           background: bgColor,
           display: "flex",
@@ -737,7 +737,7 @@ function StatCard({ icon, label, value, valueColor, bgColor, sub, isCompact, isN
           {icon}
         </div>
       </div>
-      <div style={{ fontSize: isNarrowDesktop ? 20 : 22, fontWeight: 700, color: valueColor, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: isNarrowDesktop ? 22 : 24, fontWeight: 700, color: valueColor, lineHeight: 1 }}>{value}</div>
       <span style={{ fontSize: isNarrowDesktop ? 9 : 10, color: "#8E8B8B", marginTop: 3, fontWeight: 400 }}>{sub}</span>
     </div>
   );

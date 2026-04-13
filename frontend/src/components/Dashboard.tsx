@@ -291,8 +291,11 @@ export function Dashboard({
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
   const isNarrowDesktop = vw < 1600;
   // Shared card height so ALL dashboard cards are uniform
-  const cardH = isNarrowDesktop ? 140 : 190;
+  const cardH = isNarrowDesktop ? 150 : 190;
   const panelWidth = isNarrowDesktop ? "46%" : "44%";
+  
+  // Refined title scaling for Dashboard
+  const titleFontSize = isNarrowDesktop ? 28 : 34;
 
   const metaAddress = [siteData.area, siteData.barangay, siteData.municipality]
     .map((v: any) => (typeof v === "string" ? v.trim() : ""))
@@ -902,7 +905,7 @@ export function Dashboard({
                 color: "#fff",
                 fontFamily: POPPINS,
                 fontWeight: 700,
-                fontSize: compactCards ? 28 : 34,
+                fontSize: titleFontSize,
                 lineHeight: 1.15,
                 textShadow: "0 1px 6px rgba(0,0,0,0.18)",
                 paddingLeft: isMobile ? 0 : 0,
