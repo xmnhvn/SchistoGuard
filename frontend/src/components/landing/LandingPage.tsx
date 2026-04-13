@@ -38,20 +38,20 @@ function getSensorStatus(
 ): { label: string; color: string } {
   if (type === "temperature") {
     if (value >= 22 && value <= 30)
-      return { label: "High Possible Risk", color: "#ef4444" };
+      return { label: "Needs Attention", color: "#ef4444" };
     if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
-      return { label: "Moderate Possible Risk", color: "#E7B213" };
+      return { label: "Watch Zone", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "turbidity") {
-    if (value < 5) return { label: "Clear Water – Higher Schisto Risk", color: "#ef4444" };
+    if (value < 5) return { label: "Higher Clarity (Needs Attention)", color: "#ef4444" };
     if (value <= 15) return { label: "Moderate Turbidity", color: "#E7B213" };
     return { label: "Safe", color: "#22c55e" };
   }
   if (type === "ph") {
-    if (value >= 6.5 && value <= 8.0) return { label: "High Possible Risk", color: "#ef4444" };
+    if (value >= 6.5 && value <= 8.0) return { label: "Needs Attention", color: "#ef4444" };
     if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
-      return { label: "Moderate Possible Risk", color: "#f59e0b" };
+      return { label: "Watch Zone", color: "#f59e0b" };
     return { label: "Safe", color: "#22c55e" };
   }
   return { label: "", color: "#9ca3af" };
@@ -427,14 +427,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const sampleAlerts = [
     {
       id: "1",
-      title: "High Possible Risk Turbidity Level",
+      title: "Turbidity Needs Attention",
       details: "Turbidity 18.2 NTU — Barangay San Miguel River",
       level: "critical" as const,
       timestamp: "2025-09-15 14:31",
     },
     {
       id: "2",
-      title: "Temperature Moderate Possible Risk",
+      title: "Temperature Watch Zone",
       details: "Water temp 32°C — Barangay Riverside",
       level: "warning" as const,
       timestamp: "2025-09-15 13:45",
@@ -477,22 +477,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     const overallRisk = getOverallRisk();
     const riskData = {
       safe: {
-        title: "Safe Environment",
-        message: "Conditions are currently unfavorable for Schistosomiasis snails.",
+        title: "Stable Conditions",
+        message: "Current readings are outside the most favorable range for snail activity.",
         color: "#22c55e",
         bgColor: "rgba(34,197,94,0.08)",
         borderColor: "rgba(34,197,94,0.2)"
       },
       warning: {
-        title: "Moderate Risk",
-        message: "Parameters are approaching optimal breeding ranges for snails.",
+        title: "Watch Zone",
+        message: "Some readings are near ranges that can support snail activity. Continue monitoring.",
         color: "#f59e0b",
         bgColor: "rgba(245,158,11,0.08)",
         borderColor: "rgba(245,158,11,0.2)"
       },
       critical: {
-        title: "High Risk",
-        message: "Environment is highly favorable for Schistosomiasis intermediate hosts.",
+        title: "Needs Attention",
+        message: "Current readings are within ranges linked to higher snail activity. Consider preventive action and closer monitoring.",
         color: "#ef4444",
         bgColor: "rgba(239,68,68,0.08)",
         borderColor: "rgba(239,68,68,0.2)"
@@ -559,7 +559,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Threshold Quick Guide */}
         <div style={{ marginTop: 4 }}>
           <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Snail Breeding Danger Zones
+            Reference Ranges for Monitoring
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -567,7 +567,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <Thermometer size={14} color="#77ABB2" />
                 <span style={{ fontSize: 12, color: "#475569" }}>Temperature</span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#0f766e", background: "rgba(15,118,110,0.12)", padding: "2px 8px", borderRadius: 4 }}>
                 22°C - 30°C
               </span>
             </div>
@@ -576,8 +576,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <Droplets size={14} color="#77ABB2" />
                 <span style={{ fontSize: 12, color: "#475569" }}>Turbidity</span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
-                Clear (&lt; 5 NTU)
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#0f766e", background: "rgba(15,118,110,0.12)", padding: "2px 8px", borderRadius: 4 }}>
+                Higher clarity (&lt; 5 NTU)
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -585,7 +585,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <Info size={14} color="#77ABB2" />
                 <span style={{ fontSize: 12, color: "#475569" }}>pH Levels</span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#0f766e", background: "rgba(15,118,110,0.12)", padding: "2px 8px", borderRadius: 4 }}>
                 6.5 - 8.0 pH
               </span>
             </div>
