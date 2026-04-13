@@ -396,7 +396,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
                   width: "100%",
-                  borderRadius: 12, fontFamily: POPPINS,
+                  borderRadius: 100, fontFamily: POPPINS,
                   fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
                   height: isNarrowDesktop ? 34 : 38,
@@ -408,11 +408,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger style={{
                   width: isCompact ? "100%" : 170,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS,
                   fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
                   height: isNarrowDesktop ? 34 : 38,
-                  padding: "0 10px",
+                  padding: "0 16px",
                   display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
@@ -441,7 +441,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               htmlFor="csv-upload-input"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
+                padding: isNarrowDesktop ? "0 14px" : "0 18px", height: isNarrowDesktop ? 34 : 38, borderRadius: 100,
                 border: "1px solid #e2e5ea",
                 background: "#fff", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
@@ -456,7 +456,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               onClick={() => setIsAddDialogOpen(true)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
+                padding: isNarrowDesktop ? "0 14px" : "0 18px", height: isNarrowDesktop ? 34 : 38, borderRadius: 100,
                 border: "none", flexShrink: 0,
                 background: "#357D86", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
@@ -485,7 +485,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           ].map((card, i) => (
             <div key={card.label} style={{
               background: "#fff",
-              borderRadius: 16,
+              borderRadius: 20,
               padding: isNarrowDesktop ? 12 : 14,
               display: "flex",
               flexDirection: "column",

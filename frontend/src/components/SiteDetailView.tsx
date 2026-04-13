@@ -13,6 +13,7 @@ import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
 import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from "../utils/loadHtml2Pdf";
 import { reverseGeocode } from "../utils/reverseGeocode";
+import { formatAddress } from "../utils/addressFormat";
 import { PDFHeader } from "./PDFHeader";
 
 const POPPINS = "'Poppins', sans-serif";
@@ -41,31 +42,18 @@ export function SiteDetailView({
   console.log("SiteDetailView mounted");
   const [animate] = useState(!_siteDetailFirstLoadDone);
   const [graphReady, setGraphReady] = useState(false);
-  // Load last selected timeRange from localStorage if available
-  const getInitialTimeRange = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('sg_timeRange') || "24h";
-    }
-    return "24h";
-  };
-  const [timeRange, setTimeRange] = useState(getInitialTimeRange());
+  const [timeRange, setTimeRange] = useState("24h");
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState("all");
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
-  // Cache history in memory and localStorage
-  const [history, setHistory] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('sg_history');
-      if (cached) {
-        try { return JSON.parse(cached); } catch { return []; }
-      }
-    }
-    return [];
-  });
+  const [history, setHistory] = useState<any[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   // Ref for chart container
   const chartRef = useRef<HTMLDivElement>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setExporting] = useState(false);
+<<<<<<< HEAD
 
   // Persistent Address & Dynamic Name Cache per SiteId
   const getCachedData = (key: string) => {
@@ -116,6 +104,12 @@ export function SiteDetailView({
     }
   }, [address, dynamicSiteName, siteId]);
 
+=======
+  const [address, setAddress] = useState<string | null>(null);
+  const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(siteName !== "Site Name" ? siteName : null);
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+
+>>>>>>> 2a7b035a39b05d3aae5e4dae8d7075820d82ed39
   useEffect(() => {
     // Disable entry animation after it's finished to prevent glitches on re-renders
     const timer = setTimeout(() => {
@@ -138,16 +132,23 @@ export function SiteDetailView({
         // to prevent overwriting custom Admin settings.
         if (latestWithGps.siteName && latestWithGps.siteName !== "Site Name") {
           setDynamicSiteName(latestWithGps.siteName);
-          localStorage.setItem('sg_global_latest_siteName', latestWithGps.siteName);
         }
         if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+<<<<<<< HEAD
           setAddress(latestWithGps.address);
           localStorage.setItem('sg_global_latest_address', latestWithGps.address);
+=======
+          const resolvedAddress = latestWithGps.address.trim();
+          setAddress(resolvedAddress);
+>>>>>>> 2a7b035a39b05d3aae5e4dae8d7075820d82ed39
         } else {
           reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
             if (addr) {
               setAddress(addr);
+<<<<<<< HEAD
               localStorage.setItem('sg_global_latest_address', addr);
+=======
+>>>>>>> 2a7b035a39b05d3aae5e4dae8d7075820d82ed39
             }
           });
         }
@@ -164,7 +165,11 @@ export function SiteDetailView({
           setDynamicSiteName(data.siteName);
         }
         if (typeof data.address === 'string' && data.address.trim()) {
+<<<<<<< HEAD
           setAddress(data.address);
+=======
+          setAddress(data.address.trim());
+>>>>>>> 2a7b035a39b05d3aae5e4dae8d7075820d82ed39
         } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           reverseGeocode(data.latitude, data.longitude).then(addr => {
             if (addr) setAddress(addr);
@@ -203,7 +208,9 @@ export function SiteDetailView({
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
 
-      const displaySiteName = dynamicSiteName || siteName || "Site Name";
+      const displaySiteName = selectedLocationFilter !== "all"
+        ? selectedLocationFilter
+        : (dynamicSiteName || siteName || "Site Name");
       const displayBarangay = barangay || (address ? address.split(',')[0].trim() : "");
       const filename = `${displaySiteName.replace(/\s+/g, '_')}_Real_Time_Monitoring_${time}_${dmy}.pdf`;
 
@@ -219,7 +226,7 @@ export function SiteDetailView({
       chartRef.current.style.minWidth = '1150px';
       chartRef.current.style.maxWidth = '1150px';
       chartRef.current.style.margin = '0 auto';
-      
+
       // Allow Recharts time to natively trigger ResizeObserver and fit the SVG perfectly to 1150px
       await new Promise(resolve => setTimeout(resolve, 350));
 
@@ -275,16 +282,65 @@ export function SiteDetailView({
 
   const isMobile = windowWidth < 600;
   const isTablet = windowWidth >= 600 && windowWidth < 1100;
+  const isNarrowDesktop = windowWidth < 1600;
 
   // Final layout control: Force desktop-caliber layout for PDF capture, regardless of current device aspect ratio.
   const mobileResponsive = isMobile && !isExporting;
   const tabletResponsive = isTablet && !isExporting;
+  const displayAddress = formatAddress({
+    fullAddress: address,
+    locality: address,
+    barangay,
+    fallback: "Address unavailable",
+  });
+  const effectiveSiteName = selectedLocationFilter !== "all"
+    ? selectedLocationFilter
+    : (dynamicSiteName || siteName);
 
 
 
   // Interval config state
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
+
+  // Load recorded locations from backend for Site Details filtering
+  useEffect(() => {
+    let mounted = true;
+
+    apiGet("/api/sensors/locations")
+      .then((data) => {
+        if (!mounted || !Array.isArray(data)) return;
+
+        const cleaned = Array.from(new Set(
+          data
+            .filter((name: unknown): name is string => typeof name === "string")
+            .map((name) => name.trim())
+            .filter((name) => name.length > 0)
+        ));
+
+        setAvailableLocations(cleaned);
+
+        const preferredLocation = (address || "").trim();
+        if (selectedLocationFilter === "all" && preferredLocation) {
+          const match = cleaned.find((loc) => preferredLocation.toLowerCase().includes(loc.toLowerCase()) || loc.toLowerCase().includes(preferredLocation.toLowerCase()));
+          if (match) {
+            setSelectedLocationFilter(match);
+          }
+        }
+      })
+      .catch(() => {
+        if (mounted) setAvailableLocations([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [address, selectedLocationFilter]);
+
+  const historyEndpoint = selectedLocationFilter === "all"
+    ? "/api/sensors/history"
+    : `/api/sensors/history?location=${encodeURIComponent(selectedLocationFilter)}`;
+
   // Load interval config from backend
   useEffect(() => {
     (async () => {
@@ -310,44 +366,45 @@ export function SiteDetailView({
   // Helper to get interval string for label
   const getIntervalString = () => `${intervalValue} ${intervalUnit}`;
 
-  // Auto-refresh readings every 30 seconds
+  // Auto-refresh readings every 30 seconds and whenever selected site changes
   useEffect(() => {
-    const interval = setInterval(() => {
-      apiGet("/api/sensors/history")
+    let mounted = true;
+
+    const loadHistory = () => {
+      apiGet(historyEndpoint)
         .then(data => {
+          if (!mounted) return;
           if (Array.isArray(data)) {
             setHistory(data);
+<<<<<<< HEAD
             if (typeof window !== 'undefined') {
               localStorage.setItem('sg_history', JSON.stringify(data));
             }
+=======
+          } else {
+            setHistory([]);
+>>>>>>> 2a7b035a39b05d3aae5e4dae8d7075820d82ed39
           }
         })
         .catch(err => {
-          console.error("Auto-refresh error fetching time series data:", err);
-        });
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Only fetch if not already cached
-  useEffect(() => {
-    if (history && history.length > 0) return;
-    apiGet("/api/sensors/history")
-      .then(data => {
-        console.log("Site Details time series data:", data);
-        if (Array.isArray(data)) {
-          setHistory(data);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('sg_history', JSON.stringify(data));
+          console.error("Error fetching time series data:", err);
+          if (mounted) {
+            setHistory([]);
           }
-        } else {
-          setHistory([]);
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching time series data:", err);
-      });
-  }, [history]);
+        });
+    };
+
+    loadHistory();
+
+    const interval = setInterval(() => {
+      loadHistory();
+    }, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [historyEndpoint]);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert =>
@@ -473,14 +530,7 @@ export function SiteDetailView({
 
 
 
-  // Save timeRange to localStorage on change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sg_timeRange', timeRange);
-    }
-  }, [timeRange]);
-
-  const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : 32;
+  const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : (isNarrowDesktop ? 24 : 32);
 
   const getInterpretation = () => {
     if (!chartData || chartData.length === 0) return "No data available.";
@@ -508,7 +558,7 @@ export function SiteDetailView({
     } else {
       const toDisplay = (status: string) => {
         if (status === "Critical") return "High Possible Risk";
-        if (status === "Warning") return "Moderate Possible Risk";
+        if (status === "Warning") return "Moderate Risk";
         return "Safe";
       };
 
@@ -615,7 +665,7 @@ export function SiteDetailView({
       <div style={{
         fontFamily: POPPINS,
         background: "#f6f8fb",
-        padding: `${pad}px ${pad}px 0 ${pad}px`,
+        padding: isExporting ? "0" : `${pad}px`,
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -640,7 +690,6 @@ export function SiteDetailView({
         <div style={{
           display: "flex",
           flexDirection: "column",
-          background: "#f6f8fb",
           // Main container no longer animates as a whole; children use staggered animations
         }}>
           <div style={{
@@ -658,7 +707,7 @@ export function SiteDetailView({
             }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
                 <h1 style={{
-                  fontSize: mobileResponsive ? 20 : 26,
+                  fontSize: mobileResponsive ? 18 : (isNarrowDesktop ? 19 : 22),
                   fontWeight: 700,
                   color: "#1a2a3a",
                   margin: 0,
@@ -667,7 +716,7 @@ export function SiteDetailView({
                   overflow: mobileResponsive ? undefined : "hidden",
                   textOverflow: mobileResponsive ? undefined : "ellipsis",
                   letterSpacing: mobileResponsive ? 0.1 : undefined,
-                }}>{dynamicSiteName || siteName}</h1>
+                }}>{effectiveSiteName}</h1>
                 {mobileResponsive && (
                   <span style={{
                     fontSize: 12.5,
@@ -678,17 +727,16 @@ export function SiteDetailView({
                     lineHeight: 1.3,
                     display: "block",
                     whiteSpace: "normal",
-                  }}>{address || "Device Address"}</span>
+                  }}>{displayAddress}</span>
                 )}
                 {!mobileResponsive && (
                   <p style={{
-                    fontSize: 14,
+                    fontSize: isNarrowDesktop ? 11 : 12,
                     color: "#7b8a9a",
-                    margin: "4px 0 0",
+                    margin: isNarrowDesktop ? "1px 0 0 0" : "2px 0 0 0",
                     fontFamily: POPPINS,
-                    minHeight: "20px", // Reserve space to prevent layout jump
                     transition: 'opacity 0.3s ease-in-out'
-                  }}>{address || "Device Address"}</p>
+                  }}>{displayAddress}</p>
                 )}
               </div>
             </div>
@@ -702,11 +750,37 @@ export function SiteDetailView({
               animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both' : 'none'
             }}>
               <div style={{ flex: mobileResponsive ? 1 : undefined }}>
+                <Select value={selectedLocationFilter} onValueChange={setSelectedLocationFilter}>
+                  <SelectTrigger style={{
+                    width: mobileResponsive ? undefined : "auto",
+                    padding: isNarrowDesktop ? "0 14px" : "0 16px",
+                    flex: mobileResponsive ? 1 : undefined,
+                    minWidth: isNarrowDesktop ? 160 : 196,
+                    borderRadius: 100,
+                    fontFamily: POPPINS,
+                    fontSize: isNarrowDesktop ? 12 : 13,
+                    border: "1px solid #e2e5ea",
+                    background: "#fff",
+                    height: isNarrowDesktop ? 34 : 38,
+                  }}>
+                    <SelectValue placeholder="All recorded locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All recorded locations</SelectItem>
+                    {availableLocations.map((name) => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div style={{ flex: mobileResponsive ? 1 : undefined }}>
                 <Select value={timeRange} onValueChange={setTimeRange}>
                   <SelectTrigger style={{
-                    width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
-                    minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
-                    border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                    width: mobileResponsive ? undefined : "auto",
+                    padding: isNarrowDesktop ? "0 14px" : "0 16px",
+                    flex: mobileResponsive ? 1 : undefined,
+                    minWidth: isNarrowDesktop ? 100 : 124, borderRadius: 100, fontFamily: POPPINS, fontSize: isNarrowDesktop ? 12 : 13,
+                    border: "1px solid #e2e5ea", background: "#fff", height: isNarrowDesktop ? 34 : 38,
                   }}>
                     <SelectValue />
                   </SelectTrigger>
@@ -722,16 +796,16 @@ export function SiteDetailView({
                 <button
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "0 16px", height: 38, borderRadius: 12,
+                    padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 100,
                     border: "1px solid #e2e5ea",
-                    background: "#fff", cursor: "pointer", fontSize: 13,
+                    background: "#fff", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                     fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                     whiteSpace: "nowrap",
                     width: mobileResponsive ? "100%" : undefined
                   }}
                   onClick={() => setShowExportModal(true)}
                 >
-                  <Download size={15} /> Export
+                  <Download size={isNarrowDesktop ? 14 : 15} /> Export
                 </button>
               </div>
             </div>
@@ -742,7 +816,7 @@ export function SiteDetailView({
           }}>
             <div className="sg-pdf-only top-header-gap" style={{ padding: '10px 0px 0px 0px' }}>
               <PDFHeader
-                dynamicSiteName={dynamicSiteName}
+                dynamicSiteName={effectiveSiteName}
                 siteName={siteName}
                 address={address}
                 barangay={barangay}
@@ -752,8 +826,8 @@ export function SiteDetailView({
               <div
                 style={{
                   background: "#fff",
-                  borderRadius: 24,
-                  border: "1px solid #f1f5f9",
+                  borderRadius: 20,
+                  border: "1px solid #e2e5ea",
                   overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
@@ -881,41 +955,41 @@ export function SiteDetailView({
                   )}
 
                   <div className="threshold-container" style={{
-                    background: "#ffffff", border: "1px solid #f1f5f9", borderRadius: 24, padding: isExporting ? "16px" : "24px", marginTop: 0, fontFamily: POPPINS, width: "100%",
+                    background: "#ffffff", border: "1px solid #e2e5ea", borderRadius: 20, padding: isExporting ? "16px" : (isNarrowDesktop ? "20px" : "24px"), marginTop: 0, fontFamily: POPPINS, width: "100%",
                     animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) both' : 'none'
                   }}>
-                    <h4 style={{ fontSize: isExporting ? 11 : 13, fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
+                    <h4 style={{ fontSize: isExporting ? 11 : (isNarrowDesktop ? 12 : 13), fontWeight: 700, color: "#475569", margin: "0 0 16px 0", letterSpacing: "0.02em", textTransform: "uppercase" }}>Threshold Classification Guide</h4>
                     <div style={{ display: "flex", flexWrap: isExporting ? "nowrap" : "wrap", gap: 16 }}>
-                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ background: "#fff", borderRadius: 16, padding: isNarrowDesktop ? 12 : 14, border: "1px solid rgba(0,0,0,0.03)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)", flex: "1 1 300px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
                           <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#43c6b6" }} />
-                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : (isNarrowDesktop ? 13 : 14)), fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>22 – 30</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
-                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ background: "#fff", borderRadius: 16, padding: isNarrowDesktop ? 12 : 14, border: "1px solid rgba(0,0,0,0.03)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)", flex: "1 1 300px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
                           <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4187d6" }} />
-                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>pH Level</span>
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : (isNarrowDesktop ? 13 : 14)), fontWeight: 600, color: "#1e293b" }}>pH Level</span>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>6.5 – 8.0</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
-                      <div style={{ background: "#fff", borderRadius: 12, padding: mobileResponsive ? "12px 16px" : "16px 20px", border: "1px solid #e2e8f0", flex: "1 1 300px" }}>
+                      <div style={{ background: "#fff", borderRadius: 16, padding: isNarrowDesktop ? 12 : 14, border: "1px solid rgba(0,0,0,0.03)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)", flex: "1 1 300px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mobileResponsive ? 10 : 14 }}>
                           <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#2c5282" }} />
-                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
+                          <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : (isNarrowDesktop ? 13 : 14)), fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : (isNarrowDesktop ? 12 : 13)) }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
                         </div>
                       </div>
@@ -936,7 +1010,7 @@ export function SiteDetailView({
                   <div style={{ padding: '0 0 16px 0', marginBottom: 16, borderBottom: '1px solid #f0f1f3', display: 'flex', justifyContent: 'space-between' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Report Details</div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>Site: {dynamicSiteName || siteName} {barangay || (address ? `(${address.split(',')[0].trim()})` : "")}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', marginTop: 4, fontFamily: POPPINS }}>Site: {effectiveSiteName} {barangay || (address ? `(${address.split(',')[0].trim()})` : "")}</div>
                       <div style={{ fontSize: 13, color: '#43c6b6', marginTop: 4, fontFamily: POPPINS, fontWeight: 600, fontStyle: 'italic' }}>Data sourced from IoT sensors</div>
 
                       <div style={{ fontSize: 12, color: '#475569', marginTop: 2, fontFamily: POPPINS }}>Time Range Filter: {timeRange}</div>
