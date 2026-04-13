@@ -564,6 +564,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const {
     isMobile,
     isTablet,
+    isCompact,
     isNarrowDesktop,
     pad,
     controlFontSize,
@@ -724,6 +725,20 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       }}>
         <style>{`
         *::-webkit-scrollbar { display: none; }
+        .sg-ts-scroll::-webkit-scrollbar {
+          display: block !important;
+          width: 8px;
+        }
+        .sg-ts-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .sg-ts-scroll::-webkit-scrollbar-thumb {
+          background: #c2ccd8;
+          border-radius: 999px;
+        }
+        .sg-ts-scroll::-webkit-scrollbar-thumb:hover {
+          background: #aab7c6;
+        }
         @keyframes contentSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to { opacity: 1; transform: translateY(0); }
@@ -873,8 +888,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         {/* Stat Cards */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
-          gap: isMobile ? 12 : 16,
+          gridTemplateColumns: isCompact ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: isCompact ? 12 : 16,
           marginBottom: 24,
           animation: animationEnabled ? "contentSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
@@ -1025,35 +1040,68 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <div style={{
               flex: 1,
               minHeight: 0,
-              overflowX: "auto",
-              overflowY: "auto",
-              padding: "20px",
+              overflow: "hidden",
+              // No top padding: prevents rows from appearing "above" the sticky header while scrolling.
+              padding: "0 20px 20px",
+              background: "#fff",
             }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+              {/* Fixed column header (no sticky overlay) */}
+              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: POPPINS, tableLayout: "fixed" }}>
+                <colgroup>
+                  {deleteMode && <col style={{ width: "4%" }} />}
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "18%" }} />
+                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "14%" }} />
+                </colgroup>
+                <thead style={{ background: "#fff" }}>
+                  <tr style={{ borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
                     {deleteMode && (
                       <th style={{
-                        padding: "16px 14px 16px 24px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 20
+                        padding: "16px 14px 16px 24px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#7b8a9a",
+                        textAlign: "center",
+                        background: "#fff",
+                        fontFamily: POPPINS,
                       }}></th>
                     )}
-                    {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
+                    {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h) => (
                       <th key={h} style={{
-                        padding: h === "Time" && !deleteMode ? "16px 14px 16px 24px" : h === "" ? "16px 24px 16px 14px" : "16px 14px",
+                        padding: h === "Time" && !deleteMode ? "14px 10px 14px 12px" : h === "" ? "14px 12px 14px 10px" : "14px 10px",
                         fontSize: 12,
                         fontWeight: 600,
                         color: "#7b8a9a",
                         textAlign: h === "" ? "right" : (h === "Time" || h === "Date") ? "left" : "center",
-                        position: "sticky",
-                        top: 0,
                         background: "#fff",
-                        zIndex: 20, // Increased z-index to stay above animating rows
                         fontFamily: POPPINS,
                       }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+              </table>
+
+              {/* Body (inner-scroll only) */}
+              <div
+                className="sg-ts-scroll"
+                style={{ overflowY: "auto", overflowX: "hidden", maxHeight: "100%", scrollbarWidth: "thin", msOverflowStyle: "auto" }}
+              >
+                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: POPPINS, tableLayout: "fixed" }}>
+                  <colgroup>
+                    {deleteMode && <col style={{ width: "4%" }} />}
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "18%" }} />
+                    <col style={{ width: "20%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "14%" }} />
+                  </colgroup>
+                  <tbody>
                   {filteredReadings.map((reading, idx) => {
                     const time = formatTimestamp(reading.timestamp);
                     const riskColors: Record<string, { bg: string; color: string }> = {
@@ -1085,22 +1133,22 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                             </div>
                           </td>
                         )}
-                        <td style={{ padding: deleteMode ? "16px 14px" : "16px 14px 16px 24px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
-                        <td style={{ padding: "16px 14px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
-                        <td style={{ padding: "16px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: deleteMode ? "14px 10px" : "14px 10px 14px 12px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
+                        <td style={{ padding: "14px 10px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
+                        <td style={{ padding: "14px 10px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                             <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
                             <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.turbidity}</span>
                           </span>
                         </td>
-                        <td style={{ padding: "16px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: "14px 10px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                             <Thermometer style={{ width: 14, height: 14, color: "#357D86" }} />
                             <span style={{ fontSize: 13, fontWeight: 600, color: "#357D86" }}>{reading.temperature}</span>
                           </span>
                         </td>
-                        <td style={{ padding: "16px 14px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
-                        <td style={{ padding: "16px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: "14px 10px", textAlign: "center", fontSize: 13, fontWeight: 600, color: "#357D86", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.ph}</td>
+                        <td style={{ padding: "14px 10px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           <span style={{
                             fontSize: 11,
                             fontWeight: 600,
@@ -1112,14 +1160,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                             fontFamily: POPPINS,
                           }}>{reading.riskLevel}</span>
                         </td>
-                        <td style={{ padding: "16px 24px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
+                        <td style={{ padding: "14px 12px 14px 10px", textAlign: "right", fontSize: 12, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           {formatRelativeTime(reading.timestamp)}
                         </td>
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
