@@ -2,6 +2,7 @@ const router = require("express").Router();
 const fs = require('fs');
 const classifyWater = require("../utils/classifyWater");
 const { validatePhoneNumber, formatPhoneNumber } = require("../utils/validatePhone");
+const { calculateRiskLevel } = require("../utils/generateReport");
 const db = require("../db");
 const axios = require("axios");
 const reverseGeocode = require("../utils/reverseGeocode");
@@ -9,6 +10,13 @@ const reverseGeocode = require("../utils/reverseGeocode");
 // Generalized memory interval and global trackers
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "Site Name";
+const SMS_SUMMARY_DEFAULT_TIMES = ["08:00", "17:00"];
+const SMS_SUMMARY_SETTINGS_KEY = "sms_summary_times";
+const SMS_SUMMARY_LAST_SENT_KEY = "sms_summary_last_sent";
+let SMS_SUMMARY_TIMES = [...SMS_SUMMARY_DEFAULT_TIMES];
+let SMS_SUMMARY_LAST_SENT = {};
+const SMS_SUMMARY_IN_FLIGHT = new Set();
+const SMS_SUMMARY_CONNECTED_WINDOW_MS = 10000;
 const SAME_SITE_DISTANCE_DEG = 0.0025;
 const deviceSiteCache = new Map();
 
@@ -171,6 +179,398 @@ async function saveIntervalToDB(ms) {
   });
 }
 
+function getSettingValue(key) {
+  return new Promise((resolve, reject) => {
+    db.getSetting(key, (err, value) => {
+      if (err) return reject(err);
+      resolve(value);
+    });
+  });
+}
+
+function setSettingValue(key, value) {
+  return new Promise((resolve, reject) => {
+    db.setSetting(key, value, (err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+}
+
+function normalizeSmsTime(value) {
+  const raw = (value || '').toString().trim();
+  const match = raw.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function parseSmsTimes(rawValue) {
+  if (!rawValue) return [...SMS_SUMMARY_DEFAULT_TIMES];
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    const values = Array.isArray(parsed) ? parsed : [];
+    const normalized = values
+      .map(normalizeSmsTime)
+      .filter(Boolean)
+      .slice(0, 2);
+
+    return normalized.length === 2 ? normalized : [...SMS_SUMMARY_DEFAULT_TIMES];
+  } catch {
+    return [...SMS_SUMMARY_DEFAULT_TIMES];
+  }
+}
+
+function parseSmsLastSent(rawValue) {
+  if (!rawValue) return {};
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function getMinutesFromTime(timeValue) {
+  const normalized = normalizeSmsTime(timeValue);
+  if (!normalized) return null;
+
+  const [hours, minutes] = normalized.split(':').map(Number);
+  return (hours * 60) + minutes;
+}
+
+function buildDateAtTime(baseDate, timeValue) {
+  const normalized = normalizeSmsTime(timeValue);
+  if (!normalized) return null;
+
+  const [hours, minutes] = normalized.split(':').map(Number);
+  const nextDate = new Date(baseDate);
+  nextDate.setSeconds(0, 0);
+  nextDate.setHours(hours, minutes, 0, 0);
+  return nextDate;
+}
+
+async function loadSmsSummarySettingsFromDB() {
+  const timesValue = await getSettingValue(SMS_SUMMARY_SETTINGS_KEY);
+  const lastSentValue = await getSettingValue(SMS_SUMMARY_LAST_SENT_KEY);
+
+  SMS_SUMMARY_TIMES = parseSmsTimes(timesValue);
+  SMS_SUMMARY_LAST_SENT = parseSmsLastSent(lastSentValue);
+}
+
+async function saveSmsSummarySettingsToDB(times, lastSent = {}) {
+  await setSettingValue(SMS_SUMMARY_SETTINGS_KEY, JSON.stringify(times));
+  await setSettingValue(SMS_SUMMARY_LAST_SENT_KEY, JSON.stringify(lastSent));
+  SMS_SUMMARY_TIMES = [...times];
+  SMS_SUMMARY_LAST_SENT = { ...lastSent };
+}
+
+async function markSmsSummarySent(slotTime, sentAtIso) {
+  const updated = {
+    ...SMS_SUMMARY_LAST_SENT,
+    [slotTime]: sentAtIso,
+  };
+
+  await setSettingValue(SMS_SUMMARY_LAST_SENT_KEY, JSON.stringify(updated));
+  SMS_SUMMARY_LAST_SENT = updated;
+}
+
+async function getCurrentSiteSnapshot() {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT site_key, site_name, address
+       FROM site_registry
+       ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC
+       LIMIT 1`,
+      [],
+      (siteErr, siteRow) => {
+        if (siteErr) return reject(siteErr);
+
+        if (siteRow) {
+          return resolve({
+            siteKey: siteRow.site_key || null,
+            siteName: siteRow.site_name || siteRow.address || GLOBAL_DEVICE_NAME,
+            address: siteRow.address || null,
+          });
+        }
+
+        db.get("SELECT value FROM settings WHERE key = ?", ["device_name"], (settingsErr, settingsRow) => {
+          if (settingsErr) return reject(settingsErr);
+
+          resolve({
+            siteKey: null,
+            siteName: (settingsRow && settingsRow.value) || GLOBAL_DEVICE_NAME,
+            address: null,
+          });
+        });
+      }
+    );
+  });
+}
+
+async function getActiveSiteSnapshots() {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT site_key, site_name, address, last_seen
+       FROM site_registry
+       ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC`,
+      [],
+      (err, rows) => {
+        if (err) return reject(err);
+
+        const now = Date.now();
+        const activeSites = (rows || [])
+          .filter((row) => {
+            if (!row?.last_seen) return false;
+            const lastSeenMs = new Date(row.last_seen).getTime();
+            if (Number.isNaN(lastSeenMs)) return false;
+            return Math.abs(now - lastSeenMs) < SMS_SUMMARY_CONNECTED_WINDOW_MS;
+          })
+          .map((row) => ({
+            siteKey: row.site_key || null,
+            siteName: row.site_name || row.address || GLOBAL_DEVICE_NAME,
+            address: row.address || null,
+            lastSeen: row.last_seen || null,
+          }));
+
+        resolve(activeSites);
+      }
+    );
+  });
+}
+
+async function getSummaryStats(siteKey, startIso, endIso) {
+  return new Promise((resolve, reject) => {
+    const hasSiteFilter = typeof siteKey === 'string' && siteKey.trim().length > 0;
+    const readingsQuery = hasSiteFilter
+      ? `SELECT
+          COUNT(*) as totalReadings,
+          AVG(turbidity) as avgTurbidity,
+          AVG(temperature) as avgTemperature,
+          AVG(ph) as avgPh
+         FROM readings
+         WHERE site_key = ? AND timestamp BETWEEN ? AND ?`
+      : `SELECT
+          COUNT(*) as totalReadings,
+          AVG(turbidity) as avgTurbidity,
+          AVG(temperature) as avgTemperature,
+          AVG(ph) as avgPh
+         FROM readings
+         WHERE timestamp BETWEEN ? AND ?`;
+    const readingsParams = hasSiteFilter ? [siteKey, startIso, endIso] : [startIso, endIso];
+
+    db.get(readingsQuery, readingsParams, (readingsErr, readingsRow) => {
+      if (readingsErr) return reject(readingsErr);
+
+      const alertsQuery = hasSiteFilter
+        ? `SELECT
+            COUNT(*) as totalAlerts,
+            SUM(CASE WHEN level = 'critical' THEN 1 ELSE 0 END) as criticalAlerts,
+            SUM(CASE WHEN level = 'warning' THEN 1 ELSE 0 END) as warningAlerts
+           FROM alerts
+           WHERE site_key = ? AND timestamp BETWEEN ? AND ?`
+        : `SELECT
+            COUNT(*) as totalAlerts,
+            SUM(CASE WHEN level = 'critical' THEN 1 ELSE 0 END) as criticalAlerts,
+            SUM(CASE WHEN level = 'warning' THEN 1 ELSE 0 END) as warningAlerts
+           FROM alerts
+           WHERE timestamp BETWEEN ? AND ?`;
+      const alertsParams = hasSiteFilter ? [siteKey, startIso, endIso] : [startIso, endIso];
+
+      db.get(alertsQuery, alertsParams, (alertsErr, alertsRow) => {
+        if (alertsErr) return reject(alertsErr);
+
+        const latestQuery = hasSiteFilter
+          ? `SELECT turbidity, temperature, ph, status, timestamp
+             FROM readings
+             WHERE site_key = ? AND timestamp <= ?
+             ORDER BY timestamp DESC
+             LIMIT 1`
+          : `SELECT turbidity, temperature, ph, status, timestamp
+             FROM readings
+             WHERE timestamp <= ?
+             ORDER BY timestamp DESC
+             LIMIT 1`;
+        const latestParams = hasSiteFilter ? [siteKey, endIso] : [endIso];
+
+        db.get(latestQuery, latestParams, (latestErr, latestRow) => {
+          if (latestErr) return reject(latestErr);
+
+          resolve({
+            totalReadings: Number(readingsRow?.totalReadings || 0),
+            avgTurbidity: readingsRow?.avgTurbidity != null ? Number(readingsRow.avgTurbidity) : null,
+            avgTemperature: readingsRow?.avgTemperature != null ? Number(readingsRow.avgTemperature) : null,
+            avgPh: readingsRow?.avgPh != null ? Number(readingsRow.avgPh) : null,
+            totalAlerts: Number(alertsRow?.totalAlerts || 0),
+            criticalAlerts: Number(alertsRow?.criticalAlerts || 0),
+            warningAlerts: Number(alertsRow?.warningAlerts || 0),
+            latestReading: latestRow || null,
+          });
+        });
+      });
+    });
+  });
+}
+
+function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime }) {
+  const startLabel = new Date(startIso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const endLabel = new Date(endIso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const riskValue =
+    stats.avgTurbidity != null && stats.avgTemperature != null && stats.avgPh != null
+      ? calculateRiskLevel(stats.avgTurbidity, stats.avgTemperature, stats.avgPh)
+      : (stats.latestReading?.status || 'low-risk');
+
+  const riskLabel = riskValue === 'high' || riskValue === 'high-risk'
+    ? 'High'
+    : riskValue === 'moderate' || riskValue === 'possible-risk'
+      ? 'Moderate'
+      : 'Low';
+
+  const readingLine = stats.latestReading
+    ? `Latest: T ${Number(stats.latestReading.temperature || 0).toFixed(1)} C | pH ${Number(stats.latestReading.ph || 0).toFixed(2)} | Turbidity ${Number(stats.latestReading.turbidity || 0).toFixed(1)} NTU`
+    : 'Latest: No reading available in this window';
+
+  const avgLine = stats.avgTurbidity != null && stats.avgTemperature != null && stats.avgPh != null
+    ? `Averages: T ${stats.avgTemperature.toFixed(1)} C | pH ${stats.avgPh.toFixed(2)} | Turbidity ${stats.avgTurbidity.toFixed(1)} NTU`
+    : 'Averages: No readings recorded for this window';
+
+  const alertLine = `Alerts: ${stats.totalAlerts} total (${stats.criticalAlerts} critical, ${stats.warningAlerts} warning)`;
+  const advice = riskLabel === 'High'
+    ? 'Action: Verify on site immediately and monitor closely.'
+    : riskLabel === 'Moderate'
+      ? 'Action: Continue monitoring and validate the readings.'
+      : 'Action: Continue routine monitoring.';
+
+  return [
+    'SchistoGuard SMS Summary',
+    `Site: ${siteName}`,
+    `Slot: ${slotTime}`,
+    `Window: ${startLabel} - ${endLabel}`,
+    `Overall Risk: ${riskLabel}`,
+    avgLine,
+    readingLine,
+    alertLine,
+    advice,
+  ].join('\n');
+}
+
+async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
+  const now = new Date();
+  const slotMinutes = getMinutesFromTime(slotTime);
+  if (slotMinutes == null) return;
+
+  const orderedTimes = [...SMS_SUMMARY_TIMES]
+    .map((time) => ({ time, minutes: getMinutesFromTime(time) }))
+    .filter((entry) => entry.minutes != null)
+    .sort((left, right) => left.minutes - right.minutes);
+
+  if (orderedTimes.length !== 2) return;
+
+  const currentIndex = orderedTimes.findIndex((entry) => entry.time === slotTime);
+  if (currentIndex === -1) return;
+
+  const previousEntry = currentIndex === 0 ? orderedTimes[orderedTimes.length - 1] : orderedTimes[currentIndex - 1];
+  const startDate = buildDateAtTime(now, previousEntry.time);
+  const endDate = buildDateAtTime(now, slotTime);
+  if (!startDate || !endDate) return;
+  if (previousEntry.minutes > slotMinutes || currentIndex === 0) {
+    startDate.setDate(startDate.getDate() - 1);
+  }
+
+  const siteKey = siteSnapshot.siteKey || normalizeSiteKey(siteSnapshot.siteName || GLOBAL_DEVICE_NAME);
+  const siteName = siteSnapshot.siteName || GLOBAL_DEVICE_NAME;
+  const stats = await getSummaryStats(siteKey, startDate.toISOString(), endDate.toISOString());
+  const message = buildSmsSummaryMessage({
+    siteName,
+    startIso: startDate.toISOString(),
+    endIso: endDate.toISOString(),
+    stats,
+    slotTime,
+  });
+
+  const recipients = await new Promise((resolve, reject) => {
+    db.all(
+      "SELECT phone FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
+      [siteName],
+      (err, rows) => {
+        if (err) return reject(err);
+        resolve((rows || []).map((row) => row.phone).filter(Boolean));
+      }
+    );
+  });
+
+  if (!recipients.length) {
+    console.log(`[sms-summary] No recipients found for ${siteName}; skipping ${slotTime} dispatch.`);
+    return;
+  }
+
+  await sendSMSViaESP32(message, [
+    `Summary slot: ${slotTime}`,
+    `Site: ${siteName}`,
+    `Risk: ${stats.avgTurbidity != null && stats.avgTemperature != null && stats.avgPh != null ? calculateRiskLevel(stats.avgTurbidity, stats.avgTemperature, stats.avgPh) : 'n/a'}`,
+  ], recipients);
+
+  await markSmsSummarySent(`${siteKey}:${slotTime}`, now.toISOString());
+}
+
+async function checkSmsSummarySchedule() {
+  const currentDate = new Date();
+  const currentMinute = (currentDate.getHours() * 60) + currentDate.getMinutes();
+  const activeSites = await getActiveSiteSnapshots();
+
+  if (!activeSites.length) return;
+
+  for (const slotTime of SMS_SUMMARY_TIMES) {
+    const slotMinutes = getMinutesFromTime(slotTime);
+    if (slotMinutes == null || currentMinute !== slotMinutes) continue;
+
+    for (const siteSnapshot of activeSites) {
+      const siteKey = siteSnapshot.siteKey || normalizeSiteKey(siteSnapshot.siteName || GLOBAL_DEVICE_NAME);
+      const inflightKey = `${siteKey}:${slotTime}`;
+      if (SMS_SUMMARY_IN_FLIGHT.has(inflightKey)) continue;
+
+      const lastSentAt = SMS_SUMMARY_LAST_SENT[inflightKey];
+      if (lastSentAt) {
+        const lastSentDate = new Date(lastSentAt);
+        const todaySlot = buildDateAtTime(currentDate, slotTime);
+        if (todaySlot && lastSentDate.getTime() >= todaySlot.getTime()) {
+          continue;
+        }
+      }
+
+      try {
+        SMS_SUMMARY_IN_FLIGHT.add(inflightKey);
+        await sendScheduledSmsSummary(siteSnapshot, slotTime);
+      } catch (error) {
+        console.error(`[sms-summary] Failed for ${siteSnapshot.siteName} @ ${slotTime}:`, error.message);
+      } finally {
+        SMS_SUMMARY_IN_FLIGHT.delete(inflightKey);
+      }
+    }
+  }
+}
+
 // API: Get current interval config
 router.get('/interval-config', async (req, res) => {
   await loadSettingsFromDB();
@@ -197,6 +597,33 @@ router.post('/interval-config', (req, res) => {
       res.json({ success: true, intervalMs, deviceName: GLOBAL_DEVICE_NAME });
     });
   });
+});
+
+router.get('/sms-summary-config', async (req, res) => {
+  try {
+    await loadSmsSummarySettingsFromDB();
+    res.json({ success: true, times: SMS_SUMMARY_TIMES });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/sms-summary-config', async (req, res) => {
+  try {
+    const { times } = req.body;
+    const normalizedTimes = Array.isArray(times)
+      ? times.map(normalizeSmsTime).filter(Boolean).slice(0, 2)
+      : [];
+
+    if (normalizedTimes.length !== 2) {
+      return res.status(400).json({ success: false, message: 'Two valid SMS times are required' });
+    }
+
+    await saveSmsSummarySettingsToDB(normalizedTimes, {});
+    res.json({ success: true, times: normalizedTimes });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 // ESP32 connection for SMS
@@ -258,8 +685,8 @@ async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
 
     // Show logs after all numbers attempted
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-    console.log(`⚠️ ALERT DETECTED [${timestamp}]:`, alertMessages.join(' | '));
-    console.log('📱 Attempting to send SMS alert...');
+    console.log(`📱 SMS dispatch [${timestamp}]:`, alertMessages.join(' | '));
+    console.log('📱 Attempting to send SMS...');
     console.log(`   Message: ${message.substring(0, 50)}...`);
     console.log(`✓ SMS sent to ${sent}/${phoneNumbers.length} recipients (SIMULTANEOUS)`);
     
@@ -271,8 +698,8 @@ async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
   } catch (error) {
     // Show failure logs once
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-    console.log(`⚠️ ALERT DETECTED [${timestamp}]:`, alertMessages.join(' | '));
-    console.log('📱 Attempting to send SMS alert...');
+    console.log(`📱 SMS dispatch [${timestamp}]:`, alertMessages.join(' | '));
+    console.log('📱 Attempting to send SMS...');
     console.log(`   Message: ${message.substring(0, 50)}...`);
     console.error('✗ Failed to send SMS:', error.message);
     lastSMSTime = now; // Start 5-minute cooldown even on failure
@@ -314,6 +741,14 @@ loadSettingsFromDB().then(() => {
     }
   } catch (e) { /* ignore */ }
 });
+
+loadSmsSummarySettingsFromDB().then(() => {
+  console.log('✓ Initial SMS summary schedule loaded from DB:', SMS_SUMMARY_TIMES);
+});
+
+setInterval(() => {
+  checkSmsSummarySchedule();
+}, 30000);
 
 setInterval(() => {
   if (!latestData) return;
@@ -430,12 +865,7 @@ function generateAlertsFromData(data, now = new Date()) {
     alertMessages.push(buildSmsLine(parameter, value, level));
   });
 
-  // Send SMS for ANY alerts (critical or warning)
-  if (alertMessages.length > 0) {
-    const timestamp = new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    const smsMessage = `SchistoGuard EARLY WARNING\n[Recorded: ${timestamp}]\n\n${alertMessages.join('\n')}\n\nPlease verify and monitor.`;
-    sendSMSViaESP32(smsMessage, alertMessages);
-  }
+  // SMS is now schedule-based. Alerts remain stored for dashboard/reporting.
 }
 
 function classifyLevel(status) {
@@ -500,43 +930,7 @@ function checkAndAlertImmediate(data) {
     alertMessages.push(buildSmsLine(parameter, value, level));
   });
 
-  // Send SMS for ANY alerts (critical or warning) ONLY if device is connected (last data < 10s)
-  if (alertMessages.length > 0) {
-    const now = Date.now();
-    const ts = new Date(data.timestamp).getTime();
-    if (Math.abs(now - ts) < 10000) {
-      console.log('🔍 Alert detected, looking for residents for site:', identity.siteName);
-      const nowDate = new Date();
-      const dateStr = nowDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-      const timeStr = nowDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      const timestamp = `${dateStr}, ${timeStr}`;
-      const smsMessage = `SchistoGuard EARLY WARNING\n[Recorded: ${timestamp}]\n\n${alertMessages.join('\n')}\n\nPlease verify and monitor.`;
-      // Get resident phone numbers for this site - prioritize BHWs and LGUs
-      const siteName = identity.siteName;
-      db.all(
-        "SELECT phone, role FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
-        [siteName],
-        (err, rows) => {
-          if (err) {
-            console.error("❌ Error fetching residents:", err.message);
-            return;
-          }
-          if (!rows || rows.length === 0) {
-            console.log(`⚠️ No residents found for site: "${siteName}"`);
-            return;
-          }
-          // Send to all residents (BHWs + LGUs + residents)
-          const phoneNumbers = rows.map(r => r.phone).filter(p => p);
-          const roles = [...new Set(rows.map(r => r.role))];
-          console.log(`✓ Found ${rows.length} alert recipients for site: "${siteName}"`);
-          console.log(`   Roles: ${roles.join(', ').toUpperCase()}`);
-          sendSMSViaESP32(smsMessage, alertMessages, phoneNumbers);
-        }
-      );
-    } else {
-      console.log('Device not connected: SMS alert not sent.');
-    }
-  }
+  // SMS is now schedule-based. Alerts remain stored for dashboard/reporting.
 }
 
 

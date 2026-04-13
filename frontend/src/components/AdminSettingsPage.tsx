@@ -70,6 +70,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [intervalMsg, setIntervalMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [smsSummaryTimes, setSmsSummaryTimes] = useState(["08:00", "17:00"]);
+  const [smsScheduleMsg, setSmsScheduleMsg] = useState("");
+  const [smsScheduleLoading, setSmsScheduleLoading] = useState(true);
+  const [smsScheduleSaving, setSmsScheduleSaving] = useState(false);
   // Load interval from backend
   useEffect(() => {
     (async () => {
@@ -89,6 +93,24 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       } catch {
         setIntervalValue(5);
         setIntervalUnit("min");
+      }
+    })();
+  }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        setSmsScheduleLoading(true);
+        const data = await apiGet("/api/sensors/sms-summary-config");
+        if (Array.isArray(data?.times) && data.times.length === 2) {
+          setSmsSummaryTimes([
+            data.times[0] || "08:00",
+            data.times[1] || "17:00",
+          ]);
+        }
+      } catch {
+        setSmsSummaryTimes(["08:00", "17:00"]);
+      } finally {
+        setSmsScheduleLoading(false);
       }
     })();
   }, []);
@@ -112,6 +134,28 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
     } catch (err: any) {
       setIntervalMsg("Failed to update interval");
+    }
+  };
+  const handleSaveSmsSummarySchedule = async () => {
+    setSmsScheduleMsg("");
+    try {
+      setSmsScheduleSaving(true);
+      const normalizedTimes = smsSummaryTimes
+        .map((time) => (time || "").trim())
+        .filter(Boolean)
+        .slice(0, 2);
+
+      if (normalizedTimes.length !== 2) {
+        setSmsScheduleMsg("Please set two valid SMS times.");
+        return;
+      }
+
+      await apiPost("/api/sensors/sms-summary-config", { times: normalizedTimes });
+      setSmsScheduleMsg("SMS summary schedule saved successfully.");
+    } catch (err: any) {
+      setSmsScheduleMsg(err?.message || "Failed to update SMS summary schedule");
+    } finally {
+      setSmsScheduleSaving(false);
     }
   };
   const [loading, setLoading] = useState(false);
@@ -1065,45 +1109,93 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           </div>
         </div>
 
-        {/* Generalized Interval Settings Section - Moved to bottom */}
-        <div className="glass-card premium-shadow w-full" style={{
-          borderRadius: 28,
-          padding: 32,
-          marginTop: gap,
-          position: "relative",
-          border: "1px solid rgba(0,0,0,0.03)",
-          animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
-        }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Settings</h2>
-          <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the broadcast interval for sensor logging and SMS reporting. The site name now follows the registered site name, which is managed in Registered Sites.</p>
+        {/* System Settings & SMS Summary Schedule - Side by Side */}
+        <div style={{ marginTop: gap, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: gap }}>
+          {/* System Settings Card */}
+          <div className="glass-card premium-shadow w-full" style={{
+            borderRadius: 28,
+            padding: 32,
+            position: "relative",
+            border: "1px solid rgba(0,0,0,0.03)",
+            animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
+          }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Settings</h2>
+            <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the sensor logging interval used by the system. The site name now follows the registered site name, which is managed in Registered Sites.</p>
 
-          <div style={{ marginTop: 14, marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86", width: 115 }}>General Interval:</label>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={intervalValue}
-              onChange={e => setIntervalValue(Number(e.target.value))}
-              style={{ padding: "0 12px", borderRadius: 100, border: "1px solid #ddd", width: 70, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS }}
-            />
-            <select
-              value={intervalUnit}
-              onChange={e => setIntervalUnit(e.target.value)}
-              style={{ padding: "0 8px", borderRadius: 100, border: "1px solid #ddd", width: 110, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
+            <div style={{ marginTop: 14, marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86", width: 115 }}>General Interval:</label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={intervalValue}
+                onChange={e => setIntervalValue(Number(e.target.value))}
+                style={{ padding: "0 12px", borderRadius: 100, border: "1px solid #ddd", width: 70, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS }}
+              />
+              <select
+                value={intervalUnit}
+                onChange={e => setIntervalUnit(e.target.value)}
+                style={{ padding: "0 8px", borderRadius: 100, border: "1px solid #ddd", width: 110, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
+              >
+                <option value="sec">seconds</option>
+                <option value="min">minutes</option>
+                <option value="hr">hours</option>
+              </select>
+            </div>
+            <button
+              onClick={handleSaveInterval}
+              style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
             >
-              <option value="sec">seconds</option>
-              <option value="min">minutes</option>
-              <option value="hr">hours</option>
-            </select>
+              Save Settings
+            </button>
+            {intervalMsg && !intervalMsg.includes("success") && <div style={{ marginTop: 12, color: "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
           </div>
-          <button
-            onClick={handleSaveInterval}
-            style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
-          >
-            Save Settings
-          </button>
-          {intervalMsg && !intervalMsg.includes("success") && <div style={{ marginTop: 12, color: "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
+
+          {/* SMS Summary Schedule Card */}
+          <div className="glass-card premium-shadow w-full" style={{
+            borderRadius: 28,
+            padding: 32,
+            border: "1px solid rgba(0,0,0,0.03)",
+            animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both" : "none"
+          }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>SMS Summary Schedule</h2>
+            <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Set two daily send times for the summary SMS. Each message is based on the latest readings, alert counts, and overall risk assessment before the schedule time.</p>
+
+            {smsScheduleLoading ? (
+              <div style={{ marginTop: 16, color: "#94a3b8", fontSize: 13 }}>Loading SMS schedule...</div>
+            ) : (
+              <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                {smsSummaryTimes.map((time, index) => (
+                  <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86" }}>
+                      {index === 0 ? "First SMS Time" : "Second SMS Time"}
+                    </label>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(event) => {
+                        const nextTimes = [...smsSummaryTimes];
+                        nextTimes[index] = event.target.value;
+                        setSmsSummaryTimes(nextTimes);
+                      }}
+                      style={{ padding: "0 12px", borderRadius: 100, border: "1px solid #ddd", height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={handleSaveSmsSummarySchedule}
+                disabled={smsScheduleSaving || smsScheduleLoading}
+                style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15, opacity: smsScheduleSaving || smsScheduleLoading ? 0.7 : 1, cursor: smsScheduleSaving || smsScheduleLoading ? 'not-allowed' : 'pointer' }}
+              >
+                {smsScheduleSaving ? "Saving..." : "Save SMS Schedule"}
+              </button>
+              {smsScheduleMsg && <div style={{ color: smsScheduleMsg.includes("saved") ? "#166534" : "#b91c1c", fontWeight: 500, fontSize: 13 }}>{smsScheduleMsg}</div>}
+            </div>
+          </div>
         </div>
 
         {/* Balanced Bottom Spacer matching other pages */}
