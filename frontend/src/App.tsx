@@ -111,6 +111,18 @@ export default function App() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (loading || isAuthenticated) return;
+    const isPublicView =
+      currentView === 'landing' ||
+      currentView === 'login' ||
+      currentView === 'sensor-info';
+
+    if (!isPublicView) {
+      setCurrentView('landing');
+    }
+  }, [currentView, isAuthenticated, loading]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       knownUnacknowledgedAlertIdsRef.current = new Set();
       alertFeedInitializedRef.current = false;
@@ -563,5 +575,14 @@ export default function App() {
     );
   }
 
-  return null;
+  return (
+    <>
+      <LandingPage
+        onViewMap={() => setCurrentView('login')}
+        onLearnMore={() => setCurrentView('sensor-info')}
+        onEnterApp={() => setCurrentView('login')}
+      />
+      {pwaInstallPrompt}
+    </>
+  );
 }

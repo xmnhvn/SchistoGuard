@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '../styles/mapMarker.css';
@@ -31,6 +31,7 @@ export interface DashboardMapHandle {
 export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, mobileMode = false, interactive, onMapReady, lngOffset = 0, latOffset = 0 }, ref) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const [mapUnavailable, setMapUnavailable] = useState(false);
   const markers = useRef<maplibregl.Marker[]>([]);
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
@@ -84,6 +85,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const sitesJson = sites ? JSON.stringify(sites) : '';
 
   useEffect(() => {
+    if (mapUnavailable) return;
     if (!mapContainer.current) return;
 
     const sitesToShow = sites && sites.length > 0 ? sites : [];
@@ -113,18 +115,24 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       const isInteractive = interactive !== undefined ? interactive : !mobileMode;
 
       if (!map.current) {
-        map.current = new maplibregl.Map({
-          container: mapContainer.current!,
-          style: 'https://tiles.openfreemap.org/styles/positron',
-          center: mapCenter,
-          zoom: mapZoom,
-          minZoom: 0, // allow zooming out to entire world
-          maxZoom: 19, // allow zooming in to street level
-          attributionControl: false,
-          // Always initialize as true so MapLibre attaches root DOM listeners (crucial for touch events like mobile/tablet).
-          // We will dynamically enable/disable the actual handlers right after creation instead.
-          interactive: true, 
-        });
+        try {
+          map.current = new maplibregl.Map({
+            container: mapContainer.current!,
+            style: 'https://tiles.openfreemap.org/styles/positron',
+            center: mapCenter,
+            zoom: mapZoom,
+            minZoom: 0, // allow zooming out to entire world
+            maxZoom: 19, // allow zooming in to street level
+            attributionControl: false,
+            // Always initialize as true so MapLibre attaches root DOM listeners (crucial for touch events like mobile/tablet).
+            // We will dynamically enable/disable the actual handlers right after creation instead.
+            interactive: true,
+          });
+        } catch (error) {
+          console.error('Map initialization failed:', error);
+          setMapUnavailable(true);
+          return;
+        }
       } else if (sitesToShow.length !== markers.current.length) {
         // Only reset view if number of markers/sites changed
         map.current.jumpTo({ center: mapCenter, zoom: mapZoom });
@@ -151,7 +159,13 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       }
     };
 
-    updateMapCenter();
+    try {
+      updateMapCenter();
+    } catch (error) {
+      console.error('Map update failed:', error);
+      setMapUnavailable(true);
+      return;
+    }
 
     // Only touch markers if the actual site data changed
     if (previousSitesJson.current !== sitesJson) {
@@ -210,7 +224,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [sitesJson, mobileMode, interactive, lngOffset, latOffset]);
+  }, [sitesJson, mobileMode, interactive, lngOffset, latOffset, mapUnavailable]);
 
 
   // Destroy map on unmount
@@ -224,6 +238,10 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       }
     };
   }, []);
+
+  if (mapUnavailable) {
+    return <div style={{ width: '100%', height: '100%', background: '#dbe9ed' }} />;
+  }
 
   return <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />;
 });

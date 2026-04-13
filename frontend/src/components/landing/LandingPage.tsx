@@ -64,11 +64,35 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+const safeStorage = {
+  get(key: string): string | null {
+    try {
+      return typeof window !== "undefined" ? localStorage.getItem(key) : null;
+    } catch {
+      return null;
+    }
+  },
+  set(key: string, value: string): void {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(key, value);
+      }
+    } catch {
+      // Ignore storage write errors (Safari private mode/quota).
+    }
+  },
+};
+
 export const LandingPage: React.FC<LandingPageProps> = ({
   onViewMap,
   onLearnMore,
   onEnterApp,
 }) => {
+  const isSafariBrowser =
+    typeof navigator !== "undefined" &&
+    /Safari/i.test(navigator.userAgent) &&
+    !/Chrome|CriOS|Edg|OPR|Firefox|FxiOS/i.test(navigator.userAgent);
+
   const [screenWidth, setScreenWidth] = React.useState(
     typeof window !== "undefined" ? window.innerWidth : 1200
   );
@@ -89,7 +113,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [siteData, setSiteData] = useState<any>(() => {
     try {
       if (typeof window !== "undefined") {
-        const cachedName = localStorage.getItem('sg_global_latest_siteName');
+        const cachedName = safeStorage.get('sg_global_latest_siteName');
         return {
           siteName: cachedName || "Matina Site",
           barangay: "Matina Crossing",
@@ -160,7 +184,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [gpsAddress, setGpsAddress] = useState<string | null>(() => {
     try {
       if (typeof window !== 'undefined') {
-        const cached = localStorage.getItem('sg_global_latest_address');
+        const cached = safeStorage.get('sg_global_latest_address');
         if (cached) return cached;
       }
     } catch { }
@@ -207,7 +231,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       lastLoc = { lat: latestReading.latitude, lng: latestReading.longitude, siteName: siteData.siteName };
 
       // Persist to localStorage for immediate loading on next visit
-      localStorage.setItem('lastGpsLocation', JSON.stringify(lastLoc));
+      safeStorage.set('lastGpsLocation', JSON.stringify(lastLoc));
       setGpsSites(sites);
       setLastSavedLocation(lastLoc);
     }
@@ -215,7 +239,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     else {
       let cachedSet = false;
       if (typeof window !== "undefined") {
-        const last = localStorage.getItem('lastGpsLocation');
+        const last = safeStorage.get('lastGpsLocation');
         if (last) {
           try {
             const parsed = JSON.parse(last);
@@ -254,7 +278,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           setGpsAddress(addr);
           // Sync with dashboard global cache
           if (addr && addr !== "Unnamed Road" && addr !== "Device Address") {
-            localStorage.setItem('sg_global_latest_address', addr);
+            safeStorage.set('sg_global_latest_address', addr);
           }
         });
       }
@@ -266,22 +290,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
     if (!gpsAddress && typeof window !== 'undefined') {
-      const keys = Object.keys(localStorage);
+      let keys: string[] = [];
+      try {
+        keys = Object.keys(window.localStorage);
+      } catch {
+        keys = [];
+      }
       const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
       if (addressKey) {
-        const cached = localStorage.getItem(addressKey);
+        const cached = safeStorage.get(addressKey);
         if (cached && cached !== "Device Address") {
           setGpsAddress(cached);
-          localStorage.setItem('sg_global_latest_address', cached);
+          safeStorage.set('sg_global_latest_address', cached);
         }
       }
 
       const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
       if (siteNameKey && siteData.siteName === "Matina Site") {
-        const cachedName = localStorage.getItem(siteNameKey);
+        const cachedName = safeStorage.get(siteNameKey);
         if (cachedName && cachedName !== "Site Name") {
           setSiteData((prev: any) => ({ ...prev, siteName: cachedName }));
-          localStorage.setItem('sg_global_latest_siteName', cachedName);
+          safeStorage.set('sg_global_latest_siteName', cachedName);
         }
       }
     }
@@ -303,6 +332,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Lazy-mount map to reduce initial landing page jank
   React.useEffect(() => {
+    if (isSafariBrowser) {
+      setShouldRenderMap(false);
+      return;
+    }
+
     if (showLiveUpdates) {
       setShouldRenderMap(true);
       return;
@@ -320,10 +354,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
 
     return () => {
-      if (idleId !== null) window.cancelIdleCallback(idleId);
+      if (idleId !== null && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [showLiveUpdates]);
+  }, [showLiveUpdates, isSafariBrowser]);
 
   // Fetch sensor data when live updates is shown
   useEffect(() => {
@@ -351,7 +387,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   lng: fallbackLoc.lng,
                 },
               ]);
-              localStorage.setItem('lastGpsLocation', JSON.stringify(fallbackLoc));
+              safeStorage.set('lastGpsLocation', JSON.stringify(fallbackLoc));
             } else {
               console.log('[LandingPage] NO fallback coords, clearing map');
             }
@@ -602,7 +638,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Map loads behind gradient, fades in when ready - Dashboard style */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
-          {shouldRenderMap && (
+          {!isSafariBrowser && shouldRenderMap && (
             <DashboardMap
               ref={mapRef}
               interactive={showLiveUpdates && screenWidth >= 600}
