@@ -16,6 +16,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
+import { reverseGeocode } from "../utils/reverseGeocode";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -213,9 +214,15 @@ export function Dashboard({
     if (lat !== null && lng !== null) {
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
-        if (!(typeof latestReading?.address === 'string' && latestReading.address.trim())) {
-          setGpsAddress(null);
-        }
+        // Don't reset gpsAddress to null — keep old address visible while loading new one
+        reverseGeocode(lat, lng).then(addr => {
+          if (addr) {
+            setGpsAddress(addr);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('sg_global_latest_address', addr);
+            }
+          }
+        });
       }
     } else {
       // Don't reset to null immediately — let the history fallback below try first
@@ -225,31 +232,19 @@ export function Dashboard({
     }
   }, [latestReading, lastSavedLocation]);
 
-  useEffect(() => {
-    console.log('[Dashboard] latestReading.address check:', { address: latestReading?.address, type: typeof latestReading?.address });
-    if (typeof latestReading?.address === 'string' && latestReading.address.trim()) {
-      const resolved = latestReading.address.trim();
-      console.log('[Dashboard] Setting gpsAddress from latestReading.address:', resolved);
-      setGpsAddress(resolved);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('sg_global_latest_address', resolved);
-      }
-    }
-  }, [latestReading?.address]);
-
-  useEffect(() => {
-    if (!gpsAddress && lastSavedLocation && typeof lastSavedLocation.lat === 'number' && typeof lastSavedLocation.lng === 'number') {
-      if (!lastSavedLocation.address) {
-        console.log('[Dashboard] DEBUG: lastSavedLocation has no address, but frontend reverse-geocode disabled (use backend instead)');
-        console.log('[Dashboard] Set address from backend or wait for metaAddress fallback');
-      }
-    }
-  }, [gpsAddress, lastSavedLocation]);
-
   // Smart Discovery: If global cache is empty, hunt for any site-specific address in localStorage
   useEffect(() => {
-    if (!gpsAddress && !latestReading && typeof window !== 'undefined') {
+    if (!gpsAddress && typeof window !== 'undefined') {
       const keys = Object.keys(localStorage);
+      const addressKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_address'));
+      if (addressKey) {
+        const cached = localStorage.getItem(addressKey);
+        if (cached) {
+          setGpsAddress(cached);
+          localStorage.setItem('sg_global_latest_address', cached);
+        }
+      }
+      
       const siteNameKey = keys.find(k => k.startsWith('sg_') && k.endsWith('_siteName'));
       if (siteNameKey && siteData.siteName === "Site Name") {
         const cachedName = localStorage.getItem(siteNameKey);
@@ -259,7 +254,7 @@ export function Dashboard({
         }
       }
     }
-  }, [gpsAddress, latestReading, siteData.siteName]);
+  }, [gpsAddress, siteData.siteName]);
 
   // Fallback: search history readings for GPS coordinates when latestReading has none
   // This mirrors the logic in SiteDetailView that finds the address from historical data
@@ -274,11 +269,12 @@ export function Dashboard({
       .find((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
 
     if (latestWithGps) {
-      if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
-        const resolved = latestWithGps.address.trim();
-        setGpsAddress(resolved);
-        localStorage.setItem('sg_global_latest_address', resolved);
-      }
+      reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+        if (addr) {
+          setGpsAddress(addr);
+          localStorage.setItem('sg_global_latest_address', addr);
+        }
+      });
     }
   }, [readings, gpsAddress]);
 
@@ -303,19 +299,10 @@ export function Dashboard({
     .filter(Boolean)
     .join(", ");
 
-  useEffect(() => {
-    console.log('[Dashboard] displayAddress calc inputs:', {
-      latestReadingAddr: latestReading?.address,
-      gpsAddress,
-      lastSavedAddr: lastSavedLocation?.address,
-      metaAddress
-    });
-  }, [latestReading?.address, gpsAddress, lastSavedLocation?.address, metaAddress]);
-
   const displayAddress =
-    (typeof latestReading?.address === "string" && latestReading.address.trim() ? latestReading.address.trim() : null) ||
     gpsAddress ||
-    (typeof lastSavedLocation?.address === "string" && lastSavedLocation.address.trim() ? lastSavedLocation.address.trim() : null) ||
+    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
     metaAddress ||
     "Device Address";
 
@@ -330,7 +317,7 @@ export function Dashboard({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const dPad = isMobile ? 16 : isTablet ? 24 : (isNarrowDesktop ? 24 : 32);
+  const dPad = isMobile ? 16 : isTablet ? 24 : 32;
 
   useEffect(() => {
     const handler = (e: Event) => {

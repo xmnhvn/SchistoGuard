@@ -49,7 +49,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
     <aside
       style={{
         position: "fixed",
-        top: expanded ? (isPhone ? 0 : (vw <= 1450 ? 72 : (vw < 1700 ? 80 : 88))) : (isPhone ? 0 : (vw <= 1450 ? 72 : (vw < 1700 ? 80 : 88))),
+        top: expanded ? (isPhone ? 0 : (vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72))) : (isPhone ? 0 : (vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72))),
         left: 0,
         bottom: 0,
         width: expanded ? (vw <= 1450 ? 220 : 240) : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80)),
@@ -57,7 +57,7 @@ export function AppSidebar({ currentView, onNavigate, onLogout, user, onToggleDr
         borderRight: "1px solid #e8e8e8",
         display: "flex",
         flexDirection: "column",
-        paddingTop: vw <= 1450 ? 18 : 22,
+        paddingTop: vw <= 1450 ? 10 : 12,
         paddingBottom: vw <= 1450 ? 10 : 12,
         gap: vw <= 1450 ? 2 : 4,
         zIndex: 50,
@@ -248,7 +248,7 @@ export function NavigationHeader({
         alignItems: "center",
         justifyContent: "space-between",
         padding: vw <= 1450 ? "0 16px 0 0" : (vw < 1700 ? "0 20px 0 0" : "0 28px 0 0"),
-        height: vw <= 1450 ? 80 : (vw < 1700 ? 88 : 96),
+        height: vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72),
         position: "fixed",
         top: 0,
         left: 0,
@@ -265,7 +265,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 72, height: 80, flexShrink: 0,
+                width: 60, height: vw < 1600 ? 52 : 76, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
@@ -291,9 +291,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80), 
-                height: vw <= 1450 ? 80 : (vw < 1700 ? 88 : 96), 
-                flexShrink: 0,
+                width: 70, height: vw < 1700 ? 64 : 72, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: 0,
               }}
@@ -509,7 +507,7 @@ export function NavigationProvider({
       <aside
         style={{
           position: "fixed",
-          top: 80, left: 0, bottom: 0,
+          top: 60, left: 0, bottom: 0,
           width: 260,
           background: "#fff",
           borderRight: "1px solid #e8e8e8",
@@ -595,10 +593,9 @@ export function NavigationProvider({
       )}
       {/* Main content — full width on phone, offset by sidebar on tablet/desktop */}
       <main
-        className={currentView === "dashboard" ? "scrollbar-hide" : ""}
         style={{
           position: "fixed",
-          top: vw <= 1450 ? 80 : (vw < 1700 ? 88 : 96),
+          top: vw <= 1450 ? 56 : (vw < 1700 ? 64 : 72),
           left: isPhone ? 0 : (drawerOpen ? (vw <= 1450 ? 220 : 240) : (vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80))),
           right: 0,
           bottom: 0,

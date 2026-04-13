@@ -18,6 +18,9 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
     const [savedPhoto, setSavedPhoto] = useState<string | null>(null);
     const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
     const [savingPhoto, setSavingPhoto] = useState(false);
+    const [showDeleteMenu, setShowDeleteMenu] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,6 +111,20 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
 
     const handleCancelPhoto = () => {
         setPendingPhoto(null);
+    };
+
+    const handleDeleteAccount = async () => {
+        setDeleting(true);
+        try {
+            await apiCall(`/api/auth/users/${user?.id}`, { method: "DELETE" });
+            setShowDeleteConfirm(false);
+            onLogout?.();
+        } catch (error) {
+            console.error("Failed to delete user:", error);
+            alert("Failed to delete account. Please try again.");
+        } finally {
+            setDeleting(false);
+        }
     };
 
     const pad = isMobile ? 16 : isTablet ? 24 : 32;
@@ -379,7 +396,7 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
                         </div>
                     </div>
 
-                    {/* Status Only */}
+                    {/* Status + Delete Action */}
                     <div style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         padding: "14px 18px",
@@ -412,6 +429,90 @@ export function UserProfilePage({ user, onBack, onLogout, onProfilePhotoChange }
                                     Active
                                 </span>
                             </div>
+                        </div>
+
+                        {/* More actions button */}
+                        <div style={{ position: "relative" }}>
+                            <button
+                                onClick={() => { setShowDeleteMenu(!showDeleteMenu); setShowDeleteConfirm(false); }}
+                                style={{
+                                    background: "none", border: "none",
+                                    padding: 8, borderRadius: "50%",
+                                    cursor: "pointer", display: "flex",
+                                    alignItems: "center", justifyContent: "center",
+                                    transition: "background 0.2s",
+                                    color: showDeleteMenu ? "#ef4444" : "#64748b"
+                                }}
+                            >
+                                <MoreHorizontal size={18} />
+                            </button>
+
+                            {/* Delete menu */}
+                            {showDeleteMenu && (
+                                <div style={{
+                                    position: "absolute",
+                                    bottom: "100%",
+                                    right: 0,
+                                    transform: "translateY(-8px)",
+                                    background: "#fff",
+                                    borderRadius: 16,
+                                    padding: 8,
+                                    minWidth: 160,
+                                    zIndex: 100,
+                                    border: "1px solid #f0f1f3",
+                                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.08)",
+                                    animation: "contentSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both"
+                                }}>
+                                    {!showDeleteConfirm ? (
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(true)}
+                                            style={{
+                                                width: "100%", padding: "10px 14px",
+                                                borderRadius: 10, border: "none",
+                                                background: "none", color: "#ef4444",
+                                                fontSize: 13, fontWeight: 700,
+                                                fontFamily: POPPINS, cursor: "pointer",
+                                                display: "flex", alignItems: "center", gap: 10,
+                                                textAlign: "left"
+                                            }}
+                                        >
+                                            <Trash2 size={16} /> Delete Profile
+                                        </button>
+                                    ) : (
+                                        <div style={{ padding: 4 }}>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center", textTransform: "uppercase" }}>Confirm?</div>
+                                            <div style={{ display: "flex", gap: 6 }}>
+                                                <button
+                                                    onClick={() => setShowDeleteConfirm(false)}
+                                                    disabled={deleting}
+                                                    style={{
+                                                        flex: 1, padding: "8px 0",
+                                                        borderRadius: 8, border: "1px solid #e2e8f0",
+                                                        background: "#fff", color: "#64748b",
+                                                        fontSize: 11, fontWeight: 700,
+                                                        fontFamily: POPPINS, cursor: "pointer",
+                                                    }}
+                                                >
+                                                    No
+                                                </button>
+                                                <button
+                                                    onClick={handleDeleteAccount}
+                                                    disabled={deleting}
+                                                    style={{
+                                                        flex: 1.5, padding: "8px 0",
+                                                        borderRadius: 8, border: "none",
+                                                        background: "#ef4444", color: "#fff",
+                                                        fontSize: 11, fontWeight: 700,
+                                                        fontFamily: POPPINS, cursor: "pointer",
+                                                    }}
+                                                >
+                                                    {deleting ? "Wait..." : "Yes, Delete"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

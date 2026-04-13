@@ -259,10 +259,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         }}>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger style={{
-              width: isMobile ? undefined : "auto",
-              padding: isNarrowDesktop ? "0 14px" : "0 16px",
+              width: isMobile ? undefined : (isNarrowDesktop ? 130 : 148),
               flex: isMobile ? 1 : undefined,
-              minWidth: isNarrowDesktop ? 100 : 124, borderRadius: 100, fontFamily: POPPINS,
+              minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
               fontSize: isNarrowDesktop ? 12 : 13,
               border: "1px solid #e2e5ea", background: "#fff",
               height: isNarrowDesktop ? 34 : 38,
@@ -277,10 +276,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           </Select>
           <Select value={filterLevel} onValueChange={setFilterLevel}>
             <SelectTrigger style={{
-              width: isMobile ? undefined : "auto",
-              padding: isNarrowDesktop ? "0 14px" : "0 16px",
+              width: isMobile ? undefined : (isNarrowDesktop ? 124 : 140),
               flex: isMobile ? 1 : undefined,
-              minWidth: isNarrowDesktop ? 100 : 124, borderRadius: 100, fontFamily: POPPINS,
+              minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
               fontSize: isNarrowDesktop ? 12 : 13,
               border: "1px solid #e2e5ea", background: "#fff",
               height: isNarrowDesktop ? 34 : 38,
