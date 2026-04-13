@@ -104,9 +104,19 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     }
   }, [visible]);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  const [filterBarangay, setFilterBarangay] = useState("all");
+  const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
+  const [showMobileAlertList, setShowMobileAlertList] = useState(false);
+  const [availableSites, setAvailableSites] = useState<string[]>([]);
+  const [selectedSite, setSelectedSite] = useState("all");
+
   useEffect(() => {
     const fetchAlerts = () => {
-      apiGet("/api/sensors/alerts")
+      const query = selectedSite !== 'all' ? `?site=${encodeURIComponent(selectedSite)}` : '';
+      apiGet(`/api/sensors/alerts${query}`)
         .then((data) => {
           console.log('Fetched alerts:', data); // DEBUG LOG
           if (Array.isArray(data)) {
@@ -127,13 +137,27 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     // Check for new alerts every 10 seconds
     const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
-  }, [deviceConnected]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterLevel, setFilterLevel] = useState("all");
-  const [filterBarangay, setFilterBarangay] = useState("all");
-  const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
-  const [showMobileAlertList, setShowMobileAlertList] = useState(false);
+  }, [deviceConnected, selectedSite]);
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const sites = await apiGet('/api/sensors/sites');
+        if (Array.isArray(sites)) {
+          const names = sites
+            .map((s: any) => (s.address || s.site_key || '').toString().trim())
+            .filter((v: string) => v.length > 0);
+          setAvailableSites(Array.from(new Set(names)));
+        } else {
+          setAvailableSites([]);
+        }
+      } catch {
+        setAvailableSites([]);
+      }
+    };
+
+    fetchSites();
+  }, []);
 
 
   const handleAcknowledgeAlert = (alertId: string, fullAlert?: any) => {
@@ -257,6 +281,27 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           flexWrap: "nowrap" as const,
           ...(isMobile ? { width: "100%" } : {}),
         }}>
+          <Select value={selectedSite} onValueChange={setSelectedSite}>
+            <SelectTrigger style={{
+              width: isMobile ? undefined : (isNarrowDesktop ? 180 : 210),
+              flex: isMobile ? 1 : undefined,
+              minWidth: 0,
+              borderRadius: 10,
+              fontFamily: POPPINS,
+              fontSize: isNarrowDesktop ? 12 : 13,
+              border: "1px solid #e2e5ea",
+              background: "#fff",
+              height: isNarrowDesktop ? 34 : 38,
+            }}>
+              <SelectValue placeholder="All Sites" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sites</SelectItem>
+              {availableSites.map((site) => (
+                <SelectItem key={site} value={site}>{site}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger style={{
               width: isMobile ? undefined : (isNarrowDesktop ? 130 : 148),

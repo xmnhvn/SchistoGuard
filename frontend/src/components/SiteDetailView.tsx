@@ -49,6 +49,8 @@ export function SiteDetailView({
     return "24h";
   };
   const [timeRange, setTimeRange] = useState(getInitialTimeRange());
+  const [availableSites, setAvailableSites] = useState<string[]>([]);
+  const [selectedSite, setSelectedSite] = useState<string>(siteId && siteId !== 'site-1' ? siteId : 'all');
   const [alerts, setAlerts] = useState<any[]>([]);
   // Cache history in memory and localStorage
   const [history, setHistory] = useState<any[]>(() => {
@@ -78,6 +80,10 @@ export function SiteDetailView({
   const [address, setAddress] = useState<string | null>(() => getCachedData('address'));
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(() => getCachedData('siteName'));
   const [animationEnabled, setAnimationEnabled] = useState(true);
+
+  const buildSiteQuery = () => {
+    return selectedSite !== 'all' ? `?site=${encodeURIComponent(selectedSite)}` : '';
+  };
 
   // Persistence triggers
   useEffect(() => {
@@ -143,6 +149,32 @@ export function SiteDetailView({
       }
     }).catch(() => { });
   }, []);
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const sites = await apiGet('/api/sensors/sites');
+        if (Array.isArray(sites)) {
+          const names = sites
+            .map((s: any) => (s.address || s.site_key || '').toString().trim())
+            .filter((v: string) => v.length > 0);
+          setAvailableSites(Array.from(new Set(names)));
+        } else {
+          setAvailableSites([]);
+        }
+      } catch {
+        setAvailableSites([]);
+      }
+    };
+
+    fetchSites();
+  }, []);
+
+  useEffect(() => {
+    if (selectedSite !== 'all') {
+      setDynamicSiteName(selectedSite);
+    }
+  }, [selectedSite]);
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
@@ -283,11 +315,12 @@ export function SiteDetailView({
   // Auto-refresh readings every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      apiGet("/api/sensors/history")
+      apiGet(`/api/sensors/history${buildSiteQuery()}`)
         .then(data => {
           if (Array.isArray(data)) {
+            setHistory(data);
             if (typeof window !== 'undefined') {
-              localStorage.setItem('sg_history', JSON.stringify(data));
+              localStorage.setItem(`sg_history_${selectedSite}`, JSON.stringify(data));
             }
           }
         })
@@ -296,18 +329,28 @@ export function SiteDetailView({
         });
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedSite]);
 
-  // Only fetch if not already cached
+  // Fetch selected site history immediately on mount/filter change
   useEffect(() => {
-    if (history && history.length > 0) return;
-    apiGet("/api/sensors/history")
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(`sg_history_${selectedSite}`);
+      if (cached) {
+        try {
+          setHistory(JSON.parse(cached));
+        } catch {
+          setHistory([]);
+        }
+      }
+    }
+
+    apiGet(`/api/sensors/history${buildSiteQuery()}`)
       .then(data => {
         console.log("Site Details time series data:", data);
         if (Array.isArray(data)) {
           setHistory(data);
           if (typeof window !== 'undefined') {
-            localStorage.setItem('sg_history', JSON.stringify(data));
+            localStorage.setItem(`sg_history_${selectedSite}`, JSON.stringify(data));
           }
         } else {
           setHistory([]);
@@ -316,7 +359,7 @@ export function SiteDetailView({
       .catch(err => {
         console.error("Error fetching time series data:", err);
       });
-  }, [history]);
+  }, [selectedSite]);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     setAlerts(prev => prev.map(alert =>
@@ -670,6 +713,23 @@ export function SiteDetailView({
               ...(mobileResponsive ? { width: "100%" } : {}),
               animation: (animate && animationEnabled) ? 'pageSlideIn 0.7s 0.12s cubic-bezier(0.22,1,0.36,1) both' : 'none'
             }}>
+              <div style={{ flex: mobileResponsive ? 1 : undefined }}>
+                <Select value={selectedSite} onValueChange={setSelectedSite}>
+                  <SelectTrigger style={{
+                    width: mobileResponsive ? undefined : 210, flex: mobileResponsive ? 1 : undefined,
+                    minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                    border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                  }}>
+                    <SelectValue placeholder="All Sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {availableSites.map((site) => (
+                      <SelectItem key={site} value={site}>{site}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div style={{ flex: mobileResponsive ? 1 : undefined }}>
                 <Select value={timeRange} onValueChange={setTimeRange}>
                   <SelectTrigger style={{

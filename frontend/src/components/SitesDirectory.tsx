@@ -11,9 +11,10 @@ const POPPINS = "'Poppins', sans-serif";
 
 let _sitesFirstLoadDone = false;
 
-const fetchReadings = async () => {
+const fetchReadings = async (selectedSite: string = 'all') => {
   try {
-    const data = await apiGet('/api/sensors/history');
+    const query = selectedSite !== 'all' ? `?site=${encodeURIComponent(selectedSite)}` : '';
+    const data = await apiGet(`/api/sensors/history${query}`);
     return Array.isArray(data)
       ? data
         .map((r, idx) => {
@@ -73,7 +74,29 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [dynamicSiteName, setDynamicSiteName] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(!_sitesFirstLoadDone);
+  const [availableSites, setAvailableSites] = useState<string[]>([]);
+  const [selectedSite, setSelectedSite] = useState<string>('all');
   const headerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const sites = await apiGet('/api/sensors/sites');
+        if (Array.isArray(sites)) {
+          const names = sites
+            .map((s: any) => (s.address || s.site_key || '').toString().trim())
+            .filter((v: string) => v.length > 0);
+          setAvailableSites(Array.from(new Set(names)));
+        } else {
+          setAvailableSites([]);
+        }
+      } catch {
+        setAvailableSites([]);
+      }
+    };
+
+    fetchSites();
+  }, []);
 
   useEffect(() => {
     if (visible && !_sitesFirstLoadDone) {
@@ -533,14 +556,14 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   useEffect(() => {
     const getData = async () => {
-      const data = await fetchReadings();
+      const data = await fetchReadings(selectedSite);
       setReadings(data);
     };
 
     getData();
     const interval = setInterval(getData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedSite]);
 
   const filteredReadings = readings.filter(reading => {
     if (hiddenReadings.includes(reading.id)) return false;
@@ -760,6 +783,23 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             flexWrap: mobileResponsive ? "nowrap" as const : "wrap",
             ...(mobileResponsive ? { width: "100%" } : {}),
           }}>
+            <div style={{ flex: isMobile ? 1 : undefined }}>
+              <Select value={selectedSite} onValueChange={setSelectedSite}>
+                <SelectTrigger style={{
+                  width: isMobile ? undefined : 190, flex: isMobile ? 1 : undefined,
+                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  border: "1px solid #e2e5ea", background: "#fff", height: 38,
+                }}>
+                  <SelectValue placeholder="All Sites" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sites</SelectItem>
+                  {availableSites.map((site) => (
+                    <SelectItem key={site} value={site}>{site}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div style={{ flex: isMobile ? 1 : undefined }}>
               <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
                 <SelectTrigger style={{

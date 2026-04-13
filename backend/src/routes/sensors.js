@@ -10,6 +10,54 @@ const reverseGeocode = require("../utils/reverseGeocode");
 let AGGREGATE_INTERVAL_MS = 5 * 60 * 1000;
 let GLOBAL_DEVICE_NAME = "Site Name";
 
+function normalizeSiteKey(address, fallback = "unknown-site") {
+  const source = (address || fallback || "unknown-site").toString().trim().toLowerCase();
+  return source
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120) || "unknown-site";
+}
+
+function buildSiteIdentity(data) {
+  const address = (data.address || "").toString().trim() || null;
+  const fallbackName = data.siteName || data.device_ip || GLOBAL_DEVICE_NAME || "Unknown Site";
+  const siteName = address || fallbackName;
+  return {
+    siteName,
+    address,
+    siteKey: normalizeSiteKey(siteName, fallbackName)
+  };
+}
+
+function upsertSiteRegistry(data, nowIso) {
+  const identity = buildSiteIdentity(data);
+  db.run(
+    `INSERT INTO site_registry (site_key, address, latitude, longitude, first_seen, last_seen)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (site_key)
+     DO UPDATE SET
+       address = EXCLUDED.address,
+       latitude = EXCLUDED.latitude,
+       longitude = EXCLUDED.longitude,
+       last_seen = EXCLUDED.last_seen`,
+    [
+      identity.siteKey,
+      identity.address,
+      typeof data.latitude === 'number' ? data.latitude : null,
+      typeof data.longitude === 'number' ? data.longitude : null,
+      nowIso,
+      nowIso
+    ],
+    (err) => {
+      if (err) {
+        console.error('[site_registry upsert error]', err.message, { identity });
+      }
+    }
+  );
+
+  return identity;
+}
+
 // Helper to load settings from DB
 async function loadSettingsFromDB() {
   return new Promise((resolve) => {
@@ -176,8 +224,6 @@ loadSettingsFromDB().then(() => {
   } catch (e) { /* ignore */ }
 });
 
-let firstLogged = false;
-
 setInterval(() => {
   if (!latestData) return;
   const now = new Date();
@@ -196,8 +242,9 @@ setInterval(() => {
   });
 
   // Always log to raw_readings (per event/second), now with GPS
+  const siteIdentity = upsertSiteRegistry(latestData, now.toISOString());
   db.run(
-    "INSERT INTO raw_readings (turbidity, temperature, ph, status, latitude, longitude, address, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO raw_readings (turbidity, temperature, ph, status, latitude, longitude, address, site_key, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [
       latestData.turbidity,
       latestData.temperature,
@@ -206,6 +253,7 @@ setInterval(() => {
       typeof latestData.latitude === 'number' ? latestData.latitude : null,
       typeof latestData.longitude === 'number' ? latestData.longitude : null,
       latestData.address || null,
+      siteIdentity.siteKey,
       now.toISOString()
     ],
     function (err) {
@@ -218,12 +266,11 @@ setInterval(() => {
     }
   );
   // Aggregate/copy to readings table based on interval
-  db.get("SELECT timestamp FROM readings ORDER BY timestamp DESC LIMIT 1", [], (err, row) => {
+  db.get("SELECT timestamp FROM readings WHERE site_key = ? ORDER BY timestamp DESC LIMIT 1", [siteIdentity.siteKey], (err, row) => {
     if (err) return;
     let shouldLog = false;
-    if (!firstLogged && !row) {
+    if (!row) {
       shouldLog = true;
-      firstLogged = true;
     } else if (row) {
       const last = new Date(row.timestamp);
       if (now.getTime() - last.getTime() >= intervalMs) {
@@ -232,7 +279,7 @@ setInterval(() => {
     }
     if (shouldLog) {
       db.run(
-        "INSERT INTO readings (turbidity, temperature, ph, status, latitude, longitude, address, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO readings (turbidity, temperature, ph, status, latitude, longitude, address, site_key, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           latestData.turbidity,
           latestData.temperature,
@@ -241,6 +288,7 @@ setInterval(() => {
           typeof latestData.latitude === 'number' ? latestData.latitude : null,
           typeof latestData.longitude === 'number' ? latestData.longitude : null,
           latestData.address || null,
+          siteIdentity.siteKey,
           now.toISOString()
         ],
         function (err) {
@@ -259,6 +307,7 @@ setInterval(() => {
 
 function generateAlertsFromData(data, now = new Date()) {
   let alertMessages = [];
+  const identity = buildSiteIdentity(data);
 
   ["Temperature", "pH", "Turbidity"].forEach((parameter) => {
     const level = classifyParameterRisk(parameter, data);
@@ -268,8 +317,8 @@ function generateAlertsFromData(data, now = new Date()) {
     const message = buildAlertMessage(parameter, level);
 
     db.run(
-      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy, address, site_key)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         level,
         message,
@@ -277,10 +326,12 @@ function generateAlertsFromData(data, now = new Date()) {
         value,
         now.toISOString(),
         0,
-        data.siteName || GLOBAL_DEVICE_NAME,
+        identity.siteName,
         data.barangay || "Unknown",
         "-",
-        null
+        null,
+        identity.address,
+        identity.siteKey
       ],
       (err) => { if (err) console.error('alerts insert error:', err); }
     );
@@ -349,6 +400,7 @@ function buildSmsLine(parameter, value, level) {
 // Check alerts immediately (not wait for 5-minute save)
 function checkAndAlertImmediate(data) {
   let alertMessages = [];
+  const identity = buildSiteIdentity(data);
 
   ["Temperature", "pH", "Turbidity"].forEach((parameter) => {
     const level = classifyParameterRisk(parameter, data);
@@ -362,14 +414,14 @@ function checkAndAlertImmediate(data) {
     const now = Date.now();
     const ts = new Date(data.timestamp).getTime();
     if (Math.abs(now - ts) < 10000) {
-      console.log('🔍 Alert detected, looking for residents for site:', data.siteName || GLOBAL_DEVICE_NAME);
+      console.log('🔍 Alert detected, looking for residents for site:', identity.siteName);
       const nowDate = new Date();
       const dateStr = nowDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
       const timeStr = nowDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const timestamp = `${dateStr}, ${timeStr}`;
       const smsMessage = `SchistoGuard EARLY WARNING\n[Recorded: ${timestamp}]\n\n${alertMessages.join('\n')}\n\nPlease verify and monitor.`;
       // Get resident phone numbers for this site - prioritize BHWs and LGUs
-      const siteName = data.siteName || GLOBAL_DEVICE_NAME;
+      const siteName = identity.siteName;
       db.all(
         "SELECT phone, role FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='lgu' THEN 2 ELSE 3 END",
         [siteName],
@@ -412,6 +464,7 @@ router.post("/", async (req, res) => {
     latitude,
     longitude,
     address,
+    siteKey: normalizeSiteKey(address || device_ip || GLOBAL_DEVICE_NAME),
     status,
     timestamp: new Date()
   };
@@ -488,17 +541,44 @@ router.get("/latest", (req, res) => {
 });
 
 router.get("/history", (req, res) => {
-  db.all("SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288", [], (err, rows) => {
+  const site = (req.query.site || req.query.siteKey || req.query.address || '').toString().trim();
+  const siteKey = site ? normalizeSiteKey(site) : null;
+  const query = siteKey
+    ? "SELECT * FROM readings WHERE site_key = ? ORDER BY timestamp DESC LIMIT 288"
+    : "SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288";
+  const params = siteKey ? [siteKey] : [];
+
+  db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows.reverse());
   });
 });
 
 router.get("/alerts", (req, res) => {
-  db.all("SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100", [], (err, rows) => {
+  const site = (req.query.site || req.query.siteKey || req.query.address || '').toString().trim();
+  const siteKey = site ? normalizeSiteKey(site) : null;
+  const query = siteKey
+    ? "SELECT * FROM alerts WHERE site_key = ? ORDER BY timestamp DESC LIMIT 100"
+    : "SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100";
+  const params = siteKey ? [siteKey] : [];
+
+  db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
+});
+
+router.get('/sites', (req, res) => {
+  db.all(
+    `SELECT site_key, address, latitude, longitude, first_seen, last_seen
+     FROM site_registry
+     ORDER BY last_seen DESC`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows || []);
+    }
+  );
 });
 
 // CSV upload endpoint for residents
