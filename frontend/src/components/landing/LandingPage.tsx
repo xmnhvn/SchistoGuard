@@ -23,7 +23,6 @@ import {
 import { PWAInstructionsModal } from "../PWAInstructionsModal";
 import SensorMiniCard from "../SensorMiniCard";
 import { apiGet } from "../../utils/api";
-import { reverseGeocode } from "../../utils/reverseGeocode";
 
 interface LandingPageProps {
   onViewMap?: () => void;
@@ -279,14 +278,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       const { lat, lng } = gpsSites[0];
       if (!lastLatLngRef.current || lastLatLngRef.current.lat !== lat || lastLatLngRef.current.lng !== lng) {
         lastLatLngRef.current = { lat, lng };
-        setGpsAddress(null); // reset while loading
-        reverseGeocode(lat, lng).then(addr => {
-          setGpsAddress(addr);
-          // Sync with dashboard global cache
-          if (addr && addr !== "Unnamed Road" && addr !== "Device Address") {
-            localStorage.setItem('sg_global_latest_address', addr);
-          }
-        });
+        setGpsAddress(null); // keep backend/source-of-truth address only
       }
     } else {
       setGpsAddress(null);

@@ -16,7 +16,6 @@ import {
 import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
-import { reverseGeocode } from "../utils/reverseGeocode";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -217,15 +216,6 @@ export function Dashboard({
         if (!(typeof latestReading?.address === 'string' && latestReading.address.trim())) {
           setGpsAddress(null);
         }
-        // Don't reset gpsAddress to null — keep old address visible while loading new one
-        reverseGeocode(lat, lng).then(addr => {
-          if (addr) {
-            setGpsAddress(addr);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('sg_global_latest_address', addr);
-            }
-          }
-        });
       }
     } else {
       // Don't reset to null immediately — let the history fallback below try first
@@ -284,12 +274,11 @@ export function Dashboard({
       .find((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
 
     if (latestWithGps) {
-      reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-        if (addr) {
-          setGpsAddress(addr);
-          localStorage.setItem('sg_global_latest_address', addr);
-        }
-      });
+      if (typeof latestWithGps.address === 'string' && latestWithGps.address.trim()) {
+        const resolved = latestWithGps.address.trim();
+        setGpsAddress(resolved);
+        localStorage.setItem('sg_global_latest_address', resolved);
+      }
     }
   }, [readings, gpsAddress]);
 

@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useEffect, useState, useRef } from "react";
 import { apiGet } from "../utils/api";
 import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from "../utils/loadHtml2Pdf";
-import { reverseGeocode } from "../utils/reverseGeocode";
 import { formatAddress } from "../utils/addressFormat";
 import { PDFHeader } from "./PDFHeader";
 
@@ -123,13 +122,6 @@ export function SiteDetailView({
           const resolvedAddress = latestWithGps.address.trim();
           setAddress(resolvedAddress);
           localStorage.setItem('sg_global_latest_address', resolvedAddress);
-        } else {
-          reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-            if (addr) {
-              setAddress(addr);
-              localStorage.setItem('sg_global_latest_address', addr);
-            }
-          });
         }
       }
     }
@@ -145,10 +137,6 @@ export function SiteDetailView({
         }
         if (typeof data.address === 'string' && data.address.trim()) {
           setAddress(data.address.trim());
-        } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-          reverseGeocode(data.latitude, data.longitude).then(addr => {
-            if (addr) setAddress(addr);
-          });
         }
       }
     }).catch(() => { });
