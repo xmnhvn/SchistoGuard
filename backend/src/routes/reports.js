@@ -19,6 +19,9 @@ router.get("/", (req, res) => {
         type: row.type,
         period: row.period,
         generatedDate: row.generatedDate,
+        siteKey: row.siteKey || null,
+        siteName: row.siteName || null,
+        address: row.address || null,
         status: 'published', // Frontend expects this
         summary: {
           totalSites: row.totalSites || 0,
@@ -57,6 +60,9 @@ router.get("/:id", (req, res) => {
         type: row.type,
         period: row.period,
         generatedDate: row.generatedDate,
+        siteKey: row.siteKey || null,
+        siteName: row.siteName || null,
+        address: row.address || null,
         status: 'published',
         summary: {
           totalSites: row.totalSites || 0,
@@ -76,7 +82,7 @@ router.get("/:id", (req, res) => {
 
 // Create new report
 router.post("/", async (req, res) => {
-  const { type, period } = req.body;
+  const { type, period, siteKey } = req.body;
   
   if (!type) {
     return res.status(400).json({ success: false, message: "Report type is required" });
@@ -84,15 +90,15 @@ router.post("/", async (req, res) => {
   
   try {
     // Generate report data based on type
-    const reportData = await generateReportData(type, period);
+    const reportData = await generateReportData(type, period, siteKey || null);
     
     // Insert into database
     db.run(
       `INSERT INTO reports (
         title, type, period, startDate, endDate, generatedDate, 
         generatedBy, totalSites, alertsGenerated, 
-        avgTurbidity, avgTemperature, avgPh, riskLevel
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+        avgTurbidity, avgTemperature, avgPh, riskLevel, siteKey, siteName, address
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [
         reportData.title,
         reportData.type,
@@ -106,7 +112,10 @@ router.post("/", async (req, res) => {
         reportData.avgTurbidity,
         reportData.avgTemperature,
         reportData.avgPh,
-        reportData.riskLevel
+        reportData.riskLevel,
+        reportData.siteKey,
+        reportData.siteName,
+        reportData.address
       ],
       function (err, result) {
         if (err) {
@@ -136,6 +145,9 @@ router.post("/", async (req, res) => {
               type: row.type,
               period: row.period,
               generatedDate: row.generatedDate,
+              siteKey: row.siteKey || null,
+              siteName: row.siteName || null,
+              address: row.address || null,
               status: 'published',
               summary: {
                 totalSites: row.totalSites || 0,

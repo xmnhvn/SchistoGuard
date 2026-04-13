@@ -178,9 +178,36 @@ const initPostgresTables = async () => {
         "avgTemperature" REAL,
         "avgPh" REAL,
         "riskLevel" TEXT,
+        "siteKey" TEXT,
+        "siteName" TEXT,
+        address TEXT,
         "downloadUrl" TEXT
       )
     `);
+    await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS "siteKey" TEXT');
+    await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS "siteName" TEXT');
+    await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS address TEXT');
+
+    // Backfill legacy reports that were created before site snapshot fields existed.
+    const settingsResult = await db.query("SELECT value FROM settings WHERE key = 'device_name' LIMIT 1");
+    const registryResult = await db.query(`
+      SELECT site_name, address
+      FROM site_registry
+      ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC
+      LIMIT 1
+    `);
+    const fallbackSiteName =
+      settingsResult.rows[0]?.value ||
+      registryResult.rows[0]?.site_name ||
+      'System Summary Report';
+    const fallbackAddress = registryResult.rows[0]?.address || null;
+    await db.query(
+      `UPDATE reports
+       SET "siteName" = COALESCE("siteName", $1),
+           address = COALESCE(address, $2)
+       WHERE "siteName" IS NULL OR address IS NULL`,
+      [fallbackSiteName, fallbackAddress]
+    );
 
     await ensureProtectedDefaultAccount();
     console.log('✓ PostgreSQL tables initialized');

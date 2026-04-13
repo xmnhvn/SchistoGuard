@@ -155,29 +155,48 @@ function calculateRiskLevel(avgTurbidity, avgTemperature, avgPh) {
 /**
  * Get statistics from database for date range
  */
-function getStatistics(startDate, endDate) {
+function getStatistics(startDate, endDate, siteKey = null) {
   return new Promise((resolve, reject) => {
-    // Get readings statistics
-    db.get(
-      `SELECT 
+    const hasSiteFilter = typeof siteKey === "string" && siteKey.trim().length > 0;
+    const readingsQuery = hasSiteFilter
+      ? `SELECT 
         COUNT(DISTINCT timestamp) as totalSites,
         AVG(turbidity) as avgTurbidity,
         AVG(temperature) as avgTemperature,
         AVG(ph) as avgPh
       FROM readings 
-      WHERE timestamp BETWEEN ? AND ?`,
-      [startDate, endDate],
+      WHERE timestamp BETWEEN ? AND ? AND site_key = ?`
+      : `SELECT 
+        COUNT(DISTINCT timestamp) as totalSites,
+        AVG(turbidity) as avgTurbidity,
+        AVG(temperature) as avgTemperature,
+        AVG(ph) as avgPh
+      FROM readings 
+      WHERE timestamp BETWEEN ? AND ?`;
+    const readingsParams = hasSiteFilter ? [startDate, endDate, siteKey] : [startDate, endDate];
+
+    // Get readings statistics
+    db.get(
+      readingsQuery,
+      readingsParams,
       (err, readingsRow) => {
         if (err) {
           return reject(err);
         }
+
+        const alertsQuery = hasSiteFilter
+          ? `SELECT COUNT(*) as alertsGenerated
+          FROM alerts 
+          WHERE timestamp BETWEEN ? AND ? AND site_key = ?`
+          : `SELECT COUNT(*) as alertsGenerated
+          FROM alerts 
+          WHERE timestamp BETWEEN ? AND ?`;
+        const alertsParams = hasSiteFilter ? [startDate, endDate, siteKey] : [startDate, endDate];
         
         // Get alerts count
         db.get(
-          `SELECT COUNT(*) as alertsGenerated
-          FROM alerts 
-          WHERE timestamp BETWEEN ? AND ?`,
-          [startDate, endDate],
+          alertsQuery,
+          alertsParams,
           (err, alertsRow) => {
             if (err) {
               return reject(err);
@@ -197,16 +216,74 @@ function getStatistics(startDate, endDate) {
   });
 }
 
+function getSiteSnapshot(siteKey = null) {
+  return new Promise((resolve, reject) => {
+    const hasSiteFilter = typeof siteKey === "string" && siteKey.trim().length > 0;
+
+    if (hasSiteFilter) {
+      db.get(
+        `SELECT site_key, site_name, address
+         FROM site_registry
+         WHERE site_key = ?
+         LIMIT 1`,
+        [siteKey],
+        (siteErr, siteRow) => {
+          if (siteErr) {
+            return reject(siteErr);
+          }
+
+          const siteName =
+            (siteRow && (siteRow.site_name || siteRow.address)) ||
+            "System Summary Report";
+          const address = (siteRow && siteRow.address) || null;
+
+          resolve({ siteKey, siteName, address });
+        }
+      );
+      return;
+    }
+
+    db.get("SELECT value FROM settings WHERE key = ?", ["device_name"], (settingsErr, settingsRow) => {
+      if (settingsErr) {
+        return reject(settingsErr);
+      }
+
+      db.get(
+        `SELECT site_name, address
+         FROM site_registry
+         ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC
+         LIMIT 1`,
+        [],
+        (siteErr, siteRow) => {
+          if (siteErr) {
+            return reject(siteErr);
+          }
+
+          const siteName =
+            (settingsRow && settingsRow.value) ||
+            (siteRow && siteRow.site_name) ||
+            "System Summary Report";
+          const address = (siteRow && siteRow.address) || null;
+
+          resolve({ siteKey: null, siteName, address });
+        }
+      );
+    });
+  });
+}
+
 /**
  * Generate report data
  */
-async function generateReportData(type, customPeriod = null) {
+async function generateReportData(type, customPeriod = null, siteKey = null) {
   try {
     // Get date range
     const { startDate, endDate } = getDateRange(type, customPeriod);
     
     // Get statistics
-    const stats = await getStatistics(startDate, endDate);
+    const normalizedSiteKey = typeof siteKey === "string" ? siteKey.trim() : "";
+    const selectedSiteKey = normalizedSiteKey || null;
+    const stats = await getStatistics(startDate, endDate, selectedSiteKey);
     
     // Calculate risk level
     const riskLevel = calculateRiskLevel(
@@ -214,6 +291,9 @@ async function generateReportData(type, customPeriod = null) {
       parseFloat(stats.avgTemperature),
       parseFloat(stats.avgPh)
     );
+
+    // Snapshot header metadata at generation time.
+    const snapshot = await getSiteSnapshot(selectedSiteKey);
     
     // Format period
     const period = formatPeriod(type, startDate, endDate);
@@ -234,7 +314,10 @@ async function generateReportData(type, customPeriod = null) {
       avgTurbidity: parseFloat(stats.avgTurbidity),
       avgTemperature: parseFloat(stats.avgTemperature),
       avgPh: parseFloat(stats.avgPh),
-      riskLevel
+      riskLevel,
+      siteKey: snapshot.siteKey,
+      siteName: snapshot.siteName,
+      address: snapshot.address
     };
   } catch (error) {
     throw new Error(`Failed to generate report: ${error.message}`);

@@ -41,6 +41,9 @@ interface Report {
   type: 'weekly' | 'monthly' | 'quarterly' | 'annual';
   period: string;
   generatedDate: string;
+  siteKey?: string | null;
+  siteName?: string | null;
+  address?: string | null;
   status: 'draft' | 'published' | 'archived';
   summary: {
     totalSites: number;
@@ -51,6 +54,12 @@ interface Report {
     riskLevel: 'low' | 'moderate' | 'high';
   };
   downloadUrl?: string;
+}
+
+interface SiteOption {
+  site_key: string;
+  site_name?: string | null;
+  address?: string | null;
 }
 
 const formatDateInputValue = (date: Date) => {
@@ -105,6 +114,8 @@ export const ReportsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showMobileReportList, setShowMobileReportList] = useState(false);
+  const [siteOptions, setSiteOptions] = useState<SiteOption[]>([]);
+  const [selectedSiteKey, setSelectedSiteKey] = useState('');
   
   // Persistent Global Cache for Header Metadata
   const [address, setAddress] = useState<string | null>(() => {
@@ -127,6 +138,7 @@ export const ReportsPage: React.FC = () => {
 
   React.useEffect(() => {
     fetchReports();
+    fetchSites();
     if (!_reportsFirstLoadDone) {
       setTimeout(() => { _reportsFirstLoadDone = true; }, 50);
     }
@@ -204,6 +216,7 @@ export const ReportsPage: React.FC = () => {
     setMonthlyPeriod(formatMonthInputValue(now));
     setQuarterlyYear(String(now.getFullYear()));
     setQuarterlyQuarter(String(Math.floor(now.getMonth() / 3) + 1));
+    setSelectedSiteKey('');
   };
 
   const buildCreatePeriodValue = () => {
@@ -251,6 +264,19 @@ export const ReportsPage: React.FC = () => {
     }
   };
 
+  const fetchSites = async () => {
+    try {
+      const response = await apiGet('/api/sensors/sites');
+      if (Array.isArray(response)) {
+        setSiteOptions(response);
+      } else {
+        setSiteOptions([]);
+      }
+    } catch {
+      setSiteOptions([]);
+    }
+  };
+
   const handleCreateReport = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -259,10 +285,14 @@ export const ReportsPage: React.FC = () => {
 
     try {
       const createPeriod = buildCreatePeriodValue();
+      if (!selectedSiteKey) {
+        throw new Error('Please select a site for this report.');
+      }
 
       const response = await apiPost('/api/reports', {
         type: reportType,
         period: createPeriod,
+        siteKey: selectedSiteKey,
       });
 
       if (response.success || response.report) {
@@ -441,8 +471,8 @@ export const ReportsPage: React.FC = () => {
     >
       <header className="mb-6 border-b border-slate-200 pb-6 text-center">
         <PDFHeader
-          dynamicSiteName={dynamicSiteName || 'System Summary Report'}
-          address={address || 'Device Address'}
+          dynamicSiteName={report.siteName || dynamicSiteName || 'System Summary Report'}
+          address={report.address || address || 'Device Address'}
         />
       </header>
 
@@ -477,12 +507,6 @@ export const ReportsPage: React.FC = () => {
               >
                 {report.summary.riskLevel}
               </td>
-            </tr>
-            <tr>
-              <td className="border border-slate-300 px-2 py-1 font-semibold">Total Sites</td>
-              <td className="border border-slate-300 px-2 py-1">{report.summary.totalSites}</td>
-              <td className="border border-slate-300 px-2 py-1 font-semibold">Alerts</td>
-              <td className="border border-slate-300 px-2 py-1">{report.summary.alertsGenerated}</td>
             </tr>
           </tbody>
         </table>
@@ -1287,6 +1311,32 @@ export const ReportsPage: React.FC = () => {
                 ))}
               </div>
 
+              <div className="flex flex-col gap-2">
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Site</label>
+                <Select value={selectedSiteKey || undefined} onValueChange={setSelectedSiteKey} disabled={creating}>
+                  <SelectTrigger
+                    style={{
+                      height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                      padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+                    }}
+                    className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
+                  >
+                    <SelectValue placeholder="Select site" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {siteOptions.map((site) => {
+                      const label = site.site_name || site.address || site.site_key;
+                      return (
+                        <SelectItem key={site.site_key} value={site.site_key}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS, marginTop: 24 }}>Report Period</div>
 
               {reportType === 'weekly' && (
@@ -1403,7 +1453,7 @@ export const ReportsPage: React.FC = () => {
                     boxShadow: "0 4px 14px rgba(53, 125, 134, 0.25)"
                   }}
                   className="hover:opacity-95 transition-all active:scale-95 flex items-center justify-center gap-2"
-                  disabled={creating}
+                  disabled={creating || !selectedSiteKey}
                 >
                   {creating ? (
                     <>
