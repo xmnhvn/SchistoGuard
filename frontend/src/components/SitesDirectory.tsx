@@ -764,7 +764,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <Select value={filterTimeRange} onValueChange={setFilterTimeRange}>
                 <SelectTrigger style={{
                   width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
                   border: "1px solid #e2e5ea", background: "#fff", height: 38,
                 }}>
                   <SelectValue />
@@ -781,7 +781,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               <Select value={filterRisk} onValueChange={setFilterRisk}>
                 <SelectTrigger style={{
                   width: isMobile ? undefined : 148, flex: isMobile ? 1 : undefined,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
                   border: "1px solid #e2e5ea", background: "#fff", height: 38,
                 }}>
                   <SelectValue placeholder="Risk Level" />
@@ -818,7 +818,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             <button
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "0 16px", height: 38, borderRadius: 12,
+                padding: "0 16px", height: 38, borderRadius: 100,
                 border: "1px solid #e2e5ea",
                 background: "#fff", cursor: "pointer", fontSize: 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
@@ -848,7 +848,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           ].map((card, i) => (
             <div key={card.label} style={{
               background: "#fff",
-              borderRadius: 20,
+              borderRadius: 16,
               padding: 20,
               display: "flex",
               flexDirection: "column",

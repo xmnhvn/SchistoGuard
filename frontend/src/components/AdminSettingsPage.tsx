@@ -341,7 +341,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       .custom-input {
         background: rgba(0,0,0,0.02) !important;
         border: 1px solid rgba(0,0,0,0.03) !important;
-        border-radius: 14px !important;
+        border-radius: 100px !important;
         padding: 12px 16px !important;
         height: 48px !important;
         font-family: ${POPPINS} !important;
@@ -351,7 +351,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       .custom-select-trigger {
         padding: 12px 16px !important;
         height: 48px !important;
-        border-radius: 14px !important;
+        border-radius: 100px !important;
         font-size: 14px !important;
         border: 1px solid #e2e5ea !important;
       }
@@ -870,10 +870,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setPasswordModalOpen(false)} disabled={passwordUpdating}>
+                <Button variant="outline" onClick={() => setPasswordModalOpen(false)} disabled={passwordUpdating} style={{ borderRadius: 100, fontFamily: POPPINS }}>
                   Cancel
                 </Button>
-                <Button onClick={handleAdminUpdatePassword} disabled={passwordUpdating}>
+                <Button onClick={handleAdminUpdatePassword} disabled={passwordUpdating} style={{ borderRadius: 100, fontFamily: POPPINS, background: "#357D86" }}>
                   {passwordUpdating ? "Updating..." : "Update Password"}
                 </Button>
               </div>
@@ -927,7 +927,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           )}
 
           <div style={{ marginTop: 12 }}>
-            <Button type="button" variant="outline" onClick={fetchAuditLogs}>Refresh Logs</Button>
+            <Button type="button" variant="outline" onClick={fetchAuditLogs} style={{ borderRadius: 100, fontFamily: POPPINS }}>Refresh Logs</Button>
           </div>
         </div>
 
@@ -950,7 +950,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               value={deviceName}
               onChange={e => setDeviceName(e.target.value)}
               placeholder="e.g. Mang Jose's Fish Pond"
-              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", flex: 1, maxWidth: 260, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, outline: "none" }}
+              style={{ padding: "0 12px", borderRadius: 100, border: "1px solid #ddd", flex: 1, maxWidth: 260, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, outline: "none" }}
               className="focus:ring-2 focus:ring-[#357D86]/10 focus:border-[#357D86]/40 transition-all duration-200"
             />
           </div>
@@ -963,12 +963,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               step={1}
               value={intervalValue}
               onChange={e => setIntervalValue(Number(e.target.value))}
-              style={{ padding: "0 12px", borderRadius: 10, border: "1px solid #ddd", width: 70, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS }}
+              style={{ padding: "0 12px", borderRadius: 100, border: "1px solid #ddd", width: 70, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS }}
             />
             <select
               value={intervalUnit}
               onChange={e => setIntervalUnit(e.target.value)}
-              style={{ padding: "0 8px", borderRadius: 10, border: "1px solid #ddd", width: 110, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
+              style={{ padding: "0 8px", borderRadius: 100, border: "1px solid #ddd", width: 110, height: 38, fontSize: 13, color: "#1e293b", fontFamily: POPPINS, cursor: "pointer" }}
             >
               <option value="sec">seconds</option>
               <option value="min">minutes</option>
@@ -977,7 +977,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           </div>
           <button
             onClick={handleSaveInterval}
-            style={{ background: "#357D86", color: "#fff", borderRadius: 14, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
+            style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 24px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 15 }}
           >
             Save Settings
           </button>

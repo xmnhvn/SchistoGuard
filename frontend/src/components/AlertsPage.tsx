@@ -261,7 +261,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             <SelectTrigger style={{
               width: isMobile ? undefined : (isNarrowDesktop ? 130 : 148),
               flex: isMobile ? 1 : undefined,
-              minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
+              minWidth: 0, borderRadius: 100, fontFamily: POPPINS,
               fontSize: isNarrowDesktop ? 12 : 13,
               border: "1px solid #e2e5ea", background: "#fff",
               height: isNarrowDesktop ? 34 : 38,
@@ -278,7 +278,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             <SelectTrigger style={{
               width: isMobile ? undefined : (isNarrowDesktop ? 124 : 140),
               flex: isMobile ? 1 : undefined,
-              minWidth: 0, borderRadius: 10, fontFamily: POPPINS,
+              minWidth: 0, borderRadius: 100, fontFamily: POPPINS,
               fontSize: isNarrowDesktop ? 12 : 13,
               border: "1px solid #e2e5ea", background: "#fff",
               height: isNarrowDesktop ? 34 : 38,
@@ -438,13 +438,13 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {deleteMode ? (
                 <>
-                  <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ background: "transparent", border: "1px solid #e2e5ea", borderRadius: 100, padding: isNarrowDesktop ? "4px 10px" : "6px 16px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                     Select All
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleCancelDelete(); }} style={{ background: "#f3f4f6", border: "none", borderRadius: 100, padding: isNarrowDesktop ? "4px 10px" : "6px 16px", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#374151" }}>
                     Cancel
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 8, padding: isNarrowDesktop ? "4px 8px" : "6px 12px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSelected(); }} disabled={selectedIds.size === 0} style={{ background: selectedIds.size > 0 ? "#ef4444" : "#fca5a5", border: "none", borderRadius: 100, padding: isNarrowDesktop ? "4px 10px" : "6px 16px", cursor: selectedIds.size > 0 ? "pointer" : "default", fontSize: isNarrowDesktop ? 12 : 13, fontWeight: 500, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
                     <Trash2 size={13} /> Delete ({selectedIds.size})
                   </button>
                 </>

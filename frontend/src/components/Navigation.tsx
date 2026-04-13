@@ -291,7 +291,7 @@ export function NavigationHeader({
               onClick={onToggleDrawer}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                width: 70, height: vw < 1700 ? 64 : 72, flexShrink: 0,
+                width: vw <= 1450 ? 64 : (vw < 1700 ? 72 : 80), height: vw < 1700 ? 64 : 72, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: 0,
               }}

@@ -396,7 +396,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
                   width: "100%",
-                  borderRadius: 12, fontFamily: POPPINS,
+                  borderRadius: 100, fontFamily: POPPINS,
                   fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
                   height: isNarrowDesktop ? 34 : 38,
@@ -408,7 +408,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger style={{
                   width: isCompact ? "100%" : 170,
-                  minWidth: 0, borderRadius: 12, fontFamily: POPPINS,
+                  minWidth: 0, borderRadius: 100, fontFamily: POPPINS,
                   fontSize: isNarrowDesktop ? 12 : 13,
                   border: "1px solid #e2e5ea", background: "#fff",
                   height: isNarrowDesktop ? 34 : 38,
@@ -441,7 +441,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               htmlFor="csv-upload-input"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 100,
                 border: "1px solid #e2e5ea",
                 background: "#fff", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
@@ -456,7 +456,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               onClick={() => setIsAddDialogOpen(true)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 12,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 100,
                 border: "none", flexShrink: 0,
                 background: "#357D86", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
@@ -859,7 +859,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g., Maria Santos"
-                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
                 />
               </div>
               <div>
@@ -871,7 +871,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, phone: e.target.value }))
                   }
                   placeholder="e.g., +639171234567"
-                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
                 />
                 <p style={{ fontSize: 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
                   Format: +639XXXXXXXXX / 09XXXXXXXXX
@@ -885,7 +885,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, role: value }))
                   }
                 >
-                  <SelectTrigger id="role-add" style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                  <SelectTrigger id="role-add" style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent style={{ fontFamily: POPPINS }}>
@@ -903,7 +903,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 style={{
                   backgroundColor: "#357D86",
                   color: "#fff",
-                  borderRadius: 12,
+                  borderRadius: 100,
                   height: 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
@@ -916,7 +916,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 variant="outline"
                 onClick={() => setIsAddDialogOpen(false)}
                 style={{
-                  borderRadius: 12,
+                  borderRadius: 100,
                   height: 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
@@ -998,7 +998,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g., Maria Santos"
-                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
                 />
               </div>
               <div>
@@ -1010,7 +1010,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, phone: e.target.value }))
                   }
                   placeholder="e.g., +639171234567"
-                  style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
+                  style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}
                 />
                 <p style={{ fontSize: 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
                   Format: +639XXXXXXXXX
@@ -1024,7 +1024,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     setFormData((prev) => ({ ...prev, role: value }))
                   }
                 >
-                  <SelectTrigger id="role-edit" style={{ borderRadius: 12, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
+                  <SelectTrigger id="role-edit" style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent style={{ fontFamily: POPPINS }}>
@@ -1042,7 +1042,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 style={{
                   backgroundColor: "#357D86",
                   color: "#fff",
-                  borderRadius: 12,
+                  borderRadius: 100,
                   height: 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,
@@ -1055,7 +1055,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
                 style={{
-                  borderRadius: 12,
+                  borderRadius: 100,
                   height: 42,
                   fontFamily: POPPINS,
                   fontWeight: 600,

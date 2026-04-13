@@ -835,7 +835,7 @@ export const ReportsPage: React.FC = () => {
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
                               height: 38,
-                              borderRadius: 12,
+                              borderRadius: 100,
                               fontFamily: POPPINS,
                               fontSize: 13,
                               fontWeight: 500,
@@ -861,7 +861,7 @@ export const ReportsPage: React.FC = () => {
                             className="border transition-colors focus:border-schistoguard-teal focus:bg-white w-full"
                             style={{
                               height: 38,
-                              borderRadius: 12,
+                              borderRadius: 100,
                               fontFamily: POPPINS,
                               fontSize: 13,
                               fontWeight: 500,
@@ -887,7 +887,7 @@ export const ReportsPage: React.FC = () => {
                         className="flex items-center gap-2 border-none px-4 hover:opacity-90 transition-opacity w-full"
                         style={{
                           height: 38,
-                          borderRadius: 12,
+                          borderRadius: 100,
                           fontFamily: POPPINS,
                           fontSize: 13,
                           fontWeight: 500,
@@ -1268,7 +1268,7 @@ export const ReportsPage: React.FC = () => {
                     style={{
                       height: 50,
                       padding: "0 20px",
-                      borderRadius: 12,
+                      borderRadius: 100,
                       fontSize: 14,
                       fontWeight: 600,
                       fontFamily: POPPINS,
@@ -1299,7 +1299,7 @@ export const ReportsPage: React.FC = () => {
                     <input
                       type="date"
                       style={{
-                        height: 50, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
                         padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
@@ -1314,7 +1314,7 @@ export const ReportsPage: React.FC = () => {
                     <input
                       type="date"
                       style={{
-                        height: 50, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
                         padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
@@ -1333,7 +1333,7 @@ export const ReportsPage: React.FC = () => {
                   <input
                     type="month"
                     style={{
-                      height: 50, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                      height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
                       padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
                       boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                     }}
@@ -1350,7 +1350,7 @@ export const ReportsPage: React.FC = () => {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Year</label>
                     <select
                       style={{
-                        height: 50, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        height: 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
                         padding: "0 14px", fontSize: 14, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
@@ -1369,7 +1369,7 @@ export const ReportsPage: React.FC = () => {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Quarter</label>
                     <select
                       style={{
-                        height: 42, borderRadius: 12, border: "1px solid #e2e5ea", background: "#fff",
+                        height: 42, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
                         padding: "0 14px", fontSize: 13, fontFamily: POPPINS, outline: "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                       }}
@@ -1399,7 +1399,7 @@ export const ReportsPage: React.FC = () => {
                 <button
                   type="submit"
                   style={{
-                    height: 50, width: "100%", padding: "0 24px", borderRadius: 12,
+                    height: 50, width: "100%", padding: "0 24px", borderRadius: 100,
                     fontSize: 16, fontWeight: 600, fontFamily: POPPINS,
                     background: "#357D86", color: "#fff", border: "none",
                     flexShrink: 0,
@@ -1424,7 +1424,7 @@ export const ReportsPage: React.FC = () => {
                   <button
                     type="button"
                     style={{
-                      height: 50, width: "100%", padding: "0 24px", borderRadius: 12,
+                      height: 50, width: "100%", padding: "0 24px", borderRadius: 100,
                       fontSize: 16, fontWeight: 500, fontFamily: POPPINS,
                       background: "#ffffff", color: "#64748b", 
                       border: "1px solid #e2e8f0",
