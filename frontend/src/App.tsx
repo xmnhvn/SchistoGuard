@@ -385,7 +385,7 @@ export default function App() {
     return (
       <>
         <LandingPage
-          onViewMap={() => setCurrentView('login')}
+          onViewMap={() => setCurrentView('sensor-info')}
           onLearnMore={() => setCurrentView('sensor-info')}
           onEnterApp={() => setCurrentView('login')}
         />
