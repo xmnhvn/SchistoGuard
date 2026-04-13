@@ -128,8 +128,8 @@ export function AlertDetailsModal({
                     <td style={{ fontWeight: 600 }}>{alert.siteName}</td>
                   </tr>
                   <tr>
-                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Barangay:</td>
-                    <td style={{ wordBreak: "break-word", fontWeight: 600 }}>{getDisplayBarangay(alert.barangay, alert.siteName)}</td>
+                    <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Address:</td>
+                    <td style={{ wordBreak: "break-word", fontWeight: 600 }}>{alert.address || getDisplayBarangay(alert.barangay, alert.siteName)}</td>
                   </tr>
                   <tr>
                     <td style={{ width: 200, padding: "4px 8px 4px 0", color: "#8E8B8B", fontWeight: 500 }}>Timestamp:</td>

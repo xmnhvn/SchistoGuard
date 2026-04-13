@@ -123,6 +123,7 @@ const initPostgresTables = async () => {
         "acknowledgedAt" TEXT
       )
     `);
+    await db.query('ALTER TABLE alerts ADD COLUMN IF NOT EXISTS address TEXT');
     await db.query(`
       CREATE TABLE IF NOT EXISTS residents (
         id SERIAL PRIMARY KEY,

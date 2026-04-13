@@ -334,8 +334,8 @@ function generateAlertsFromData(data, now = new Date()) {
     const message = buildAlertMessage(parameter, level);
 
     db.run(
-      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, duration, acknowledgedBy)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO alerts (level, message, parameter, value, timestamp, isAcknowledged, siteName, barangay, address, duration, acknowledgedBy)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         level,
         message,
@@ -345,6 +345,7 @@ function generateAlertsFromData(data, now = new Date()) {
         0,
         data.siteName || GLOBAL_DEVICE_NAME,
         data.barangay || "Unknown",
+        data.address || null,
         "-",
         null
       ],

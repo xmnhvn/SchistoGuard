@@ -1462,13 +1462,13 @@ export function Dashboard({
         </div>
 
         {/* ── UNIFIED CARDS GRID (Forces all 5 cards to be identically tall!) ── */}
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))", 
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
           gridAutoRows: "1fr", // MAGIC: Forces all implicitly created rows to share exactly the same height as the tallest row.
-          gap: isNarrowDesktop ? 10 : 14, 
-          marginBottom: isNarrowDesktop ? 12 : 20, 
-          animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none" 
+          gap: isNarrowDesktop ? 10 : 14,
+          marginBottom: isNarrowDesktop ? 12 : 20,
+          animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none"
         }}>
           {/* Temperature */}
           <div style={{ height: "100%" }}>
@@ -1566,77 +1566,77 @@ export function Dashboard({
               animation: animationEnabled ? "contentSlideIn 0.7s 0.45s cubic-bezier(0.22,1,0.36,1) both" : "none",
             }}
           >
-          {/* LEFT: Risk Level */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-            <p style={{
-              margin: isNarrowDesktop ? "0 0 4px" : "0 0 5px",
-              fontWeight: 700,
-              fontSize: isNarrowDesktop ? 17 : 20,
-              color: "#337C85",
-              fontFamily: "'Poppins', sans-serif",
-            }}>
-              Risk Level
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 8 : 10, marginBottom: isNarrowDesktop ? 5 : 8 }}>
-              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 24 : 28, height: isNarrowDesktop ? 24 : 28, objectFit: "contain" }} />
-              <span
-                style={{
-                  background: "transparent",
-                  color: riskColor,
-                  border: `1.2px solid ${riskColor}`,
-                  borderRadius: 999,
-                  padding: isNarrowDesktop ? "4px 12px" : "4px 14px",
-                  fontWeight: 700,
-                  fontSize: isNarrowDesktop ? 11.5 : 13,
-                  fontFamily: "'Poppins', sans-serif",
-                  textTransform: "capitalize",
-                }}
-              >
-                {getOverallRiskLabel(overallRisk)}
-              </span>
+            {/* LEFT: Risk Level */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <p style={{
+                margin: isNarrowDesktop ? "0 0 4px" : "0 0 5px",
+                fontWeight: 700,
+                fontSize: isNarrowDesktop ? 17 : 20,
+                color: "#337C85",
+                fontFamily: "'Poppins', sans-serif",
+              }}>
+                Risk Level
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 8 : 10, marginBottom: isNarrowDesktop ? 5 : 8 }}>
+                <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 24 : 28, height: isNarrowDesktop ? 24 : 28, objectFit: "contain" }} />
+                <span
+                  style={{
+                    background: "transparent",
+                    color: riskColor,
+                    border: `1.2px solid ${riskColor}`,
+                    borderRadius: 999,
+                    padding: isNarrowDesktop ? "4px 12px" : "4px 14px",
+                    fontWeight: 700,
+                    fontSize: isNarrowDesktop ? 11.5 : 13,
+                    fontFamily: "'Poppins', sans-serif",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {getOverallRiskLabel(overallRisk)}
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: isNarrowDesktop ? 10.5 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
+                Based on temperature, turbidity, and pH
+              </p>
             </div>
-            <p style={{ margin: 0, fontSize: isNarrowDesktop ? 10.5 : 12, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
-              Based on temperature, turbidity, and pH
-            </p>
-          </div>
 
-          {/* RIGHT: Active Alerts Container */}
-          <div
-            style={{
-              flex: "0 0 40%", // Fixed smaller width proportion
-              background: "#337C85", // Solid teal to match reference
-              borderRadius: 12, // Adjusted to pair nicely inside the 16px outer box
-              padding: isNarrowDesktop ? "10px 8px" : "14px 16px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: isNarrowDesktop ? 3 : 5,
-            }}
-          >
-            <p style={{
-              margin: 0,
-              fontWeight: 700,
-              fontSize: isNarrowDesktop ? 12 : 14,
-              color: "#fff",
-              textAlign: "center",
-              fontFamily: "'Poppins', sans-serif",
-              letterSpacing: 0.2,
-            }}>
-              Active Alerts
-            </p>
-            <p style={{
-              margin: 0,
-              fontSize: isNarrowDesktop ? 38 : 42,
-              fontWeight: 700,
-              color: "#fff",
-              lineHeight: 1,
-              fontFamily: "'Poppins', sans-serif",
-            }}>
-              {unacknowledgedAlerts}
-            </p>
+            {/* RIGHT: Active Alerts Container */}
+            <div
+              style={{
+                flex: "0 0 40%", // Fixed smaller width proportion
+                background: "#337C85", // Solid teal to match reference
+                borderRadius: 12, // Adjusted to pair nicely inside the 16px outer box
+                padding: isNarrowDesktop ? "10px 8px" : "14px 16px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: isNarrowDesktop ? 3 : 5,
+              }}
+            >
+              <p style={{
+                margin: 0,
+                fontWeight: 700,
+                fontSize: isNarrowDesktop ? 12 : 14,
+                color: "#fff",
+                textAlign: "center",
+                fontFamily: "'Poppins', sans-serif",
+                letterSpacing: 0.2,
+              }}>
+                Active Alerts
+              </p>
+              <p style={{
+                margin: 0,
+                fontSize: isNarrowDesktop ? 38 : 42,
+                fontWeight: 700,
+                color: "#fff",
+                lineHeight: 1,
+                fontFamily: "'Poppins', sans-serif",
+              }}>
+                {unacknowledgedAlerts}
+              </p>
+            </div>
           </div>
-        </div>
         </div> {/* ── END OF UNIFIED CARDS GRID ── */}
       </div>
 

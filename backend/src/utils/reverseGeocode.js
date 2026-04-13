@@ -2,8 +2,14 @@
 const axios = require('axios');
 
 function buildBestAvailableAddress(data) {
-  const locality = typeof data?.locality === 'string' && data.locality.trim() ? data.locality.trim() : null;
-  return locality || null;
+  if (!data) return null;
+  const parts = [];
+  if (data.locality) parts.push(data.locality);
+  if (data.city && data.city !== data.locality) parts.push(data.city);
+  if (data.principalSubdivision) parts.push(data.principalSubdivision);
+  
+  const address = parts.join(', ').trim();
+  return address || null;
 }
 
 async function reverseGeocode(lat, lng) {
