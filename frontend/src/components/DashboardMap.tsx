@@ -98,7 +98,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       let mapZoom: number;
       if (sitesToShow.length === 1) {
         mapCenter = [center.lng + lngOffset, center.lat + latOffset];
-        mapZoom = 16;
+        mapZoom = 17;
       } else if (sitesToShow.length > 1) {
         mapCenter = [center.lng + lngOffset, center.lat + latOffset];
         mapZoom = 13;
