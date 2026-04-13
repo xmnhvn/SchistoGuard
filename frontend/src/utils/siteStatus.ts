@@ -14,6 +14,7 @@ export type SiteMapItem = {
 
 const STALE_AFTER_MS = 15000;
 const ACTIVE_LOCATION_TOLERANCE_DEG = 0.00035;
+const NEAREST_FALLBACK_TOLERANCE_DEG = 0.01;
 
 function isValidCoordinate(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -53,6 +54,8 @@ export function normalizeSiteMapItems(
   const source = Array.isArray(sites) ? sites : [];
   const normalizedActiveName = (activeSiteName || '').toString().trim().toLowerCase();
 
+  let hasExplicitActiveMatch = false;
+
   const normalized = source
     .map((site) => {
       const siteKey = (site.site_key || '').toString().trim();
@@ -67,6 +70,10 @@ export function normalizeSiteMapItems(
       const isLocationMatch = isValidCoordinate(latitude) && isValidCoordinate(longitude)
         ? isLikelySameLocation(activeLatLng, { lat: latitude, lng: longitude })
         : false;
+
+      if (siteKey === activeSiteKey || isNameMatch || isLocationMatch) {
+        hasExplicitActiveMatch = true;
+      }
 
       const status = siteKey === activeSiteKey || isNameMatch || isLocationMatch
         ? 'active'
@@ -84,6 +91,28 @@ export function normalizeSiteMapItems(
       } as SiteMapItem;
     })
     .filter((site): site is SiteMapItem => site !== null);
+
+  if (!hasExplicitActiveMatch && activeLatLng && normalized.length > 0) {
+    let nearestIndex = -1;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    normalized.forEach((site, index) => {
+      const dLat = site.lat - activeLatLng.lat;
+      const dLng = site.lng - activeLatLng.lng;
+      const distance = Math.sqrt((dLat * dLat) + (dLng * dLng));
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    if (nearestIndex >= 0 && nearestDistance <= NEAREST_FALLBACK_TOLERANCE_DEG) {
+      normalized[nearestIndex] = {
+        ...normalized[nearestIndex],
+        status: 'active',
+      };
+    }
+  }
 
   if (
     activeLatLng &&
