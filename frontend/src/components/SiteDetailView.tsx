@@ -521,6 +521,8 @@ export function SiteDetailView({
   }, [timeRange]);
 
   const pad = mobileResponsive ? 16 : tabletResponsive ? 24 : 32;
+  const cleanAddress = address && address !== "Device Address" ? address : "";
+  const siteLocationLabel = cleanAddress || barangay || "Address unavailable";
 
   const getInterpretation = () => {
     if (!chartData || chartData.length === 0) return "No data available.";
@@ -718,7 +720,7 @@ export function SiteDetailView({
                     lineHeight: 1.3,
                     display: "block",
                     whiteSpace: "normal",
-                  }}>{address || "Device Address"}</span>
+                  }}>{siteLocationLabel}</span>
                 )}
                 {!mobileResponsive && (
                   <p style={{
@@ -728,7 +730,7 @@ export function SiteDetailView({
                     fontFamily: POPPINS,
                     minHeight: "20px", // Reserve space to prevent layout jump
                     transition: 'opacity 0.3s ease-in-out'
-                  }}>{address || "Device Address"}</p>
+                  }}>{siteLocationLabel}</p>
                 )}
               </div>
             </div>
