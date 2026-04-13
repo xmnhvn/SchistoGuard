@@ -349,9 +349,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Header */}
         <div style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          flexDirection: isCompact ? "column" : "row",
+          justifyContent: isCompact ? "flex-start" : "space-between",
+          alignItems: isCompact ? "flex-start" : "center",
           marginBottom: 4,
+          gap: isCompact ? 12 : 0,
           animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
@@ -370,6 +372,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               color: "#74828f",
               margin: "2px 0 0",
               fontFamily: POPPINS,
+              whiteSpace: "normal",
+              maxWidth: "100%",
             }}>Manage residents and personnel for {siteName}</p>
           </div>
           <div style={{

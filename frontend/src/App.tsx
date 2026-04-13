@@ -190,11 +190,21 @@ export default function App() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadingTimeout = window.setTimeout(() => {
+      if (!cancelled) {
+        setLoading(false);
+      }
+    }, 1200);
+
     (async () => {
       setLoading(true);
       try {
         console.log("🔄 Checking session...");
         const data = await apiGet("/api/auth/session");
+        if (cancelled) return;
+
         console.log("📡 Session response:", data);
         if (data.loggedIn) {
           setIsAuthenticated(true);
@@ -213,38 +223,49 @@ export default function App() {
           setCurrentView('landing');
         }
       } catch (error) {
-        console.error("❌ Session check error:", error);
-        // Error - start at landing page
-        setCurrentView('landing');
+        if (!cancelled) {
+          console.error("❌ Session check error:", error);
+          // Error - start at landing page
+          setCurrentView('landing');
+        }
+      } finally {
+        if (!cancelled) {
+          window.clearTimeout(loadingTimeout);
+          setLoading(false);
+        }
       }
-
-      // Add artificial delay to make the loading screen stay longer
-      setTimeout(() => {
-        setLoading(false);
-      }, 1500);
-      
     })();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(loadingTimeout);
+    };
   }, []);
 
   if (loading) {
     return (
-      <div className="fixed inset-0 h-[100dvh] w-full flex items-center justify-center bg-white z-[100]">
-        <div className="flex items-center space-x-3 animate-pulse">
-           <img
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(53,125,134,0.14),_transparent_55%),linear-gradient(180deg,#f8fbfc_0%,#e7f1f3_100%)]">
+        <div className="rounded-3xl border border-white/70 bg-white/85 px-6 py-5 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+          <div className="flex items-center space-x-3 animate-pulse">
+            <img
               src="/schistoguard.png"
               alt="SchistoGuard Logo"
               style={{ width: 48, height: 48, objectFit: "contain" }}
             />
-            <h1
-              style={{
-                fontFamily: "Poppins, sans-serif",
-                color: "#357D86",
-                fontWeight: 600,
-                fontSize: 32,
-              }}
-            >
-              SchistoGuard
-            </h1>
+            <div>
+              <h1
+                style={{
+                  fontFamily: "Poppins, sans-serif",
+                  color: "#357D86",
+                  fontWeight: 600,
+                  fontSize: 32,
+                }}
+              >
+                SchistoGuard
+              </h1>
+              <p className="text-sm text-slate-500">Loading secure dashboard...</p>
+            </div>
+          </div>
         </div>
       </div>
     );

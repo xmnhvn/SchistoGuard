@@ -63,7 +63,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [filterTimeRange, setFilterTimeRange] = useState<string>('all');
-  const [filterLocation, setFilterLocation] = useState<string>('all');
   const [readings, setReadings] = useState<any[]>([]);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -254,7 +253,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       const columns = [
         { header: 'Time', dataKey: 'time' },
         { header: 'Date', dataKey: 'date' },
-        { header: 'Location', dataKey: 'location' },
         { header: 'Turbidity (NTU)', dataKey: 'turbidity' },
         { header: 'Temperature (°C)', dataKey: 'temperature' },
         { header: 'pH Level', dataKey: 'ph' },
@@ -265,7 +263,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         return {
           time: t.time,
           date: t.date,
-          location: r.siteName || r.address || "Unknown",
           turbidity: r.turbidity,
           temperature: r.temperature,
           ph: r.ph,
@@ -282,7 +279,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       const dateFormat = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const timeFormat = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
       const risk = filterRisk !== 'all' ? filterRisk.charAt(0).toUpperCase() + filterRisk.slice(1) : 'AllRisk';
-      const locFilter = filterLocation !== 'all' ? filterLocation : 'All Locations';
       let timeRangeText = 'AllTime';
       if (filterTimeRange !== 'all') {
         if (filterTimeRange.endsWith('h')) timeRangeText = `${filterTimeRange.replace('h', '')} Hours`;
@@ -290,7 +286,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         else timeRangeText = filterTimeRange;
       }
 
-      const metaStr = `Date Exported: ${dateFormat} at ${timeFormat} | Time Range: ${timeRangeText} | Risk: ${risk} | Location: ${locFilter}`;
+      const metaStr = `Date Exported: ${dateFormat} at ${timeFormat} | Time Range: ${timeRangeText} | Risk: ${risk}`;
       doc.text(metaStr, pw / 2, metadataY, { align: 'center' });
 
       doc.setDrawColor(226, 232, 240);
@@ -573,7 +569,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       reading.temperature?.toString().includes(searchQuery);
 
     const matchesRisk = filterRisk === 'all' || reading.riskLevel === filterRisk;
-    const matchesLocation = filterLocation === 'all' || (reading.siteName || reading.address) === filterLocation;
     const now = new Date();
     const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
     let matchesTime = true;
@@ -582,10 +577,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     else if (filterTimeRange === '12h') matchesTime = hoursDiff <= 12;
     else if (filterTimeRange === '24h') matchesTime = hoursDiff <= 24;
 
-    return searchMatch && matchesRisk && matchesTime && matchesLocation;
+    return searchMatch && matchesRisk && matchesTime;
   });
-
-  const uniqueLocations = Array.from(new Set(readings.map(r => r.siteName || r.address).filter(Boolean)));
 
   const getRiskBadgeClass = (riskLevel: string) => {
     switch (riskLevel) {
@@ -834,27 +827,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                 </SelectContent>
               </Select>
             </div>
-            <div style={{ flex: isMobile ? 1 : undefined }}>
-              <Select value={filterLocation} onValueChange={setFilterLocation}>
-                <SelectTrigger style={{
-                  width: isMobile ? undefined : "auto",
-                  padding: isNarrowDesktop ? "0 14px" : "0 16px",
-                  flex: isMobile ? 1 : undefined,
-                  minWidth: isNarrowDesktop ? 100 : 120, borderRadius: 100, fontFamily: POPPINS,
-                  fontSize: isNarrowDesktop ? 12 : 13,
-                  border: "1px solid #e2e5ea", background: "#fff",
-                  height: isNarrowDesktop ? 34 : 38,
-                }}>
-                  <SelectValue placeholder="All Locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {uniqueLocations.map(loc => (
-                    <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <button
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -1039,13 +1011,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                         padding: "16px 14px 16px 24px", width: 40, position: "sticky", top: 0, background: "#fff", zIndex: 20
                       }}></th>
                     )}
-                    {["Time", "Date", "Location", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
+                    {["Time", "Date", "Turbidity (NTU)", "Temperature (°C)", "pH Level", "Risk Level", ""].map((h, i) => (
                       <th key={h} style={{
                         padding: h === "Time" && !deleteMode ? "16px 14px 16px 24px" : h === "" ? "16px 24px 16px 14px" : "16px 14px",
                         fontSize: 12,
                         fontWeight: 600,
                         color: "#7b8a9a",
-                        textAlign: h === "" ? "right" : (h === "Time" || h === "Date" || h === "Location") ? "left" : "center",
+                        textAlign: h === "" ? "right" : (h === "Time" || h === "Date") ? "left" : "center",
                         position: "sticky",
                         top: 0,
                         background: "#fff",
@@ -1089,7 +1061,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                         )}
                         <td style={{ padding: deleteMode ? "16px 14px" : "16px 14px 16px 24px", fontSize: 13, fontWeight: 600, color: "#1a2a3a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.time}</td>
                         <td style={{ padding: "16px 14px", fontSize: 13, color: "#7b8a9a", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{time.date}</td>
-                        <td style={{ padding: "16px 14px", fontSize: 13, fontWeight: 500, color: "#475569", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>{reading.siteName || reading.address || "Unknown"}</td>
                         <td style={{ padding: "16px 14px", textAlign: "center", opacity: deleteMode && !selectedIds.has(reading.id) ? 0.7 : 1 }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                             <Droplets style={{ width: 14, height: 14, color: "#357D86" }} />
@@ -1202,7 +1173,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                   return (
                     <div key={reading.id} style={{
                       background: "#fff",
-                      borderRadius: 100,
+                      borderRadius: 16,
                       border: "1px solid #f0f1f3",
                       display: "flex",
                       flexDirection: "row",
@@ -1251,7 +1222,6 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#94a3b8", fontFamily: POPPINS, fontWeight: 500 }}>
                           <span>{time.date}, {time.time}</span>
-                          <span style={{ color: "#64748b" }}>{reading.siteName || reading.address || "Unknown"}</span>
                         </div>
                       </div>
                     </div>

@@ -717,7 +717,7 @@ export function SiteDetailView({
                 <Select value={selectedSite} onValueChange={setSelectedSite}>
                   <SelectTrigger style={{
                     width: mobileResponsive ? undefined : 210, flex: mobileResponsive ? 1 : undefined,
-                    minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                    minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
                     border: "1px solid #e2e5ea", background: "#fff", height: 38,
                   }}>
                     <SelectValue placeholder="All Sites" />
@@ -734,7 +734,7 @@ export function SiteDetailView({
                 <Select value={timeRange} onValueChange={setTimeRange}>
                   <SelectTrigger style={{
                     width: mobileResponsive ? undefined : 148, flex: mobileResponsive ? 1 : undefined,
-                    minWidth: 0, borderRadius: 12, fontFamily: POPPINS, fontSize: 13,
+                    minWidth: 0, borderRadius: 100, fontFamily: POPPINS, fontSize: 13,
                     border: "1px solid #e2e5ea", background: "#fff", height: 38,
                   }}>
                     <SelectValue />
@@ -751,7 +751,7 @@ export function SiteDetailView({
                 <button
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "0 16px", height: 38, borderRadius: 12,
+                    padding: "0 16px", height: 38, borderRadius: 100,
                     border: "1px solid #e2e5ea",
                     background: "#fff", cursor: "pointer", fontSize: 13,
                     fontFamily: POPPINS, fontWeight: 500, color: "#374151",
