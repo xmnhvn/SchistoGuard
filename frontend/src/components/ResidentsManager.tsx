@@ -93,12 +93,16 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
   const {
     isMobile,
+    isTablet,
     isNarrowDesktop,
     isCompact,
     isSmallLaptop,
     pad,
+    controlFontSize,
+    controlHeight,
   } = useResponsiveScale();
   const smallLaptopModal = !isMobile && isSmallLaptop;
+  const sectionSpacing = isNarrowDesktop ? 20 : 24;
 
   // Fetch residents
   useEffect(() => {
@@ -329,10 +333,22 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         padding: pad,
         display: "flex",
         flexDirection: "column",
-        gap: 20
       }}>
         <style>{`
           *::-webkit-scrollbar { display: none; }
+          .sg-ts-scroll::-webkit-scrollbar {
+            width: 8px;
+          }
+          .sg-ts-scroll::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .sg-ts-scroll::-webkit-scrollbar-thumb {
+            background: #c9d3df;
+            border-radius: 999px;
+          }
+          .sg-ts-scroll::-webkit-scrollbar-thumb:hover {
+            background: #b7c4d3;
+          }
           @keyframes contentSlideIn {
             from { opacity: 0; transform: translateY(18px); }
             to { opacity: 1; transform: translateY(0); }
@@ -345,11 +361,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Header */}
         <div style={{
           display: "flex",
-          flexDirection: isCompact ? "column" : "row",
-          justifyContent: isCompact ? "flex-start" : "space-between",
-          alignItems: isCompact ? "flex-start" : "center",
-          marginBottom: 4,
-          gap: isCompact ? 12 : 0,
+          flexDirection: (isMobile || isTablet) ? "column" : "row",
+          justifyContent: "space-between",
+          alignItems: (isMobile || isTablet) ? "flex-start" : "center",
+          marginBottom: sectionSpacing,
+          gap: (isMobile || isTablet) ? 12 : 16,
           animation: animate ? "contentSlideIn 0.7s 0.05s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
@@ -359,32 +375,47 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               color: "#1a2a3a",
               margin: 0,
               fontFamily: POPPINS,
-              letterSpacing: "-0.02em",
+              whiteSpace: isMobile ? "normal" : "nowrap",
+              overflow: isMobile ? undefined : "hidden",
+              textOverflow: isMobile ? undefined : "ellipsis",
+              letterSpacing: isMobile ? 0.1 : undefined,
             }}>
               Recipients
             </h1>
-            <p style={{
-              fontSize: isNarrowDesktop ? 11 : 12,
-              color: "#74828f",
-              margin: "2px 0 0",
-              fontFamily: POPPINS,
-              whiteSpace: "normal",
-              maxWidth: "100%",
-            }}>Manage residents and personnel for {siteName}</p>
+            {isMobile && (
+              <span style={{
+                fontSize: 12.5,
+                color: "#7b8a9a",
+                fontWeight: 400,
+                marginTop: 2,
+                fontFamily: POPPINS,
+                lineHeight: 1.3,
+                display: "block",
+                whiteSpace: "normal",
+              }}>Manage residents and personnel for {siteName}</span>
+            )}
+            {!isMobile && (
+              <p style={{
+                fontSize: isNarrowDesktop ? 11 : 12,
+                color: "#7b8a9a",
+                margin: isNarrowDesktop ? "1px 0 0" : "2px 0 0",
+                fontFamily: POPPINS,
+              }}>Manage residents and personnel for {siteName}</p>
+            )}
           </div>
           <div style={{
             display: "flex",
             alignItems: "center",
-            gap: isCompact ? 10 : 10,
-            flexWrap: "wrap",
+            gap: isMobile ? 8 : 10,
+            flexWrap: isCompact ? "wrap" : "nowrap",
             flex: isCompact ? "none" : 1,
             justifyContent: isCompact ? "flex-start" : "flex-end",
-            ...(isCompact ? { width: "100%" } : {}),
+            ...(isMobile ? { width: "100%" } : {}),
           }}>
             <div style={{
               position: "relative",
-              flex: isCompact ? "1 1 calc(50% - 6px)" : "1",
-              maxWidth: isCompact ? undefined : 420,
+              flex: isCompact ? "1 1 calc(50% - 6px)" : "1 1 300px",
+              maxWidth: isCompact ? undefined : 360,
               minWidth: isCompact ? 0 : 200
             }}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -395,9 +426,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 style={{
                   width: "100%",
                   borderRadius: 100, fontFamily: POPPINS,
-                  fontSize: isNarrowDesktop ? 12 : 13,
+                  fontSize: controlFontSize,
                   border: "1px solid #e2e5ea", background: "#fff",
-                  height: isNarrowDesktop ? 34 : 38,
+                  height: controlHeight,
                   paddingLeft: 34
                 }}
               />
@@ -405,11 +436,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             <div style={{ flex: isCompact ? "1 1 calc(50% - 6px)" : undefined, minWidth: isCompact ? 0 : undefined }}>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger style={{
-                  width: isCompact ? "100%" : 170,
+                  width: isCompact ? "100%" : (isNarrowDesktop ? 170 : 186),
                   minWidth: 0, borderRadius: 100, fontFamily: POPPINS,
-                  fontSize: isNarrowDesktop ? 12 : 13,
+                  fontSize: controlFontSize,
                   border: "1px solid #e2e5ea", background: "#fff",
-                  height: isNarrowDesktop ? 34 : 38,
+                  height: controlHeight,
                   padding: "0 10px",
                   display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
@@ -439,9 +470,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               htmlFor="csv-upload-input"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 100,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: controlHeight, borderRadius: 100,
                 border: "1px solid #e2e5ea",
-                background: "#fff", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
+                background: "#fff", cursor: "pointer", fontSize: controlFontSize,
                 fontFamily: POPPINS, fontWeight: 500, color: "#374151",
                 margin: 0, flexShrink: 0,
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
@@ -454,9 +485,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               onClick={() => setIsAddDialogOpen(true)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: isNarrowDesktop ? 34 : 38, borderRadius: 100,
+                padding: isNarrowDesktop ? "0 12px" : "0 16px", height: controlHeight, borderRadius: 100,
                 border: "none", flexShrink: 0,
-                background: "#357D86", cursor: "pointer", fontSize: isNarrowDesktop ? 12 : 13,
+                background: "#357D86", cursor: "pointer", fontSize: controlFontSize,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
               }}
@@ -470,9 +501,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Stat Cards */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
-          gap: isMobile ? 12 : 16,
-          marginBottom: 24,
+          gridTemplateColumns: isCompact ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: isCompact ? 12 : 16,
+          marginBottom: sectionSpacing,
           animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           {[
@@ -515,7 +546,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
         {/* Main List Card */}
         <div style={{
           background: "#fff",
-          borderRadius: 20,
+          borderRadius: 28,
           border: "1px solid #e2e5ea",
           overflow: "hidden",
           flex: isMobile ? "0 0 auto" : 1,
@@ -527,7 +558,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           <div
             onClick={() => isMobile && setShowMobileViewAll(true)}
             style={{
-              padding: isMobile ? "12px 14px" : "14px 20px 12px",
+              padding: isMobile ? "12px 14px" : (isNarrowDesktop ? "12px 16px 10px" : "14px 20px 12px"),
+              minHeight: isMobile ? undefined : (isNarrowDesktop ? 62 : 66),
               background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
               borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
               display: "flex",
@@ -552,9 +584,12 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               )}
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <h2 style={{
-                  fontSize: 13, fontWeight: 700, color: "#1a2a3a",
+                  fontSize: isNarrowDesktop ? 12 : 13,
+                  fontWeight: 700,
+                  color: "#1a2a3a",
                   margin: 0,
                   fontFamily: POPPINS,
+                  lineHeight: 1.2,
                 }}>
                   {isMobile ? "Recipients Directory" : "Recipient List"}
                 </h2>
@@ -597,9 +632,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             <div style={{
               flex: 1,
               minHeight: 0,
-              overflowX: "auto",
-              overflowY: "auto",
-              padding: 0,
+              overflow: "hidden",
+              padding: "0 20px 20px",
+              background: "#fff",
             }}>
               {loading ? (
                 <div style={{ padding: "48px 20px", textAlign: "center", color: "#7b8a9a", fontFamily: POPPINS }}>Loading recipients...</div>
@@ -613,83 +648,99 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 </div>
               ) : (
                 /* Desktop Table */
-                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: POPPINS }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                      {["Name", "Phone Number", "Designation", "Actions"].map(h => (
-                        <th key={h} style={{
-                          padding: isNarrowDesktop ? "8px 12px" : "10px 16px",
-                          fontSize: isNarrowDesktop ? 10.5 : 11,
-                          fontWeight: 600,
-                          color: "#7b8a9a",
-                          textAlign: h === "Actions" ? "right" : "left",
-                          position: "sticky",
-                          top: 0,
-                          background: "#fff",
-                          zIndex: 1,
-                          fontFamily: POPPINS,
-                        }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredResidents.map((resident, idx) => (
-                      <tr key={resident.id} style={{
-                        borderBottom: "1px solid #f5f5f5",
-                        animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both`,
-                      }}>
-                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px" }}>
-                          <div style={{ fontSize: isNarrowDesktop ? 11 : 12, fontWeight: 600, color: "#1a2a3a" }}>{resident.name}</div>
-                        </td>
-                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px", fontSize: isNarrowDesktop ? 10.5 : 11, color: "#475569", fontWeight: 500 }}>
-                          {resident.phone}
-                        </td>
-                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px" }}>
-                          <span style={{
-                            fontSize: isNarrowDesktop ? 9 : 10,
+                <>
+                  <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: POPPINS, tableLayout: "fixed" }}>
+                    <colgroup>
+                      <col style={{ width: "32%" }} />
+                      <col style={{ width: "30%" }} />
+                      <col style={{ width: "22%" }} />
+                      <col style={{ width: "16%" }} />
+                    </colgroup>
+                    <thead style={{ background: "#fff" }}>
+                      <tr style={{ borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
+                        {["Name", "Phone Number", "Designation", "Actions"].map((h) => (
+                          <th key={h} style={{
+                            padding: h === "Name" ? "14px 10px 14px 12px" : h === "Actions" ? "14px 12px 14px 10px" : "14px 10px",
+                            fontSize: 12,
                             fontWeight: 600,
-                            padding: isNarrowDesktop ? "2px 8px" : "3px 10px",
-                            borderRadius: 18,
-                            background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
-                            color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
+                            color: "#7b8a9a",
+                            textAlign: h === "Actions" ? "right" : (h === "Name" || h === "Phone Number") ? "left" : "center",
+                            background: "#fff",
                             fontFamily: POPPINS,
-                          }}>
-                            {roleLabels[resident.role]}
-                          </span>
-                        </td>
-                        <td style={{ padding: isNarrowDesktop ? "8px 12px" : "10px 16px", textAlign: "right" }}>
-                          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button style={{
-                                  background: "none",
-                                  border: "none",
-                                  padding: "4px 8px",
-                                  cursor: "pointer",
-                                  color: "#64748b",
-                                  borderRadius: 6,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center"
-                                }}>
-                                  <MoreHorizontal size={20} />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" style={{ fontFamily: POPPINS }}>
-                                <DropdownMenuItem onClick={() => openEditDialog(resident)} className="cursor-pointer">
-                                  <Edit size={14} className="mr-2" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openDeleteDialog(resident)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
-                                  <Trash2 size={14} className="mr-2" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </td>
+                          }}>{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                  </table>
+
+                  <div className="sg-ts-scroll" style={{ overflowY: "auto", overflowX: "hidden", maxHeight: "100%", scrollbarWidth: "thin", msOverflowStyle: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: POPPINS, tableLayout: "fixed" }}>
+                      <colgroup>
+                        <col style={{ width: "32%" }} />
+                        <col style={{ width: "30%" }} />
+                        <col style={{ width: "22%" }} />
+                        <col style={{ width: "16%" }} />
+                      </colgroup>
+                      <tbody>
+                        {filteredResidents.map((resident, idx) => (
+                          <tr key={resident.id} style={{
+                            borderBottom: "1px solid #f5f5f5",
+                            animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both`,
+                          }}>
+                            <td style={{ padding: "14px 10px 14px 12px", fontSize: 13, fontWeight: 600, color: "#1a2a3a" }}>
+                              {resident.name}
+                            </td>
+                            <td style={{ padding: "14px 10px", fontSize: 13, color: "#475569", fontWeight: 600 }}>
+                              {resident.phone}
+                            </td>
+                            <td style={{ padding: "14px 10px", textAlign: "center" }}>
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                padding: "3px 12px",
+                                borderRadius: 20,
+                                background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
+                                color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
+                                fontFamily: POPPINS,
+                              }}>
+                                {roleLabels[resident.role]}
+                              </span>
+                            </td>
+                            <td style={{ padding: "14px 12px 14px 10px", textAlign: "right" }}>
+                              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button style={{
+                                      background: "none",
+                                      border: "none",
+                                      padding: "4px 8px",
+                                      cursor: "pointer",
+                                      color: "#64748b",
+                                      borderRadius: 6,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center"
+                                    }}>
+                                      <MoreHorizontal size={20} />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" style={{ fontFamily: POPPINS }}>
+                                    <DropdownMenuItem onClick={() => openEditDialog(resident)} className="cursor-pointer">
+                                      <Edit size={14} className="mr-2" /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openDeleteDialog(resident)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                                      <Trash2 size={14} className="mr-2" /> Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}

@@ -945,6 +945,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
             onClick={() => (isMobile) && setShowMobileViewAll(true)}
             style={{
               padding: isMobile ? "12px 14px" : (isNarrowDesktop ? "12px 16px 10px" : "14px 20px 12px"),
+              minHeight: isMobile ? undefined : (isNarrowDesktop ? 62 : 66),
               background: isMobile ? "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)" : "#fff",
               borderBottom: isMobile ? "none" : "1px solid #f0f1f3",
               display: "flex",
