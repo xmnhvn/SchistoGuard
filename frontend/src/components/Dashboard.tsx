@@ -7,6 +7,8 @@ import {
   Bell,
   Asterisk,
   LocateFixed,
+  ChevronDown,
+  BadgeCheck,
   Info,
   Thermometer,
   Droplets,
@@ -294,10 +296,12 @@ export function Dashboard({
   }, [readings, gpsAddress]);
 
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
+  const [showSiteDropdown, setShowSiteDropdown] = useState(false);
   const [alertsClosing, setAlertsClosing] = useState(false);
   const alertsOpenRef = useRef(false);
   const alertsClosingRef = useRef(false);
   const mapRef = useRef<DashboardMapHandle>(null);
+  const siteDropdownRef = useRef<HTMLDivElement>(null);
   const [alertsDropdownPosition, setAlertsDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -652,6 +656,9 @@ export function Dashboard({
       if (!alertsPanelRef.current?.contains(target)) {
         closeAlertsDropdown();
       }
+      if (!siteDropdownRef.current?.contains(target)) {
+        setShowSiteDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
@@ -875,36 +882,121 @@ export function Dashboard({
 
   const dashboardOperational = !!selectedSiteKey && backendOk && dataOk && selectedSiteOnline;
 
-  const siteDropdownControl = (
-    <div style={{ marginTop: 10 }}>
-      <select
-        value={selectedSiteKey}
-        onChange={(e) => setSelectedSiteKey(e.target.value)}
+  const topRightSiteDropdownControl = (
+    <div
+      ref={siteDropdownRef}
+      style={{
+        position: "relative",
+        background: "rgba(255,255,255,0.92)",
+        borderRadius: 999,
+        padding: "6px 12px",
+        width: "fit-content",
+        boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+        backdropFilter: "blur(4px)",
+        zIndex: 3,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setShowSiteDropdown((prev) => !prev)}
         style={{
-          minWidth: 220,
-          maxWidth: '100%',
-          borderRadius: 10,
-          border: '1px solid rgba(255,255,255,0.45)',
-          background: 'rgba(255,255,255,0.18)',
-          color: '#ffffff',
-          padding: '8px 12px',
+          border: "none",
+          background: "transparent",
+          color: "#337C85",
+          padding: 0,
           fontFamily: POPPINS,
           fontSize: 13,
-          fontWeight: 600,
-          outline: 'none',
-          cursor: 'pointer',
+          fontWeight: 500,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          cursor: "pointer",
         }}
       >
-        {availableSites.length === 0 ? (
-          <option value="" style={{ color: '#0f172a' }}>No sites</option>
-        ) : (
-          availableSites.map((site) => (
-            <option key={site.siteKey} value={site.siteKey} style={{ color: '#0f172a' }}>
-              {site.siteName}
-            </option>
-          ))
-        )}
-      </select>
+        <span>
+          {selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site")}
+        </span>
+        <ChevronDown
+          size={14}
+          color="#337C85"
+          style={{
+            transform: showSiteDropdown ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.18s ease",
+          }}
+        />
+      </button>
+
+      {showSiteDropdown && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            minWidth: "100%",
+            maxHeight: 220,
+            overflowY: "auto",
+            background: "#ffffff",
+            borderRadius: 12,
+            boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
+            border: "1px solid #e2e8f0",
+            padding: 6,
+            zIndex: 30,
+          }}
+        >
+          {availableSites.length === 0 ? (
+            <div
+              style={{
+                padding: "8px 10px",
+                color: "#64748b",
+                fontSize: 13,
+                fontFamily: POPPINS,
+                whiteSpace: "nowrap",
+              }}
+            >
+              No sites
+            </div>
+          ) : (
+            availableSites.map((site) => {
+              const isSelected = site.siteKey === selectedSiteKey;
+              return (
+                <button
+                  key={site.siteKey}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSiteKey(site.siteKey);
+                    setShowSiteDropdown(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "8px 10px",
+                    textAlign: "left",
+                    background: isSelected ? "#3b82f6" : "transparent",
+                    color: isSelected ? "#ffffff" : "#0f172a",
+                    fontFamily: POPPINS,
+                    fontSize: 13,
+                    fontWeight: isSelected ? 600 : 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
+                  <span>{site.siteName}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -1242,9 +1334,6 @@ export function Dashboard({
             }}>
               {siteData.siteName}
             </h1>
-            <div style={{ pointerEvents: 'auto' }}>
-              {siteDropdownControl}
-            </div>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
               fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", 
@@ -1255,7 +1344,7 @@ export function Dashboard({
             }}>
               {displayAddress}
             </p>
-            {/* System Operational badge — left-aligned, under address */}
+            {/* System and site pills — side by side under address */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
@@ -1273,6 +1362,9 @@ export function Dashboard({
                 } as React.CSSProperties} />
                 {dashboardOperational ? "System Operational" : "Device Not Connected"}
               </div>
+
+              {topRightSiteDropdownControl}
+
               {isTab && (
                 <button
                   onClick={() => mapRef.current?.resetView()}
@@ -1686,7 +1778,6 @@ export function Dashboard({
           }}>
             {siteData.siteName}
           </h1>
-          {siteDropdownControl}
           <p style={{
             color: "rgba(255,255,255,0.9)",
             fontSize: isNarrowDesktop ? 12 : 15,
@@ -1879,65 +1970,70 @@ export function Dashboard({
         <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={gpsSites} lngOffset={-0.0015} />
       </div>
 
-      {/* System Operational badge — top right, above gradient */}
-      <div
-        style={{
-          position: "absolute",
-          top: dPad,
-          right: dPad,
-          background: "rgba(255,255,255,0.9)",
-          borderRadius: 999,
-          padding: "6px 14px",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: 13,
-          fontWeight: 500,
-          color: "#15803d",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          backdropFilter: "blur(4px)",
-          zIndex: 3,
-        }}
-      >
-        <span
+        {/* Top-right controls: single horizontal flow */}
+        <div
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: dashboardOperational ? "#22c55e" : "#9ca3af",
-            display: "inline-block",
-            animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
-            transition: "background 0.4s",
-            "--dot-glow": dashboardOperational ? hexToRgba("#22c55e", 0.5) : "transparent",
-          } as React.CSSProperties}
-        />
-        {dashboardOperational ? "System Operational" : "Device Not Connected"}
-      </div>
+            position: "absolute",
+            top: dPad,
+            right: dPad,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            zIndex: 3,
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(255,255,255,0.9)",
+              borderRadius: 999,
+              padding: "6px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#15803d",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: dashboardOperational ? "#22c55e" : "#9ca3af",
+                display: "inline-block",
+                animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
+                transition: "background 0.4s",
+                "--dot-glow": dashboardOperational ? hexToRgba("#22c55e", 0.5) : "transparent",
+              } as React.CSSProperties}
+            />
+            {dashboardOperational ? "System Operational" : "Device Not Connected"}
+          </div>
 
-      {/* Reset map position button — below System Operational badge */}
-      <button
-        onClick={() => mapRef.current?.resetView()}
-        style={{
-          position: "absolute",
-          top: dPad + 38,
-          right: dPad,
-          width: 34,
-          height: 34,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.9)",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          backdropFilter: "blur(4px)",
-          zIndex: 3,
-        }}
-        title="Reset map position"
-      >
-        <LocateFixed size={17} color="#357D86" strokeWidth={2.5} />
-      </button>
+          {topRightSiteDropdownControl}
+
+          <button
+            onClick={() => mapRef.current?.resetView()}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.9)",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              backdropFilter: "blur(4px)",
+            }}
+            title="Reset map position"
+          >
+            <LocateFixed size={17} color="#357D86" strokeWidth={2.5} />
+          </button>
+        </div>
 
       {/* Alert Details Modal */}
       <AlertDetailsModal 
