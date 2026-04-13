@@ -1226,15 +1226,14 @@ export const ReportsPage: React.FC = () => {
         <DialogContent
           hideCloseButton={true}
           style={{
-            width: isMobile ? "90vw" : 420,
-            maxWidth: isMobile ? "90vw" : 420,
+            width: isMobile ? "90vw" : (smallLaptopModal ? 460 : 560),
+            maxWidth: isMobile ? "90vw" : (smallLaptopModal ? 460 : 560),
             borderRadius: smallLaptopModal ? 20 : 24,
             padding: 0,
             overflow: "hidden",
             border: "none",
             fontFamily: POPPINS,
-            maxHeight: smallLaptopModal ? "95vh" : undefined,
-            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
+            maxHeight: smallLaptopModal ? "92vh" : "90vh",
           }}
           className="p-0"
         >
@@ -1278,7 +1277,7 @@ export const ReportsPage: React.FC = () => {
             </DialogClose>
           </div>
 
-          <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
+          <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: "auto", maxHeight: smallLaptopModal ? "calc(92vh - 66px)" : "calc(90vh - 72px)" }}>
             <p style={{ fontSize: smallLaptopModal ? 12 : 13, color: "#64748b", marginBottom: smallLaptopModal ? 18 : 24, fontFamily: POPPINS }}>
               Select the type of report you want to generate.
             </p>
