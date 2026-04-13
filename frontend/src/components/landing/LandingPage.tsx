@@ -201,12 +201,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     .filter(Boolean)
     .join(", ");
 
+  const hasLiveCoordinates =
+    !!latestReading &&
+    Number.isFinite(Number(latestReading.latitude)) &&
+    Number.isFinite(Number(latestReading.longitude));
+
+  const hasLiveDeviceLocation = deviceConnected && hasLiveCoordinates;
+
+  const liveApiAddress =
+    typeof latestReading?.address === "string" && latestReading.address.trim().length > 0
+      ? latestReading.address.trim()
+      : null;
+
   const displayAddress =
-    gpsAddress ||
-    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
-    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
-    metaAddress ||
-    "Device Address";
+    hasLiveDeviceLocation
+      ? (gpsAddress || liveApiAddress || metaAddress || "Resolving live device location...")
+      : "Waiting for live device location";
 
   // Strictly follow real sensor device location (from GSM/GPS data)
   // Fallback to last known location in localStorage if sensor is not yet available
