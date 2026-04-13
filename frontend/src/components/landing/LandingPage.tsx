@@ -671,6 +671,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         className="relative z-50 border-b border-gray-100"
         style={{
           backgroundColor: '#FFFFFF',
+          height: screenWidth <= 1450 ? 80 : (screenWidth < 1700 ? 88 : 96),
+          display: "flex",
+          alignItems: "center",
           transform: showLiveUpdates ? 'translateY(-100%)' : 'translateY(0)',
           opacity: showLiveUpdates ? 0 : 1,
           transition: isExitingLiveUpdates
@@ -679,20 +682,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           pointerEvents: showLiveUpdates ? 'none' : 'auto',
         }}
       >
-        <div className="w-full py-6" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
+        <div className="w-full" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <img
                 src="/schistoguard.png"
                 alt="SchistoGuard Logo"
-                style={{ width: 28, height: 28, objectFit: "contain" }}
+                style={{ width: 24, height: 24, objectFit: "contain" }}
               />
               <h1
                 style={{
                   fontFamily: "Poppins, sans-serif",
                   color: "#357D86",
                   fontWeight: 600,
-                  fontSize: 18,
+                  fontSize: 16,
                 }}
               >
                 SchistoGuard
