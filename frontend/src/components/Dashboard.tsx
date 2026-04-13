@@ -30,6 +30,17 @@ type Alert = {
   [key: string]: any;
 };
 
+type SiteOption = {
+  siteKey: string;
+  siteName: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  lastSeen?: string | null;
+};
+
+const SITE_STALE_MS = 15000;
+
 export function Dashboard({
   onNavigate,
   setSystemStatus,
@@ -46,7 +57,11 @@ export function Dashboard({
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [latestReading, setLatestReading] = useState<any>(null);
+  const [liveReading, setLiveReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
+  const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
+  const [selectedSiteKey, setSelectedSiteKey] = useState<string>('');
+  const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const [siteData, setSiteData] = useState<any>(() => {
     try {
       if (typeof window !== "undefined") {
@@ -309,6 +324,17 @@ export function Dashboard({
     metaAddress ||
     "Device Address";
 
+  const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+
+  const isSiteFresh = (site?: SiteOption | null) => {
+    if (!site?.lastSeen) return false;
+    const ts = new Date(site.lastSeen).getTime();
+    if (!Number.isFinite(ts)) return false;
+    return Date.now() - ts <= SITE_STALE_MS;
+  };
+
+  const selectedSiteOnline = !!selectedSiteKey && !!liveReading?.deviceConnected && !!activeSiteKey && activeSiteKey === selectedSiteKey;
+
   useEffect(() => {
     const check = () => {
       const w = window.innerWidth;
@@ -371,6 +397,44 @@ export function Dashboard({
   };
 
   useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const data = await apiGet('/api/sensors/sites');
+        if (!Array.isArray(data)) {
+          setAvailableSites([]);
+          return;
+        }
+
+        const mapped: SiteOption[] = data
+          .map((site: any) => ({
+            siteKey: (site.site_key || '').toString().trim(),
+            siteName: (site.site_name || site.address || site.site_key || 'Unnamed Site').toString().trim(),
+            address: (site.address || '').toString().trim() || null,
+            latitude: typeof site.latitude === 'number' ? site.latitude : null,
+            longitude: typeof site.longitude === 'number' ? site.longitude : null,
+            lastSeen: site.last_seen || site.first_seen || null,
+          }))
+          .filter((site) => !!site.siteKey)
+          .sort((a, b) => a.siteName.localeCompare(b.siteName));
+
+        setAvailableSites(mapped);
+
+        setSelectedSiteKey((prev) => {
+          if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
+          if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
+          return mapped[0]?.siteKey || '';
+        });
+      } catch {
+        setAvailableSites([]);
+      }
+    };
+
+    fetchSites();
+    const interval = setInterval(fetchSites, 15000);
+    return () => clearInterval(interval);
+  }, [activeSiteKey]);
+
+  useEffect(() => {
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
         .then((data) => {
@@ -400,22 +464,26 @@ export function Dashboard({
             } else {
               console.log('[Dashboard] NO fallback coords, clearing map');
             }
+            setLiveReading({ ...data, deviceConnected: false });
+            setActiveSiteKey(data.siteKey || null);
             setDeviceConnected(false);
-            setLatestReading(null);
             setBackendOk(true);
             setDataOk(false);
             return;
           }
           console.log('[Dashboard] Device connected, setting latestReading');
-          setLatestReading(data);
+          setLiveReading({ ...data, deviceConnected: true });
+          setActiveSiteKey(data?.siteKey || null);
           setBackendOk(true);
-          setDataOk(true);
-          setDeviceConnected(true);
           // Only update siteName from telemetry if it's not the generic default, 
           // to prevent overwriting custom Admin settings.
           if (data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             localStorage.setItem('sg_global_latest_siteName', data.siteName);
+          }
+
+          if (!selectedSiteKey && data?.siteKey) {
+            setSelectedSiteKey(data.siteKey);
           }
         })
         .catch(() => {
@@ -427,7 +495,7 @@ export function Dashboard({
     fetchLatest();
     const interval = setInterval(fetchLatest, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedSiteKey]);
 
 
 
@@ -474,18 +542,66 @@ export function Dashboard({
 
   useEffect(() => {
     const fetchReadings = () => {
-      apiGet(`/api/sensors/history?interval=${getIntervalString()}&range=24h`)
+      if (!selectedSiteKey) {
+        setReadings([]);
+        setLatestReading(null);
+        setDeviceConnected(false);
+        setDataOk(false);
+        return;
+      }
+
+      apiGet(`/api/sensors/history?siteKey=${encodeURIComponent(selectedSiteKey)}&interval=${getIntervalString()}&range=24h`)
         .then((data) => {
-          if (Array.isArray(data)) setReadings(data);
+          if (Array.isArray(data)) {
+            setReadings(data);
+
+            const latestFromHistory = data.length > 0 ? data[data.length - 1] : null;
+            const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && !!liveReading?.deviceConnected;
+            const effectiveLatest = selectedIsActiveSite ? (liveReading || latestFromHistory) : latestFromHistory;
+
+            setLatestReading(effectiveLatest || null);
+            setDeviceConnected(selectedIsActiveSite);
+            setDataOk(!!effectiveLatest);
+
+            if (selectedSite?.siteName) {
+              setSiteData((prev: any) => ({
+                ...prev,
+                siteName: selectedSite.siteName,
+                area: selectedSite.address || prev.area || '',
+                barangay: '',
+                municipality: '',
+              }));
+            }
+
+            if (selectedSite?.latitude != null && selectedSite?.longitude != null) {
+              setGpsSites([
+                {
+                  id: selectedSite.siteKey,
+                  name: selectedSite.siteName,
+                  lat: selectedSite.latitude,
+                  lng: selectedSite.longitude,
+                },
+              ]);
+            }
+          } else {
+            setReadings([]);
+            setLatestReading(null);
+            setDeviceConnected(false);
+            setDataOk(false);
+          }
           setBackendOk(true);
         })
-        .catch(() => setBackendOk(false));
+        .catch(() => {
+          setBackendOk(false);
+          setDataOk(false);
+          setDeviceConnected(false);
+        });
     };
     fetchReadings();
     const interval = setInterval(fetchReadings, 10000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intervalValue, intervalUnit]);
+  }, [intervalValue, intervalUnit, selectedSiteKey, activeSiteKey, liveReading, selectedSite]);
 
   useEffect(() => {
     if (setSystemStatus) {
@@ -495,11 +611,16 @@ export function Dashboard({
         setSystemStatus(!backendOk || !dataOk ? "down" : "operational");
       }
     }
-  }, [backendOk, dataOk, setSystemStatus]);
+  }, [backendOk, dataOk, deviceConnected, setSystemStatus]);
 
   useEffect(() => {
     const fetchAlerts = () => {
-      apiGet("/api/sensors/alerts")
+      if (!selectedSiteKey) {
+        setAlerts([]);
+        return;
+      }
+
+      apiGet(`/api/sensors/alerts?siteKey=${encodeURIComponent(selectedSiteKey)}`)
         .then((data) => {
           if (Array.isArray(data)) {
             const sanitized = data
@@ -520,7 +641,7 @@ export function Dashboard({
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
-  }, [deviceConnected]);
+  }, [selectedSiteKey]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -748,6 +869,41 @@ export function Dashboard({
     return "Safe";
   };
 
+  const dashboardOperational = !!selectedSiteKey && backendOk && dataOk && selectedSiteOnline;
+
+  const siteDropdownControl = (
+    <div style={{ marginTop: 10 }}>
+      <select
+        value={selectedSiteKey}
+        onChange={(e) => setSelectedSiteKey(e.target.value)}
+        style={{
+          minWidth: 220,
+          maxWidth: '100%',
+          borderRadius: 10,
+          border: '1px solid rgba(255,255,255,0.45)',
+          background: 'rgba(255,255,255,0.18)',
+          color: '#ffffff',
+          padding: '8px 12px',
+          fontFamily: POPPINS,
+          fontSize: 13,
+          fontWeight: 600,
+          outline: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        {availableSites.length === 0 ? (
+          <option value="" style={{ color: '#0f172a' }}>No sites</option>
+        ) : (
+          availableSites.map((site) => (
+            <option key={site.siteKey} value={site.siteKey} style={{ color: '#0f172a' }}>
+              {site.siteName}
+            </option>
+          ))
+        )}
+      </select>
+    </div>
+  );
+
   // ─── Alerts portal — rendered in ALL layout branches ─────────────────────
   const alertsPortal = (() => {
     if (!showAlertsDropdown || !alertsDropdownPosition) return null;
@@ -951,12 +1107,12 @@ export function Dashboard({
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: (backendOk && dataOk) ? "#22c55e" : "#9ca3af",
+                  background: dashboardOperational ? "#22c55e" : "#9ca3af",
                   display: "inline-block",
-                  animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
+                  animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
+                  "--dot-glow": dashboardOperational ? "rgba(34,197,94,0.5)" : "transparent",
                 } as any} />
-                {(backendOk && dataOk) ? "System Operational" : "Device Not Connected"}
+                {dashboardOperational ? "System Operational" : "Device Not Connected"}
               </div>
 
               <button
@@ -1082,6 +1238,9 @@ export function Dashboard({
             }}>
               {siteData.siteName}
             </h1>
+            <div style={{ pointerEvents: 'auto' }}>
+              {siteDropdownControl}
+            </div>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
               fontSize: isTab ? 15 : 13, color: "rgba(255,255,255,0.9)", 
@@ -1103,12 +1262,12 @@ export function Dashboard({
               }}>
                 <span style={{
                   width: 8, height: 8, borderRadius: "50%",
-                  background: (backendOk && dataOk) ? "#22c55e" : "#9ca3af",
+                  background: dashboardOperational ? "#22c55e" : "#9ca3af",
                   display: "inline-block",
-                  animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": (backendOk && dataOk) ? "rgba(34,197,94,0.5)" : "transparent",
+                  animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
+                  "--dot-glow": dashboardOperational ? "rgba(34,197,94,0.5)" : "transparent",
                 } as React.CSSProperties} />
-                {(backendOk && dataOk) ? "System Operational" : "Device Not Connected"}
+                {dashboardOperational ? "System Operational" : "Device Not Connected"}
               </div>
               {isTab && (
                 <button
@@ -1509,6 +1668,7 @@ export function Dashboard({
           }}>
             {siteData.siteName}
           </h1>
+          {siteDropdownControl}
           <p style={{
             color: "rgba(255,255,255,0.9)",
             fontSize: isNarrowDesktop ? 12 : 15,
@@ -1726,14 +1886,14 @@ export function Dashboard({
             width: 8,
             height: 8,
             borderRadius: "50%",
-            background: (backendOk && dataOk) ? "#22c55e" : "#9ca3af",
+            background: dashboardOperational ? "#22c55e" : "#9ca3af",
             display: "inline-block",
-            animation: (backendOk && dataOk) ? "dotPulse 3s ease-in-out infinite" : "none",
+            animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
             transition: "background 0.4s",
-            "--dot-glow": (backendOk && dataOk) ? hexToRgba("#22c55e", 0.5) : "transparent",
+            "--dot-glow": dashboardOperational ? hexToRgba("#22c55e", 0.5) : "transparent",
           } as React.CSSProperties}
         />
-        {(backendOk && dataOk) ? "System Operational" : "Device Not Connected"}
+        {dashboardOperational ? "System Operational" : "Device Not Connected"}
       </div>
 
       {/* Reset map position button — below System Operational badge */}
