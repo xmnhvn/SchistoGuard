@@ -82,7 +82,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     setDeleteMode(false);
     setSelectedIds(new Set());
   };
-  const { isMobile, isTablet, isNarrowDesktop, pad } = useResponsiveScale();
+  const { isMobile, isTablet, isCompact, isNarrowDesktop, pad } = useResponsiveScale();
 
   useEffect(() => {
     if (visible && !_alertsFirstLoadDone) {
@@ -362,8 +362,8 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
       {/* ── Stat Cards ── */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: (isMobile) ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-          gap: (isMobile) ? 12 : 16,
+          gridTemplateColumns: (isCompact) ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: (isCompact) ? 12 : 16,
           marginBottom: 24,
           animation: animationEnabled ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>

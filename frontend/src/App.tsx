@@ -244,28 +244,23 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(53,125,134,0.14),_transparent_55%),linear-gradient(180deg,#f8fbfc_0%,#e7f1f3_100%)]">
-        <div className="rounded-3xl border border-white/70 bg-white/85 px-6 py-5 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-sm">
-          <div className="flex items-center space-x-3 animate-pulse">
-            <img
-              src="/schistoguard.png"
-              alt="SchistoGuard Logo"
-              style={{ width: 48, height: 48, objectFit: "contain" }}
-            />
-            <div>
-              <h1
-                style={{
-                  fontFamily: "Poppins, sans-serif",
-                  color: "#357D86",
-                  fontWeight: 600,
-                  fontSize: 32,
-                }}
-              >
-                SchistoGuard
-              </h1>
-              <p className="text-sm text-slate-500">Loading secure dashboard...</p>
-            </div>
-          </div>
+      <div className="fixed inset-0 h-[100dvh] w-full flex items-center justify-center bg-white z-[100]">
+        <div className="flex items-center space-x-3 animate-pulse">
+          <img
+            src="/schistoguard.png"
+            alt="SchistoGuard Logo"
+            style={{ width: 48, height: 48, objectFit: "contain" }}
+          />
+          <h1
+            style={{
+              fontFamily: "Poppins, sans-serif",
+              color: "#357D86",
+              fontWeight: 600,
+              fontSize: 32,
+            }}
+          >
+            SchistoGuard
+          </h1>
         </div>
       </div>
     );
