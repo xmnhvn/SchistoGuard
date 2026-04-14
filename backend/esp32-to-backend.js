@@ -1,9 +1,14 @@
 const axios = require('axios');
+const os = require('os');
 require('dotenv').config();
 
 // ESP32 connection settings - mDNS hostname with IP fallback
 const ESP32_HOSTNAME = process.env.ESP32_HOSTNAME || 'schistoguard-esp32.local';
-const ESP32_IP_FALLBACK = process.env.ESP32_IP_FALLBACK || '192.168.100.168';
+let ESP32_IP_FALLBACK = process.env.ESP32_IP_FALLBACK || '10.143.90.164';
+const ESP32_AUTO_DISCOVER = String(process.env.ESP32_AUTO_DISCOVER || 'true').toLowerCase() === 'true';
+const ESP32_DISCOVER_TIMEOUT_MS = parseInt(process.env.ESP32_DISCOVER_TIMEOUT_MS || '900', 10);
+const ESP32_DISCOVER_CONCURRENCY = Math.max(4, parseInt(process.env.ESP32_DISCOVER_CONCURRENCY || '24', 10));
+const ESP32_DISCOVER_COOLDOWN_MS = parseInt(process.env.ESP32_DISCOVER_COOLDOWN_MS || '60000', 10);
 
 // Backend URL - supports both cloud and local
 const BACKEND_URL = process.env.ESP32_BACKEND_URL || 'https://schistoguard-production.up.railway.app/api/sensors';
@@ -30,10 +35,89 @@ let sensorFailureStreak = 0;
 let relayFailureStreak = 0;
 let nextSensorAttemptAt = 0;
 let nextRelayAttemptAt = 0;
+let discoveringEsp32 = false;
+let nextDiscoverAt = 0;
 
 function getBackoffMs(streak, baseMs, maxMs) {
   const exponent = Math.min(streak, 5);
   return Math.min(maxMs, baseMs * Math.pow(2, exponent));
+}
+
+function getLocalSubnets() {
+  const interfaces = os.networkInterfaces();
+  const subnets = new Set();
+
+  for (const netList of Object.values(interfaces)) {
+    for (const net of netList || []) {
+      if (!net || net.internal || net.family !== 'IPv4') continue;
+      const parts = (net.address || '').split('.');
+      if (parts.length !== 4) continue;
+      subnets.add(`${parts[0]}.${parts[1]}.${parts[2]}`);
+    }
+  }
+
+  return Array.from(subnets);
+}
+
+function looksLikeEsp32Payload(data) {
+  if (!data || typeof data !== 'object') return false;
+  const hasAnyReadingKey =
+    Object.prototype.hasOwnProperty.call(data, 'temperature') ||
+    Object.prototype.hasOwnProperty.call(data, 'turbidity') ||
+    Object.prototype.hasOwnProperty.call(data, 'pH') ||
+    Object.prototype.hasOwnProperty.call(data, 'ph');
+  return hasAnyReadingKey;
+}
+
+async function probeEsp32Ip(ip) {
+  const url = `http://${ip}/api/sensors`;
+  try {
+    const response = await axios.get(url, { timeout: ESP32_DISCOVER_TIMEOUT_MS });
+    if (looksLikeEsp32Payload(response.data)) {
+      return ip;
+    }
+  } catch {
+    // Ignore probe failures during discovery.
+  }
+  return null;
+}
+
+async function discoverEsp32Ip() {
+  if (!ESP32_AUTO_DISCOVER) return null;
+  const now = Date.now();
+  if (discoveringEsp32 || now < nextDiscoverAt) return null;
+
+  discoveringEsp32 = true;
+  nextDiscoverAt = now + ESP32_DISCOVER_COOLDOWN_MS;
+
+  try {
+    const subnets = getLocalSubnets();
+    if (!subnets.length) return null;
+
+    const candidates = [];
+    for (const subnet of subnets) {
+      for (let host = 1; host <= 254; host += 1) {
+        candidates.push(`${subnet}.${host}`);
+      }
+    }
+
+    for (let i = 0; i < candidates.length; i += ESP32_DISCOVER_CONCURRENCY) {
+      const batch = candidates.slice(i, i + ESP32_DISCOVER_CONCURRENCY);
+      const found = await Promise.all(batch.map((ip) => probeEsp32Ip(ip)));
+      const hit = found.find(Boolean);
+      if (hit) {
+        ESP32_IP_FALLBACK = hit;
+        currentESP32URL = `http://${hit}/api/sensors`;
+        useHostname = false;
+        console.log(`✓ Auto-discovered ESP32 at ${hit}`);
+        return hit;
+      }
+    }
+  } finally {
+    discoveringEsp32 = false;
+  }
+
+  return null;
 }
 
 async function fetchAndSaveSensorData() {
@@ -90,6 +174,10 @@ async function fetchAndSaveSensorData() {
       // Retry immediately with IP
       return fetchAndSaveSensorData();
     }
+
+    if (!useHostname && ESP32_AUTO_DISCOVER) {
+      await discoverEsp32Ip();
+    }
     
     if (error.response && error.response.status === 504) {
       console.error(`✗ ESP32/backend timeout from ${currentESP32URL} (504). Backing off ${Math.round((nextSensorAttemptAt - Date.now()) / 1000)}s.`);
@@ -116,6 +204,9 @@ async function sendSmsViaEsp32(phone, message) {
     return { success: true };
   } catch (err) {
     if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
+      if (ESP32_AUTO_DISCOVER) {
+        await discoverEsp32Ip();
+      }
       url = `http://${ESP32_IP_FALLBACK}/api/sms`;
       await axios.post(url, payload, {
         timeout: 5000,
@@ -220,6 +311,9 @@ async function pollSmsRelayQueue() {
 console.log(`Starting ESP32 sensor polling...`);
 console.log(`Primary: http://${ESP32_HOSTNAME}/api/sensors`);
 console.log(`Fallback: http://${ESP32_IP_FALLBACK}/api/sensors`);
+if (ESP32_AUTO_DISCOVER) {
+  console.log(`ESP32 auto-discovery: enabled (cooldown ${ESP32_DISCOVER_COOLDOWN_MS}ms)`);
+}
 console.log(`Sending data to backend at ${BACKEND_URL}`);
 console.log(`Site name: ${SITE_NAME}`);
 console.log(`Poll interval: ${POLL_INTERVAL}ms\n`);
