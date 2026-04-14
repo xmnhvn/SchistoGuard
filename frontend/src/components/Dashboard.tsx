@@ -1001,6 +1001,137 @@ export function Dashboard({
     </div>
   );
 
+  const mobileSiteDropdownControl = (
+    <div
+      ref={siteDropdownRef}
+      style={{
+        position: "relative",
+        background: "rgba(255,255,255,0.92)",
+        borderRadius: 999,
+        padding: "6px 12px",
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+        backdropFilter: "blur(4px)",
+        zIndex: 3,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setShowSiteDropdown((prev) => !prev)}
+        style={{
+          border: "none",
+          background: "transparent",
+          color: "#337C85",
+          padding: 0,
+          fontFamily: POPPINS,
+          fontSize: 13,
+          fontWeight: 500,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          width: "100%",
+          minWidth: 0,
+          outline: "none",
+          cursor: "pointer",
+        }}
+      >
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            textAlign: "left",
+          }}
+          title={selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site")}
+        >
+          {selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site")}
+        </span>
+        <ChevronDown
+          size={14}
+          color="#337C85"
+          style={{
+            flexShrink: 0,
+            transform: showSiteDropdown ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.18s ease",
+          }}
+        />
+      </button>
+
+      {showSiteDropdown && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            width: "100%",
+            minWidth: "100%",
+            maxHeight: 220,
+            overflowY: "auto",
+            background: "#ffffff",
+            borderRadius: 12,
+            boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
+            border: "1px solid #e2e8f0",
+            padding: 6,
+            zIndex: 30,
+          }}
+        >
+          {availableSites.length === 0 ? (
+            <div
+              style={{
+                padding: "8px 10px",
+                color: "#64748b",
+                fontSize: 13,
+                fontFamily: POPPINS,
+                whiteSpace: "nowrap",
+              }}
+            >
+              No sites
+            </div>
+          ) : (
+            availableSites.map((site) => {
+              const isSelected = site.siteKey === selectedSiteKey;
+              return (
+                <button
+                  key={site.siteKey}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSiteKey(site.siteKey);
+                    setShowSiteDropdown(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "8px 10px",
+                    textAlign: "left",
+                    background: isSelected ? "#3b82f6" : "transparent",
+                    color: isSelected ? "#ffffff" : "#0f172a",
+                    fontFamily: POPPINS,
+                    fontSize: 13,
+                    fontWeight: isSelected ? 600 : 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    cursor: "pointer",
+                  }}
+                >
+                  {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
+                  <span style={{ whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.25 }}>{site.siteName}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   // ─── Alerts portal — rendered in ALL layout branches ─────────────────────
   const alertsPortal = (() => {
     if (!showAlertsDropdown || !alertsDropdownPosition) return null;
@@ -1345,26 +1476,39 @@ export function Dashboard({
             }}>
               {displayAddress}
             </p>
-            {/* System and site pills — side by side under address */}
+            {/* Mobile: status + site each uses half width to avoid clipping */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 background: "rgba(255,255,255,0.92)", borderRadius: 999,
                 padding: "5px 13px", fontSize: 12, fontWeight: 600, color: "#15803d",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.12)", backdropFilter: "blur(4px)",
-                width: "fit-content"
+                width: isTab ? "fit-content" : "50%",
+                minWidth: 0,
+                justifyContent: isTab ? "flex-start" : "center",
               }}>
                 <span style={{
-                  width: 8, height: 8, borderRadius: "50%",
+                  width: 8,
+                  minWidth: 8,
+                  maxWidth: 8,
+                  height: 8,
+                  minHeight: 8,
+                  maxHeight: 8,
+                  borderRadius: "50%",
                   background: dashboardOperational ? "#22c55e" : "#9ca3af",
                   display: "inline-block",
+                  flex: "0 0 8px",
                   animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
                   "--dot-glow": dashboardOperational ? "rgba(34,197,94,0.5)" : "transparent",
                 } as React.CSSProperties} />
-                {dashboardOperational ? "System Operational" : "Device Not Connected"}
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {dashboardOperational ? "System Operational" : "Device Not Connected"}
+                </span>
               </div>
 
-              {topRightSiteDropdownControl}
+              <div style={{ width: isTab ? "auto" : "50%", minWidth: 0, flex: isTab ? undefined : "0 0 50%" }}>
+                {isTab ? topRightSiteDropdownControl : mobileSiteDropdownControl}
+              </div>
 
               {isTab && (
                 <button

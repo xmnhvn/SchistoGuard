@@ -215,11 +215,21 @@ export function AlertDetailsModal({
         className="sm:max-w-2xl"
         style={{
           fontFamily: POPPINS,
-          width: isMobile ? "92vw" : undefined,
-          maxWidth: smallLaptopModal ? 700 : (compactDesktopModal ? 760 : 960),
-          maxHeight: smallLaptopModal ? "92vh" : (compactDesktopModal ? "90vh" : "calc(100vh - 5rem)"),
+          width: isMobile ? "88vw" : (isTablet ? "min(92vw, 760px)" : "min(92vw, 960px)"),
+          maxWidth: isTablet ? 760 : 960,
+          maxHeight: isMobile
+            ? "min(72dvh, 640px)"
+            : (isTablet ? "min(84vh, 860px)" : "90vh"),
           overflow: "hidden",
-          transform: smallLaptopModal ? "translateY(-50%) scale(0.88)" : (compactDesktopModal ? "translateY(-50%) scale(0.94)" : undefined),
+          display: "flex",
+          flexDirection: "column",
+          top: "50%",
+          left: "50%",
+          right: "auto",
+          bottom: "auto",
+          marginInline: 0,
+          borderRadius: isMobile ? 20 : undefined,
+          transform: "translate(-50%, -50%)",
         }}
       >
         <DialogHeader>
@@ -228,7 +238,16 @@ export function AlertDetailsModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 sm:gap-6" style={{ paddingBottom: compactDesktopModal ? 2 : 0 }}>
+        <div
+          className="flex flex-col gap-4 sm:gap-6"
+          style={{
+            paddingBottom: isMobile ? "max(8px, env(safe-area-inset-bottom))" : (compactDesktopModal ? 2 : 0),
+            overflowY: "auto",
+            minHeight: 0,
+            flex: 1,
+            paddingRight: isMobile ? 2 : 0,
+          }}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             <div>
               <h4 className="font-semibold text-[14px] sm:text-[15px] mb-2 sm:mb-3 color-[#1a2a3a]">
