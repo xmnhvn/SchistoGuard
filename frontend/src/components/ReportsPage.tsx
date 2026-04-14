@@ -38,7 +38,7 @@ let _reportsFirstLoadDone = false;
 interface Report {
   id: string;
   title: string;
-  type: 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  type: 'hourly' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annual';
   period: string;
   generatedDate: string;
   siteKey?: string | null;
@@ -75,6 +75,12 @@ const formatMonthInputValue = (date: Date) => {
   return `${year}-${month}`;
 };
 
+const formatTimeInputValue = (date: Date) => {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
 const POPPINS = "'Poppins', sans-serif";
 const SCHISTO_TEAL = "#357D86";
 const SCHISTO_NAVY = "#1a2b3c";
@@ -98,6 +104,18 @@ export const ReportsPage: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [reportType, setReportType] = useState('monthly');
+  const [hourlyReportDate, setHourlyReportDate] = useState(() => formatDateInputValue(new Date()));
+  const [hourlyStartTime, setHourlyStartTime] = useState(() => {
+    const now = new Date();
+    now.setMinutes(0, 0, 0);
+    return formatTimeInputValue(now);
+  });
+  const [hourlyEndTime, setHourlyEndTime] = useState(() => {
+    const now = new Date();
+    now.setMinutes(59, 0, 0);
+    return formatTimeInputValue(now);
+  });
+  const [dailyReportDate, setDailyReportDate] = useState(() => formatDateInputValue(new Date()));
   const [weeklyStartDate, setWeeklyStartDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 6);
@@ -213,6 +231,10 @@ export const ReportsPage: React.FC = () => {
     weeklyStart.setDate(now.getDate() - 6);
 
     setReportType('monthly');
+    setHourlyReportDate(formatDateInputValue(now));
+    setHourlyStartTime('00:00');
+    setHourlyEndTime('23:59');
+    setDailyReportDate(formatDateInputValue(now));
     setWeeklyStartDate(formatDateInputValue(weeklyStart));
     setWeeklyEndDate(formatDateInputValue(now));
     setMonthlyPeriod(formatMonthInputValue(now));
@@ -222,6 +244,33 @@ export const ReportsPage: React.FC = () => {
   };
 
   const buildCreatePeriodValue = () => {
+    if (reportType === 'hourly') {
+      if (!hourlyReportDate || !hourlyStartTime || !hourlyEndTime) {
+        throw new Error('Please choose a date and time range for hourly report.');
+      }
+
+      const startValue = new Date(`${hourlyReportDate}T${hourlyStartTime}:00`);
+      const endValue = new Date(`${hourlyReportDate}T${hourlyEndTime}:59.999`);
+
+      if (Number.isNaN(startValue.getTime()) || Number.isNaN(endValue.getTime())) {
+        throw new Error('Please choose valid hourly date and time values.');
+      }
+
+      if (startValue > endValue) {
+        throw new Error('Hourly start time should not be after end time.');
+      }
+
+      return `hour:${hourlyReportDate}|${hourlyStartTime}|${hourlyEndTime}`;
+    }
+
+    if (reportType === 'daily') {
+      if (!dailyReportDate) {
+        throw new Error('Please choose a date for daily report.');
+      }
+
+      return `day:${dailyReportDate}`;
+    }
+
     if (reportType === 'weekly') {
       if (!weeklyStartDate || !weeklyEndDate) {
         throw new Error('Please choose both start date and end date for weekly report.');
@@ -244,6 +293,10 @@ export const ReportsPage: React.FC = () => {
         throw new Error('Please choose year and quarter for quarterly report.');
       }
       return `quarter:${quarterlyYear}-Q${quarterlyQuarter}`;
+    }
+
+    if (reportType === 'annual') {
+      return `year:${new Date().getFullYear()}`;
     }
 
     return selectedPeriod;
@@ -897,6 +950,8 @@ export const ReportsPage: React.FC = () => {
                           </SelectTrigger>
                           <SelectContent style={{ fontFamily: POPPINS, fontSize: 13 }}>
                             <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="hourly">Hourly</SelectItem>
+                            <SelectItem value="daily">Daily</SelectItem>
                             <SelectItem value="weekly">Weekly</SelectItem>
                             <SelectItem value="monthly">Monthly</SelectItem>
                             <SelectItem value="quarterly">Quarterly</SelectItem>
@@ -1285,7 +1340,7 @@ export const ReportsPage: React.FC = () => {
             <form className="space-y-6" style={{ rowGap: smallLaptopModal ? 16 : undefined }} onSubmit={handleCreateReport}>
               <div style={{ marginBottom: smallLaptopModal ? 10 : 12, fontSize: smallLaptopModal ? 12 : 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Type</div>
               <div className="flex flex-wrap gap-2">
-                {['weekly', 'monthly', 'quarterly', 'annual'].map((type) => (
+                {['hourly', 'daily', 'weekly', 'monthly', 'quarterly', 'annual'].map((type) => (
                   <button
                     key={type}
                     type="button"
@@ -1341,6 +1396,70 @@ export const ReportsPage: React.FC = () => {
               </div>
 
               <div style={{ marginBottom: smallLaptopModal ? 10 : 12, fontSize: smallLaptopModal ? 12 : 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS, marginTop: smallLaptopModal ? 16 : 24 }}>Report Period</div>
+
+              {reportType === 'hourly' && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Date</label>
+                    <input
+                      type="date"
+                      style={{
+                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+                      }}
+                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
+                      value={hourlyReportDate}
+                      onChange={(e) => setHourlyReportDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Start Time</label>
+                    <input
+                      type="time"
+                      style={{
+                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+                      }}
+                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
+                      value={hourlyStartTime}
+                      onChange={(e) => setHourlyStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>End Time</label>
+                    <input
+                      type="time"
+                      style={{
+                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+                      }}
+                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
+                      value={hourlyEndTime}
+                      onChange={(e) => setHourlyEndTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {reportType === 'daily' && (
+                <div className="flex flex-col gap-2">
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Date</label>
+                  <input
+                    type="date"
+                    style={{
+                      height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
+                      padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+                    }}
+                    className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
+                    value={dailyReportDate}
+                    onChange={(e) => setDailyReportDate(e.target.value)}
+                  />
+                </div>
+              )}
 
               {reportType === 'weekly' && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

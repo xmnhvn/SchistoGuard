@@ -9,6 +9,64 @@ function getDateRange(type, customPeriod = null) {
   const periodValue = typeof customPeriod === "string" ? customPeriod : "";
   
   switch (type) {
+    case 'hourly':
+      if (periodValue.startsWith('hour:')) {
+        const customHourMatch = periodValue.match(/^hour:(\d{4}-\d{2}-\d{2})\|(\d{2}:\d{2})\|(\d{2}:\d{2})$/);
+        const legacyHourMatch = periodValue.match(/^hour:(\d{4})-(\d{2})-(\d{2})-(\d{2})$/);
+
+        if (customHourMatch) {
+          const [startHour, startMinute] = customHourMatch[2].split(':').map(Number);
+          const [endHour, endMinute] = customHourMatch[3].split(':').map(Number);
+          const parsedStart = new Date(`${customHourMatch[1]}T${customHourMatch[2]}:00`);
+          const parsedEnd = new Date(`${customHourMatch[1]}T${customHourMatch[3]}:59.999`);
+
+          if (!Number.isNaN(parsedStart.getTime()) && !Number.isNaN(parsedEnd.getTime()) && parsedStart <= parsedEnd && [startHour, startMinute, endHour, endMinute].every(Number.isFinite)) {
+            startDate = parsedStart;
+            endDate = parsedEnd;
+            break;
+          }
+        } else if (legacyHourMatch) {
+          const year = Number(legacyHourMatch[1]);
+          const month = Number(legacyHourMatch[2]) - 1;
+          const day = Number(legacyHourMatch[3]);
+          const hour = Number(legacyHourMatch[4]);
+          const parsedStart = new Date(year, month, day, hour, 0, 0, 0);
+          const parsedEnd = new Date(year, month, day, hour, 59, 59, 999);
+
+          if (!Number.isNaN(parsedStart.getTime()) && !Number.isNaN(parsedEnd.getTime())) {
+            startDate = parsedStart;
+            endDate = parsedEnd;
+            break;
+          }
+        }
+      }
+
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+      endDate = now;
+      break;
+
+    case 'daily':
+      if (periodValue.startsWith('day:')) {
+        const dayMatch = periodValue.match(/^day:(\d{4})-(\d{2})-(\d{2})$/);
+        if (dayMatch) {
+          const year = Number(dayMatch[1]);
+          const month = Number(dayMatch[2]) - 1;
+          const day = Number(dayMatch[3]);
+          const parsedStart = new Date(year, month, day, 0, 0, 0, 0);
+          const parsedEnd = new Date(year, month, day, 23, 59, 59, 999);
+
+          if (!Number.isNaN(parsedStart.getTime()) && !Number.isNaN(parsedEnd.getTime())) {
+            startDate = parsedStart;
+            endDate = parsedEnd;
+            break;
+          }
+        }
+      }
+
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      endDate = now;
+      break;
+
     case 'weekly':
       // Custom weekly range: range:YYYY-MM-DD:YYYY-MM-DD
       if (periodValue.startsWith('range:')) {
@@ -113,6 +171,10 @@ function formatPeriod(type, startDate, endDate) {
     "July", "August", "September", "October", "November", "December"];
   
   switch (type) {
+    case 'hourly':
+      return `${start.toLocaleString()} - ${end.toLocaleString()}`;
+    case 'daily':
+      return `${start.toLocaleDateString()}`;
     case 'weekly':
       return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
     case 'monthly':
@@ -150,6 +212,25 @@ function calculateRiskLevel(avgTurbidity, avgTemperature, avgPh) {
   if (riskScore >= 5) return 'high';
   if (riskScore >= 3) return 'moderate';
   return 'low';
+}
+
+function formatReportTypeTitle(type) {
+  switch (type) {
+    case 'hourly':
+      return 'Hourly';
+    case 'daily':
+      return 'Daily';
+    case 'weekly':
+      return 'Weekly';
+    case 'monthly':
+      return 'Monthly';
+    case 'quarterly':
+      return 'Quarterly';
+    case 'annual':
+      return 'Annual';
+    default:
+      return type.charAt(0).toUpperCase() + type.slice(1);
+  }
 }
 
 /**
@@ -299,7 +380,7 @@ async function generateReportData(type, customPeriod = null, siteKey = null) {
     const period = formatPeriod(type, startDate, endDate);
     
     // Generate title
-    const typeTitle = type.charAt(0).toUpperCase() + type.slice(1);
+      const typeTitle = formatReportTypeTitle(type);
     const title = `${typeTitle} Water Quality Report - ${period}`;
     
     return {
