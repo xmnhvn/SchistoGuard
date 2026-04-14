@@ -12,6 +12,9 @@ const SMS_RELAY_TOKEN = process.env.SMS_RELAY_TOKEN || '';
 const ENABLE_SMS_RELAY = String(process.env.ENABLE_SMS_RELAY || 'true').toLowerCase() === 'true';
 const SMS_RELAY_POLL_INTERVAL = parseInt(process.env.SMS_RELAY_POLL_INTERVAL || '5000', 10);
 const SMS_RELAY_BATCH_SIZE = parseInt(process.env.SMS_RELAY_BATCH_SIZE || '10', 10);
+const SMS_RELAY_PULL_TIMEOUT_MS = parseInt(process.env.SMS_RELAY_PULL_TIMEOUT_MS || '20000', 10);
+const SMS_RELAY_PULL_RETRIES = Math.max(1, parseInt(process.env.SMS_RELAY_PULL_RETRIES || '3', 10));
+const SMS_RELAY_RETRY_DELAY_MS = parseInt(process.env.SMS_RELAY_RETRY_DELAY_MS || '1500', 10);
 
 // Poll interval in milliseconds (2 seconds)
 const POLL_INTERVAL = parseInt(process.env.ESP32_POLL_INTERVAL) || 2000;
@@ -159,17 +162,39 @@ async function pollSmsRelayQueue() {
   }
 
   try {
-    const response = await axios.post(
-      SMS_RELAY_PULL_URL,
-      { limit: SMS_RELAY_BATCH_SIZE },
-      {
-        timeout: 8000,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-sms-relay-token': SMS_RELAY_TOKEN,
-        },
+    let response = null;
+
+    for (let attempt = 1; attempt <= SMS_RELAY_PULL_RETRIES; attempt += 1) {
+      try {
+        response = await axios.post(
+          SMS_RELAY_PULL_URL,
+          { limit: SMS_RELAY_BATCH_SIZE },
+          {
+            timeout: SMS_RELAY_PULL_TIMEOUT_MS,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-sms-relay-token': SMS_RELAY_TOKEN,
+            },
+          }
+        );
+        break;
+      } catch (err) {
+        const status = err?.response?.status;
+        const retryable = err.code === 'ETIMEDOUT' || status === 504 || status === 502;
+        const hasMoreAttempts = attempt < SMS_RELAY_PULL_RETRIES;
+
+        if (!retryable || !hasMoreAttempts) {
+          throw err;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, SMS_RELAY_RETRY_DELAY_MS));
       }
-    );
+    }
+
+    if (!response) return;
+
+    relayFailureStreak = 0;
+    nextRelayAttemptAt = 0;
 
     const jobs = Array.isArray(response.data?.jobs) ? response.data.jobs : [];
     if (!jobs.length) return;
@@ -186,7 +211,7 @@ async function pollSmsRelayQueue() {
     }
   } catch (error) {
     relayFailureStreak += 1;
-    nextRelayAttemptAt = Date.now() + getBackoffMs(relayFailureStreak, 5000, 60000);
+    nextRelayAttemptAt = Date.now() + getBackoffMs(relayFailureStreak, 3000, 15000);
     console.error('✗ SMS relay poll error:', error.message);
   }
 }
