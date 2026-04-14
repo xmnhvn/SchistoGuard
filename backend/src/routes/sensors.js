@@ -536,25 +536,25 @@ function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime })
   ].join('\n');
 }
 
-async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
+async function sendScheduledSmsSummary(siteSnapshot, slotTime, options = {}) {
   const now = new Date();
   const slotMinutes = getMinutesFromTime(slotTime);
-  if (slotMinutes == null) return;
+  if (slotMinutes == null) return { success: false, reason: 'invalid-slot-time' };
 
   const orderedTimes = [...SMS_SUMMARY_TIMES]
     .map((time) => ({ time, minutes: getMinutesFromTime(time) }))
     .filter((entry) => entry.minutes != null)
     .sort((left, right) => left.minutes - right.minutes);
 
-  if (orderedTimes.length !== 2) return;
+  if (orderedTimes.length !== 2) return { success: false, reason: 'invalid-configured-times' };
 
   const currentIndex = orderedTimes.findIndex((entry) => entry.time === slotTime);
-  if (currentIndex === -1) return;
+  if (currentIndex === -1) return { success: false, reason: 'slot-not-configured' };
 
   const previousEntry = currentIndex === 0 ? orderedTimes[orderedTimes.length - 1] : orderedTimes[currentIndex - 1];
   const startDate = buildDateAtTimeInZone(now, previousEntry.time);
   const endDate = buildDateAtTimeInZone(now, slotTime);
-  if (!startDate || !endDate) return;
+  if (!startDate || !endDate) return { success: false, reason: 'invalid-time-window' };
   if (previousEntry.minutes > slotMinutes || currentIndex === 0) {
     const adjusted = addDaysInZone(startDate, -1);
     startDate.setTime(adjusted.getTime());
@@ -585,7 +585,7 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
   if (!recipients.length) {
     recipients = await new Promise((resolve, reject) => {
       db.all(
-        "SELECT phone FROM residents WHERE role IN ('bhw', 'municipal_health_officer') ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='municipal_health_officer' THEN 2 ELSE 3 END",
+        "SELECT phone FROM residents ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='municipal_health_officer' THEN 2 ELSE 3 END",
         [],
         (err, rows) => {
           if (err) return reject(err);
@@ -597,23 +597,40 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
 
   if (!recipients.length) {
     console.log(`[sms-summary] No recipients found for ${siteName}; skipping ${slotTime} dispatch.`);
-    return;
+    return { success: false, reason: 'no-recipients' };
   }
 
   const dispatchResult = await sendSMSViaESP32(message, [
     `Summary slot: ${slotTime}`,
     `Site: ${siteName}`,
     `Risk: ${stats.avgTurbidity != null && stats.avgTemperature != null && stats.avgPh != null ? calculateRiskLevel(stats.avgTurbidity, stats.avgTemperature, stats.avgPh) : 'n/a'}`,
-  ], recipients);
+  ], recipients, options);
 
   if (dispatchResult?.sent > 0) {
     await markSmsSummarySent(`${siteKey}:${slotTime}`, now.toISOString());
-    return;
+    return {
+      success: true,
+      reason: null,
+      sent: dispatchResult.sent,
+      failed: dispatchResult.failed,
+      total: dispatchResult.total,
+      siteName,
+      slotTime,
+    };
   }
 
   console.warn(
     `[sms-summary] Not marking as sent for ${siteName} @ ${slotTime}. Reason: ${dispatchResult?.skippedReason || 'no successful SMS'}`
   );
+  return {
+    success: false,
+    reason: dispatchResult?.skippedReason || 'no-successful-sms',
+    sent: dispatchResult?.sent || 0,
+    failed: dispatchResult?.failed || recipients.length,
+    total: dispatchResult?.total || recipients.length,
+    siteName,
+    slotTime,
+  };
 }
 
 async function checkSmsSummarySchedule() {
@@ -710,17 +727,110 @@ router.post('/sms-summary-config', async (req, res) => {
   }
 });
 
+router.get('/sms-summary-debug', async (req, res) => {
+  try {
+    await loadSmsSummarySettingsFromDB();
+    const currentDate = new Date();
+    const zonedNow = getZonedDateTimeParts(currentDate);
+    const currentMinute = (zonedNow.hour * 60) + zonedNow.minute;
+    const activeSites = await getActiveSiteSnapshots();
+    const fallbackSite = await getCurrentSiteSnapshot();
+
+    const recipientCounts = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT COALESCE("siteName", '') as site_name, COUNT(*) as total
+         FROM residents
+         GROUP BY COALESCE("siteName", '')
+         ORDER BY total DESC`,
+        [],
+        (err, rows) => {
+          if (err) return reject(err);
+          resolve(rows || []);
+        }
+      );
+    });
+
+    res.json({
+      success: true,
+      timezone: SMS_SUMMARY_TIMEZONE,
+      nowIso: currentDate.toISOString(),
+      nowInTimezone: zonedNow,
+      currentMinute,
+      scheduleTimes: SMS_SUMMARY_TIMES,
+      lastSent: SMS_SUMMARY_LAST_SENT,
+      inFlight: Array.from(SMS_SUMMARY_IN_FLIGHT),
+      activeSites,
+      fallbackSite,
+      recipientCounts,
+      cooldownMsRemaining: Math.max(0, SMS_COOLDOWN_MS - (Date.now() - lastSMSTime)),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/sms-summary-trigger', async (req, res) => {
+  try {
+    await loadSmsSummarySettingsFromDB();
+
+    const requestedSlot = normalizeSmsTime(req.body?.slotTime);
+    const slotTime = requestedSlot || SMS_SUMMARY_TIMES[0];
+    if (!slotTime) {
+      return res.status(400).json({ success: false, message: 'No valid slotTime available' });
+    }
+
+    const requestedSiteKey = (req.body?.siteKey || '').toString().trim();
+    let siteSnapshot = null;
+
+    if (requestedSiteKey) {
+      siteSnapshot = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT site_key, site_name, address
+           FROM site_registry
+           WHERE site_key = ?
+           ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC
+           LIMIT 1`,
+          [requestedSiteKey],
+          (err, row) => {
+            if (err) return reject(err);
+            if (!row) return resolve(null);
+            resolve({
+              siteKey: row.site_key || null,
+              siteName: row.site_name || row.address || GLOBAL_DEVICE_NAME,
+              address: row.address || null,
+            });
+          }
+        );
+      });
+    }
+
+    if (!siteSnapshot) {
+      siteSnapshot = await getCurrentSiteSnapshot();
+    }
+
+    if (!siteSnapshot) {
+      return res.status(404).json({ success: false, message: 'No site snapshot available' });
+    }
+
+    const result = await sendScheduledSmsSummary(siteSnapshot, slotTime, { bypassCooldown: true });
+    res.json({ success: Boolean(result?.success), slotTime, siteSnapshot, result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ESP32 connection for SMS
 const ESP32_HOSTNAME = 'schistoguard-esp32.local';
 const ESP32_IP_FALLBACK = '192.168.100.168';
 let lastSMSTime = 0;
 const SMS_COOLDOWN_MS = 300000; // 5 minutes between successful SMS
 
-async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
+async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = [], options = {}) {
   const now = Date.now();
+  const bypassCooldown = Boolean(options && options.bypassCooldown);
   
   // Prevent SMS spam - cooldown after any attempt (success or fail)
-  if (now - lastSMSTime < SMS_COOLDOWN_MS) {
+  if (!bypassCooldown && now - lastSMSTime < SMS_COOLDOWN_MS) {
     return { sent: 0, failed: 0, total: phoneNumbers?.length || 0, skippedReason: 'cooldown' };
   }
 
