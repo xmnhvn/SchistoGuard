@@ -5,6 +5,7 @@ async function reverseGeocode(lat, lng) {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
     const response = await axios.get(url, {
+      timeout: 2500,
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'SchistoGuard/1.0 (contact@example.com)'

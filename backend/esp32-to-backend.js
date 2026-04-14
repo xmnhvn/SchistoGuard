@@ -23,8 +23,20 @@ const SMS_RELAY_ACK_URL = `${BACKEND_ROOT}/api/sensors/sms-relay/ack`;
 let currentESP32URL = `http://${ESP32_HOSTNAME}/api/sensors`;
 let useHostname = true;
 let relayAuthWarningShown = false;
+let sensorFailureStreak = 0;
+let relayFailureStreak = 0;
+let nextSensorAttemptAt = 0;
+let nextRelayAttemptAt = 0;
+
+function getBackoffMs(streak, baseMs, maxMs) {
+  const exponent = Math.min(streak, 5);
+  return Math.min(maxMs, baseMs * Math.pow(2, exponent));
+}
 
 async function fetchAndSaveSensorData() {
+  const now = Date.now();
+  if (now < nextSensorAttemptAt) return;
+
   try {
     // Try fetching from current URL (hostname or IP)
     const response = await axios.get(currentESP32URL, { timeout: 5000 });
@@ -60,8 +72,13 @@ async function fetchAndSaveSensorData() {
       ? ` GPS=${latitude.toFixed(6)},${longitude.toFixed(6)}`
       : ' GPS=unavailable';
     console.log(`✓ Sensor data saved: T=${sensorData.temperature}°C pH=${sensorData.ph} Turb=${sensorData.turbidity}NTU${gpsTag}`);
+    sensorFailureStreak = 0;
+    nextSensorAttemptAt = 0;
     
   } catch (error) {
+    sensorFailureStreak += 1;
+    nextSensorAttemptAt = Date.now() + getBackoffMs(sensorFailureStreak, 5000, 60000);
+
     // If hostname fails, try IP fallback
     if (useHostname && (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN' || error.code === 'ETIMEDOUT')) {
       console.log(`⚠ Hostname ${ESP32_HOSTNAME} not found, switching to IP fallback...`);
@@ -71,10 +88,15 @@ async function fetchAndSaveSensorData() {
       return fetchAndSaveSensorData();
     }
     
+    if (error.response && error.response.status === 504) {
+      console.error(`✗ ESP32/backend timeout from ${currentESP32URL} (504). Backing off ${Math.round((nextSensorAttemptAt - Date.now()) / 1000)}s.`);
+      return;
+    }
+    
     if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-      console.error(`✗ Cannot reach ESP32 at ${currentESP32URL} - Check WiFi connection`);
+      console.error(`✗ Cannot reach ESP32 at ${currentESP32URL} - Check WiFi connection. Backing off ${Math.round((nextSensorAttemptAt - Date.now()) / 1000)}s.`);
     } else {
-      console.error(`✗ Error fetching/saving sensor data:`, error.message);
+      console.error(`✗ Error fetching/saving sensor data:`, error.message, `(backoff ${Math.round((nextSensorAttemptAt - Date.now()) / 1000)}s)`);
     }
   }
 }
@@ -125,6 +147,9 @@ async function acknowledgeSmsJob(jobId, success, error) {
 async function pollSmsRelayQueue() {
   if (!ENABLE_SMS_RELAY) return;
 
+  const now = Date.now();
+  if (now < nextRelayAttemptAt) return;
+
   if (!SMS_RELAY_TOKEN) {
     if (!relayAuthWarningShown) {
       console.warn('⚠ SMS relay is enabled but SMS_RELAY_TOKEN is missing. Skipping relay polling.');
@@ -160,6 +185,8 @@ async function pollSmsRelayQueue() {
       }
     }
   } catch (error) {
+    relayFailureStreak += 1;
+    nextRelayAttemptAt = Date.now() + getBackoffMs(relayFailureStreak, 5000, 60000);
     console.error('✗ SMS relay poll error:', error.message);
   }
 }

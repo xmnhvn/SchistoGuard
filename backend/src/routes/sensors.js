@@ -1268,7 +1268,14 @@ router.post("/", async (req, res) => {
   const status = classifyWater(temperature, ph, turbidity);
   let address = null;
   if (typeof latitude === 'number' && typeof longitude === 'number' && latitude !== null && longitude !== null) {
-    address = await reverseGeocode(latitude, longitude);
+    try {
+      address = await Promise.race([
+        reverseGeocode(latitude, longitude),
+        new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+      ]);
+    } catch {
+      address = null;
+    }
   }
   latestData = {
     turbidity,
