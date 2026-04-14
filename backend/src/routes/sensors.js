@@ -18,8 +18,16 @@ let SMS_SUMMARY_LAST_SENT = {};
 const SMS_SUMMARY_IN_FLIGHT = new Set();
 const SMS_SUMMARY_CONNECTED_WINDOW_MS = 10000;
 const SMS_SUMMARY_TIMEZONE = process.env.SMS_SUMMARY_TIMEZONE || 'Asia/Manila';
+const SMS_TRANSPORT_MODE = (process.env.SMS_TRANSPORT_MODE || 'esp32-http').toLowerCase();
+const SMS_RELAY_TOKEN = process.env.SMS_RELAY_TOKEN || '';
 const SAME_SITE_DISTANCE_DEG = 0.0025;
 const deviceSiteCache = new Map();
+
+function hasRelayAuth(req) {
+  if (!SMS_RELAY_TOKEN) return false;
+  const token = (req.get('x-sms-relay-token') || '').trim();
+  return token === SMS_RELAY_TOKEN;
+}
 
 function isFiniteCoordinate(value) {
   return typeof value === 'number' && Number.isFinite(value);
@@ -737,15 +745,15 @@ router.get('/sms-summary-debug', async (req, res) => {
     const fallbackSite = await getCurrentSiteSnapshot();
 
     const recipientCounts = await new Promise((resolve, reject) => {
-      db.all(
+      db.query(
         `SELECT COALESCE("siteName", '') as site_name, COUNT(*) as total
          FROM residents
          GROUP BY COALESCE("siteName", '')
          ORDER BY total DESC`,
         [],
-        (err, rows) => {
+        (err, result) => {
           if (err) return reject(err);
-          resolve(rows || []);
+          resolve(result?.rows || []);
         }
       );
     });
@@ -766,6 +774,99 @@ router.get('/sms-summary-debug', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/sms-relay/pull', async (req, res) => {
+  if (!hasRelayAuth(req)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized relay request' });
+  }
+
+  const requestedLimit = Number(req.body?.limit || 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(25, Math.max(1, Math.floor(requestedLimit))) : 10;
+
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT id, phone, message, meta_json
+         FROM sms_outbox
+         WHERE status = 'pending'
+         ORDER BY id ASC
+         LIMIT ?`,
+        [limit],
+        (err, resultRows) => {
+          if (err) return reject(err);
+          resolve(resultRows || []);
+        }
+      );
+    });
+
+    if (!rows.length) {
+      return res.json({ success: true, jobs: [] });
+    }
+
+    await Promise.all(
+      rows.map((row) => new Promise((resolve) => {
+        db.run(
+          `UPDATE sms_outbox
+           SET status = 'processing', updated_at = ?
+           WHERE id = ? AND status = 'pending'`,
+          [new Date().toISOString(), row.id],
+          () => resolve()
+        );
+      }))
+    );
+
+    const jobs = rows.map((row) => ({
+      id: row.id,
+      phone: row.phone,
+      message: row.message,
+      meta: row.meta_json ? JSON.parse(row.meta_json) : null,
+    }));
+
+    return res.json({ success: true, jobs });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/sms-relay/ack', async (req, res) => {
+  if (!hasRelayAuth(req)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized relay request' });
+  }
+
+  const jobId = Number(req.body?.jobId);
+  const success = Boolean(req.body?.success);
+  const errorMessage = (req.body?.error || '').toString().slice(0, 500);
+
+  if (!Number.isFinite(jobId) || jobId <= 0) {
+    return res.status(400).json({ success: false, message: 'jobId is required' });
+  }
+
+  const nowIso = new Date().toISOString();
+  const status = success ? 'sent' : 'failed';
+
+  try {
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE sms_outbox
+         SET status = ?,
+             attempts = attempts + 1,
+             last_error = ?,
+             updated_at = ?,
+             sent_at = CASE WHEN ? = 'sent' THEN ? ELSE sent_at END
+         WHERE id = ?`,
+        [status, success ? null : errorMessage || 'relay-send-failed', nowIso, status, nowIso, jobId],
+        (err) => {
+          if (err) return reject(err);
+          resolve();
+        }
+      );
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -828,6 +929,38 @@ const SMS_COOLDOWN_MS = 300000; // 5 minutes between successful SMS
 async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = [], options = {}) {
   const now = Date.now();
   const bypassCooldown = Boolean(options && options.bypassCooldown);
+
+  if (SMS_TRANSPORT_MODE === 'relay-queue') {
+    const nowIso = new Date().toISOString();
+    let queued = 0;
+
+    for (const phone of phoneNumbers) {
+      const meta = {
+        alertMessages,
+        queuedAt: nowIso,
+      };
+
+      await new Promise((resolve) => {
+        db.run(
+          `INSERT INTO sms_outbox (phone, message, meta_json, status, attempts, last_error, created_at, updated_at, sent_at)
+           VALUES (?, ?, ?, 'pending', 0, NULL, ?, ?, NULL)`,
+          [phone, message, JSON.stringify(meta), nowIso, nowIso],
+          (err) => {
+            if (!err) queued += 1;
+            resolve();
+          }
+        );
+      });
+    }
+
+    return {
+      sent: queued,
+      failed: Math.max(0, phoneNumbers.length - queued),
+      total: phoneNumbers.length,
+      skippedReason: queued > 0 ? null : 'queue-insert-failed',
+      queued: true,
+    };
+  }
   
   // Prevent SMS spam - cooldown after any attempt (success or fail)
   if (!bypassCooldown && now - lastSMSTime < SMS_COOLDOWN_MS) {

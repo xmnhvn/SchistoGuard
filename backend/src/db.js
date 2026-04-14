@@ -179,6 +179,22 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS "siteName" TEXT');
     await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS address TEXT');
 
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS sms_outbox (
+        id SERIAL PRIMARY KEY,
+        phone TEXT NOT NULL,
+        message TEXT NOT NULL,
+        meta_json TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sent_at TEXT
+      )
+    `);
+    await db.query('CREATE INDEX IF NOT EXISTS idx_sms_outbox_status_id ON sms_outbox (status, id)');
+
     // Backfill legacy reports that were created before site snapshot fields existed.
     const settingsResult = await db.query("SELECT value FROM settings WHERE key = 'device_name' LIMIT 1");
     const registryResult = await db.query(`
