@@ -20,6 +20,7 @@ const SMS_RELAY_BATCH_SIZE = parseInt(process.env.SMS_RELAY_BATCH_SIZE || '10', 
 const SMS_RELAY_PULL_TIMEOUT_MS = parseInt(process.env.SMS_RELAY_PULL_TIMEOUT_MS || '20000', 10);
 const SMS_RELAY_PULL_RETRIES = Math.max(1, parseInt(process.env.SMS_RELAY_PULL_RETRIES || '3', 10));
 const SMS_RELAY_RETRY_DELAY_MS = parseInt(process.env.SMS_RELAY_RETRY_DELAY_MS || '1500', 10);
+const ESP32_SMS_TIMEOUT_MS = parseInt(process.env.ESP32_SMS_TIMEOUT_MS || '20000', 10);
 
 // Poll interval in milliseconds (2 seconds)
 const POLL_INTERVAL = parseInt(process.env.ESP32_POLL_INTERVAL) || 2000;
@@ -198,18 +199,24 @@ async function sendSmsViaEsp32(phone, message) {
 
   try {
     await axios.post(url, payload, {
-      timeout: 5000,
+      timeout: ESP32_SMS_TIMEOUT_MS,
       headers: { 'Content-Type': 'application/json' }
     });
     return { success: true };
   } catch (err) {
-    if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
+    const shouldTryFallback =
+      err.code === 'ENOTFOUND' ||
+      err.code === 'EAI_AGAIN' ||
+      err.code === 'ETIMEDOUT' ||
+      err.code === 'ECONNABORTED';
+
+    if (shouldTryFallback) {
       if (ESP32_AUTO_DISCOVER) {
         await discoverEsp32Ip();
       }
       url = `http://${ESP32_IP_FALLBACK}/api/sms`;
       await axios.post(url, payload, {
-        timeout: 5000,
+        timeout: ESP32_SMS_TIMEOUT_MS,
         headers: { 'Content-Type': 'application/json' }
       });
       return { success: true };
