@@ -1269,6 +1269,7 @@ export function Dashboard({
         />
 
         <div
+          className="scrollbar-hide"
           style={{
             position: "relative",
             zIndex: 2,
@@ -1279,6 +1280,8 @@ export function Dashboard({
             flexDirection: "column",
             gap: 16,
             overflowY: "auto",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
             pointerEvents: "none",
           } as React.CSSProperties}
         >
