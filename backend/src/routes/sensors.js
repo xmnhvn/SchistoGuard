@@ -571,10 +571,10 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
     slotTime,
   });
 
-  const recipients = await new Promise((resolve, reject) => {
+  let recipients = await new Promise((resolve, reject) => {
     db.all(
-      "SELECT phone FROM residents WHERE siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='municipal_health_officer' THEN 2 ELSE 3 END",
-      [siteName],
+      "SELECT phone FROM residents WHERE siteName = ? OR siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='municipal_health_officer' THEN 2 ELSE 3 END",
+      [siteName, siteSnapshot.address || siteName],
       (err, rows) => {
         if (err) return reject(err);
         resolve((rows || []).map((row) => row.phone).filter(Boolean));
@@ -583,17 +583,37 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
   });
 
   if (!recipients.length) {
+    recipients = await new Promise((resolve, reject) => {
+      db.all(
+        "SELECT phone FROM residents WHERE role IN ('bhw', 'municipal_health_officer') ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='municipal_health_officer' THEN 2 ELSE 3 END",
+        [],
+        (err, rows) => {
+          if (err) return reject(err);
+          resolve((rows || []).map((row) => row.phone).filter(Boolean));
+        }
+      );
+    });
+  }
+
+  if (!recipients.length) {
     console.log(`[sms-summary] No recipients found for ${siteName}; skipping ${slotTime} dispatch.`);
     return;
   }
 
-  await sendSMSViaESP32(message, [
+  const dispatchResult = await sendSMSViaESP32(message, [
     `Summary slot: ${slotTime}`,
     `Site: ${siteName}`,
     `Risk: ${stats.avgTurbidity != null && stats.avgTemperature != null && stats.avgPh != null ? calculateRiskLevel(stats.avgTurbidity, stats.avgTemperature, stats.avgPh) : 'n/a'}`,
   ], recipients);
 
-  await markSmsSummarySent(`${siteKey}:${slotTime}`, now.toISOString());
+  if (dispatchResult?.sent > 0) {
+    await markSmsSummarySent(`${siteKey}:${slotTime}`, now.toISOString());
+    return;
+  }
+
+  console.warn(
+    `[sms-summary] Not marking as sent for ${siteName} @ ${slotTime}. Reason: ${dispatchResult?.skippedReason || 'no successful SMS'}`
+  );
 }
 
 async function checkSmsSummarySchedule() {
@@ -701,12 +721,12 @@ async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
   
   // Prevent SMS spam - cooldown after any attempt (success or fail)
   if (now - lastSMSTime < SMS_COOLDOWN_MS) {
-    return; // Silent cooldown
+    return { sent: 0, failed: 0, total: phoneNumbers?.length || 0, skippedReason: 'cooldown' };
   }
 
   // If no phone numbers provided, skip
   if (!phoneNumbers || phoneNumbers.length === 0) {
-    return;
+    return { sent: 0, failed: 0, total: 0, skippedReason: 'no-recipients' };
   }
 
   try {
@@ -759,6 +779,7 @@ async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
     }
 
     lastSMSTime = now; // Start 5-minute cooldown
+    return { sent, failed, total: phoneNumbers.length, skippedReason: null };
   } catch (error) {
     // Show failure logs once
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -767,6 +788,7 @@ async function sendSMSViaESP32(message, alertMessages = [], phoneNumbers = []) {
     console.log(`   Message: ${message.substring(0, 50)}...`);
     console.error('✗ Failed to send SMS:', error.message);
     lastSMSTime = now; // Start 5-minute cooldown even on failure
+    return { sent: 0, failed: phoneNumbers.length, total: phoneNumbers.length, skippedReason: 'dispatch-error' };
   }
 }
 
