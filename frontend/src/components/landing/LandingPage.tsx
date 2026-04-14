@@ -496,8 +496,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (screenWidth < 480) return '30px'; // Small mobile
     if (screenWidth < 768) return '40px'; // Large mobile
     if (screenWidth < 1024) return '55px'; // Tablet
-    if (isSmallDesktop) return '28px';
-    return '44px'; // Desktop (refined for better scaling)
+    if (isSmallDesktop) return '26px';
+    return '40px'; // Desktop (refined for better scaling)
   };
 
   const getHeroParagraphFontSize = () => {
@@ -538,6 +538,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isSmallDesktop = !isMobileOrTablet && screenWidth <= 1600 && screenHeight <= 1000;
   const isDesktopViewport = !isMobileOrTablet;
   const desktopSidePadding = '10%';
+  const liveUpdatesContentPadding = isMobileOrTablet
+    ? (screenWidth < 400 ? '72px 16px 16px'
+      : screenWidth < 600 ? '76px 20px 20px'
+      : screenWidth < 800 ? '80px 24px 24px'
+      : '88px 28px 28px')
+    : (isSmallDesktop ? '88px 36px 92px' : '100px 50px 120px');
+  const liveUpdatesBackButtonLeft = isMobileOrTablet
+    ? (screenWidth < 400 ? 16 : screenWidth < 600 ? 20 : screenWidth < 800 ? 24 : 28)
+    : (isSmallDesktop ? 36 : 50);
 
   // ─── Risk Calculation Logic (Sync with Dashboard) ───────────────────────
   const getOverallRisk = () => {
@@ -846,7 +855,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="hidden lg:block w-full" style={{ paddingTop: isSmallDesktop ? 24 : 32, paddingBottom: isSmallDesktop ? 24 : 32 }}>
           <div className="w-full" style={{ paddingLeft: desktopSidePadding, paddingRight: desktopSidePadding }}>
             <div className="grid lg:grid-cols-2 items-center" style={{ gap: isSmallDesktop ? 28 : 40 }}>
-              <div className="max-w-4xl animate-fade-up" style={{ maxWidth: isSmallDesktop ? 620 : undefined, paddingTop: isSmallDesktop ? 28 : 32, paddingBottom: isSmallDesktop ? 28 : 32 }}>
+              <div
+                className="max-w-4xl animate-fade-up"
+                style={{
+                  maxWidth: isSmallDesktop ? 620 : undefined,
+                  paddingTop: isSmallDesktop ? 28 : 32,
+                  paddingBottom: isSmallDesktop ? 28 : 32,
+                  marginTop: isSmallDesktop ? -22 : -16,
+                }}
+              >
                 <div>
                   <h2
                     className="animate-fade-up animate-delay-50"
@@ -1096,12 +1113,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               left: 0,
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
-              padding: isMobileOrTablet
-                ? (screenWidth < 400 ? '72px 16px 16px' :
-                  screenWidth < 600 ? '76px 20px 20px' :
-                    screenWidth < 800 ? '80px 24px 24px' :
-                      '88px 28px 28px')
-                : (isSmallDesktop ? '88px 36px 92px' : '100px 50px 120px'),
+              padding: liveUpdatesContentPadding,
               display: 'flex',
               flexDirection: 'column',
               gap: 16,
@@ -1122,9 +1134,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 top: isMobileOrTablet
                   ? (screenWidth < 400 ? 18 : screenWidth < 600 ? 20 : screenWidth < 800 ? 22 : 26)
                   : 32,
-                left: isMobileOrTablet
-                  ? (screenWidth < 400 ? 16 : screenWidth < 600 ? 20 : screenWidth < 800 ? 24 : 28)
-                  : 50,
+                left: liveUpdatesBackButtonLeft,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

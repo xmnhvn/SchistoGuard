@@ -29,7 +29,6 @@ export default function App() {
   const [systemStatus, setSystemStatus] = useState<'operational' | 'down'>('operational');
   const [user, setUser] = useState<{ id: number; email: string; firstName: string; lastName: string; role: string; lastView?: string; profilePhoto?: string | null } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [adminUnlockOpen, setAdminUnlockOpen] = useState(false);
   const [adminUnlockEmail, setAdminUnlockEmail] = useState('');
   const [adminUnlockPassword, setAdminUnlockPassword] = useState('');
@@ -87,15 +86,12 @@ export default function App() {
 
   useEffect(() => {
     const check = () => {
-      setViewportWidth(window.innerWidth);
       setIsMobile(window.innerWidth < 600);
     };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-
-  const sensorPreviewPad = viewportWidth < 600 ? 16 : viewportWidth < 1100 ? 24 : 32;
 
   useEffect(() => {
     if (!isAuthenticated || typeof window === 'undefined' || !("Notification" in window)) return;
@@ -434,19 +430,13 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <div className="scrollbar-hide" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ paddingLeft: sensorPreviewPad, paddingRight: sensorPreviewPad }}>
-                  <button
-                    onClick={() => setCurrentView('landing')}
-                    className="flex items-center justify-center w-10 h-10 rounded-full text-schistoguard-navy hover:text-schistoguard-navy/80 transition-colors flex-shrink-0"
-                    aria-label="Back to Home"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Dashboard onNavigate={(() => console.log('Navigation disabled in sensor-info view'))} setSystemStatus={setSystemStatus} viewMode="sensors-only" />
-                </div>
+              <div className="flex-1 min-w-0">
+                <Dashboard
+                  onNavigate={(() => console.log('Navigation disabled in sensor-info view'))}
+                  setSystemStatus={setSystemStatus}
+                  viewMode="sensors-only"
+                  onBack={() => setCurrentView('landing')}
+                />
               </div>
             )}
           </div>
