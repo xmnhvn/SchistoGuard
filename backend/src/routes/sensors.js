@@ -267,6 +267,22 @@ function buildDateAtTime(baseDate, timeValue) {
   return nextDate;
 }
 
+function getNextScheduledSlotTime(now = new Date()) {
+  const currentParts = getZonedDateTimeParts(now);
+  const currentMinute = (currentParts.hour * 60) + currentParts.minute;
+  const orderedTimes = [...SMS_SUMMARY_TIMES]
+    .map((time) => ({ time, minutes: getMinutesFromTime(time) }))
+    .filter((entry) => entry.minutes != null)
+    .sort((left, right) => left.minutes - right.minutes);
+
+  if (!orderedTimes.length) return null;
+
+  const nextToday = orderedTimes.find((entry) => entry.minutes >= currentMinute);
+  if (nextToday) return nextToday.time;
+
+  return orderedTimes[0].time;
+}
+
 function getZonedDateTimeParts(date, timeZone = SMS_SUMMARY_TIMEZONE) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -875,7 +891,7 @@ router.post('/sms-summary-trigger', async (req, res) => {
     await loadSmsSummarySettingsFromDB();
 
     const requestedSlot = normalizeSmsTime(req.body?.slotTime);
-    const slotTime = requestedSlot || SMS_SUMMARY_TIMES[0];
+    const slotTime = requestedSlot || getNextScheduledSlotTime(new Date());
     if (!slotTime) {
       return res.status(400).json({ success: false, message: 'No valid slotTime available' });
     }
