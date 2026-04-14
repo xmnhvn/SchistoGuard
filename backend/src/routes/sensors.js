@@ -938,7 +938,7 @@ router.post('/sms-summary-trigger', async (req, res) => {
 
 // ESP32 connection for SMS
 const ESP32_HOSTNAME = 'schistoguard-esp32.local';
-const ESP32_IP_FALLBACK = '192.168.100.168';
+const ESP32_IP_FALLBACK = process.env.ESP32_IP_FALLBACK || '10.143.90.164';
 let lastSMSTime = 0;
 const SMS_COOLDOWN_MS = 300000; // 5 minutes between successful SMS
 
