@@ -17,6 +17,7 @@ let SMS_SUMMARY_TIMES = [...SMS_SUMMARY_DEFAULT_TIMES];
 let SMS_SUMMARY_LAST_SENT = {};
 const SMS_SUMMARY_IN_FLIGHT = new Set();
 const SMS_SUMMARY_CONNECTED_WINDOW_MS = 10000;
+const SMS_SUMMARY_TIMEZONE = process.env.SMS_SUMMARY_TIMEZONE || 'Asia/Manila';
 const SAME_SITE_DISTANCE_DEG = 0.0025;
 const deviceSiteCache = new Map();
 
@@ -258,6 +259,62 @@ function buildDateAtTime(baseDate, timeValue) {
   return nextDate;
 }
 
+function getZonedDateTimeParts(date, timeZone = SMS_SUMMARY_TIMEZONE) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  const readPart = (type) => Number(parts.find((entry) => entry.type === type)?.value || '0');
+  return {
+    year: readPart('year'),
+    month: readPart('month'),
+    day: readPart('day'),
+    hour: readPart('hour'),
+    minute: readPart('minute'),
+    second: readPart('second'),
+  };
+}
+
+function getTimezoneOffsetMs(date, timeZone = SMS_SUMMARY_TIMEZONE) {
+  const zoned = getZonedDateTimeParts(date, timeZone);
+  const zonedAsUtcMs = Date.UTC(
+    zoned.year,
+    zoned.month - 1,
+    zoned.day,
+    zoned.hour,
+    zoned.minute,
+    zoned.second,
+    0
+  );
+  return zonedAsUtcMs - date.getTime();
+}
+
+function buildDateAtTimeInZone(baseDate, timeValue, timeZone = SMS_SUMMARY_TIMEZONE) {
+  const normalized = normalizeSmsTime(timeValue);
+  if (!normalized) return null;
+
+  const [hours, minutes] = normalized.split(':').map(Number);
+  const zonedBase = getZonedDateTimeParts(baseDate, timeZone);
+  const utcGuess = new Date(Date.UTC(zonedBase.year, zonedBase.month - 1, zonedBase.day, hours, minutes, 0, 0));
+  const offset = getTimezoneOffsetMs(utcGuess, timeZone);
+  return new Date(utcGuess.getTime() - offset);
+}
+
+function addDaysInZone(baseDate, days, timeZone = SMS_SUMMARY_TIMEZONE) {
+  const shifted = new Date(baseDate.getTime() + (days * 24 * 60 * 60 * 1000));
+  const zoned = getZonedDateTimeParts(shifted, timeZone);
+  const utcGuess = new Date(Date.UTC(zoned.year, zoned.month - 1, zoned.day, zoned.hour, zoned.minute, zoned.second, 0));
+  const offset = getTimezoneOffsetMs(utcGuess, timeZone);
+  return new Date(utcGuess.getTime() - offset);
+}
+
 async function loadSmsSummarySettingsFromDB() {
   const timesValue = await getSettingValue(SMS_SUMMARY_SETTINGS_KEY);
   const lastSentValue = await getSettingValue(SMS_SUMMARY_LAST_SENT_KEY);
@@ -422,6 +479,7 @@ async function getSummaryStats(siteKey, startIso, endIso) {
 
 function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime }) {
   const startLabel = new Date(startIso).toLocaleString('en-US', {
+    timeZone: SMS_SUMMARY_TIMEZONE,
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -429,6 +487,7 @@ function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime })
     hour12: false,
   });
   const endLabel = new Date(endIso).toLocaleString('en-US', {
+    timeZone: SMS_SUMMARY_TIMEZONE,
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -493,11 +552,12 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
   if (currentIndex === -1) return;
 
   const previousEntry = currentIndex === 0 ? orderedTimes[orderedTimes.length - 1] : orderedTimes[currentIndex - 1];
-  const startDate = buildDateAtTime(now, previousEntry.time);
-  const endDate = buildDateAtTime(now, slotTime);
+  const startDate = buildDateAtTimeInZone(now, previousEntry.time);
+  const endDate = buildDateAtTimeInZone(now, slotTime);
   if (!startDate || !endDate) return;
   if (previousEntry.minutes > slotMinutes || currentIndex === 0) {
-    startDate.setDate(startDate.getDate() - 1);
+    const adjusted = addDaysInZone(startDate, -1);
+    startDate.setTime(adjusted.getTime());
   }
 
   const siteKey = siteSnapshot.siteKey || normalizeSiteKey(siteSnapshot.siteName || GLOBAL_DEVICE_NAME);
@@ -538,16 +598,18 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime) {
 
 async function checkSmsSummarySchedule() {
   const currentDate = new Date();
-  const currentMinute = (currentDate.getHours() * 60) + currentDate.getMinutes();
+  const zonedNow = getZonedDateTimeParts(currentDate);
+  const currentMinute = (zonedNow.hour * 60) + zonedNow.minute;
   const activeSites = await getActiveSiteSnapshots();
+  const sitesToProcess = activeSites.length ? activeSites : [await getCurrentSiteSnapshot()].filter(Boolean);
 
-  if (!activeSites.length) return;
+  if (!sitesToProcess.length) return;
 
   for (const slotTime of SMS_SUMMARY_TIMES) {
     const slotMinutes = getMinutesFromTime(slotTime);
     if (slotMinutes == null || currentMinute !== slotMinutes) continue;
 
-    for (const siteSnapshot of activeSites) {
+    for (const siteSnapshot of sitesToProcess) {
       const siteKey = siteSnapshot.siteKey || normalizeSiteKey(siteSnapshot.siteName || GLOBAL_DEVICE_NAME);
       const inflightKey = `${siteKey}:${slotTime}`;
       if (SMS_SUMMARY_IN_FLIGHT.has(inflightKey)) continue;
@@ -555,7 +617,7 @@ async function checkSmsSummarySchedule() {
       const lastSentAt = SMS_SUMMARY_LAST_SENT[inflightKey];
       if (lastSentAt) {
         const lastSentDate = new Date(lastSentAt);
-        const todaySlot = buildDateAtTime(currentDate, slotTime);
+        const todaySlot = buildDateAtTimeInZone(currentDate, slotTime);
         if (todaySlot && lastSentDate.getTime() >= todaySlot.getTime()) {
           continue;
         }
