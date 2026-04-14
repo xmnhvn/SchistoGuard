@@ -744,8 +744,29 @@ router.post('/sms-summary-config', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Two valid SMS times are required' });
     }
 
+    if (normalizedTimes[0] === normalizedTimes[1]) {
+      return res.status(400).json({ success: false, message: 'SMS times must be different' });
+    }
+
     await saveSmsSummarySettingsToDB(normalizedTimes, {});
-    res.json({ success: true, times: normalizedTimes });
+
+    // Read-after-write verification to ensure the persisted value matches what was requested.
+    await loadSmsSummarySettingsFromDB();
+    const persistedTimes = [...SMS_SUMMARY_TIMES];
+    const savedExactly =
+      persistedTimes.length === normalizedTimes.length &&
+      persistedTimes.every((time, idx) => time === normalizedTimes[idx]);
+
+    if (!savedExactly) {
+      return res.status(500).json({
+        success: false,
+        message: 'Schedule saved but verification failed. Please retry.',
+        requestedTimes: normalizedTimes,
+        persistedTimes,
+      });
+    }
+
+    res.json({ success: true, times: persistedTimes, verified: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -139,8 +139,39 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         return;
       }
 
-      await apiPost("/api/sensors/sms-summary-config", { times: normalizedTimes });
-      setSmsScheduleMsg("SMS summary schedule saved successfully.");
+      if (normalizedTimes[0] === normalizedTimes[1]) {
+        setSmsScheduleMsg("First and second SMS time must be different.");
+        return;
+      }
+
+      const saveResult = await apiPost("/api/sensors/sms-summary-config", { times: normalizedTimes });
+      let persistedTimes = Array.isArray(saveResult?.times)
+        ? saveResult.times.map((time: string) => (time || "").trim()).slice(0, 2)
+        : [];
+
+      const matchesRequest =
+        persistedTimes.length === 2 &&
+        persistedTimes[0] === normalizedTimes[0] &&
+        persistedTimes[1] === normalizedTimes[1];
+
+      if (!matchesRequest) {
+        const verifyResult = await apiGet("/api/sensors/sms-summary-config");
+        persistedTimes = Array.isArray(verifyResult?.times)
+          ? verifyResult.times.map((time: string) => (time || "").trim()).slice(0, 2)
+          : [];
+      }
+
+      const verifiedMatch =
+        persistedTimes.length === 2 &&
+        persistedTimes[0] === normalizedTimes[0] &&
+        persistedTimes[1] === normalizedTimes[1];
+
+      if (!verifiedMatch) {
+        throw new Error("Schedule was not persisted exactly. Please try again.");
+      }
+
+      setSmsSummaryTimes(persistedTimes);
+      setSmsScheduleMsg("SMS summary schedule saved and verified successfully.");
     } catch (err: any) {
       setSmsScheduleMsg(err?.message || "Failed to update SMS summary schedule");
     } finally {
