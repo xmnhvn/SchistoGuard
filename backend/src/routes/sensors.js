@@ -56,14 +56,18 @@ function buildSiteIdentity(data) {
   const deviceId = (data.device_ip || data.deviceId || 'default-device').toString().trim();
   const address = (data.address || "").toString().trim() || null;
   const fallbackName = data.siteName || data.device_ip || GLOBAL_DEVICE_NAME || "Unknown Site";
+  const normalizedAddress = address ? normalizeSiteKey(address) : null;
   const currentCoords = {
     lat: isFiniteCoordinate(data.latitude) ? data.latitude : null,
     lng: isFiniteCoordinate(data.longitude) ? data.longitude : null,
   };
 
   const cached = deviceSiteCache.get(deviceId);
+  const cachedNormalizedAddress = cached?.address ? normalizeSiteKey(cached.address) : null;
+  const hasAddressChanged = Boolean(normalizedAddress && normalizedAddress !== cachedNormalizedAddress);
   if (
     cached &&
+    !hasAddressChanged &&
     isNearbyCoordinate(
       { lat: cached.latitude, lng: cached.longitude },
       { lat: currentCoords.lat, lng: currentCoords.lng }
