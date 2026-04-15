@@ -61,13 +61,26 @@ function buildSiteIdentity(data) {
     lat: isFiniteCoordinate(data.latitude) ? data.latitude : null,
     lng: isFiniteCoordinate(data.longitude) ? data.longitude : null,
   };
+  const currentCoordinateBucket =
+    isFiniteCoordinate(currentCoords.lat) && isFiniteCoordinate(currentCoords.lng)
+      ? `${currentCoords.lat.toFixed(4)}:${currentCoords.lng.toFixed(4)}`
+      : null;
 
   const cached = deviceSiteCache.get(deviceId);
   const cachedNormalizedAddress = cached?.address ? normalizeSiteKey(cached.address) : null;
+  const cachedCoordinateBucket =
+    cached && isFiniteCoordinate(cached.latitude) && isFiniteCoordinate(cached.longitude)
+      ? `${cached.latitude.toFixed(4)}:${cached.longitude.toFixed(4)}`
+      : null;
   const hasAddressChanged = Boolean(normalizedAddress && normalizedAddress !== cachedNormalizedAddress);
+  const hasCoordinateBucketChanged = Boolean(
+    currentCoordinateBucket && currentCoordinateBucket !== (cachedCoordinateBucket || '')
+  );
+  const shouldForceNewSiteFromCoordinates = !address && hasCoordinateBucketChanged;
   if (
     cached &&
     !hasAddressChanged &&
+    !shouldForceNewSiteFromCoordinates &&
     isNearbyCoordinate(
       { lat: cached.latitude, lng: cached.longitude },
       { lat: currentCoords.lat, lng: currentCoords.lng }
