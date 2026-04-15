@@ -44,6 +44,43 @@ function isNearbyCoordinate(a, b) {
   return distance <= SAME_SITE_DISTANCE_DEG;
 }
 
+// Find an existing site in DB with nearby coordinates; returns site_key if found, null otherwise
+function findNearestExistingSite(latitude, longitude) {
+  return new Promise((resolve) => {
+    if (!isFiniteCoordinate(latitude) || !isFiniteCoordinate(longitude)) {
+      return resolve(null);
+    }
+
+    db.all(
+      `SELECT site_key, latitude, longitude FROM site_registry
+       WHERE latitude IS NOT NULL AND longitude IS NOT NULL`,
+      [],
+      (err, rows) => {
+        if (err) {
+          console.error('[findNearestExistingSite DB error]', err.message);
+          return resolve(null);
+        }
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+          return resolve(null);
+        }
+
+        const incomingCoords = { lat: latitude, lng: longitude };
+        for (const row of rows) {
+          const existingSiteCoords = { lat: row.latitude, lng: row.longitude };
+          if (isNearbyCoordinate(incomingCoords, existingSiteCoords)) {
+            console.log('[findNearestExistingSite] Found nearby existing site:', row.site_key);
+            return resolve(row.site_key);
+          }
+        }
+
+        console.log('[findNearestExistingSite] No nearby existing site found');
+        resolve(null);
+      }
+    );
+  });
+}
+
 function normalizeSiteKey(address, fallback = "unknown-site") {
   const source = (address || fallback || "unknown-site").toString().trim().toLowerCase();
   return source
@@ -130,6 +167,42 @@ function buildSiteIdentity(data) {
   };
 }
 
+// Async version: checks for nearby existing sites in DB before building identity
+async function buildSiteIdentityWithProximityCheck(data) {
+  const currentCoords = {
+    lat: isFiniteCoordinate(data.latitude) ? data.latitude : null,
+    lng: isFiniteCoordinate(data.longitude) ? data.longitude : null,
+  };
+
+  // Check if coordinates match an existing nearby site in database
+  if (currentCoords.lat && currentCoords.lng) {
+    const nearestSiteKey = await findNearestExistingSite(currentCoords.lat, currentCoords.lng);
+    if (nearestSiteKey) {
+      // Get the site details from database and return them
+      return new Promise((resolve) => {
+        db.get(
+          `SELECT site_key, site_name, address FROM site_registry WHERE site_key = ? LIMIT 1`,
+          [nearestSiteKey],
+          (err, row) => {
+            if (err || !row) {
+              // Fallback to normal buildSiteIdentity if lookup fails
+              return resolve(buildSiteIdentity(data));
+            }
+            resolve({
+              siteKey: row.site_key,
+              siteName: row.site_name || (data.address || data.siteName || GLOBAL_DEVICE_NAME),
+              address: row.address || data.address || null
+            });
+          }
+        );
+      });
+    }
+  }
+
+  // No nearby site found, use normal identity building
+  return buildSiteIdentity(data);
+}
+
 function resolveResidentSiteName(siteIdentifier, callback) {
   const raw = (siteIdentifier || '').toString().trim();
   if (!raw) {
@@ -157,8 +230,8 @@ function resolveResidentSiteName(siteIdentifier, callback) {
   );
 }
 
-function upsertSiteRegistry(data, nowIso) {
-  const identity = buildSiteIdentity(data);
+function upsertSiteRegistry(data, nowIso, prebuiltIdentity) {
+  const identity = prebuiltIdentity || buildSiteIdentity(data);
   db.run(
     `INSERT INTO site_registry (site_key, site_name, address, latitude, longitude, first_seen, last_seen)
      VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1138,7 +1211,7 @@ setInterval(() => {
   checkSmsSummarySchedule();
 }, 30000);
 
-setInterval(() => {
+setInterval(async () => {
   if (!latestData) return;
   const now = new Date();
   const dataTimestamp = new Date(latestData.timestamp).getTime();
@@ -1155,8 +1228,11 @@ setInterval(() => {
     if (!err && value) intervalMs = parseInt(value, 10);
   });
 
-  // Always log to raw_readings (per event/second), now with GPS
-  const siteIdentity = upsertSiteRegistry(latestData, now.toISOString());
+  // Check for nearby existing sites and build identity with proximity check
+  const siteIdentity = await buildSiteIdentityWithProximityCheck(latestData);
+  // Update site registry with proximity-checked identity
+  upsertSiteRegistry(latestData, now.toISOString(), siteIdentity);
+
   db.run(
     "INSERT INTO raw_readings (turbidity, temperature, ph, status, latitude, longitude, address, site_key, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [
