@@ -366,22 +366,22 @@ export function Dashboard({
 
   const mapSites = (() => {
     const fromRegistry = availableSites
-      .map((site) => {
+      .reduce<Array<{ id: string; name: string; lat: number; lng: number; isActive: boolean; isSelected: boolean }>>((acc, site) => {
         const coords = resolveSiteCoordinates(site);
-        if (!coords) return null;
+        if (!coords) return acc;
 
         const lastSeenTs = site.lastSeen ? new Date(site.lastSeen).getTime() : Number.NaN;
         const isFreshSite = Number.isFinite(lastSeenTs) && (Date.now() - lastSeenTs <= SITE_STALE_MS);
-        return {
+        acc.push({
           id: site.siteKey,
           name: site.siteName,
           lat: coords.lat,
           lng: coords.lng,
           isActive: site.siteKey === activeSiteKey && !!liveReading?.deviceConnected && isFreshSite,
           isSelected: site.siteKey === selectedSiteKey,
-        };
-      })
-      .filter((site): site is { id: string; name: string; lat: number; lng: number; isActive?: boolean; isSelected?: boolean } => !!site)
+        });
+        return acc;
+      }, [])
       .sort((a, b) => Number(b.isSelected) - Number(a.isSelected));
 
     if (fromRegistry.length > 0) return fromRegistry;
@@ -594,6 +594,7 @@ export function Dashboard({
             } else {
               console.log('[Dashboard] NO fallback coords, clearing map');
             }
+            setLatestReading(null);
             setLiveReading({ ...data, deviceConnected: false });
             setActiveSiteKey(data.siteKey || null);
             // Only initialize selectedSiteKey if nothing is selected yet (first load)
@@ -731,6 +732,7 @@ export function Dashboard({
           setBackendOk(true);
         })
         .catch(() => {
+          setLatestReading(null);
           setBackendOk(false);
           setDataOk(false);
           setDeviceConnected(false);
