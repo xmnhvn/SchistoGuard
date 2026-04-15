@@ -1965,13 +1965,15 @@ export function Dashboard({
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
                       <img src="/icons/icon-risk.svg" alt="risk"
-                        style={{ width: 38, height: 38, objectFit: "contain" }} />
+                        style={{ width: 38, height: 38, objectFit: "contain", opacity: deviceConnected ? 1 : 0.4 }} />
                     <span style={{
-                      background: "transparent", color: riskColor, borderRadius: 999,
-                      border: `1.5px solid ${riskColor}`,
+                      background: deviceConnected ? "transparent" : "#f3f4f6", 
+                      color: deviceConnected ? riskColor : "#6b7280", 
+                      borderRadius: 999,
+                      border: deviceConnected ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
                       padding: "6px 20px",
                       fontWeight: 700, fontSize: tabletRiskPillFontSize,
-                      fontFamily: POPPINS, textTransform: "capitalize" as const,
+                      fontFamily: POPPINS, textTransform: deviceConnected ? "capitalize" as const : "none",
                       textAlign: "center" as const,
                       whiteSpace: "normal" as const,
                       lineHeight: 1.15,
@@ -1980,7 +1982,7 @@ export function Dashboard({
                       justifyContent: "center",
                       maxWidth: "100%",
                     }}>
-                        {overallRiskLabel}
+                        {deviceConnected ? overallRiskLabel : "No Data"}
                       </span>
                     </div>
                     <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -2019,12 +2021,14 @@ export function Dashboard({
                   }}>Risk Level</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                     <img src="/icons/icon-risk.svg" alt="risk"
-                      style={{ width: 32, height: 32, objectFit: "contain" }} />
+                      style={{ width: 32, height: 32, objectFit: "contain", opacity: deviceConnected ? 1 : 0.4 }} />
                     <span style={{
-                      background: "transparent", color: riskColor, borderRadius: 999,
-                      border: `1.5px solid ${riskColor}`,
+                      background: deviceConnected ? "transparent" : "#f3f4f6", 
+                      color: deviceConnected ? riskColor : "#6b7280", 
+                      borderRadius: 999,
+                      border: deviceConnected ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
                       padding: "5px 12px", fontWeight: 700, fontSize: mobileRiskPillFontSize,
-                      fontFamily: POPPINS, textTransform: "capitalize" as const,
+                      fontFamily: POPPINS, textTransform: deviceConnected ? "capitalize" as const : "none",
                       textAlign: "center" as const,
                       whiteSpace: "normal" as const,
                       lineHeight: 1.15,
@@ -2033,7 +2037,7 @@ export function Dashboard({
                       justifyContent: "center",
                       maxWidth: "100%",
                     }}>
-                      {overallRiskLabel}
+                      {deviceConnected ? overallRiskLabel : "No Data"}
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -2247,18 +2251,18 @@ export function Dashboard({
               Risk Level
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 12 : 18, marginBottom: isNarrowDesktop ? 8 : 14, flexWrap: "wrap" }}>
-              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain" }} />
+              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain", opacity: deviceConnected ? 1 : 0.4 }} />
               <span
                 style={{
-                  background: "transparent",
-                  color: riskColor,
-                  border: `1.5px solid ${riskColor}`,
+                  background: deviceConnected ? "transparent" : "#f3f4f6",
+                  color: deviceConnected ? riskColor : "#6b7280",
+                  border: deviceConnected ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
                   borderRadius: 999,
                   padding: isNarrowDesktop ? "6px 14px" : "8px 20px",
                   fontWeight: 700,
                   fontSize: isNarrowDesktop ? 14 : 16,
                   fontFamily: "'Poppins', sans-serif",
-                  textTransform: "capitalize",
+                  textTransform: deviceConnected ? "capitalize" : "none",
                   textAlign: "center",
                   whiteSpace: "normal",
                   lineHeight: 1.15,
@@ -2270,7 +2274,7 @@ export function Dashboard({
                   overflowWrap: "break-word",
                 }}
               >
-                {overallRiskLabel}
+                {deviceConnected ? overallRiskLabel : "No Data"}
               </span>
             </div>
             <p style={{ margin: 0, fontSize: isNarrowDesktop ? 12 : 14, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
