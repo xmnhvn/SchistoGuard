@@ -55,49 +55,56 @@ function DialogContent({
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
-      <DialogPrimitive.Content
-        data-slot="dialog-content"
-        className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed z-50 grid gap-4 rounded-xl border p-6 shadow-lg duration-200 overflow-y-auto",
-          className,
-        )}
+      <div
         style={{
-          top: "50%",
-          left: "12px",
-          right: "12px",
-          transform: "translateY(-50%)",
-          maxWidth: 512,
-          maxHeight: "calc(100vh - 5rem)",
-          marginInline: "auto",
-          ...style,
+          position: "fixed",
+          inset: 0,
+          zIndex: 50,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 12,
+          pointerEvents: "none",
         }}
-        {...props}
       >
-        {children}
-        {!hideCloseButton && (
-          <DialogPrimitive.Close 
-            style={{ 
-              width: 32, height: 32, borderRadius: "50%", 
-              border: "none", background: "#f3f4f6", 
-              color: "#64748b",
-              display: "flex", alignItems: "center", justifyContent: "center", 
-              cursor: "pointer",
-              transition: "all 0.2s",
-              position: "absolute",
-              top: 16,
-              right: 16,
-              zIndex: 50,
-              flexShrink: 0,
-              aspectRatio: "1/1",
-              padding: 0
-            }}
-            className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
-          >
-            <X size={18} />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Content>
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 relative z-50 grid w-full max-w-[32rem] gap-4 rounded-xl border p-6 shadow-lg duration-200 overflow-y-auto pointer-events-auto",
+            className,
+          )}
+          style={{
+            maxHeight: "calc(100vh - 1.5rem)",
+            ...style,
+          }}
+          {...props}
+        >
+          {children}
+          {!hideCloseButton && (
+            <DialogPrimitive.Close 
+              style={{ 
+                width: 32, height: 32, borderRadius: "50%", 
+                border: "none", background: "#f3f4f6", 
+                color: "#64748b",
+                display: "flex", alignItems: "center", justifyContent: "center", 
+                cursor: "pointer",
+                transition: "all 0.2s",
+                position: "absolute",
+                top: 16,
+                right: 16,
+                zIndex: 50,
+                flexShrink: 0,
+                aspectRatio: "1/1",
+                padding: 0
+              }}
+              className="hover:bg-[#e5e7eb] hover:text-slate-700 active:scale-95 transition-all outline-none"
+            >
+              <X size={18} />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Content>
+      </div>
     </DialogPortal>
   );
 }

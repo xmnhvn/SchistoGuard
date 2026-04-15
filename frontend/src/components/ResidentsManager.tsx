@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button, buttonVariants } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,6 +15,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import {
@@ -52,6 +54,8 @@ interface Resident {
   name: string;
   phone: string;
   role: "resident" | "bhw" | "municipal_health_officer";
+  barangay?: string;
+  designationDetail?: string;
   createdAt?: string;
 }
 
@@ -63,6 +67,310 @@ interface SiteOption {
 interface ResidentsManagerProps {
   siteName?: string;
   refreshTrigger?: number;
+}
+
+interface ResidentGroup {
+  key: string;
+  primaryResident: Resident;
+  records: Resident[];
+  displayName: string;
+  names: string[];
+  phone: string;
+  roles: Resident["role"][];
+  siteNames: string[];
+}
+
+interface ResidentFormData {
+  name: string;
+  phone: string;
+  role: Resident["role"];
+  barangay: string;
+  designationDetail: string;
+}
+
+const ROLE_ORDER: Record<Resident["role"], number> = {
+  bhw: 0,
+  municipal_health_officer: 1,
+  resident: 2,
+};
+
+const roleLabels: Record<Resident["role"], string> = {
+  resident: "Resident",
+  bhw: "BHW",
+  municipal_health_officer: "Municipal Health Officer",
+};
+
+const roleStyles: Record<Resident["role"], { background: string; color: string }> = {
+  resident: { background: "#eff6ff", color: "#2563eb" },
+  bhw: { background: "#f0fdf4", color: "#16a34a" },
+  municipal_health_officer: { background: "#faf5ff", color: "#9333ea" },
+};
+
+const EMPTY_RESIDENT_FORM: ResidentFormData = {
+  name: "",
+  phone: "",
+  role: "resident",
+  barangay: "",
+  designationDetail: "",
+};
+
+function normalizeResidentRole(role: unknown): Resident["role"] {
+  const normalized = (role || "").toString().trim().toLowerCase();
+
+  if (normalized === "bhw" || normalized === "barangay health worker" || normalized === "barangay health worker (bhw)") {
+    return "bhw";
+  }
+
+  if (
+    normalized === "municipal_health_officer" ||
+    normalized === "municipal health officer" ||
+    normalized === "mho"
+  ) {
+    return "municipal_health_officer";
+  }
+
+  return "resident";
+}
+
+function normalizeResidentPhone(phone: string) {
+  const digits = (phone || "").replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("0")) return `63${digits.slice(1)}`;
+  if (digits.length === 10 && digits.startsWith("9")) return `63${digits}`;
+  return digits;
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function compareResidents(a: Resident, b: Resident) {
+  const nameDiff = a.name.localeCompare(b.name);
+  if (nameDiff !== 0) return nameDiff;
+
+  const roleDiff = ROLE_ORDER[a.role] - ROLE_ORDER[b.role];
+  if (roleDiff !== 0) return roleDiff;
+
+  const siteDiff = a.siteName.localeCompare(b.siteName);
+  if (siteDiff !== 0) return siteDiff;
+
+  return a.id - b.id;
+}
+
+function buildResidentGroups(residentList: Resident[]): ResidentGroup[] {
+  const groups = new Map<string, Resident[]>();
+
+  residentList.forEach((resident) => {
+    const phoneKey = normalizeResidentPhone(resident.phone) || `resident-${resident.id}`;
+    const existing = groups.get(phoneKey);
+    if (existing) {
+      existing.push(resident);
+      return;
+    }
+    groups.set(phoneKey, [resident]);
+  });
+
+  return Array.from(groups.entries())
+    .map(([key, records]) => {
+      const sortedRecords = [...records].sort(compareResidents);
+      const primaryResident = sortedRecords[0];
+      const siteNames = uniqueStrings(sortedRecords.map((resident) => resident.siteName)).sort((a, b) => a.localeCompare(b));
+      const names = uniqueStrings(sortedRecords.map((resident) => resident.name)).sort((a, b) => a.localeCompare(b));
+      const roles = Array.from(new Set(sortedRecords.map((resident) => resident.role))).sort(
+        (a, b) => ROLE_ORDER[a] - ROLE_ORDER[b]
+      );
+
+      return {
+        key,
+        primaryResident,
+        records: sortedRecords,
+        displayName: primaryResident?.name || names[0] || "",
+        names,
+        phone: primaryResident?.phone || "",
+        roles,
+        siteNames,
+      };
+    })
+    .sort((a, b) => {
+      const nameDiff = a.displayName.localeCompare(b.displayName);
+      if (nameDiff !== 0) return nameDiff;
+      return a.phone.localeCompare(b.phone);
+    });
+}
+
+function getResidentGroupSummary(group: ResidentGroup) {
+  if (group.records.length <= 1) return "";
+  if (group.siteNames.length > 1) {
+    return `${group.records.length} records across ${group.siteNames.length} sites`;
+  }
+  return `${group.records.length} records merged by phone number`;
+}
+
+function getResidentRecordDetailLines(resident: Resident) {
+  const barangay = (resident.barangay || "").trim();
+  const designationDetail = (resident.designationDetail || "").trim();
+
+  if (resident.role === "municipal_health_officer") {
+    return [
+      barangay ? `Area: ${barangay}` : "",
+      designationDetail ? `Designation: ${designationDetail}` : "",
+    ].filter(Boolean);
+  }
+
+  if (resident.role === "bhw" || resident.role === "resident") {
+    return [barangay ? `Barangay: ${barangay}` : ""].filter(Boolean);
+  }
+
+  return [];
+}
+
+function getResidentGroupDetailLines(group: ResidentGroup) {
+  return uniqueStrings(group.records.flatMap((resident) => getResidentRecordDetailLines(resident)));
+}
+
+function SitePreviewChips({ group, compact = false }: { group: ResidentGroup; compact?: boolean }) {
+  if (!group.siteNames.length) return null;
+
+  const [primarySite, ...remainingSites] = group.siteNames;
+  const moreCount = remainingSites.length;
+  const maxSiteWidth = compact ? "100%" : 260;
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", maxWidth: "100%" }}>
+      <span
+        title={primarySite}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          maxWidth: maxSiteWidth,
+          minWidth: 0,
+          padding: "3px 10px",
+          borderRadius: 999,
+          background: "#f8fafc",
+          color: "#475569",
+          border: "1px solid #e2e8f0",
+          fontFamily: POPPINS,
+          fontSize: 10,
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {primarySite}
+      </span>
+      {moreCount > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "3px 10px",
+                borderRadius: 999,
+                border: "1px solid #dbe4f0",
+                background: "#fff",
+                color: "#357D86",
+                fontFamily: POPPINS,
+                fontSize: 10,
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              +{moreCount} more
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            style={{
+              fontFamily: POPPINS,
+              width: 320,
+              maxWidth: "min(320px, calc(100vw - 32px))",
+              padding: 0,
+              overflow: "hidden",
+              borderRadius: 16,
+            }}
+          >
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid #eef2f7", background: "#fbfdff" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2a3a", marginBottom: 2 }}>Linked Sites</div>
+              <div style={{ fontSize: 11, color: "#7b8a9a" }}>{group.siteNames.length} total sites for this contact</div>
+            </div>
+            <div style={{ maxHeight: 240, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+              {group.siteNames.map((siteName) => (
+                <div
+                  key={`${group.key}-${siteName}`}
+                  title={siteName}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    background: "#fff",
+                    border: "1px solid #eef2f7",
+                    color: "#475569",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {siteName}
+                </div>
+              ))}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+}
+
+function ResidentRoleDetailFields({
+  role,
+  formData,
+  onChange,
+  smallLaptopModal,
+  fieldPrefix,
+}: {
+  role: Resident["role"];
+  formData: ResidentFormData;
+  onChange: (field: "barangay" | "designationDetail", value: string) => void;
+  smallLaptopModal: boolean;
+  fieldPrefix: "add" | "edit";
+}) {
+  if (role === "resident" || role === "bhw") {
+    return (
+      <div>
+        <Label htmlFor={`barangay-${fieldPrefix}`} style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>
+          Barangay
+        </Label>
+        <Input
+          id={`barangay-${fieldPrefix}`}
+          value={formData.barangay}
+          onChange={(e) => onChange("barangay", e.target.value)}
+          placeholder="e.g., Basak"
+          style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
+        />
+      </div>
+    );
+  }
+
+  if (role === "municipal_health_officer") {
+    return (
+      <div>
+        <Label htmlFor={`designation-detail-${fieldPrefix}`} style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>
+          Designation
+        </Label>
+        <Input
+          id={`designation-detail-${fieldPrefix}`}
+          value={formData.designationDetail}
+          onChange={(e) => onChange("designationDetail", e.target.value)}
+          placeholder="e.g., Sanitary Inspector"
+          style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
+        />
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }: ResidentsManagerProps) {
@@ -80,15 +388,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
-  const [formData, setFormData] = useState<{
-    name: string;
-    phone: string;
-    role: "resident" | "bhw" | "municipal_health_officer";
-  }>({
-    name: "",
-    phone: "",
-    role: "resident",
-  });
+  const [formData, setFormData] = useState<ResidentFormData>(EMPTY_RESIDENT_FORM);
   const [isUploadingCSV, setIsUploadingCSV] = useState(false);
   const [uploadResultOpen, setUploadResultOpen] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
@@ -191,7 +491,14 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
       console.log("Fetching residents from:", endpoint);
       const data = await apiGet(endpoint);
       console.log("Residents data:", data);
-      setResidents(Array.isArray(data) ? data : []);
+      setResidents(
+        Array.isArray(data)
+          ? data.map((resident: any) => ({
+              ...resident,
+              role: normalizeResidentRole(resident?.role),
+            }))
+          : []
+      );
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error fetching residents";
       console.error("Fetch error:", errorMsg, err);
@@ -221,7 +528,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
       setError("");
       setIsAddDialogOpen(false);
-      setFormData({ name: "", phone: "", role: "resident" });
+      setFormData(EMPTY_RESIDENT_FORM);
       fetchResidents();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error adding resident");
@@ -243,7 +550,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
 
       setError("");
       setIsEditDialogOpen(false);
-      setFormData({ name: "", phone: "", role: "resident" });
+      setFormData(EMPTY_RESIDENT_FORM);
       setSelectedResident(null);
       fetchResidents();
     } catch (err) {
@@ -273,7 +580,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     setFormData({
       name: resident.name,
       phone: resident.phone,
-      role: resident.role,
+      role: normalizeResidentRole(resident.role),
+      barangay: resident.barangay || "",
+      designationDetail: resident.designationDetail || "",
     });
     setIsEditDialogOpen(true);
   };
@@ -387,26 +696,20 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     }
   };
 
-  // Filter residents
-  const filteredResidents = residents.filter((resident) => {
+  const residentGroups = buildResidentGroups(residents);
+  const filteredResidentGroups = residentGroups.filter((group) => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
     const matchesSearch =
-      resident.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resident.phone.includes(searchTerm);
-    const matchesRole = selectedRole === "all" || resident.role === selectedRole;
+      !normalizedSearch ||
+      group.names.some((name) => name.toLowerCase().includes(normalizedSearch)) ||
+      group.phone.toLowerCase().includes(normalizedSearch) ||
+      group.siteNames.some((currentSiteName) => currentSiteName.toLowerCase().includes(normalizedSearch));
+    const matchesRole =
+      selectedRole === "all" ||
+      group.roles.includes(selectedRole as Resident["role"]);
+
     return matchesSearch && matchesRole;
   });
-
-  const roleColors = {
-    resident: "bg-blue-100 text-blue-800",
-    bhw: "bg-green-100 text-green-800",
-    municipal_health_officer: "bg-purple-100 text-purple-800",
-  };
-
-  const roleLabels = {
-    resident: "Resident",
-    bhw: "BHW",
-    municipal_health_officer: "Municipal Health Officer",
-  };
 
   return (
     <>
@@ -656,10 +959,10 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           animation: animate ? "contentSlideIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both" : "none",
         }}>
           {[
-            { label: "Total Recipients", value: residents.length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
-            { label: "Residents", value: residents.filter((r) => r.role === "resident").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#4478f6" }} />, color: "#4478f6", bg: "#ebf2ff" },
-            { label: "BHW", value: residents.filter((r) => r.role === "bhw").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#2cc865" }} />, color: "#2cc865", bg: "#eafff1" },
-            { label: "Municipal Health Officer", value: residents.filter((r) => r.role === "municipal_health_officer").length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#a559ea" }} />, color: "#a559ea", bg: "#f6eeff" },
+            { label: "Total Recipients", value: residentGroups.length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#367981" }} />, color: "#367981", bg: "#e9f2f3" },
+            { label: "Residents", value: residentGroups.filter((group) => group.roles.includes("resident")).length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#4478f6" }} />, color: "#4478f6", bg: "#ebf2ff" },
+            { label: "BHW", value: residentGroups.filter((group) => group.roles.includes("bhw")).length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#2cc865" }} />, color: "#2cc865", bg: "#eafff1" },
+            { label: "Municipal Health Officer", value: residentGroups.filter((group) => group.roles.includes("municipal_health_officer")).length, icon: <Users style={{ width: isNarrowDesktop ? 18 : 22, height: isNarrowDesktop ? 18 : 22, color: "#a559ea" }} />, color: "#a559ea", bg: "#f6eeff" },
           ].map((card, i) => (
             <div key={card.label} style={{
               background: "#fff",
@@ -787,12 +1090,12 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             }}>
               {loading ? (
                 <div style={{ padding: "48px 20px", textAlign: "center", color: "#7b8a9a", fontFamily: POPPINS }}>Loading recipients...</div>
-              ) : filteredResidents.length === 0 ? (
+              ) : filteredResidentGroups.length === 0 ? (
                 <div style={{ padding: "48px 20px", textAlign: "center" }}>
                   <Users style={{ width: 48, height: 48, color: "#d1d9e0", margin: "0 auto 16px" }} />
                   <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a2a3a", marginBottom: 6, fontFamily: POPPINS }}>No recipients found</h3>
                   <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>
-                    {residents.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
+                    {residentGroups.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
                   </p>
                 </div>
               ) : (
@@ -807,7 +1110,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                     </colgroup>
                     <thead style={{ background: "#fff" }}>
                       <tr style={{ borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
-                        {["Name", "Phone Number", "Designation", "Actions"].map((h) => (
+                        {["Name", "Phone Number", "Role Details", "Actions"].map((h) => (
                           <th key={h} style={{
                             padding: h === "Name" ? "14px 10px 14px 12px" : h === "Actions" ? "14px 12px 14px 10px" : "14px 10px",
                             fontSize: 12,
@@ -831,29 +1134,68 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                         <col style={{ width: "16%" }} />
                       </colgroup>
                       <tbody>
-                        {filteredResidents.map((resident, idx) => (
-                          <tr key={resident.id} style={{
+                        {filteredResidentGroups.map((residentGroup, idx) => {
+                          const mergedSummary = getResidentGroupSummary(residentGroup);
+                          const showSites = selectedSiteFilter === "all" || residentGroup.siteNames.length > 1;
+                          const detailLines = getResidentGroupDetailLines(residentGroup);
+
+                          return (
+                          <tr key={residentGroup.key} style={{
                             borderBottom: "1px solid #f5f5f5",
                             animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both`,
                           }}>
                             <td style={{ padding: "14px 10px 14px 12px", fontSize: 13, fontWeight: 600, color: "#1a2a3a" }}>
-                              {resident.name}
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                <span>{residentGroup.displayName}</span>
+                                {showSites && (
+                                  <SitePreviewChips group={residentGroup} />
+                                )}
+                              </div>
                             </td>
                             <td style={{ padding: "14px 10px", fontSize: 13, color: "#475569", fontWeight: 600 }}>
-                              {resident.phone}
+                              {residentGroup.phone}
                             </td>
                             <td style={{ padding: "14px 10px", textAlign: "center" }}>
-                              <span style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                padding: "3px 12px",
-                                borderRadius: 20,
-                                background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
-                                color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
-                                fontFamily: POPPINS,
-                              }}>
-                                {roleLabels[resident.role]}
-                              </span>
+                              <div style={{ display: "flex", justifyContent: "center" }}>
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, maxWidth: "100%" }}>
+                                  <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, maxWidth: "100%" }}>
+                                    {residentGroup.roles.map((role) => (
+                                      <span
+                                        key={`${residentGroup.key}-${role}`}
+                                        style={{
+                                          fontSize: 11,
+                                          fontWeight: 600,
+                                          padding: "3px 12px",
+                                          borderRadius: 20,
+                                          background: roleStyles[role].background,
+                                          color: roleStyles[role].color,
+                                          fontFamily: POPPINS,
+                                        }}
+                                      >
+                                        {roleLabels[role]}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  {detailLines.length > 0 && (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
+                                      {detailLines.map((line) => (
+                                        <span
+                                          key={`${residentGroup.key}-${line}`}
+                                          style={{
+                                            fontSize: 11,
+                                            fontWeight: 500,
+                                            color: "#64748b",
+                                            fontFamily: POPPINS,
+                                            lineHeight: 1.35,
+                                          }}
+                                        >
+                                          {line}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </td>
                             <td style={{ padding: "14px 12px 14px 10px", textAlign: "right" }}>
                               <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -874,18 +1216,37 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" style={{ fontFamily: POPPINS }}>
-                                    <DropdownMenuItem onClick={() => openEditDialog(resident)} className="cursor-pointer">
-                                      <Edit size={14} className="mr-2" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openDeleteDialog(resident)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
-                                      <Trash2 size={14} className="mr-2" /> Delete
-                                    </DropdownMenuItem>
+                                    {residentGroup.records.length > 1 && (
+                                      <>
+                                        <DropdownMenuLabel style={{ fontFamily: POPPINS, fontSize: 11, color: "#64748b" }}>
+                                          Select a record
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                      </>
+                                    )}
+                                    {residentGroup.records.map((residentRecord, recordIndex) => {
+                                      const recordContext = residentGroup.records.length > 1
+                                        ? `${roleLabels[residentRecord.role]}${selectedSiteFilter === "all" || residentGroup.siteNames.length > 1 ? ` • ${residentRecord.siteName}` : ""}`
+                                        : "";
+
+                                      return (
+                                        <Fragment key={residentRecord.id}>
+                                          <DropdownMenuItem onClick={() => openEditDialog(residentRecord)} className="cursor-pointer">
+                                            <Edit size={14} className="mr-2" /> {recordContext ? `Edit ${recordContext}` : "Edit"}
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => openDeleteDialog(residentRecord)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                                            <Trash2 size={14} className="mr-2" /> {recordContext ? `Delete ${recordContext}` : "Delete"}
+                                          </DropdownMenuItem>
+                                          {recordIndex < residentGroup.records.length - 1 && <DropdownMenuSeparator />}
+                                        </Fragment>
+                                      );
+                                    })}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        )})}
                       </tbody>
                     </table>
                   </div>
@@ -949,40 +1310,72 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
               </button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "10px 0 10px 0" }}>
-              {filteredResidents.map((resident, idx) => (
-                <div key={resident.id} style={{
+              {filteredResidentGroups.map((residentGroup, idx) => {
+                const mergedSummary = getResidentGroupSummary(residentGroup);
+                const showSites = selectedSiteFilter === "all" || residentGroup.siteNames.length > 1;
+                const detailLines = getResidentGroupDetailLines(residentGroup);
+
+                return (
+                <div key={residentGroup.key} style={{
                   padding: "12px 20px",
-                  borderBottom: idx < filteredResidents.length - 1 ? "1px solid #f0f0f0" : "none",
+                  borderBottom: idx < filteredResidentGroups.length - 1 ? "1px solid #f0f0f0" : "none",
                   background: "#fff",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 2,
+                  gap: 10,
                 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{resident.name}</span>
-                      <span style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>{resident.phone}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{residentGroup.displayName}</span>
+                      <span style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>{residentGroup.phone}</span>
                     </div>
-                    <span style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: "3px 10px",
-                      borderRadius: 20,
-                      background: resident.role === 'resident' ? '#eff6ff' : resident.role === 'bhw' ? '#f0fdf4' : '#faf5ff',
-                      color: resident.role === 'resident' ? '#2563eb' : resident.role === 'bhw' ? '#16a34a' : '#9333ea',
-                      fontFamily: POPPINS,
-                    }}>
-                      {roleLabels[resident.role]}
-                    </span>
+                    {showSites && (
+                      <SitePreviewChips group={residentGroup} compact />
+                    )}
                   </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {residentGroup.roles.map((role) => (
+                      <span
+                        key={`${residentGroup.key}-${role}`}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: "3px 10px",
+                          borderRadius: 20,
+                          background: roleStyles[role].background,
+                          color: roleStyles[role].color,
+                          fontFamily: POPPINS,
+                        }}
+                      >
+                        {roleLabels[role]}
+                      </span>
+                    ))}
+                  </div>
+                  {detailLines.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {detailLines.map((line) => (
+                        <span
+                          key={`${residentGroup.key}-mobile-${line}`}
+                          style={{
+                            fontSize: 11,
+                            color: "#64748b",
+                            fontFamily: POPPINS,
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {line}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
-              {filteredResidents.length === 0 && (
+              )})}
+              {filteredResidentGroups.length === 0 && (
                 <div style={{ padding: "48px 20px", textAlign: "center" }}>
                   <Users style={{ width: 48, height: 48, color: "#d1d9e0", margin: "0 auto 16px" }} />
                   <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a2a3a", marginBottom: 6, fontFamily: POPPINS }}>No recipients found</h3>
                   <p style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>
-                    {residents.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
+                    {residentGroups.length === 0 ? "Try adding a new recipient" : "Try adjusting your search criteria"}
                   </p>
                 </div>
               )}
@@ -1004,7 +1397,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             border: "none",
             fontFamily: POPPINS,
             maxHeight: smallLaptopModal ? "95vh" : undefined,
-            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
           }}
           className="p-0"
         >
@@ -1048,12 +1440,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </DialogClose>
           </div>
 
-          <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
+          <div style={{ padding: smallLaptopModal ? "8px 16px 16px" : "10px 20px 20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
             <div className="space-y-4">
               <div>
-                <p style={{ fontSize: 11, color: "#7b8a9a", margin: "0 0 10px", fontFamily: POPPINS }}>
-                  Site: {selectedSiteForOps || "Please choose a site from the filter above"}
-                </p>
                 <Label htmlFor="name-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Name</Label>
                 <Input
                   id="name-add"
@@ -1098,6 +1487,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   </SelectContent>
                 </Select>
               </div>
+              <ResidentRoleDetailFields
+                role={formData.role}
+                formData={formData}
+                onChange={(field, value) => setFormData((prev) => ({ ...prev, [field]: value }))}
+                smallLaptopModal={smallLaptopModal}
+                fieldPrefix="add"
+              />
             </div>
 
             <div style={{ marginTop: smallLaptopModal ? 16 : 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
@@ -1150,7 +1546,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             border: "none",
             fontFamily: POPPINS,
             maxHeight: smallLaptopModal ? "95vh" : undefined,
-            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
           }}
           className="p-0"
         >
@@ -1194,7 +1589,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </DialogClose>
           </div>
 
-          <div style={{ padding: smallLaptopModal ? "16px" : "20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
+          <div style={{ padding: smallLaptopModal ? "8px 16px 16px" : "10px 20px 20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Name</Label>
@@ -1241,6 +1636,13 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   </SelectContent>
                 </Select>
               </div>
+              <ResidentRoleDetailFields
+                role={formData.role}
+                formData={formData}
+                onChange={(field, value) => setFormData((prev) => ({ ...prev, [field]: value }))}
+                smallLaptopModal={smallLaptopModal}
+                fieldPrefix="edit"
+              />
             </div>
 
             <div style={{ marginTop: smallLaptopModal ? 16 : 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
@@ -1293,7 +1695,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             border: "none",
             fontFamily: POPPINS,
             maxHeight: smallLaptopModal ? "95vh" : undefined,
-            transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
           }}
           className="p-0"
         >
@@ -1394,7 +1795,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 border: "none",
                 fontFamily: POPPINS,
                 maxHeight: smallLaptopModal ? "95vh" : undefined,
-                transform: smallLaptopModal ? "translateY(-50%) scale(0.92)" : undefined,
               }}
               className="p-0"
             >

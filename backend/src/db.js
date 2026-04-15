@@ -171,10 +171,14 @@ const initPostgresTables = async () => {
         name TEXT,
         phone TEXT,
         role TEXT DEFAULT 'resident',
+        barangay TEXT,
+        "designationDetail" TEXT,
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     await db.query('ALTER TABLE residents DROP COLUMN IF EXISTS verified');
+    await db.query('ALTER TABLE residents ADD COLUMN IF NOT EXISTS barangay TEXT');
+    await db.query('ALTER TABLE residents ADD COLUMN IF NOT EXISTS "designationDetail" TEXT');
     await db.query("UPDATE residents SET role = 'municipal_health_officer' WHERE role = 'lgu'");
     await db.query(`
       CREATE TABLE IF NOT EXISTS reports (

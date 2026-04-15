@@ -230,6 +230,16 @@ function resolveResidentSiteName(siteIdentifier, callback) {
   );
 }
 
+function normalizeResidentRoleDetails(role, details = {}) {
+  const barangay = (details.barangay || '').toString().trim();
+  const designationDetail = (details.designationDetail || '').toString().trim();
+
+  return {
+    barangay: role === 'bhw' || role === 'resident' ? barangay : '',
+    designationDetail: role === 'municipal_health_officer' ? designationDetail : '',
+  };
+}
+
 function upsertSiteRegistry(data, nowIso, prebuiltIdentity) {
   const identity = prebuiltIdentity || buildSiteIdentity(data);
   db.run(
@@ -1656,8 +1666,8 @@ router.post("/upload-csv", (req, res) => {
           } else if (existingResident) {
             // Update existing resident
             db.run(
-              "UPDATE residents SET name = ?, role = ? WHERE id = ?",
-              [name, role, existingResident.id],
+              "UPDATE residents SET name = ?, role = ?, barangay = ?, designationDetail = ? WHERE id = ?",
+              [name, role, '', '', existingResident.id],
               (err) => {
                 if (err) failed++;
                 else updated++;
@@ -1709,7 +1719,7 @@ router.post("/upload-csv", (req, res) => {
 router.get("/residents/:siteName", (req, res) => {
   const { siteName } = req.params;
   db.all(
-    "SELECT id, siteName, name, phone, role, createdAt FROM residents WHERE siteName = ? ORDER BY role, name",
+    "SELECT id, siteName, name, phone, role, barangay, designationDetail, createdAt FROM residents WHERE siteName = ? ORDER BY role, name",
     [siteName],
     (err, rows) => {
       if (err) {
@@ -1725,7 +1735,7 @@ router.get("/residents/:siteName", (req, res) => {
 
 // POST - Add a new resident (prevent duplicates)
 router.post("/residents", (req, res) => {
-  const { siteName, name, phone, role = "resident" } = req.body;
+  const { siteName, name, phone, role = "resident", barangay, designationDetail } = req.body;
   
   if (!siteName || !name || !phone) {
     return res.status(400).json({ error: "siteName, name, and phone are required" });
@@ -1739,6 +1749,7 @@ router.post("/residents", (req, res) => {
   const formattedPhone = formatPhoneNumber(phone);
   const validRoles = ["resident", "bhw", "municipal_health_officer"];
   const finalRole = validRoles.includes(role) ? role : "resident";
+  const normalizedDetails = normalizeResidentRoleDetails(finalRole, { barangay, designationDetail });
 
   resolveResidentSiteName(siteName, (resolveErr, resolvedSiteName) => {
     if (resolveErr) {
@@ -1755,8 +1766,8 @@ router.post("/residents", (req, res) => {
         if (existingResident) {
           // Update existing resident
           db.run(
-            "UPDATE residents SET name = ?, role = ? WHERE id = ?",
-            [name, finalRole, existingResident.id],
+            "UPDATE residents SET name = ?, role = ?, barangay = ?, designationDetail = ? WHERE id = ?",
+            [name, finalRole, normalizedDetails.barangay, normalizedDetails.designationDetail, existingResident.id],
             function(err) {
               if (err) return res.status(500).json({ error: err.message });
               res.json({
@@ -1765,6 +1776,8 @@ router.post("/residents", (req, res) => {
                 name,
                 phone: formattedPhone,
                 role: finalRole,
+                barangay: normalizedDetails.barangay,
+                designationDetail: normalizedDetails.designationDetail,
                 message: "Resident updated (duplicate prevented)"
               });
             }
@@ -1772,8 +1785,8 @@ router.post("/residents", (req, res) => {
         } else {
           // Create new resident
           db.run(
-            "INSERT INTO residents (siteName, name, phone, role) VALUES (?, ?, ?, ?)",
-            [resolvedSiteName, name, formattedPhone, finalRole],
+            "INSERT INTO residents (siteName, name, phone, role, barangay, designationDetail) VALUES (?, ?, ?, ?, ?, ?)",
+            [resolvedSiteName, name, formattedPhone, finalRole, normalizedDetails.barangay, normalizedDetails.designationDetail],
             function(err) {
               if (err) return res.status(500).json({ error: err.message });
               res.status(201).json({
@@ -1782,6 +1795,8 @@ router.post("/residents", (req, res) => {
                 name,
                 phone: formattedPhone,
                 role: finalRole,
+                barangay: normalizedDetails.barangay,
+                designationDetail: normalizedDetails.designationDetail,
                 message: "Resident added"
               });
             }
@@ -1795,7 +1810,7 @@ router.post("/residents", (req, res) => {
 // PUT - Update a resident
 router.put("/residents/:id", (req, res) => {
   const { id } = req.params;
-  const { name, phone, role } = req.body;
+  const { name, phone, role, barangay, designationDetail } = req.body;
   
   if (!name && !phone && role === undefined) {
     return res.status(400).json({ error: "At least one field to update is required" });
@@ -1810,24 +1825,45 @@ router.put("/residents/:id", (req, res) => {
     const newPhone = phone ? formatPhoneNumber(phone) : resident.phone;
     const validRoles = ["resident", "bhw", "municipal_health_officer"];
     const newRole = role ? (validRoles.includes(role) ? role : resident.role) : resident.role;
+    const normalizedDetails = normalizeResidentRoleDetails(newRole, { barangay, designationDetail });
     
     // Validate phone if updated
     if (phone && !validatePhoneNumber(phone)) {
       return res.status(400).json({ error: "Invalid Philippine phone number format" });
     }
-    
-    db.run(
-      "UPDATE residents SET name = ?, phone = ?, role = ? WHERE id = ?",
-      [newName, newPhone, newRole, id],
-      function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({
-          id,
-          name: newName,
-          phone: newPhone,
-          role: newRole,
-          message: "Resident updated successfully"
-        });
+
+    const finalizeUpdate = () => {
+      db.run(
+        "UPDATE residents SET name = ?, phone = ?, role = ?, barangay = ?, designationDetail = ? WHERE id = ?",
+        [newName, newPhone, newRole, normalizedDetails.barangay, normalizedDetails.designationDetail, id],
+        function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({
+            id,
+            name: newName,
+            phone: newPhone,
+            role: newRole,
+            barangay: normalizedDetails.barangay,
+            designationDetail: normalizedDetails.designationDetail,
+            message: "Resident updated successfully"
+          });
+        }
+      );
+    };
+
+    if (newPhone === resident.phone) {
+      return finalizeUpdate();
+    }
+
+    db.get(
+      "SELECT id FROM residents WHERE siteName = ? AND phone = ? AND id <> ?",
+      [resident.siteName, newPhone, id],
+      (duplicateErr, duplicateResident) => {
+        if (duplicateErr) return res.status(500).json({ error: duplicateErr.message });
+        if (duplicateResident) {
+          return res.status(409).json({ error: "A recipient with this phone number already exists for this site" });
+        }
+        finalizeUpdate();
       }
     );
   });
@@ -1853,7 +1889,7 @@ router.get("/residents-by-role/:role", (req, res) => {
     return res.status(400).json({ error: `Invalid role. Valid roles: ${validRoles.join(", ")}` });
   }
   
-  db.all("SELECT id, siteName, name, phone, role FROM residents WHERE role = ?", [role], (err, rows) => {
+  db.all("SELECT id, siteName, name, phone, role, barangay, designationDetail FROM residents WHERE role = ?", [role], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows || []);
   });
@@ -1865,7 +1901,7 @@ router.get("/residents", (req, res) => {
   
   console.log("GET /residents - siteName:", siteName, "role:", role);
   
-  let query = "SELECT id, siteName, name, phone, role, createdAt FROM residents WHERE 1=1";
+  let query = "SELECT id, siteName, name, phone, role, barangay, designationDetail, createdAt FROM residents WHERE 1=1";
   const params = [];
   
   const runQuery = (resolvedSiteName) => {
