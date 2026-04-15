@@ -1722,11 +1722,11 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Temperature"
                   iconSrc="/icons/icon-temperature.svg"
-                  value={latestReading ? `${latestReading.temperature}` : "—"}
+                  value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.temperature}` : "—"}
                   unit="°C"
-                  sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-                  dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-                  active={!!latestReading}
+                  sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
+                  dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
+                  active={deviceConnected && !!latestReading}
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
@@ -1741,10 +1741,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af",
+                    background: !deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af",
                     display: "inline-block",
-                    animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": latestReading ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
+                    animation: deviceConnected && latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": !deviceConnected ? "transparent" : latestReading ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-temperature.svg" alt="temp"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -1752,11 +1752,15 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {latestReading ? latestReading.temperature : "—"}
+                        {!deviceConnected ? "NO DATA" : latestReading ? latestReading.temperature : "—"}
                       </span>
-                      {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
+                      {deviceConnected && latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
                     </p>
-                    {latestReading && (
+                    {!deviceConnected ? (
+                      <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
+                        Device not connected
+                      </p>
+                    ) : latestReading && (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         {getSensorStatus("temperature", latestReading.temperature).label}
                       </p>
@@ -1770,11 +1774,11 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Turbidity"
                   iconSrc="/icons/icon-turbidity.svg"
-                  value={latestReading ? `${latestReading.turbidity}` : "—"}
+                  value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.turbidity}` : "—"}
                   unit="NTU"
-                  sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-                  dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-                  active={!!latestReading}
+                  sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
+                  dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
+                  active={deviceConnected && !!latestReading}
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
@@ -1789,10 +1793,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af",
+                    background: !deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af",
                     display: "inline-block",
-                    animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": latestReading ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
+                    animation: deviceConnected && latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": !deviceConnected ? "transparent" : latestReading ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-turbidity.svg" alt="turbidity"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -1800,11 +1804,15 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {latestReading ? latestReading.turbidity : "—"}
+                        {!deviceConnected ? "NO DATA" : latestReading ? latestReading.turbidity : "—"}
                       </span>
-                      {latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
+                      {deviceConnected && latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
                     </p>
-                    {latestReading && (
+                    {!deviceConnected ? (
+                      <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
+                        Device not connected
+                      </p>
+                    ) : latestReading && (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         {getSensorStatus("turbidity", latestReading.turbidity).label}
                       </p>
@@ -1818,11 +1826,11 @@ export function Dashboard({
                 <SensorMiniCard
                   label="pH Level"
                   iconSrc="/icons/icon-ph.svg"
-                  value={latestReading ? `${latestReading.ph}` : "—"}
+                  value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.ph}` : "—"}
                   unit=""
-                  sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-                  dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-                  active={!!latestReading}
+                  sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
+                  dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
+                  active={deviceConnected && !!latestReading}
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
@@ -1837,10 +1845,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af",
+                    background: !deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af",
                     display: "inline-block",
-                    animation: latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": latestReading ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
+                    animation: deviceConnected && latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": !deviceConnected ? "transparent" : latestReading ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-ph.svg" alt="ph"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -1848,10 +1856,14 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {latestReading ? latestReading.ph : "—"}
+                        {!deviceConnected ? "NO DATA" : latestReading ? latestReading.ph : "—"}
                       </span>
                     </p>
-                    {latestReading && (
+                    {!deviceConnected ? (
+                      <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
+                        Device not connected
+                      </p>
+                    ) : latestReading && (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         {getSensorStatus("ph", latestReading.ph).label}
                       </p>
