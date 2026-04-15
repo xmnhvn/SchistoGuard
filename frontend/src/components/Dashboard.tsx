@@ -460,11 +460,12 @@ export function Dashboard({
     return () => clearInterval(interval);
   }, [activeSiteKey]);
 
+  // Only initialize selectedSiteKey to activeSiteKey on first load with no selection
   useEffect(() => {
-    if (activeSiteKey) {
+    if (!selectedSiteKey && activeSiteKey) {
       setSelectedSiteKey(activeSiteKey);
     }
-  }, [activeSiteKey]);
+  }, []);
 
   useEffect(() => {
     const fetchLatest = () => {
@@ -498,6 +499,8 @@ export function Dashboard({
             }
             setLiveReading({ ...data, deviceConnected: false });
             setActiveSiteKey(data.siteKey || null);
+            // Only initialize selectedSiteKey if nothing is selected yet (first load)
+            setSelectedSiteKey((prev) => prev || data.siteKey || '');
             setDeviceConnected(false);
             setBackendOk(true);
             setDataOk(false);
@@ -514,8 +517,9 @@ export function Dashboard({
             localStorage.setItem('sg_global_latest_siteName', data.siteName);
           }
 
+          // Only initialize selectedSiteKey if nothing is selected yet (first load)
           if (data?.siteKey) {
-            setSelectedSiteKey(data.siteKey);
+            setSelectedSiteKey((prev) => prev || data.siteKey || '');
           }
         })
         .catch(() => {
@@ -527,7 +531,7 @@ export function Dashboard({
     fetchLatest();
     const interval = setInterval(fetchLatest, 1000);
     return () => clearInterval(interval);
-  }, [selectedSiteKey]);
+  }, []);
 
 
 
