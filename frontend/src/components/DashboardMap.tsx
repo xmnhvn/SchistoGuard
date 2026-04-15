@@ -38,6 +38,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const previousSitesJson = useRef<string>('');
+  const previousSelectedSiteId = useRef<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     resetView: (center?: { lat: number; lng: number }) => {
@@ -95,25 +96,20 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     // If no sites, center map to Philippines as neutral view
     const center = sitesToShow[0] || { lat: 12.8797, lng: 121.7740, name: '', id: '' };
 
-    // Center map exactly on marker and use higher zoom if only one marker
-    // Only set center/zoom on initial mount or when sites change, not on every render
+    // Center map exactly on marker (with offsets) for the selected site
+    // This ensures consistent visual locking effect for each selected site
     const updateMapCenter = () => {
       let mapCenter: [number, number];
       let mapZoom: number;
-      if (sitesToShow.length === 1) {
+      if (sitesToShow.length >= 1) {
         mapCenter = [center.lng + lngOffset, center.lat + latOffset];
-        mapZoom = 17;
-      } else if (sitesToShow.length > 1) {
-        mapCenter = [center.lng + lngOffset, center.lat + latOffset];
-        mapZoom = 13;
+        mapZoom = 15; // Decreased zoom from 17 down to 15 for a wider view
       } else {
         mapCenter = [121.7740, 12.8797];
         mapZoom = 6;
       }
       defaultView.current = { center: mapCenter, zoom: mapZoom };
-      if (!originalDashboardView.current && !mobileMode) {
-        originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
-      }
+      
       const isInteractive = interactive !== undefined ? interactive : !mobileMode;
 
       if (!map.current) {
@@ -130,14 +126,32 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
             // We will dynamically enable/disable the actual handlers right after creation instead.
             interactive: true,
           });
+          previousSelectedSiteId.current = center.id;
+          if (!mobileMode) {
+            originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
+          }
         } catch (error) {
           console.error('Map initialization failed:', error);
           setMapUnavailable(true);
           return;
         }
-      } else if (sitesToShow.length !== markers.current.length) {
-        // Only reset view if number of markers/sites changed
-        map.current.jumpTo({ center: mapCenter, zoom: mapZoom });
+      } else {
+        // Only update center if the selected site changed or markers count changed
+        const selectedSiteChanged = center.id !== previousSelectedSiteId.current;
+        const markersCountChanged = sitesToShow.length !== markers.current.length;
+        
+        if (selectedSiteChanged || markersCountChanged) {
+          if (!mobileMode) {
+            originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
+          }
+          map.current.easeTo({
+            center: mapCenter,
+            zoom: mapZoom,
+            duration: 800,
+            easing: (t) => t
+          });
+          previousSelectedSiteId.current = center.id;
+        }
       }
       // Dynamically enable/disable interactivity based on prop
       const handlers = [
@@ -187,9 +201,12 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               ? 'site-marker--active'
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
+            // Set pulsating html only if active
+            const pulseHtml = site.isActive ? `<div class="site-marker__pulse"></div>` : '';
+
             el.innerHTML = `
               <div class="site-marker ${markerStateClass}">
-                <div class="site-marker__pulse"></div>
+                ${pulseHtml}
                 <div class="site-marker__ring"></div>
                 <div class="site-marker__dot"></div>
               </div>`;

@@ -2330,7 +2330,7 @@ export function Dashboard({
           transition: "opacity 0.8s ease",
         }}
       >
-        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={-0.0015} />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={-0.0075} />
       </div>
 
         {/* Top-right controls: single horizontal flow */}
