@@ -138,6 +138,29 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS longitude REAL');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS first_seen TEXT');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS last_seen TEXT');
+    await db.query(`
+      CREATE OR REPLACE FUNCTION prevent_site_registry_coord_update()
+      RETURNS trigger AS $$
+      BEGIN
+        IF OLD.latitude IS NOT NULL AND NEW.latitude IS DISTINCT FROM OLD.latitude THEN
+          NEW.latitude := OLD.latitude;
+        END IF;
+
+        IF OLD.longitude IS NOT NULL AND NEW.longitude IS DISTINCT FROM OLD.longitude THEN
+          NEW.longitude := OLD.longitude;
+        END IF;
+
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await db.query('DROP TRIGGER IF EXISTS trg_lock_site_registry_coords ON site_registry');
+    await db.query(`
+      CREATE TRIGGER trg_lock_site_registry_coords
+      BEFORE UPDATE ON site_registry
+      FOR EACH ROW
+      EXECUTE FUNCTION prevent_site_registry_coord_update()
+    `);
     await db.query('CREATE INDEX IF NOT EXISTS idx_raw_readings_site_key_ts ON raw_readings (site_key, "timestamp" DESC)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_readings_site_key_ts ON readings (site_key, "timestamp" DESC)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_alerts_site_key_ts ON alerts (site_key, "timestamp" DESC)');

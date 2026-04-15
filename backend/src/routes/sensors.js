@@ -91,10 +91,15 @@ function buildSiteIdentity(data) {
   }
 
   const siteName = address || fallbackName;
+  const coordinateSeed =
+    isFiniteCoordinate(currentCoords.lat) && isFiniteCoordinate(currentCoords.lng)
+      ? `coords-${currentCoords.lat.toFixed(4)}-${currentCoords.lng.toFixed(4)}`
+      : null;
+  const siteKeySeed = address || coordinateSeed || fallbackName;
   const identity = {
     siteName,
     address,
-    siteKey: normalizeSiteKey(siteName, fallbackName)
+    siteKey: normalizeSiteKey(siteKeySeed, fallbackName)
   };
 
   deviceSiteCache.set(deviceId, {
@@ -147,9 +152,9 @@ function upsertSiteRegistry(data, nowIso) {
      ON CONFLICT (site_key)
      DO UPDATE SET
        site_name = COALESCE(site_registry.site_name, EXCLUDED.site_name),
-       address = EXCLUDED.address,
-       latitude = EXCLUDED.latitude,
-       longitude = EXCLUDED.longitude,
+       address = COALESCE(EXCLUDED.address, site_registry.address),
+       latitude = COALESCE(site_registry.latitude, EXCLUDED.latitude),
+       longitude = COALESCE(site_registry.longitude, EXCLUDED.longitude),
        last_seen = EXCLUDED.last_seen`,
     [
       identity.siteKey,
