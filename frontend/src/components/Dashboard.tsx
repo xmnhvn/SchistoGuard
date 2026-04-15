@@ -88,6 +88,7 @@ export function Dashboard({
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const selectedSiteKeyRef = useRef<string>('');
   const activeSiteKeyRef = useRef<string | null>(null);
+  const liveReadingRef = useRef<any>(null);
   const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
   const [siteData, setSiteData] = useState<any>(() => {
     try {
@@ -140,6 +141,10 @@ export function Dashboard({
   useEffect(() => {
     activeSiteKeyRef.current = activeSiteKey;
   }, [activeSiteKey]);
+
+  useEffect(() => {
+    liveReadingRef.current = liveReading;
+  }, [liveReading]);
 
   useEffect(() => {
     if (visible && !_dashboardFirstLoadDone) {
@@ -696,8 +701,9 @@ export function Dashboard({
             setReadings(data);
 
             const latestFromHistory = data.length > 0 ? data[data.length - 1] : null;
-            const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && !!liveReading?.deviceConnected;
-            const effectiveLatest = selectedIsActiveSite ? (liveReading || latestFromHistory) : latestFromHistory;
+            const currentLive = liveReadingRef.current;
+            const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && !!currentLive?.deviceConnected;
+            const effectiveLatest = selectedIsActiveSite ? (currentLive || latestFromHistory) : latestFromHistory;
 
             setLatestReading(effectiveLatest || null);
             setDeviceConnected(selectedIsActiveSite);
@@ -742,7 +748,7 @@ export function Dashboard({
     const interval = setInterval(fetchReadings, 10000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intervalValue, intervalUnit, selectedSiteKey, activeSiteKey, liveReading, selectedSite]);
+  }, [intervalValue, intervalUnit, selectedSiteKey, activeSiteKey, selectedSite]);
 
   useEffect(() => {
     if (setSystemStatus) {
@@ -1562,7 +1568,7 @@ export function Dashboard({
             <SensorMiniCard
               label="Temperature"
               iconSrc="/icons/icon-temperature.svg"
-              value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.temperature}` : "—"}
+              value={!deviceConnected ? "-" : latestReading ? `${latestReading.temperature}` : "—"}
               unit="°C"
               sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
               dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
@@ -1574,7 +1580,7 @@ export function Dashboard({
             <SensorMiniCard
               label="Turbidity"
               iconSrc="/icons/icon-turbidity.svg"
-              value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.turbidity}` : "—"}
+              value={!deviceConnected ? "-" : latestReading ? `${latestReading.turbidity}` : "—"}
               unit="NTU"
               sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
               dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
@@ -1586,7 +1592,7 @@ export function Dashboard({
             <SensorMiniCard
               label="pH Level"
               iconSrc="/icons/icon-ph.svg"
-              value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.ph}` : "—"}
+              value={!deviceConnected ? "-" : latestReading ? `${latestReading.ph}` : "—"}
               unit=""
               sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
               dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
@@ -1724,7 +1730,7 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Temperature"
                   iconSrc="/icons/icon-temperature.svg"
-                  value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.temperature}` : "—"}
+                  value={!deviceConnected ? "-" : latestReading ? `${latestReading.temperature}` : "—"}
                   unit="°C"
                   sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
                   dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
@@ -1754,7 +1760,7 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!deviceConnected ? "NO DATA" : latestReading ? latestReading.temperature : "—"}
+                        {!deviceConnected ? "-" : latestReading ? latestReading.temperature : "—"}
                       </span>
                       {deviceConnected && latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
                     </p>
@@ -1776,7 +1782,7 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Turbidity"
                   iconSrc="/icons/icon-turbidity.svg"
-                  value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.turbidity}` : "—"}
+                  value={!deviceConnected ? "-" : latestReading ? `${latestReading.turbidity}` : "—"}
                   unit="NTU"
                   sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
                   dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
@@ -1806,7 +1812,7 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!deviceConnected ? "NO DATA" : latestReading ? latestReading.turbidity : "—"}
+                        {!deviceConnected ? "-" : latestReading ? latestReading.turbidity : "—"}
                       </span>
                       {deviceConnected && latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
                     </p>
@@ -1828,7 +1834,7 @@ export function Dashboard({
                 <SensorMiniCard
                   label="pH Level"
                   iconSrc="/icons/icon-ph.svg"
-                  value={!deviceConnected ? "NO DATA" : latestReading ? `${latestReading.ph}` : "—"}
+                  value={!deviceConnected ? "-" : latestReading ? `${latestReading.ph}` : "—"}
                   unit=""
                   sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
                   dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
@@ -1858,7 +1864,7 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!deviceConnected ? "NO DATA" : latestReading ? latestReading.ph : "—"}
+                        {!deviceConnected ? "-" : latestReading ? latestReading.ph : "—"}
                       </span>
                     </p>
                     {!deviceConnected ? (
@@ -2134,11 +2140,11 @@ export function Dashboard({
           <SensorMiniCard
             label="Temperature"
             iconSrc="/icons/icon-temperature.svg"
-            value={latestReading ? `${latestReading.temperature}` : "—"}
+            value={!deviceConnected ? "-" : latestReading ? `${latestReading.temperature}` : "—"}
             unit="°C"
-            sub={latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-            dot={latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-            active={!!latestReading}
+            sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
+            dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
+            active={deviceConnected && !!latestReading}
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
@@ -2147,11 +2153,11 @@ export function Dashboard({
           <SensorMiniCard
             label="Turbidity"
             iconSrc="/icons/icon-turbidity.svg"
-            value={latestReading ? `${latestReading.turbidity}` : "—"}
+            value={!deviceConnected ? "-" : latestReading ? `${latestReading.turbidity}` : "—"}
             unit="NTU"
-            sub={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-            dot={latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-            active={!!latestReading}
+            sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
+            dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
+            active={deviceConnected && !!latestReading}
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
@@ -2160,11 +2166,11 @@ export function Dashboard({
           <SensorMiniCard
             label="pH Level"
             iconSrc="/icons/icon-ph.svg"
-            value={latestReading ? `${latestReading.ph}` : "—"}
+            value={!deviceConnected ? "-" : latestReading ? `${latestReading.ph}` : "—"}
             unit=""
-            sub={latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-            dot={latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-            active={!!latestReading}
+            sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
+            dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
+            active={deviceConnected && !!latestReading}
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
