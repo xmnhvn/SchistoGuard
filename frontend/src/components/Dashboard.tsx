@@ -86,6 +86,7 @@ export function Dashboard({
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSiteKey, setSelectedSiteKey] = useState<string>('');
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
+  const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
   const [siteData, setSiteData] = useState<any>(() => {
     try {
       if (typeof window !== "undefined") {
@@ -344,6 +345,7 @@ export function Dashboard({
     .join(", ");
 
   const displayAddress =
+    selectedSiteAddress ||
     gpsAddress ||
     (typeof latestReading?.address === "string" ? latestReading.address : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
@@ -351,6 +353,53 @@ export function Dashboard({
     "Device Address";
 
   const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveSelectedSiteAddress = async () => {
+      if (!selectedSite) {
+        setSelectedSiteAddress(null);
+        return;
+      }
+
+      const resolvedCoords = resolveSiteCoordinates(selectedSite);
+      if (!resolvedCoords) {
+        setSelectedSiteAddress(selectedSite.address || null);
+        return;
+      }
+
+      const cacheKey = `sg_${selectedSite.siteKey}_address`;
+      try {
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            setSelectedSiteAddress(cached);
+            return;
+          }
+        }
+      } catch { }
+
+      try {
+        const addr = await reverseGeocode(resolvedCoords.lat, resolvedCoords.lng);
+        if (cancelled) return;
+        setSelectedSiteAddress(addr || selectedSite.address || null);
+        if (addr && typeof window !== 'undefined') {
+          localStorage.setItem(cacheKey, addr);
+        }
+      } catch {
+        if (!cancelled) {
+          setSelectedSiteAddress(selectedSite.address || null);
+        }
+      }
+    };
+
+    resolveSelectedSiteAddress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSite]);
 
   const isSiteFresh = (site?: SiteOption | null) => {
     if (!site?.lastSeen) return false;
