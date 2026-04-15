@@ -3,6 +3,9 @@
   position: relative;
   width: 200px;
   height: 200px;
+  --marker-pulse: rgba(20, 184, 166, 0.18);
+  --marker-ring: rgba(20, 184, 166, 0.30);
+  --marker-dot: #0f766e;
 }
 
 /* Outer pulsating ring */
@@ -13,7 +16,7 @@
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  background: rgba(20, 184, 166, 0.18);
+  background: var(--marker-pulse);
   transform: translate(-50%, -50%) scale(0.6);
   animation: site-pulse 2.2s ease-out infinite;
   z-index: 1;
@@ -27,7 +30,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(20, 184, 166, 0.30);
+  background: var(--marker-ring);
   transform: translate(-50%, -50%);
   z-index: 2;
 }
@@ -40,7 +43,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #0f766e;
+  background: var(--marker-dot);
   border: 1px solid #fff;
   transform: translate(-50%, -50%);
   z-index: 3;
@@ -56,4 +59,22 @@
 .site-marker:hover .site-marker__dot {
   cursor: pointer;
   filter: brightness(1.15);
+}
+
+.site-marker--active {
+  --marker-pulse: rgba(20, 184, 166, 0.18);
+  --marker-ring: rgba(20, 184, 166, 0.30);
+  --marker-dot: #0f766e;
+}
+
+.site-marker--inactive {
+  --marker-pulse: rgba(148, 163, 184, 0.12);
+  --marker-ring: rgba(148, 163, 184, 0.26);
+  --marker-dot: #64748b;
+}
+
+.site-marker--selected-inactive {
+  --marker-pulse: rgba(100, 116, 139, 0.16);
+  --marker-ring: rgba(100, 116, 139, 0.34);
+  --marker-dot: #475569;
 }

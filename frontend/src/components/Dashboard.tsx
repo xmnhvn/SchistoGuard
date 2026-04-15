@@ -86,6 +86,8 @@ export function Dashboard({
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSiteKey, setSelectedSiteKey] = useState<string>('');
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
+  const selectedSiteKeyRef = useRef<string>('');
+  const activeSiteKeyRef = useRef<string | null>(null);
   const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
   const [siteData, setSiteData] = useState<any>(() => {
     try {
@@ -130,6 +132,14 @@ export function Dashboard({
   const [intervalUnit, setIntervalUnit] = useState("min");
   const [mapReady, setMapReady] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(!_dashboardFirstLoadDone);
+
+  useEffect(() => {
+    selectedSiteKeyRef.current = selectedSiteKey;
+  }, [selectedSiteKey]);
+
+  useEffect(() => {
+    activeSiteKeyRef.current = activeSiteKey;
+  }, [activeSiteKey]);
 
   useEffect(() => {
     if (visible && !_dashboardFirstLoadDone) {
@@ -345,6 +355,7 @@ export function Dashboard({
     .join(", ");
 
   const displayAddress =
+    selectedSiteAddress ||
     gpsAddress ||
     (typeof latestReading?.address === "string" ? latestReading.address : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
@@ -352,6 +363,39 @@ export function Dashboard({
     "Device Address";
 
   const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+
+  const mapSites = (() => {
+    const fromRegistry = availableSites
+      .map((site) => {
+        const coords = resolveSiteCoordinates(site);
+        if (!coords) return null;
+
+        const lastSeenTs = site.lastSeen ? new Date(site.lastSeen).getTime() : Number.NaN;
+        const isFreshSite = Number.isFinite(lastSeenTs) && (Date.now() - lastSeenTs <= SITE_STALE_MS);
+        return {
+          id: site.siteKey,
+          name: site.siteName,
+          lat: coords.lat,
+          lng: coords.lng,
+          isActive: site.siteKey === activeSiteKey && !!liveReading?.deviceConnected && isFreshSite,
+          isSelected: site.siteKey === selectedSiteKey,
+        };
+      })
+      .filter((site): site is { id: string; name: string; lat: number; lng: number; isActive?: boolean; isSelected?: boolean } => !!site)
+      .sort((a, b) => Number(b.isSelected) - Number(a.isSelected));
+
+    if (fromRegistry.length > 0) return fromRegistry;
+
+    if (gpsSites && gpsSites.length > 0) {
+      return gpsSites.map((site) => ({
+        ...site,
+        isActive: false,
+        isSelected: true,
+      }));
+    }
+
+    return undefined;
+  })();
 
   useEffect(() => {
     let cancelled = false;
@@ -494,8 +538,8 @@ export function Dashboard({
         setAvailableSites(mapped);
 
         setSelectedSiteKey((prev) => {
-          if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
+          if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
           return mapped[0]?.siteKey || '';
         });
       } catch {
@@ -515,14 +559,6 @@ export function Dashboard({
     }
   }, []);
 
-  // Keep selectedSiteKey locked to activeSiteKey so manual selections are ignored
-  // This prevents Basak from staying selected when user clicks it - view snaps back to current site
-  useEffect(() => {
-    if (activeSiteKey && selectedSiteKey !== activeSiteKey) {
-      setSelectedSiteKey(activeSiteKey);
-    }
-  }, [activeSiteKey]);
-
   useEffect(() => {
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
@@ -531,7 +567,12 @@ export function Dashboard({
           // If backend says deviceConnected: false, treat as disconnected
           if (data && data.deviceConnected === false) {
             console.log('[Dashboard] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
-            if (data.siteName && data.siteName !== "Site Name") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            const currentSelected = selectedSiteKeyRef.current;
+            const incomingActive = data.siteKey || null;
+            const shouldSyncLiveSiteName = !currentSelected || (incomingActive && currentSelected === incomingActive);
+            if (shouldSyncLiveSiteName && data.siteName && data.siteName !== "Site Name") {
+              setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
+            }
             if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
               console.log('[Dashboard] Fallback coords found, setting gpsSites and lastSavedLocation');
               const fallbackLoc = {
@@ -568,7 +609,10 @@ export function Dashboard({
           setBackendOk(true);
           // Only update siteName from telemetry if it's not the generic default, 
           // to prevent overwriting custom Admin settings.
-          if (data && data.siteName && data.siteName !== "Site Name") {
+          const currentSelected = selectedSiteKeyRef.current;
+          const incomingActive = data?.siteKey || null;
+          const shouldSyncLiveSiteName = !currentSelected || (incomingActive && currentSelected === incomingActive);
+          if (shouldSyncLiveSiteName && data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
             localStorage.setItem('sg_global_latest_siteName', data.siteName);
           }
@@ -598,7 +642,10 @@ export function Dashboard({
       try {
         const data = await apiGet("/api/sensors/interval-config");
         let ms = data.intervalMs || 300000;
-        if (data.deviceName && data.deviceName !== "Site Name") {
+        const selectedNow = selectedSiteKeyRef.current;
+        const activeNow = activeSiteKeyRef.current;
+        const shouldSyncConfigSiteName = !selectedNow || (activeNow && selectedNow === activeNow);
+        if (shouldSyncConfigSiteName && data.deviceName && data.deviceName !== "Site Name") {
           setSiteData((prev: any) => ({ ...prev, siteName: data.deviceName }));
         }
         if (ms !== lastIntervalMs) {
@@ -1053,16 +1100,14 @@ export function Dashboard({
             availableSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
               const isActive = site.siteKey === activeSiteKey;
+              const selectedButInactive = isSelected && !isActive;
               return (
                 <button
                   key={site.siteKey}
                   type="button"
-                  disabled={!isActive}
                   onClick={() => {
-                    if (isActive) {
-                      setSelectedSiteKey(site.siteKey);
-                      setShowSiteDropdown(false);
-                    }
+                    setSelectedSiteKey(site.siteKey);
+                    setShowSiteDropdown(false);
                   }}
                   style={{
                     width: "100%",
@@ -1070,19 +1115,21 @@ export function Dashboard({
                     borderRadius: 10,
                     padding: "8px 10px",
                     textAlign: "left",
-                    background: isSelected ? "#3b82f6" : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#cbd5e1"),
+                    background: isSelected
+                      ? (selectedButInactive ? "#94a3b8" : "#3b82f6")
+                      : "transparent",
+                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#64748b"),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    cursor: isActive ? "pointer" : "not-allowed",
+                    cursor: "pointer",
                     whiteSpace: "nowrap",
-                    opacity: isActive ? 1 : 0.6,
+                    opacity: isActive ? 1 : 0.82,
                   }}
-                  title={!isActive ? "Only the current active site can be selected" : ""}
+                  title={selectedButInactive ? "Selected site is not currently active" : ""}
                 >
                   {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
                   <span>{site.siteName}</span>
@@ -1191,16 +1238,14 @@ export function Dashboard({
             availableSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
               const isActive = site.siteKey === activeSiteKey;
+              const selectedButInactive = isSelected && !isActive;
               return (
                 <button
                   key={site.siteKey}
                   type="button"
-                  disabled={!isActive}
                   onClick={() => {
-                    if (isActive) {
-                      setSelectedSiteKey(site.siteKey);
-                      setShowSiteDropdown(false);
-                    }
+                    setSelectedSiteKey(site.siteKey);
+                    setShowSiteDropdown(false);
                   }}
                   style={{
                     width: "100%",
@@ -1208,18 +1253,20 @@ export function Dashboard({
                     borderRadius: 10,
                     padding: "8px 10px",
                     textAlign: "left",
-                    background: isSelected ? "#3b82f6" : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#cbd5e1"),
+                    background: isSelected
+                      ? (selectedButInactive ? "#94a3b8" : "#3b82f6")
+                      : "transparent",
+                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#64748b"),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    cursor: isActive ? "pointer" : "not-allowed",
-                    opacity: isActive ? 1 : 0.6,
+                    cursor: "pointer",
+                    opacity: isActive ? 1 : 0.82,
                   }}
-                  title={!isActive ? "Only the current active site can be selected" : ""}
+                  title={selectedButInactive ? "Selected site is not currently active" : ""}
                 >
                   {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
                   <span style={{ whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.25 }}>{site.siteName}</span>
@@ -1351,9 +1398,9 @@ export function Dashboard({
       >
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           {compactCards ? (
-            <DashboardMap ref={mapRef} mobileMode={true} interactive={true} sites={gpsSites} />
+            <DashboardMap ref={mapRef} mobileMode={true} interactive={true} sites={mapSites} />
           ) : (
-            <DashboardMap ref={mapRef} sites={gpsSites} />
+            <DashboardMap ref={mapRef} sites={mapSites} />
           )}
         </div>
 
@@ -1567,7 +1614,7 @@ export function Dashboard({
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.8s ease" }}>
-          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={gpsSites} latOffset={-0.00099} />
+          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={mapSites} latOffset={-0.00099} />
         </div>
 
         {/* ── GRADIENT OVERLAY — matches desktop: upper-left teal fading to transparent ── */}
@@ -2254,7 +2301,7 @@ export function Dashboard({
           transition: "opacity 0.8s ease",
         }}
       >
-        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={gpsSites} lngOffset={-0.0015} />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={-0.0015} />
       </div>
 
         {/* Top-right controls: single horizontal flow */}

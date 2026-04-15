@@ -9,6 +9,8 @@ interface DashboardMapProps {
     name: string;
     lat: number;
     lng: number;
+    isActive?: boolean;
+    isSelected?: boolean;
   }>;
   /** When true, centers the map on the pin (for mobile/tablet fixed backgrounds) */
   mobileMode?: boolean;
@@ -180,8 +182,13 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
           sitesToShow.forEach((site) => {
             const el = document.createElement('div');
             el.className = 'site-marker-container';
+
+            const markerStateClass = site.isActive
+              ? 'site-marker--active'
+              : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
+
             el.innerHTML = `
-              <div class="site-marker">
+              <div class="site-marker ${markerStateClass}">
                 <div class="site-marker__pulse"></div>
                 <div class="site-marker__ring"></div>
                 <div class="site-marker__dot"></div>
