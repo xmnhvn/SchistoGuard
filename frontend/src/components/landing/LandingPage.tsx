@@ -96,12 +96,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [screenWidth, setScreenWidth] = React.useState(
     typeof window !== "undefined" ? window.innerWidth : 1200
   );
+  const [screenHeight, setScreenHeight] = React.useState(
+    typeof window !== "undefined" ? window.innerHeight : 800
+  );
   const [isMobileOrTablet, setIsMobileOrTablet] = React.useState(
     typeof window !== "undefined" ? window.innerWidth < 1100 : false
   );
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
   const [isMonitoringHovered, setIsMonitoringHovered] = useState(false);
+  const [desktopZoomScale, setDesktopZoomScale] = useState(1);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [shouldRenderMap, setShouldRenderMap] = useState(false);
   const [showLiveUpdates, setShowLiveUpdates] = useState(false);
@@ -328,16 +332,54 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const mapRef = useRef<DashboardMapHandle>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
+  const desktopBaselineDprRef = useRef<number | null>(null);
 
   React.useEffect(() => {
+    const getBrowserZoom = (): number => {
+      if (typeof window === "undefined") return 1;
+      const vvScale = window.visualViewport?.scale;
+      if (typeof vvScale === "number" && vvScale > 0) {
+        return vvScale;
+      }
+      return 1;
+    };
+
+    const updateDesktopZoomScale = () => {
+      const isDesktopWidth = window.innerWidth >= 1100;
+      if (!isDesktopWidth) {
+        setDesktopZoomScale(1);
+        desktopBaselineDprRef.current = null;
+        return;
+      }
+
+      const currentDpr = window.devicePixelRatio || 1;
+      if (desktopBaselineDprRef.current === null) {
+        desktopBaselineDprRef.current = currentDpr;
+      }
+
+      const dprRatio = desktopBaselineDprRef.current / currentDpr;
+      const zoom = getBrowserZoom();
+      const zoomRatio = zoom > 0 ? 1 / zoom : 1;
+      const sourceRatio = zoom !== 1 ? zoomRatio : dprRatio;
+      const next = Math.min(1.35, Math.max(0.6, sourceRatio));
+      setDesktopZoomScale(next);
+    };
+
     const check = () => {
       const width = window.innerWidth;
+      const height = window.innerHeight;
       setScreenWidth(width);
+      setScreenHeight(height);
       setIsMobileOrTablet(width < 1100);
+      updateDesktopZoomScale();
     };
     check();
     window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    window.visualViewport?.addEventListener("resize", check);
+    return () => {
+      window.removeEventListener("resize", check);
+      window.visualViewport?.removeEventListener("resize", check);
+    };
   }, []);
 
   // Lazy-mount map to reduce initial landing page jank
@@ -454,13 +496,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (screenWidth < 480) return '30px'; // Small mobile
     if (screenWidth < 768) return '40px'; // Large mobile
     if (screenWidth < 1024) return '55px'; // Tablet
-    return '44px'; // Desktop (refined for better scaling)
+    if (isSmallDesktop) return '26px';
+    return '40px'; // Desktop (refined for better scaling)
   };
 
   const getHeroParagraphFontSize = () => {
     if (screenWidth < 480) return '14px'; // Small mobile
     if (screenWidth < 768) return '16px'; // Large mobile
     if (screenWidth < 1024) return '18px'; // Tablet
+    if (isSmallDesktop) return '11px';
     return '17px'; // Desktop (refined)
   };
 
@@ -491,6 +535,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Upstream implementation uses state for gpsSites, procedural logic removed.
 
   const isPreviewActive = showLiveUpdates && !isExitingLiveUpdates;
+  const isSmallDesktop = !isMobileOrTablet && screenWidth <= 1600 && screenHeight <= 1000;
+  const isDesktopViewport = !isMobileOrTablet;
+  const desktopSidePadding = '10%';
+  const liveUpdatesContentPadding = isMobileOrTablet
+    ? (screenWidth < 400 ? '72px 16px 16px'
+      : screenWidth < 600 ? '76px 20px 20px'
+      : screenWidth < 800 ? '80px 24px 24px'
+      : '88px 28px 28px')
+    : (isSmallDesktop ? '88px 36px 92px' : '100px 50px 120px');
+  const liveUpdatesBackButtonLeft = isMobileOrTablet
+    ? (screenWidth < 400 ? 16 : screenWidth < 600 ? 20 : screenWidth < 800 ? 24 : 28)
+    : (isSmallDesktop ? 36 : 50);
 
   // ─── Risk Calculation Logic (Sync with Dashboard) ───────────────────────
   const getOverallRisk = () => {
@@ -699,20 +755,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           pointerEvents: showLiveUpdates ? 'none' : 'auto',
         }}
       >
-        <div className="w-full py-6" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
+        <div
+          className="w-full"
+          style={{
+            paddingTop: isSmallDesktop ? 18 : 24,
+            paddingBottom: isSmallDesktop ? 18 : 24,
+            paddingLeft: desktopSidePadding,
+            paddingRight: desktopSidePadding,
+          }}
+        >
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <img
                 src="/schistoguard.png"
                 alt="SchistoGuard Logo"
-                style={{ width: 28, height: 28, objectFit: "contain" }}
+                style={{ width: isSmallDesktop ? 24 : 28, height: isSmallDesktop ? 24 : 28, objectFit: "contain" }}
               />
               <h1
                 style={{
                   fontFamily: "Poppins, sans-serif",
                   color: "#357D86",
                   fontWeight: 600,
-                  fontSize: 18,
+                  fontSize: isSmallDesktop ? 16 : 18,
                 }}
               >
                 SchistoGuard
@@ -727,11 +791,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   size="sm"
                   onClick={onEnterApp}
                   ariaLabel="Start monitoring"
-                  className="flex rounded-full px-5 py-2 border-2 transition-all duration-300 shadow-lg"
+                  className="flex rounded-full border-2 transition-all duration-300 shadow-lg"
                   style={{
                     fontFamily: 'Poppins, sans-serif',
                     fontWeight: 600,
-                    fontSize: '14px',
+                    fontSize: isSmallDesktop ? '13px' : '14px',
+                    padding: isSmallDesktop ? '6px 16px' : undefined,
                     backgroundColor: isMonitoringHovered ? '#FFFFFF' : '#357D86',
                     color: isMonitoringHovered ? '#357D86' : '#FFFFFF',
                     borderColor: '#357D86',
@@ -787,11 +852,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
         pointerEvents: showLiveUpdates ? 'none' : 'auto',
       }}>
-        <section className="hidden lg:block w-full py-8">
-          <div className="w-full" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
-            <div className="grid lg:grid-cols-2 gap-10 items-center">
-              <div className="space-y-6 max-w-4xl py-8 animate-fade-up">
-                <div className="space-y-4">
+        <section className="hidden lg:block w-full" style={{ paddingTop: isSmallDesktop ? 24 : 32, paddingBottom: isSmallDesktop ? 24 : 32 }}>
+          <div className="w-full" style={{ paddingLeft: desktopSidePadding, paddingRight: desktopSidePadding }}>
+            <div className="grid lg:grid-cols-2 items-center" style={{ gap: isSmallDesktop ? 28 : 40 }}>
+              <div
+                className="max-w-4xl animate-fade-up"
+                style={{
+                  maxWidth: isSmallDesktop ? 620 : undefined,
+                  paddingTop: isSmallDesktop ? 28 : 32,
+                  paddingBottom: isSmallDesktop ? 28 : 32,
+                  marginTop: isSmallDesktop ? -22 : -16,
+                }}
+              >
+                <div>
                   <h2
                     className="animate-fade-up animate-delay-50"
                     style={{
@@ -799,7 +872,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       textShadow: '0 2px 10px rgba(0,0,0,0.3)',
                       fontSize: getHeroFontSize(),
                       fontWeight: 800,
-                      lineHeight: '1.2',
+                      maxWidth: isSmallDesktop ? 500 : undefined,
+                      lineHeight: isSmallDesktop ? '1.1' : '1.2',
                       fontFamily: 'Poppins, sans-serif'
                     }}
                   >
@@ -810,9 +884,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <p
                     className="leading-relaxed animate-fade-up animate-delay-100"
                     style={{
+                      marginTop: isSmallDesktop ? 12 : 16,
+                      marginBottom: isSmallDesktop ? 12 : 16,
                       color: 'rgba(255,255,255,0.95)',
                       textShadow: '0 1px 8px rgba(0,0,0,0.35)',
-                      fontSize: getHeroParagraphFontSize()
+                      fontSize: getHeroParagraphFontSize(),
+                      maxWidth: isSmallDesktop ? 430 : undefined
                     }}
                   >
                     Real-time monitoring of water
@@ -822,7 +899,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div
                   className="flex flex-wrap animate-fade-up animate-delay-150"
-                  style={{ gap: '12px' }}
+                  style={{
+                    gap: '12px',
+                    transform: isDesktopViewport ? `scale(${desktopZoomScale})` : undefined,
+                    transformOrigin: 'left center',
+                    width: isDesktopViewport ? `${100 / desktopZoomScale}%` : undefined
+                  }}
                 >
                   <TrustBadge
                     icon={
@@ -830,6 +912,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     }
                     label="Real-time monitoring"
                     small
+                    compact={false}
                   />
                   <TrustBadge
                     icon={
@@ -837,6 +920,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     }
                     label="Multiple locations"
                     small
+                    compact={false}
                   />
                   <TrustBadge
                     icon={
@@ -844,9 +928,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     }
                     label="Public health focus"
                     small
+                    compact={false}
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 animate-fade-up animate-delay-200" style={{ marginTop: '70px' }}>
+                <div className="flex flex-col sm:flex-row gap-3 animate-fade-up animate-delay-200" style={{ marginTop: isSmallDesktop ? 30 : 70 }}>
                   <CTAButton
                     variant="primary"
                     size="md"
@@ -859,7 +944,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       WebkitBackdropFilter: 'blur(10px)',
                       color: '#ffffffff',
                       borderRadius: '9999px',
-                      padding: '12px 36px',
+                      padding: isSmallDesktop ? '7px 18px' : '12px 36px',
                       boxShadow: `
                         inset 0 0 0 1px rgba(255, 255, 255, 0.10),
                         inset 0 1px 2px rgba(255, 255, 255, 0.1), 
@@ -868,9 +953,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         0 0 30px rgba(53, 125, 134, 0.2)
                       `,
                       fontWeight: 600,
-                      fontSize: '15px',
+                      fontSize: isSmallDesktop ? '12px' : '15px',
                       fontFamily: 'Poppins, sans-serif',
-                      letterSpacing: '0.05em',
+                      letterSpacing: isSmallDesktop ? '0.03em' : '0.05em',
                       textShadow: '0 1px 2px rgba(28, 28, 28, 0.60)',
                       overflow: 'hidden',
                       position: 'relative',
@@ -879,7 +964,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   >
                     <span className="relative z-10 flex items-center justify-center">
                       Live Updates
-                      <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1.5 transition-transform" />
+                      <ArrowRight className={`${isSmallDesktop ? 'w-4 h-4 ml-1.5' : 'w-5 h-5 ml-2'} group-hover:translate-x-1.5 transition-transform`} />
                     </span>
                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ borderRadius: '9999px' }} />
                   </CTAButton>
@@ -887,7 +972,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               {/* Removed HeroIllustration */}
-              <div className="relative h-96 flex items-center justify-center">
+              <div className="relative flex items-center justify-center" style={{ height: isSmallDesktop ? 260 : 384 }}>
                 {/* Empty container to maintain layout balance without animations */}
               </div>
             </div>
@@ -1028,12 +1113,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               left: 0,
               bottom: 0,
               width: isMobileOrTablet ? '100%' : '50%',
-              padding: isMobileOrTablet
-                ? (screenWidth < 400 ? '72px 16px 16px' :
-                  screenWidth < 600 ? '76px 20px 20px' :
-                    screenWidth < 800 ? '80px 24px 24px' :
-                      '88px 28px 28px')
-                : '100px 50px 120px',
+              padding: liveUpdatesContentPadding,
               display: 'flex',
               flexDirection: 'column',
               gap: 16,
@@ -1054,9 +1134,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 top: isMobileOrTablet
                   ? (screenWidth < 400 ? 18 : screenWidth < 600 ? 20 : screenWidth < 800 ? 22 : 26)
                   : 32,
-                left: isMobileOrTablet
-                  ? (screenWidth < 400 ? 16 : screenWidth < 600 ? 20 : screenWidth < 800 ? 24 : 28)
-                  : 50,
+                left: liveUpdatesBackButtonLeft,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1085,7 +1163,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   color: '#fff',
                   fontFamily: "'Poppins', sans-serif",
                   fontWeight: 700,
-                  fontSize: isMobileOrTablet ? (screenWidth < 600 ? 26 : 32) : 38,
+                  fontSize: isMobileOrTablet ? (screenWidth < 600 ? 26 : 32) : (isSmallDesktop ? 32 : 38),
                   lineHeight: 1.15,
                   textShadow: '0 1px 6px rgba(0,0,0,0.18)',
                   animation: 'slideInFromRight 0.6s 0.2s ease-out both',
@@ -1098,7 +1176,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   margin: '6px 0 0',
                   color: 'rgba(255,255,255,0.92)',
                   fontFamily: "'Poppins', sans-serif",
-                  fontSize: isMobileOrTablet ? 13 : 16,
+                  fontSize: isMobileOrTablet ? 13 : (isSmallDesktop ? 14 : 16),
                   animation: 'slideInFromRight 0.6s 0.3s ease-out both',
                 }}
               >
@@ -1171,10 +1249,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               style={{
                 display: 'grid',
                 gridTemplateColumns: screenWidth >= 1100 ? '1fr 1fr 1fr' : '1fr 1fr',
-                gap: 20,
+                gap: isSmallDesktop ? 14 : 20,
                 pointerEvents: 'auto',
-                marginTop: 20,
-                maxWidth: screenWidth < 1100 ? '100%' : 580, 
+                marginTop: isSmallDesktop ? 14 : 20,
+                maxWidth: screenWidth < 1100 ? '100%' : (isSmallDesktop ? 520 : 580), 
               }}
             >
               {/* Temperature Card - Full Width on Mobile */}
@@ -1183,7 +1261,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '14px 18px' : '20px 26px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? (isSmallDesktop ? '12px 14px' : '14px 18px') : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1206,13 +1284,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('temperature', latestReading.temperature).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 11.5 : screenWidth >= 1100 ? 12 : 15, color: '#77ABB2' }}>Temperature</p>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 11.5 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 12) : 15, color: '#77ABB2' }}>Temperature</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.temperature : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> °C</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> °C</span>}
                 </p>
                 {latestReading && (
                   <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
@@ -1226,7 +1304,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 style={{
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? (isSmallDesktop ? '12px 14px' : '16px 20px') : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1249,13 +1327,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('turbidity', latestReading.turbidity).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>Turbidity</p>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 13) : 15, color: '#77ABB2' }}>Turbidity</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.turbidity : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 16 : 20, color: '#6b7280' }}> NTU</span>}
+                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> NTU</span>}
                 </p>
                 {latestReading && (
                   <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
@@ -1270,7 +1348,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gridColumn: screenWidth >= 1100 ? 'auto' : '1 / -1',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? '16px 20px' : '20px 26px',
+                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? (isSmallDesktop ? '12px 14px' : '16px 20px') : '20px 26px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
@@ -1293,10 +1371,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   "--dot-glow": latestReading ? hexToRgba(getSensorStatus('ph', latestReading.ph).color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? 36 : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? 13 : 15, color: '#77ABB2' }}>pH Level</p>
+                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
+                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 13) : 15, color: '#77ABB2' }}>pH Level</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? 24 : 30, color: '#6b7280' }}>
+                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
                     {latestReading ? latestReading.ph : '—'}
                   </span>
                 </p>

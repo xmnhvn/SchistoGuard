@@ -89,13 +89,20 @@ interface TrustBadgeProps {
   icon: React.ReactNode;
   label: string;
   small?: boolean;
+  compact?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export const TrustBadge: React.FC<TrustBadgeProps> = ({ icon, label, small }) => {
+export const TrustBadge: React.FC<TrustBadgeProps> = ({ icon, label, small, compact = false, className = '', style }) => {
+  const smallClasses = compact
+    ? "px-3 py-1 text-[11px] shadow-sm"
+    : "px-4 py-1.5 text-xs shadow-sm";
+
   return (
     <div 
-      className={`inline-flex items-center ${small ? 'px-3 py-1 text-xs shadow-sm' : 'px-4 py-1.5 text-sm shadow-lg'} bg-white rounded-full font-light text-gray-500 border border-gray-100`}
-      style={{ gap: '10px' }}
+      className={`inline-flex items-center ${small ? smallClasses : 'px-4 py-1.5 text-sm shadow-lg'} bg-white rounded-full font-light text-gray-500 border border-gray-100 ${className}`}
+      style={{ gap: small ? (compact ? '6px' : '8px') : '10px', ...style }}
     >
       <div className="flex-shrink-0 flex items-center">{icon}</div>
       <span className="whitespace-nowrap">{label}</span>

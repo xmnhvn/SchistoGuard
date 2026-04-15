@@ -7,6 +7,7 @@ import {
   Bell,
   Asterisk,
   LocateFixed,
+  ChevronLeft,
   ChevronDown,
   BadgeCheck,
   Info,
@@ -49,12 +50,14 @@ export function Dashboard({
   viewMode = "full",
   visible = true,
   user,
+  onBack,
 }: {
   onNavigate?: (view: string) => void;
   setSystemStatus?: (status: "operational" | "down") => void;
   viewMode?: "full" | "sensors-only";
   visible?: boolean;
   user?: any;
+  onBack?: () => void;
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
@@ -1269,6 +1272,7 @@ export function Dashboard({
         />
 
         <div
+          className="scrollbar-hide"
           style={{
             position: "relative",
             zIndex: 2,
@@ -1279,89 +1283,123 @@ export function Dashboard({
             flexDirection: "column",
             gap: 16,
             overflowY: "auto",
-            pointerEvents: "none",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorY: "contain",
+            touchAction: isMobile ? "pan-y" : undefined,
+            pointerEvents: isMobile ? "auto" : "none",
           } as React.CSSProperties}
         >
-          <div style={{ pointerEvents: "none" }}>
-            <h1
-              style={{
-                margin: 0,
-                color: "#fff",
-                fontFamily: POPPINS,
-                fontWeight: 700,
-                fontSize: titleFontSize,
-                lineHeight: 1.15,
-                textShadow: "0 1px 6px rgba(0,0,0,0.18)",
-                paddingLeft: isMobile ? 0 : 0,
-              }}
-            >
-              Water Quality Information
-            </h1>
-            <p
-              style={{
-                margin: "6px 0 0",
-                color: "rgba(255,255,255,0.92)",
-                fontFamily: POPPINS,
-                fontSize: compactCards ? 13 : 15,
-                paddingLeft: isMobile ? 40 : 0,
-              }}
-            >
-              Real-time data For monitoring Schistosomiasis Risk
-            </p>
-            {/* System Status & Recenter Button for Preview Mode */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 10,
-              paddingLeft: isMobile ? 40 : 0,
-              pointerEvents: "auto"
-            }}>
-              <div style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(255,255,255,0.92)",
-                borderRadius: 999,
-                padding: "4px 12px",
-                fontSize: 11,
-                fontWeight: 600,
-                color: "#15803d",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-                backdropFilter: "blur(4px)",
-                fontFamily: POPPINS
-              }}>
-                <span style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: dashboardOperational ? "#22c55e" : "#9ca3af",
-                  display: "inline-block",
-                  animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
-                  "--dot-glow": dashboardOperational ? "rgba(34,197,94,0.5)" : "transparent",
-                } as any} />
-                {dashboardOperational ? "System Operational" : "Device Not Connected"}
+          <div style={{ display: "flex", flexDirection: "column", gap: compactCards ? 16 : 22 }}>
+            {!compactCards && onBack && (
+              <div style={{ pointerEvents: "auto" }}>
+                <button
+                  onClick={onBack}
+                  aria-label="Back to Home"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "rgba(255,255,255,0.92)",
+                    color: "#357D86",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
+                    backdropFilter: "blur(4px)",
+                    WebkitBackdropFilter: "blur(4px)",
+                    padding: 0,
+                  }}
+                >
+                  <ChevronLeft size={22} strokeWidth={2.4} />
+                </button>
               </div>
+            )}
 
-              <button
-                onClick={() => mapRef.current?.resetView()}
+            <div style={{ pointerEvents: "none" }}>
+              <h1
                 style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.92)",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
+                  margin: 0,
+                  color: "#fff",
+                  fontFamily: POPPINS,
+                  fontWeight: 700,
+                  fontSize: titleFontSize,
+                  lineHeight: 1.15,
+                  textShadow: "0 1px 6px rgba(0,0,0,0.18)",
+                  paddingLeft: isMobile ? 0 : 0,
+                }}
+              >
+                Water Quality Information
+              </h1>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color: "rgba(255,255,255,0.92)",
+                  fontFamily: POPPINS,
+                  fontSize: compactCards ? 13 : 15,
+                  paddingLeft: isMobile ? 40 : 0,
+                }}
+              >
+                Real-time data For monitoring Schistosomiasis Risk
+              </p>
+              {/* System Status & Recenter Button for Preview Mode */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                paddingLeft: isMobile ? 40 : 0,
+                pointerEvents: "auto"
+              }}>
+                <div style={{
+                  display: "inline-flex",
                   alignItems: "center",
-                  justifyContent: "center",
+                  gap: 6,
+                  background: "rgba(255,255,255,0.92)",
+                  borderRadius: 999,
+                  padding: "4px 12px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#15803d",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                   backdropFilter: "blur(4px)",
-                }}
-                title="Reset map position"
-              >
-                <LocateFixed size={13} color="#357D86" strokeWidth={2.5} />
-              </button>
+                  fontFamily: POPPINS
+                }}>
+                  <span style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: dashboardOperational ? "#22c55e" : "#9ca3af",
+                    display: "inline-block",
+                    animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": dashboardOperational ? "rgba(34,197,94,0.5)" : "transparent",
+                  } as any} />
+                  {dashboardOperational ? "System Operational" : "Device Not Connected"}
+                </div>
+
+                <button
+                  onClick={() => mapRef.current?.resetView()}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.92)",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                    backdropFilter: "blur(4px)",
+                  }}
+                  title="Reset map position"
+                >
+                  <LocateFixed size={13} color="#357D86" strokeWidth={2.5} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1417,8 +1455,6 @@ export function Dashboard({
           @keyframes dotPulse {
             0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--dot-glow); }
             60% { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
-          }
-            to { opacity: 1; transform: translateY(0); }
           }
         `}</style>
       </div>
