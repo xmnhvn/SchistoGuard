@@ -515,6 +515,14 @@ export function Dashboard({
     }
   }, []);
 
+  // Keep selectedSiteKey locked to activeSiteKey so manual selections are ignored
+  // This prevents Basak from staying selected when user clicks it - view snaps back to current site
+  useEffect(() => {
+    if (activeSiteKey && selectedSiteKey !== activeSiteKey) {
+      setSelectedSiteKey(activeSiteKey);
+    }
+  }, [activeSiteKey]);
+
   useEffect(() => {
     const fetchLatest = () => {
       apiGet("/api/sensors/latest")
@@ -1044,13 +1052,17 @@ export function Dashboard({
           ) : (
             availableSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
+              const isActive = site.siteKey === activeSiteKey;
               return (
                 <button
                   key={site.siteKey}
                   type="button"
+                  disabled={!isActive}
                   onClick={() => {
-                    setSelectedSiteKey(site.siteKey);
-                    setShowSiteDropdown(false);
+                    if (isActive) {
+                      setSelectedSiteKey(site.siteKey);
+                      setShowSiteDropdown(false);
+                    }
                   }}
                   style={{
                     width: "100%",
@@ -1059,16 +1071,18 @@ export function Dashboard({
                     padding: "8px 10px",
                     textAlign: "left",
                     background: isSelected ? "#3b82f6" : "transparent",
-                    color: isSelected ? "#ffffff" : "#0f172a",
+                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#cbd5e1"),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    cursor: "pointer",
+                    cursor: isActive ? "pointer" : "not-allowed",
                     whiteSpace: "nowrap",
+                    opacity: isActive ? 1 : 0.6,
                   }}
+                  title={!isActive ? "Only the current active site can be selected" : ""}
                 >
                   {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
                   <span>{site.siteName}</span>
@@ -1176,13 +1190,17 @@ export function Dashboard({
           ) : (
             availableSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
+              const isActive = site.siteKey === activeSiteKey;
               return (
                 <button
                   key={site.siteKey}
                   type="button"
+                  disabled={!isActive}
                   onClick={() => {
-                    setSelectedSiteKey(site.siteKey);
-                    setShowSiteDropdown(false);
+                    if (isActive) {
+                      setSelectedSiteKey(site.siteKey);
+                      setShowSiteDropdown(false);
+                    }
                   }}
                   style={{
                     width: "100%",
@@ -1191,15 +1209,17 @@ export function Dashboard({
                     padding: "8px 10px",
                     textAlign: "left",
                     background: isSelected ? "#3b82f6" : "transparent",
-                    color: isSelected ? "#ffffff" : "#0f172a",
+                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#cbd5e1"),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    cursor: "pointer",
+                    cursor: isActive ? "pointer" : "not-allowed",
+                    opacity: isActive ? 1 : 0.6,
                   }}
+                  title={!isActive ? "Only the current active site can be selected" : ""}
                 >
                   {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
                   <span style={{ whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.25 }}>{site.siteName}</span>
