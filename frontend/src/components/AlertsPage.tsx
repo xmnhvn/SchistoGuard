@@ -109,10 +109,22 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   const [showMobileAlertList, setShowMobileAlertList] = useState(false);
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSite, setSelectedSite] = useState("all");
+  const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiGet('/api/sensors/latest')
+      .then((data) => {
+        if (data?.siteKey) {
+          setActiveSiteKey(data.siteKey);
+        }
+      })
+      .catch(() => { });
+  }, []);
 
   useEffect(() => {
     const fetchAlerts = () => {
-      const query = selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
+      const effectiveSite = selectedSite !== 'all' ? selectedSite : (activeSiteKey || 'all');
+      const query = effectiveSite !== 'all' ? `?siteKey=${encodeURIComponent(effectiveSite)}` : '';
       apiGet(`/api/sensors/alerts${query}`)
         .then((data) => {
           console.log('Fetched alerts:', data); // DEBUG LOG
@@ -134,7 +146,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     // Check for new alerts every 10 seconds
     const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
-  }, [deviceConnected, selectedSite]);
+  }, [deviceConnected, selectedSite, activeSiteKey]);
 
   useEffect(() => {
     const fetchSites = async () => {
@@ -162,6 +174,17 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
 
     fetchSites();
   }, []);
+
+  useEffect(() => {
+    if (!activeSiteKey) return;
+
+    setSelectedSite((prev) => {
+      if (prev === 'all') return activeSiteKey;
+      const siteExists = availableSites.some((site) => site.siteKey === prev);
+      if (!siteExists) return activeSiteKey;
+      return prev;
+    });
+  }, [activeSiteKey, availableSites]);
 
   // Validate selectedSite against availableSites to prevent Select rendering blank
   useEffect(() => {

@@ -1424,30 +1424,52 @@ router.get("/latest", (req, res) => {
 
 router.get("/history", (req, res) => {
   const site = (req.query.site || req.query.siteKey || req.query.address || '').toString().trim();
-  const siteKey = site ? normalizeSiteKey(site) : null;
-  const query = siteKey
-    ? "SELECT * FROM readings WHERE site_key = ? ORDER BY timestamp DESC LIMIT 288"
-    : "SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288";
-  const params = siteKey ? [siteKey] : [];
 
-  db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows.reverse());
-  });
+  const handleHistory = (siteKey) => {
+    const query = siteKey
+      ? "SELECT * FROM readings WHERE site_key = ? ORDER BY timestamp DESC LIMIT 288"
+      : "SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288";
+    const params = siteKey ? [siteKey] : [];
+
+    db.all(query, params, (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows.reverse());
+    });
+  };
+
+  if (site) {
+    if (site.toLowerCase() === 'all') return handleHistory(null);
+    return handleHistory(normalizeSiteKey(site));
+  }
+
+  getCurrentSiteSnapshot()
+    .then((snapshot) => handleHistory(snapshot?.siteKey || null))
+    .catch((err) => res.status(500).json({ error: err.message }));
 });
 
 router.get("/alerts", (req, res) => {
   const site = (req.query.site || req.query.siteKey || req.query.address || '').toString().trim();
-  const siteKey = site ? normalizeSiteKey(site) : null;
-  const query = siteKey
-    ? "SELECT * FROM alerts WHERE site_key = ? ORDER BY timestamp DESC LIMIT 100"
-    : "SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100";
-  const params = siteKey ? [siteKey] : [];
 
-  db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  const handleAlerts = (siteKey) => {
+    const query = siteKey
+      ? "SELECT * FROM alerts WHERE site_key = ? ORDER BY timestamp DESC LIMIT 100"
+      : "SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100";
+    const params = siteKey ? [siteKey] : [];
+
+    db.all(query, params, (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    });
+  };
+
+  if (site) {
+    if (site.toLowerCase() === 'all') return handleAlerts(null);
+    return handleAlerts(normalizeSiteKey(site));
+  }
+
+  getCurrentSiteSnapshot()
+    .then((snapshot) => handleAlerts(snapshot?.siteKey || null))
+    .catch((err) => res.status(500).json({ error: err.message }));
 });
 
 router.get('/sites', (req, res) => {

@@ -43,6 +43,25 @@ type SiteOption = {
 };
 
 const SITE_STALE_MS = 15000;
+const BASAK_SITE_KEY = '10-143-90-164';
+const BASAK_SITE_COORDINATES = { lat: 7.606312, lng: 126.00713 };
+
+function resolveSiteCoordinates(site: SiteOption | null | undefined) {
+  if (!site) return null;
+
+  const siteKey = site.siteKey.toLowerCase();
+  const siteName = site.siteName.toLowerCase();
+
+  if (siteKey === BASAK_SITE_KEY || siteName.includes('basak')) {
+    return BASAK_SITE_COORDINATES;
+  }
+
+  if (site.latitude != null && site.longitude != null) {
+    return { lat: site.latitude, lng: site.longitude };
+  }
+
+  return null;
+}
 
 export function Dashboard({
   onNavigate,
@@ -427,8 +446,8 @@ export function Dashboard({
         setAvailableSites(mapped);
 
         setSelectedSiteKey((prev) => {
-          if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
           if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
+          if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
           return mapped[0]?.siteKey || '';
         });
       } catch {
@@ -439,6 +458,12 @@ export function Dashboard({
     fetchSites();
     const interval = setInterval(fetchSites, 15000);
     return () => clearInterval(interval);
+  }, [activeSiteKey]);
+
+  useEffect(() => {
+    if (activeSiteKey) {
+      setSelectedSiteKey(activeSiteKey);
+    }
   }, [activeSiteKey]);
 
   useEffect(() => {
@@ -489,7 +514,7 @@ export function Dashboard({
             localStorage.setItem('sg_global_latest_siteName', data.siteName);
           }
 
-          if (!selectedSiteKey && data?.siteKey) {
+          if (data?.siteKey) {
             setSelectedSiteKey(data.siteKey);
           }
         })
@@ -580,13 +605,14 @@ export function Dashboard({
               }));
             }
 
-            if (selectedSite?.latitude != null && selectedSite?.longitude != null) {
+            const selectedCoordinates = resolveSiteCoordinates(selectedSite);
+            if (selectedCoordinates) {
               setGpsSites([
                 {
                   id: selectedSite.siteKey,
                   name: selectedSite.siteName,
-                  lat: selectedSite.latitude,
-                  lng: selectedSite.longitude,
+                  lat: selectedCoordinates.lat,
+                  lng: selectedCoordinates.lng,
                 },
               ]);
             }
