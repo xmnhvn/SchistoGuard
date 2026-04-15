@@ -212,7 +212,7 @@ export function AlertDetailsModal({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-2xl"
+        className="sm:max-w-2xl p-0 gap-0"
         style={{
           fontFamily: POPPINS,
           width: isMobile ? "88vw" : (isTablet ? "min(92vw, 760px)" : "min(92vw, 960px)"),
@@ -223,29 +223,26 @@ export function AlertDetailsModal({
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          top: "50%",
-          left: "50%",
-          right: "auto",
-          bottom: "auto",
-          marginInline: 0,
           borderRadius: isMobile ? 20 : undefined,
-          transform: "translate(-50%, -50%)",
         }}
       >
-        <DialogHeader>
-          <DialogTitle style={{ textAlign: "center", fontWeight: 700, marginTop: compactDesktopModal ? 10 : 20, marginBottom: compactDesktopModal ? 10 : 20, fontSize: compactDesktopModal ? 24 : undefined }}>
+        <DialogHeader style={{ padding: isMobile ? "18px 20px 14px" : "20px 24px 16px", borderBottom: "1px solid #eef0f2" }}>
+          <DialogTitle style={{ textAlign: "center", fontWeight: 700, margin: 0, fontSize: compactDesktopModal ? 24 : undefined }}>
             Alert Details
           </DialogTitle>
         </DialogHeader>
 
         <div
-          className="flex flex-col gap-4 sm:gap-6"
+          className="sg-modal-scroll flex flex-col gap-4 sm:gap-6"
           style={{
-            paddingBottom: isMobile ? "max(8px, env(safe-area-inset-bottom))" : (compactDesktopModal ? 2 : 0),
+            padding: isMobile
+              ? "20px 20px max(20px, env(safe-area-inset-bottom))"
+              : (compactDesktopModal ? "20px 24px 22px" : "24px 24px 24px"),
             overflowY: "auto",
             minHeight: 0,
             flex: 1,
-            paddingRight: isMobile ? 2 : 0,
+            paddingRight: isMobile ? 10 : 12,
+            marginRight: isMobile ? 0 : -6,
           }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">

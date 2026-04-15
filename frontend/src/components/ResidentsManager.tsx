@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { Fragment, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button, buttonVariants } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,8 +15,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import {
@@ -139,6 +137,42 @@ function normalizeResidentPhone(phone: string) {
   return digits;
 }
 
+function normalizePhilippinePhoneInput(phone: string) {
+  const cleaned = (phone || "").replace(/[\s-]/g, "");
+  if (/^09\d*$/.test(cleaned)) {
+    return `+639${cleaned.slice(2)}`;
+  }
+  if (/^639\d*$/.test(cleaned)) {
+    return `+${cleaned}`;
+  }
+  if (cleaned.startsWith("+6309")) {
+    return `+639${cleaned.slice(5)}`;
+  }
+  return cleaned;
+}
+
+function isValidPhilippineMobile(phone: string) {
+  const normalized = normalizePhilippinePhoneInput(phone);
+  return /^(?:\+639\d{9}|09\d{9})$/.test(normalized);
+}
+
+function getPhoneValidationMessage(phone: string) {
+  if (!phone.trim()) return "";
+  if (isValidPhilippineMobile(phone)) return "";
+  return "Use 09XXXXXXXXX or +639XXXXXXXXX only.";
+}
+
+function normalizeBarangayToken(value: string) {
+  return (value || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/barangay|brgy\.?|purok|sitio/gi, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function uniqueStrings(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
@@ -197,130 +231,28 @@ function buildResidentGroups(residentList: Resident[]): ResidentGroup[] {
     });
 }
 
-function getResidentGroupSummary(group: ResidentGroup) {
-  if (group.records.length <= 1) return "";
-  if (group.siteNames.length > 1) {
-    return `${group.records.length} records across ${group.siteNames.length} sites`;
-  }
-  return `${group.records.length} records merged by phone number`;
-}
-
-function getResidentRecordDetailLines(resident: Resident) {
+function getResidentDetailPills(resident: Resident) {
   const barangay = (resident.barangay || "").trim();
   const designationDetail = (resident.designationDetail || "").trim();
+  const pills: Array<{ label: string; background: string; color: string }> = [];
 
-  if (resident.role === "municipal_health_officer") {
-    return [
-      barangay ? `Area: ${barangay}` : "",
-      designationDetail ? `Designation: ${designationDetail}` : "",
-    ].filter(Boolean);
+  if (barangay && resident.role !== "municipal_health_officer") {
+    pills.push({
+      label: barangay,
+      background: "#f3f4f6",
+      color: "#64748b",
+    });
   }
 
-  if (resident.role === "bhw" || resident.role === "resident") {
-    return [barangay ? `Barangay: ${barangay}` : ""].filter(Boolean);
+  if (resident.role === "municipal_health_officer" && designationDetail) {
+    pills.push({
+      label: designationDetail,
+      background: "#f5f3ff",
+      color: "#7c3aed",
+    });
   }
 
-  return [];
-}
-
-function getResidentGroupDetailLines(group: ResidentGroup) {
-  return uniqueStrings(group.records.flatMap((resident) => getResidentRecordDetailLines(resident)));
-}
-
-function SitePreviewChips({ group, compact = false }: { group: ResidentGroup; compact?: boolean }) {
-  if (!group.siteNames.length) return null;
-
-  const [primarySite, ...remainingSites] = group.siteNames;
-  const moreCount = remainingSites.length;
-  const maxSiteWidth = compact ? "100%" : 260;
-
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", maxWidth: "100%" }}>
-      <span
-        title={primarySite}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          maxWidth: maxSiteWidth,
-          minWidth: 0,
-          padding: "3px 10px",
-          borderRadius: 999,
-          background: "#f8fafc",
-          color: "#475569",
-          border: "1px solid #e2e8f0",
-          fontFamily: POPPINS,
-          fontSize: 10,
-          fontWeight: 600,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {primarySite}
-      </span>
-      {moreCount > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "3px 10px",
-                borderRadius: 999,
-                border: "1px solid #dbe4f0",
-                background: "#fff",
-                color: "#357D86",
-                fontFamily: POPPINS,
-                fontSize: 10,
-                fontWeight: 700,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              +{moreCount} more
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            style={{
-              fontFamily: POPPINS,
-              width: 320,
-              maxWidth: "min(320px, calc(100vw - 32px))",
-              padding: 0,
-              overflow: "hidden",
-              borderRadius: 16,
-            }}
-          >
-            <div style={{ padding: "12px 14px", borderBottom: "1px solid #eef2f7", background: "#fbfdff" }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2a3a", marginBottom: 2 }}>Linked Sites</div>
-              <div style={{ fontSize: 11, color: "#7b8a9a" }}>{group.siteNames.length} total sites for this contact</div>
-            </div>
-            <div style={{ maxHeight: 240, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-              {group.siteNames.map((siteName) => (
-                <div
-                  key={`${group.key}-${siteName}`}
-                  title={siteName}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    background: "#fff",
-                    border: "1px solid #eef2f7",
-                    color: "#475569",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    lineHeight: 1.35,
-                  }}
-                >
-                  {siteName}
-                </div>
-              ))}
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
-  );
+  return pills;
 }
 
 function ResidentRoleDetailFields({
@@ -356,16 +288,18 @@ function ResidentRoleDetailFields({
   if (role === "municipal_health_officer") {
     return (
       <div>
-        <Label htmlFor={`designation-detail-${fieldPrefix}`} style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>
-          Designation
-        </Label>
-        <Input
-          id={`designation-detail-${fieldPrefix}`}
-          value={formData.designationDetail}
-          onChange={(e) => onChange("designationDetail", e.target.value)}
-          placeholder="e.g., Sanitary Inspector"
-          style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
-        />
+        <div>
+          <Label htmlFor={`designation-detail-${fieldPrefix}`} style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>
+            Designation
+          </Label>
+          <Input
+            id={`designation-detail-${fieldPrefix}`}
+            value={formData.designationDetail}
+            onChange={(e) => onChange("designationDetail", e.target.value)}
+            placeholder="e.g., Sanitary Inspector"
+            style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
+          />
+        </div>
       </div>
     );
   }
@@ -389,6 +323,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [formData, setFormData] = useState<ResidentFormData>(EMPTY_RESIDENT_FORM);
+  const [isAddingResident, setIsAddingResident] = useState(false);
   const [isUploadingCSV, setIsUploadingCSV] = useState(false);
   const [uploadResultOpen, setUploadResultOpen] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
@@ -411,6 +346,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   } = useResponsiveScale();
   const smallLaptopModal = !isMobile && isSmallLaptop;
   const sectionSpacing = isNarrowDesktop ? 20 : 24;
+  const phoneValidationMessage = getPhoneValidationMessage(formData.phone);
 
   // Keep the local site filter aligned with the current app/site context.
   useEffect(() => {
@@ -483,11 +419,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     setLoading(true);
     setError(""); // Clear previous errors
     try {
-      let endpoint = "/api/sensors/residents";
-      if (selectedSiteForOps) {
-        endpoint += `?siteName=${encodeURIComponent(selectedSiteForOps)}`;
-      }
-
+      const endpoint = "/api/sensors/residents";
       console.log("Fetching residents from:", endpoint);
       const data = await apiGet(endpoint);
       console.log("Residents data:", data);
@@ -510,21 +442,51 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   };
 
   const handleAddResident = async () => {
-    if (!selectedSiteForOps) {
-      setError("Please select a site before adding a recipient");
-      return;
-    }
+    if (isAddingResident) return;
 
     if (!formData.name || !formData.phone) {
       setError("Name and phone are required");
       return;
     }
 
+    if (!isValidPhilippineMobile(formData.phone)) {
+      setError("Invalid phone number. Use 09XXXXXXXXX or +639XXXXXXXXX.");
+      return;
+    }
+
+    if ((formData.role === "resident" || formData.role === "bhw") && !formData.barangay.trim()) {
+      setError("Barangay is required for residents and BHW");
+      return;
+    }
+
+    setIsAddingResident(true);
     try {
-      await apiPost("/api/sensors/residents", {
-        siteName: selectedSiteForOps,
-        ...formData,
-      });
+      let targetSiteNames: string[] = [];
+
+      if (formData.role === "municipal_health_officer") {
+        targetSiteNames = ["All Sites"];
+      } else if (selectedSiteForOps) {
+        targetSiteNames = [selectedSiteForOps];
+      } else {
+        const barangayToken = normalizeBarangayToken(formData.barangay);
+        targetSiteNames = siteOptions
+          .map((site) => site.siteName)
+          .filter((siteName) => normalizeBarangayToken(siteName).includes(barangayToken));
+
+        if (!targetSiteNames.length) {
+          setError("No matching site found for that barangay");
+          return;
+        }
+      }
+
+      await Promise.all(
+        Array.from(new Set(targetSiteNames)).map((resolvedSiteName) =>
+          apiPost("/api/sensors/residents", {
+            siteName: resolvedSiteName,
+            ...formData,
+          })
+        )
+      );
 
       setError("");
       setIsAddDialogOpen(false);
@@ -532,6 +494,8 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
       fetchResidents();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error adding resident");
+    } finally {
+      setIsAddingResident(false);
     }
   };
 
@@ -539,6 +503,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
     if (!selectedResident) return;
     if (!formData.name || !formData.phone) {
       setError("Name and phone are required");
+      return;
+    }
+
+    if (!isValidPhilippineMobile(formData.phone)) {
+      setError("Invalid phone number. Use 09XXXXXXXXX or +639XXXXXXXXX.");
       return;
     }
 
@@ -699,6 +668,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
   const residentGroups = buildResidentGroups(residents);
   const filteredResidentGroups = residentGroups.filter((group) => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
+    const matchesSite =
+      selectedSiteFilter === "all" ||
+      group.records.some((record) => {
+        const recordSiteName = (record.siteName || "").trim();
+        return (
+          recordSiteName === selectedSiteFilter ||
+          (record.role === "municipal_health_officer" && recordSiteName === "All Sites")
+        );
+      });
     const matchesSearch =
       !normalizedSearch ||
       group.names.some((name) => name.toLowerCase().includes(normalizedSearch)) ||
@@ -708,7 +686,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
       selectedRole === "all" ||
       group.roles.includes(selectedRole as Resident["role"]);
 
-    return matchesSearch && matchesRole;
+    return matchesSite && matchesSearch && matchesRole;
   });
 
   return (
@@ -911,21 +889,15 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </Label>
             <button
               onClick={() => {
-                if (needsSiteSelection) {
-                  setShowSiteSelectionWarning(true);
-                  return;
-                }
                 setIsAddDialogOpen(true);
               }}
-              aria-disabled={needsSiteSelection}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                 padding: isNarrowDesktop ? "0 12px" : "0 16px", height: controlHeight, borderRadius: 100,
                 border: "none", flexShrink: 0,
-                background: "#357D86", cursor: needsSiteSelection ? "not-allowed" : "pointer", fontSize: controlFontSize,
+                background: "#357D86", cursor: "pointer", fontSize: controlFontSize,
                 fontFamily: POPPINS, fontWeight: 500, color: "#fff",
                 ...(isCompact ? { padding: "0 10px", flex: "1 1 calc(50% - 6px)" } : {}),
-                opacity: needsSiteSelection ? 0.6 : 1,
               }}
             >
               <Plus size={15} />
@@ -946,7 +918,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             fontSize: isNarrowDesktop ? 12 : 13,
             fontWeight: 500,
           }}>
-            Please select a site in the site filter before using Import CSV or Add Recipient.
+            Please select a site in the site filter before using Import CSV.
           </div>
         )}
 
@@ -1135,9 +1107,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                       </colgroup>
                       <tbody>
                         {filteredResidentGroups.map((residentGroup, idx) => {
-                          const mergedSummary = getResidentGroupSummary(residentGroup);
-                          const showSites = selectedSiteFilter === "all" || residentGroup.siteNames.length > 1;
-                          const detailLines = getResidentGroupDetailLines(residentGroup);
+                          const detailPills = uniqueStrings(
+                            residentGroup.records.flatMap((resident) =>
+                              getResidentDetailPills(resident).map((pill) => JSON.stringify(pill))
+                            )
+                          ).map((pill) => JSON.parse(pill) as { label: string; background: string; color: string });
 
                           return (
                           <tr key={residentGroup.key} style={{
@@ -1145,12 +1119,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                             animation: `cardDataFadeIn 0.8s cubic-bezier(.22,1,.36,1) ${0.35 + idx * 0.04}s both`,
                           }}>
                             <td style={{ padding: "14px 10px 14px 12px", fontSize: 13, fontWeight: 600, color: "#1a2a3a" }}>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                <span>{residentGroup.displayName}</span>
-                                {showSites && (
-                                  <SitePreviewChips group={residentGroup} />
-                                )}
-                              </div>
+                              <span>{residentGroup.displayName}</span>
                             </td>
                             <td style={{ padding: "14px 10px", fontSize: 13, color: "#475569", fontWeight: 600 }}>
                               {residentGroup.phone}
@@ -1175,25 +1144,23 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                                         {roleLabels[role]}
                                       </span>
                                     ))}
-                                  </div>
-                                  {detailLines.length > 0 && (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
-                                      {detailLines.map((line) => (
+                                    {detailPills.map((pill) => (
                                         <span
-                                          key={`${residentGroup.key}-${line}`}
+                                          key={`${residentGroup.key}-${pill.label}`}
                                           style={{
                                             fontSize: 11,
-                                            fontWeight: 500,
-                                            color: "#64748b",
+                                            fontWeight: 600,
+                                            padding: "3px 12px",
+                                            borderRadius: 20,
+                                            background: pill.background,
+                                            color: pill.color,
                                             fontFamily: POPPINS,
-                                            lineHeight: 1.35,
                                           }}
                                         >
-                                          {line}
+                                          {pill.label}
                                         </span>
                                       ))}
-                                    </div>
-                                  )}
+                                  </div>
                                 </div>
                               </div>
                             </td>
@@ -1216,31 +1183,12 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" style={{ fontFamily: POPPINS }}>
-                                    {residentGroup.records.length > 1 && (
-                                      <>
-                                        <DropdownMenuLabel style={{ fontFamily: POPPINS, fontSize: 11, color: "#64748b" }}>
-                                          Select a record
-                                        </DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-                                      </>
-                                    )}
-                                    {residentGroup.records.map((residentRecord, recordIndex) => {
-                                      const recordContext = residentGroup.records.length > 1
-                                        ? `${roleLabels[residentRecord.role]}${selectedSiteFilter === "all" || residentGroup.siteNames.length > 1 ? ` • ${residentRecord.siteName}` : ""}`
-                                        : "";
-
-                                      return (
-                                        <Fragment key={residentRecord.id}>
-                                          <DropdownMenuItem onClick={() => openEditDialog(residentRecord)} className="cursor-pointer">
-                                            <Edit size={14} className="mr-2" /> {recordContext ? `Edit ${recordContext}` : "Edit"}
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem onClick={() => openDeleteDialog(residentRecord)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
-                                            <Trash2 size={14} className="mr-2" /> {recordContext ? `Delete ${recordContext}` : "Delete"}
-                                          </DropdownMenuItem>
-                                          {recordIndex < residentGroup.records.length - 1 && <DropdownMenuSeparator />}
-                                        </Fragment>
-                                      );
-                                    })}
+                                    <DropdownMenuItem onClick={() => openEditDialog(residentGroup.primaryResident)} className="cursor-pointer">
+                                      <Edit size={14} className="mr-2" /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openDeleteDialog(residentGroup.primaryResident)} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                                      <Trash2 size={14} className="mr-2" /> Delete
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
@@ -1311,9 +1259,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "10px 0 10px 0" }}>
               {filteredResidentGroups.map((residentGroup, idx) => {
-                const mergedSummary = getResidentGroupSummary(residentGroup);
-                const showSites = selectedSiteFilter === "all" || residentGroup.siteNames.length > 1;
-                const detailLines = getResidentGroupDetailLines(residentGroup);
+                const detailPills = uniqueStrings(
+                  residentGroup.records.flatMap((resident) =>
+                    getResidentDetailPills(resident).map((pill) => JSON.stringify(pill))
+                  )
+                ).map((pill) => JSON.parse(pill) as { label: string; background: string; color: string });
 
                 return (
                 <div key={residentGroup.key} style={{
@@ -1329,9 +1279,6 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                       <span style={{ fontSize: 14, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>{residentGroup.displayName}</span>
                       <span style={{ fontSize: 13, color: "#7b8a9a", fontFamily: POPPINS }}>{residentGroup.phone}</span>
                     </div>
-                    {showSites && (
-                      <SitePreviewChips group={residentGroup} compact />
-                    )}
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {residentGroup.roles.map((role) => (
@@ -1350,24 +1297,23 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                         {roleLabels[role]}
                       </span>
                     ))}
-                  </div>
-                  {detailLines.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {detailLines.map((line) => (
+                    {detailPills.map((pill) => (
                         <span
-                          key={`${residentGroup.key}-mobile-${line}`}
+                          key={`${residentGroup.key}-mobile-${pill.label}`}
                           style={{
                             fontSize: 11,
-                            color: "#64748b",
+                            fontWeight: 600,
+                            padding: "3px 10px",
+                            borderRadius: 20,
+                            background: pill.background,
+                            color: pill.color,
                             fontFamily: POPPINS,
-                            lineHeight: 1.35,
                           }}
                         >
-                          {line}
+                          {pill.label}
                         </span>
                       ))}
-                    </div>
-                  )}
+                  </div>
                 </div>
               )})}
               {filteredResidentGroups.length === 0 && (
@@ -1441,6 +1387,21 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           </div>
 
           <div style={{ padding: smallLaptopModal ? "8px 16px 16px" : "10px 20px 20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
+            {error && (
+              <div style={{
+                marginBottom: 14,
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid #fca5a5",
+                background: "#fef2f2",
+                color: "#b91c1c",
+                fontFamily: POPPINS,
+                fontSize: smallLaptopModal ? 11.5 : 12.5,
+                fontWeight: 500,
+              }}>
+                {error}
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Name</Label>
@@ -1460,7 +1421,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   id="phone-add"
                   value={formData.phone}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                    setFormData((prev) => ({ ...prev, phone: normalizePhilippinePhoneInput(e.target.value) }))
                   }
                   placeholder="e.g., +639171234567"
                   style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
@@ -1468,6 +1429,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 <p style={{ fontSize: smallLaptopModal ? 10.5 : 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
                   Format: +639XXXXXXXXX / 09XXXXXXXXX
                 </p>
+                {phoneValidationMessage && (
+                  <p style={{ fontSize: smallLaptopModal ? 10.5 : 11, color: "#b91c1c", marginTop: 6, fontFamily: POPPINS, fontWeight: 500 }}>
+                    {phoneValidationMessage}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="role-add" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Designation</Label>
@@ -1499,6 +1465,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             <div style={{ marginTop: smallLaptopModal ? 16 : 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
               <Button
                 onClick={handleAddResident}
+                disabled={!!phoneValidationMessage || isAddingResident}
                 style={{
                   backgroundColor: "#357D86",
                   color: "#fff",
@@ -1507,10 +1474,12 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   fontFamily: POPPINS,
                   fontWeight: 600,
                   fontSize: smallLaptopModal ? 13 : undefined,
-                  flex: 1
+                  flex: 1,
+                  opacity: phoneValidationMessage || isAddingResident ? 0.7 : 1,
+                  cursor: phoneValidationMessage || isAddingResident ? "not-allowed" : "pointer",
                 }}
               >
-                Add Recipient
+                {isAddingResident ? "Saving..." : "Add Recipient"}
               </Button>
               <Button
                 variant="outline"
@@ -1590,6 +1559,21 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
           </div>
 
           <div style={{ padding: smallLaptopModal ? "8px 16px 16px" : "10px 20px 20px", overflowY: smallLaptopModal ? "visible" : "auto", maxHeight: smallLaptopModal ? "none" : "80vh" }}>
+            {error && (
+              <div style={{
+                marginBottom: 14,
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid #fca5a5",
+                background: "#fef2f2",
+                color: "#b91c1c",
+                fontFamily: POPPINS,
+                fontSize: smallLaptopModal ? 11.5 : 12.5,
+                fontWeight: 500,
+              }}>
+                {error}
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Name</Label>
@@ -1609,7 +1593,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   id="phone-edit"
                   value={formData.phone}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                    setFormData((prev) => ({ ...prev, phone: normalizePhilippinePhoneInput(e.target.value) }))
                   }
                   placeholder="e.g., +639171234567"
                   style={{ borderRadius: 100, border: "1px solid #e2e5ea", fontFamily: POPPINS, height: smallLaptopModal ? 44 : undefined, fontSize: smallLaptopModal ? 13 : undefined }}
@@ -1617,6 +1601,11 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                 <p style={{ fontSize: smallLaptopModal ? 10.5 : 11, color: "#7b8a9a", marginTop: 6, fontFamily: POPPINS }}>
                   Format: +639XXXXXXXXX
                 </p>
+                {phoneValidationMessage && (
+                  <p style={{ fontSize: smallLaptopModal ? 10.5 : 11, color: "#b91c1c", marginTop: 6, fontFamily: POPPINS, fontWeight: 500 }}>
+                    {phoneValidationMessage}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="role-edit" style={{ fontFamily: POPPINS, fontWeight: 600, fontSize: smallLaptopModal ? 12 : 13, marginBottom: 8, display: "block" }}>Designation</Label>
@@ -1648,6 +1637,7 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
             <div style={{ marginTop: smallLaptopModal ? 16 : 24, display: "flex", flexDirection: isMobile ? "column" : "row-reverse", gap: 12 }}>
               <Button
                 onClick={handleEditResident}
+                disabled={!!phoneValidationMessage}
                 style={{
                   backgroundColor: "#357D86",
                   color: "#fff",
@@ -1656,7 +1646,9 @@ export function ResidentsManager({ siteName = "All Sites", refreshTrigger = 0 }:
                   fontFamily: POPPINS,
                   fontWeight: 600,
                   fontSize: smallLaptopModal ? 13 : undefined,
-                  flex: 1
+                  flex: 1,
+                  opacity: phoneValidationMessage ? 0.7 : 1,
+                  cursor: phoneValidationMessage ? "not-allowed" : "pointer",
                 }}
               >
                 Save Changes

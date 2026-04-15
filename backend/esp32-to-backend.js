@@ -9,6 +9,8 @@ const ESP32_AUTO_DISCOVER = String(process.env.ESP32_AUTO_DISCOVER || 'true').to
 const ESP32_DISCOVER_TIMEOUT_MS = parseInt(process.env.ESP32_DISCOVER_TIMEOUT_MS || '900', 10);
 const ESP32_DISCOVER_CONCURRENCY = Math.max(4, parseInt(process.env.ESP32_DISCOVER_CONCURRENCY || '24', 10));
 const ESP32_DISCOVER_COOLDOWN_MS = parseInt(process.env.ESP32_DISCOVER_COOLDOWN_MS || '60000', 10);
+const ESP32_SENSOR_TIMEOUT_MS = parseInt(process.env.ESP32_SENSOR_TIMEOUT_MS || '12000', 10);
+const BACKEND_PUSH_TIMEOUT_MS = parseInt(process.env.BACKEND_PUSH_TIMEOUT_MS || '15000', 10);
 
 // Backend URL - supports both cloud and local
 const BACKEND_URL = process.env.ESP32_BACKEND_URL || 'https://schistoguard-production.up.railway.app/api/sensors';
@@ -127,7 +129,7 @@ async function fetchAndSaveSensorData() {
 
   try {
     // Try fetching from current URL (hostname or IP)
-    const response = await axios.get(currentESP32URL, { timeout: 5000 });
+    const response = await axios.get(currentESP32URL, { timeout: ESP32_SENSOR_TIMEOUT_MS });
     const data = response.data;
     
     // If using IP fallback and this succeeds, log it once
@@ -155,7 +157,7 @@ async function fetchAndSaveSensorData() {
     };
     
     // Send to backend
-    await axios.post(BACKEND_URL, sensorData);
+    await axios.post(BACKEND_URL, sensorData, { timeout: BACKEND_PUSH_TIMEOUT_MS });
     const gpsTag = latitude !== null && longitude !== null
       ? ` GPS=${latitude.toFixed(6)},${longitude.toFixed(6)}`
       : ' GPS=unavailable';
@@ -185,7 +187,7 @@ async function fetchAndSaveSensorData() {
       return;
     }
     
-    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
       console.error(`✗ Cannot reach ESP32 at ${currentESP32URL} - Check WiFi connection. Backing off ${Math.round((nextSensorAttemptAt - Date.now()) / 1000)}s.`);
     } else {
       console.error(`✗ Error fetching/saving sensor data:`, error.message, `(backoff ${Math.round((nextSensorAttemptAt - Date.now()) / 1000)}s)`);

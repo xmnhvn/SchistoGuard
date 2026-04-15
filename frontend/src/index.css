@@ -131,6 +131,32 @@
   background: #357D86;
 }
 
+.sg-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d5dee8 transparent;
+}
+
+.sg-modal-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.sg-modal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sg-modal-scroll::-webkit-scrollbar-thumb {
+  background: #d5dee8;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.sg-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #c7d2df;
+  background-clip: padding-box;
+}
+
 html,
 body {
   font-family: 'Poppins', sans-serif;

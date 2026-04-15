@@ -344,6 +344,7 @@ export function Dashboard({
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [stableOverallRisk, setStableOverallRisk] = useState<"critical" | "warning" | "safe">("safe");
   
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
   const isNarrowDesktop = vw < 1600;
@@ -863,7 +864,7 @@ export function Dashboard({
   }, [unacknowledgedAlerts]);
 
   // ─── Risk Level computation ──────────────────────────────────────────────
-  let overallRisk: "critical" | "warning" | "safe" = "safe";
+  let overallRiskComputed: "critical" | "warning" | "safe" = "safe";
   if (latestReading) {
     const temp = latestReading.temperature;
     const turbidity = latestReading.turbidity;
@@ -881,9 +882,17 @@ export function Dashboard({
     if (ph >= 6.5 && ph <= 8.0) phRisk = "critical";
     else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) phRisk = "warning";
 
-    if ([tempRisk, turbidityRisk, phRisk].includes("critical")) overallRisk = "critical";
-    else if ([tempRisk, turbidityRisk, phRisk].includes("warning")) overallRisk = "warning";
+    if ([tempRisk, turbidityRisk, phRisk].includes("critical")) overallRiskComputed = "critical";
+    else if ([tempRisk, turbidityRisk, phRisk].includes("warning")) overallRiskComputed = "warning";
   }
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setStableOverallRisk((current) => (current === overallRiskComputed ? current : overallRiskComputed));
+    }, 1500);
+
+    return () => window.clearTimeout(timeout);
+  }, [overallRiskComputed]);
 
   const renderDataInterpretation = (compact: boolean = false) => {
     const riskData = {
@@ -910,7 +919,7 @@ export function Dashboard({
       }
     };
 
-    const current = riskData[overallRisk];
+    const current = riskData[stableOverallRisk];
 
     return (
       <div style={{
@@ -1001,16 +1010,16 @@ export function Dashboard({
   };
 
   const riskColor =
-    overallRisk === "critical"
+    stableOverallRisk === "critical"
       ? "#ef4444"
-      : overallRisk === "warning"
+      : stableOverallRisk === "warning"
         ? "#f59e0b"
         : "#22c55e";
 
   const riskGradient =
-    overallRisk === "critical"
+    stableOverallRisk === "critical"
       ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
-      : overallRisk === "warning"
+      : stableOverallRisk === "warning"
         ? "linear-gradient(135deg, #fbbf24 0%, #d97706 100%)"
         : "linear-gradient(135deg, #4ade80 0%, #16a34a 100%)";
 
@@ -1019,7 +1028,7 @@ export function Dashboard({
     if (risk === "warning") return "Watch Zone";
     return "Safe";
   };
-  const overallRiskLabel = getOverallRiskLabel(overallRisk);
+  const overallRiskLabel = getOverallRiskLabel(stableOverallRisk);
   const isLongRiskLabel = overallRiskLabel.length > 16;
   const mobileRiskPillFontSize = vw <= 360 ? (isLongRiskLabel ? 9.5 : 10.5) : vw <= 430 ? (isLongRiskLabel ? 10.5 : 11.5) : 12;
   const tabletRiskPillFontSize = vw <= 900 ? (isLongRiskLabel ? 12.5 : 13.5) : (isLongRiskLabel ? 13 : 15);
@@ -2261,7 +2270,7 @@ export function Dashboard({
                   overflowWrap: "break-word",
                 }}
               >
-                {getOverallRiskLabel(overallRisk)}
+                {overallRiskLabel}
               </span>
             </div>
             <p style={{ margin: 0, fontSize: isNarrowDesktop ? 12 : 14, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>

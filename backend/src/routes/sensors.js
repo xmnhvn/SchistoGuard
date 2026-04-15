@@ -240,6 +240,76 @@ function normalizeResidentRoleDetails(role, details = {}) {
   };
 }
 
+function normalizeBarangayToken(value) {
+  return (value || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/barangay|brgy\.?|purok|sitio/gi, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function siteMatchesBarangay(siteSnapshot, barangay) {
+  const token = normalizeBarangayToken(barangay);
+  if (!token) return false;
+
+  const haystack = normalizeBarangayToken([
+    siteSnapshot?.siteName,
+    siteSnapshot?.address,
+  ].filter(Boolean).join(' '));
+
+  return Boolean(haystack) && haystack.includes(token);
+}
+
+function getSmsRecipientsForSite(siteSnapshot) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      "SELECT phone, role, barangay FROM residents ORDER BY CASE WHEN role='municipal_health_officer' THEN 1 WHEN role='bhw' THEN 2 ELSE 3 END, name",
+      [],
+      (err, rows) => {
+        if (err) return reject(err);
+
+        const recipients = (rows || [])
+          .filter((row) => {
+            if (!row?.phone) return false;
+            if (row.role === 'municipal_health_officer') return true;
+            if (row.role === 'bhw' || row.role === 'resident') {
+              return siteMatchesBarangay(siteSnapshot, row.barangay);
+            }
+            return false;
+          })
+          .map((row) => row.phone);
+
+        resolve(Array.from(new Set(recipients)));
+      }
+    );
+  });
+}
+
+function resolveSitesByBarangay(barangay) {
+  const token = normalizeBarangayToken(barangay);
+  if (!token) return Promise.resolve([]);
+
+  return new Promise((resolve, reject) => {
+    db.all(
+      "SELECT DISTINCT site_name, address FROM site_registry ORDER BY last_seen DESC, site_name ASC",
+      [],
+      (err, rows) => {
+        if (err) return reject(err);
+
+        const matches = Array.from(new Set((rows || [])
+          .map((row) => (row.site_name || row.address || '').toString().trim())
+          .filter(Boolean)
+          .filter((site) => normalizeBarangayToken(site).includes(token))));
+
+        resolve(matches);
+      }
+    );
+  });
+}
+
 function upsertSiteRegistry(data, nowIso, prebuiltIdentity) {
   const identity = prebuiltIdentity || buildSiteIdentity(data);
   db.run(
@@ -700,16 +770,7 @@ async function sendScheduledSmsSummary(siteSnapshot, slotTime, options = {}) {
     slotTime,
   });
 
-  let recipients = await new Promise((resolve, reject) => {
-    db.all(
-      "SELECT phone FROM residents WHERE siteName = ? OR siteName = ? ORDER BY CASE WHEN role='bhw' THEN 1 WHEN role='municipal_health_officer' THEN 2 ELSE 3 END",
-      [siteName, siteSnapshot.address || siteName],
-      (err, rows) => {
-        if (err) return reject(err);
-        resolve((rows || []).map((row) => row.phone).filter(Boolean));
-      }
-    );
-  });
+  let recipients = await getSmsRecipientsForSite(siteSnapshot);
 
   if (!recipients.length) {
     recipients = await new Promise((resolve, reject) => {
@@ -1737,8 +1798,8 @@ router.get("/residents/:siteName", (req, res) => {
 router.post("/residents", (req, res) => {
   const { siteName, name, phone, role = "resident", barangay, designationDetail } = req.body;
   
-  if (!siteName || !name || !phone) {
-    return res.status(400).json({ error: "siteName, name, and phone are required" });
+  if (!name || !phone) {
+    return res.status(400).json({ error: "name and phone are required" });
   }
   
   // Validate phone number
@@ -1751,60 +1812,111 @@ router.post("/residents", (req, res) => {
   const finalRole = validRoles.includes(role) ? role : "resident";
   const normalizedDetails = normalizeResidentRoleDetails(finalRole, { barangay, designationDetail });
 
-  resolveResidentSiteName(siteName, (resolveErr, resolvedSiteName) => {
-    if (resolveErr) {
-      return res.status(400).json({ error: resolveErr.message || 'Invalid siteName' });
+  const proceedWithTargetSites = (targetSiteNames) => {
+    const uniqueSites = Array.from(new Set((targetSiteNames || []).map((value) => (value || '').toString().trim()).filter(Boolean)));
+    if (!uniqueSites.length) {
+      return res.status(400).json({ error: "No matching site found for this recipient" });
     }
 
-    // Check if resident with same siteName and phone already exists
-    db.get(
-      "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
-      [resolvedSiteName, formattedPhone],
-      (err, existingResident) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const inserted = [];
+    const updated = [];
+    let pending = uniqueSites.length;
+    let responded = false;
 
-        if (existingResident) {
-          // Update existing resident
-          db.run(
-            "UPDATE residents SET name = ?, role = ?, barangay = ?, designationDetail = ? WHERE id = ?",
-            [name, finalRole, normalizedDetails.barangay, normalizedDetails.designationDetail, existingResident.id],
-            function(err) {
-              if (err) return res.status(500).json({ error: err.message });
-              res.json({
-                id: existingResident.id,
-                siteName: resolvedSiteName,
-                name,
-                phone: formattedPhone,
-                role: finalRole,
-                barangay: normalizedDetails.barangay,
-                designationDetail: normalizedDetails.designationDetail,
-                message: "Resident updated (duplicate prevented)"
+    uniqueSites.forEach((resolvedSiteName) => {
+      db.get(
+        "SELECT id FROM residents WHERE siteName = ? AND phone = ?",
+        [resolvedSiteName, formattedPhone],
+        (err, existingResident) => {
+          if (responded) return;
+          if (err) {
+            responded = true;
+            return res.status(500).json({ error: err.message });
+          }
+
+          const finish = () => {
+            pending -= 1;
+            if (!responded && pending === 0) {
+              const affected = [...inserted, ...updated];
+              res.status(inserted.length > 0 ? 201 : 200).json({
+                inserted,
+                updated,
+                affected,
+                message: inserted.length > 0 || updated.length > 0 ? "Recipient saved successfully" : "No changes applied",
               });
             }
-          );
-        } else {
-          // Create new resident
-          db.run(
-            "INSERT INTO residents (siteName, name, phone, role, barangay, designationDetail) VALUES (?, ?, ?, ?, ?, ?)",
-            [resolvedSiteName, name, formattedPhone, finalRole, normalizedDetails.barangay, normalizedDetails.designationDetail],
-            function(err) {
-              if (err) return res.status(500).json({ error: err.message });
-              res.status(201).json({
-                id: this.lastID,
-                siteName: resolvedSiteName,
-                name,
-                phone: formattedPhone,
-                role: finalRole,
-                barangay: normalizedDetails.barangay,
-                designationDetail: normalizedDetails.designationDetail,
-                message: "Resident added"
-              });
-            }
-          );
+          };
+
+          if (existingResident) {
+            db.run(
+              "UPDATE residents SET name = ?, role = ?, barangay = ?, designationDetail = ? WHERE id = ?",
+              [name, finalRole, normalizedDetails.barangay, normalizedDetails.designationDetail, existingResident.id],
+              function(updateErr) {
+                if (responded) return;
+                if (updateErr) {
+                  responded = true;
+                  return res.status(500).json({ error: updateErr.message });
+                }
+                updated.push({
+                  id: existingResident.id,
+                  siteName: resolvedSiteName,
+                  name,
+                  phone: formattedPhone,
+                  role: finalRole,
+                  barangay: normalizedDetails.barangay,
+                  designationDetail: normalizedDetails.designationDetail,
+                });
+                finish();
+              }
+            );
+          } else {
+            db.run(
+              "INSERT INTO residents (siteName, name, phone, role, barangay, designationDetail) VALUES (?, ?, ?, ?, ?, ?)",
+              [resolvedSiteName, name, formattedPhone, finalRole, normalizedDetails.barangay, normalizedDetails.designationDetail],
+              function(insertErr) {
+                if (responded) return;
+                if (insertErr) {
+                  responded = true;
+                  return res.status(500).json({ error: insertErr.message });
+                }
+                inserted.push({
+                  id: this.lastID,
+                  siteName: resolvedSiteName,
+                  name,
+                  phone: formattedPhone,
+                  role: finalRole,
+                  barangay: normalizedDetails.barangay,
+                  designationDetail: normalizedDetails.designationDetail,
+                });
+                finish();
+              }
+            );
+          }
         }
+      );
+    });
+  };
+
+  if (finalRole === "municipal_health_officer") {
+    return proceedWithTargetSites(["All Sites"]);
+  }
+
+  if (siteName) {
+    return resolveResidentSiteName(siteName, (resolveErr, resolvedSiteName) => {
+      if (resolveErr) {
+        return res.status(400).json({ error: resolveErr.message || 'Invalid siteName' });
       }
-    );
-  });
+      proceedWithTargetSites([resolvedSiteName]);
+    });
+  }
+
+  if (!normalizedDetails.barangay) {
+    return res.status(400).json({ error: "Barangay is required for residents and BHW" });
+  }
+
+  resolveSitesByBarangay(normalizedDetails.barangay)
+    .then((matchedSites) => proceedWithTargetSites(matchedSites))
+    .catch((resolveErr) => res.status(500).json({ error: resolveErr.message }));
 });
 
 // PUT - Update a resident
@@ -1826,6 +1938,7 @@ router.put("/residents/:id", (req, res) => {
     const validRoles = ["resident", "bhw", "municipal_health_officer"];
     const newRole = role ? (validRoles.includes(role) ? role : resident.role) : resident.role;
     const normalizedDetails = normalizeResidentRoleDetails(newRole, { barangay, designationDetail });
+    const targetSiteName = newRole === 'municipal_health_officer' ? 'All Sites' : resident.siteName;
     
     // Validate phone if updated
     if (phone && !validatePhoneNumber(phone)) {
@@ -1834,8 +1947,8 @@ router.put("/residents/:id", (req, res) => {
 
     const finalizeUpdate = () => {
       db.run(
-        "UPDATE residents SET name = ?, phone = ?, role = ?, barangay = ?, designationDetail = ? WHERE id = ?",
-        [newName, newPhone, newRole, normalizedDetails.barangay, normalizedDetails.designationDetail, id],
+        "UPDATE residents SET name = ?, phone = ?, role = ?, siteName = ?, barangay = ?, designationDetail = ? WHERE id = ?",
+        [newName, newPhone, newRole, targetSiteName, normalizedDetails.barangay, normalizedDetails.designationDetail, id],
         function(err) {
           if (err) return res.status(500).json({ error: err.message });
           res.json({
@@ -1843,6 +1956,7 @@ router.put("/residents/:id", (req, res) => {
             name: newName,
             phone: newPhone,
             role: newRole,
+            siteName: targetSiteName,
             barangay: normalizedDetails.barangay,
             designationDetail: normalizedDetails.designationDetail,
             message: "Resident updated successfully"
@@ -1857,7 +1971,7 @@ router.put("/residents/:id", (req, res) => {
 
     db.get(
       "SELECT id FROM residents WHERE siteName = ? AND phone = ? AND id <> ?",
-      [resident.siteName, newPhone, id],
+      [targetSiteName, newPhone, id],
       (duplicateErr, duplicateResident) => {
         if (duplicateErr) return res.status(500).json({ error: duplicateErr.message });
         if (duplicateResident) {
@@ -1906,7 +2020,7 @@ router.get("/residents", (req, res) => {
   
   const runQuery = (resolvedSiteName) => {
     if (resolvedSiteName) {
-      query += " AND siteName = ?";
+      query += " AND (siteName = ? OR (role = 'municipal_health_officer' AND siteName = 'All Sites'))";
       params.push(resolvedSiteName);
     }
 
