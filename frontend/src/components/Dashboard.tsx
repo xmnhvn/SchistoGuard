@@ -345,7 +345,6 @@ export function Dashboard({
     .join(", ");
 
   const displayAddress =
-    selectedSiteAddress ||
     gpsAddress ||
     (typeof latestReading?.address === "string" ? latestReading.address : null) ||
     (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
@@ -652,20 +651,19 @@ export function Dashboard({
               setSiteData((prev: any) => ({
                 ...prev,
                 siteName: selectedSite.siteName,
-                area: selectedSite.address || prev.area || '',
+                area: prev.area || '',
                 barangay: '',
                 municipality: '',
               }));
             }
 
-            const selectedCoordinates = resolveSiteCoordinates(selectedSite);
-            if (selectedCoordinates) {
+            if (latestFromHistory && typeof latestFromHistory.latitude === 'number' && typeof latestFromHistory.longitude === 'number') {
               setGpsSites([
                 {
-                  id: selectedSite.siteKey,
-                  name: selectedSite.siteName,
-                  lat: selectedCoordinates.lat,
-                  lng: selectedCoordinates.lng,
+                  id: latestFromHistory.id || selectedSiteKey || 'device-gps',
+                  name: latestFromHistory.siteName || selectedSite?.siteName || 'Device Location',
+                  lat: latestFromHistory.latitude,
+                  lng: latestFromHistory.longitude,
                 },
               ]);
             }
