@@ -303,6 +303,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       if (typeof window !== "undefined") {
         localStorage.setItem("sg_manual_active_site_key", siteKey);
       }
+      // Update UI immediately so active site styling does not depend on a follow-up fetch.
+      setRegisteredSites((prev) => prev.map((item) => ({
+        ...item,
+        is_active: item.site_key === siteKey ? 1 : 0,
+      })));
       setSuccess("Reading started for selected site");
       await fetchRegisteredSites();
     } catch (err: any) {
@@ -1216,7 +1221,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1e293b" }}>{currentLabel}</div>
                         {isActiveSite && (
-                          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", background: "#dbeafe", border: "1px solid #bfdbfe", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#0f766e", background: "#ccfbf1", border: "1px solid #99f6e4", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                             Active
                           </span>
                         )}
@@ -1243,7 +1248,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         onClick={() => handleStartReading(site.site_key)}
                         disabled={startingSiteKey === site.site_key}
                         style={{
-                          background: isActiveSite ? "#2563eb" : "#1d4ed8",
+                          background: isActiveSite ? "#0f766e" : "#357D86",
                           color: "#fff",
                           borderRadius: 100,
                           padding: "10px 16px",
