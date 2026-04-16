@@ -587,6 +587,35 @@ async function getCurrentSiteSnapshot() {
   });
 }
 
+async function getConfiguredActiveSiteSnapshot() {
+  return new Promise((resolve, reject) => {
+    db.get("SELECT value FROM settings WHERE key = ?", ['active_site_key'], (settingErr, settingRow) => {
+      if (settingErr) return reject(settingErr);
+
+      const configuredSiteKey = (settingRow?.value || '').toString().trim();
+      if (!configuredSiteKey) return resolve(null);
+
+      db.get(
+        `SELECT site_key, site_name, address
+         FROM site_registry
+         WHERE site_key = ?
+         LIMIT 1`,
+        [configuredSiteKey],
+        (siteErr, siteRow) => {
+          if (siteErr) return reject(siteErr);
+          if (!siteRow) return resolve(null);
+
+          resolve({
+            siteKey: siteRow.site_key || null,
+            siteName: siteRow.site_name || siteRow.address || GLOBAL_DEVICE_NAME,
+            address: siteRow.address || null,
+          });
+        }
+      );
+    });
+  });
+}
+
 async function getActiveSiteSnapshots() {
   return new Promise((resolve, reject) => {
     db.all(
@@ -1314,9 +1343,19 @@ setInterval(async () => {
     if (!err && value) intervalMs = parseInt(value, 10);
   });
 
-  // Check for nearby existing sites and build identity with proximity check
-  const siteIdentity = await buildSiteIdentityWithProximityCheck(latestData);
-  // Update site registry with proximity-checked identity
+  // Route readings to the site selected via Start Reading.
+  let siteIdentity = await getConfiguredActiveSiteSnapshot();
+  if (!siteIdentity) {
+    // Fallback when no active site has been selected yet.
+    siteIdentity = await buildSiteIdentityWithProximityCheck(latestData);
+  }
+
+  if (siteIdentity?.siteKey) {
+    latestData.siteKey = siteIdentity.siteKey;
+    latestData.address = siteIdentity.address || latestData.address || null;
+  }
+
+  // Update site registry with resolved identity
   upsertSiteRegistry(latestData, now.toISOString(), siteIdentity);
 
   db.run(
@@ -1372,7 +1411,7 @@ setInterval(async () => {
             console.error('[readings insert error]', err.message, { latestData });
           } else {
             console.log('[readings] Inserted:', latestData);
-            generateAlertsFromData(latestData, now);
+            generateAlertsFromData(latestData, now, siteIdentity);
           }
         }
       );
@@ -1381,9 +1420,9 @@ setInterval(async () => {
   });
 }, 1000);
 
-function generateAlertsFromData(data, now = new Date()) {
+function generateAlertsFromData(data, now = new Date(), prebuiltIdentity = null) {
   let alertMessages = [];
-  const identity = buildSiteIdentity(data);
+  const identity = prebuiltIdentity || buildSiteIdentity(data);
 
   ["Temperature", "pH", "Turbidity"].forEach((parameter) => {
     const level = classifyParameterRisk(parameter, data);
