@@ -36,10 +36,17 @@ interface RegisteredSite {
   longitude?: number | null;
   first_seen?: string | null;
   last_seen?: string | null;
+  is_active?: number | boolean | null;
 }
 
 interface AdminSettingsPageProps {
   user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
+}
+
+function isPlaceholderSite(site: RegisteredSite): boolean {
+  const key = (site.site_key || '').toString().trim().toLowerCase();
+  const name = (site.site_name || '').toString().trim().toLowerCase();
+  return key.includes('esp32-local') || name.includes('esp32.local');
 }
 
 export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
@@ -195,6 +202,14 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [sitesError, setSitesError] = useState("");
   const [siteNameDrafts, setSiteNameDrafts] = useState<Record<string, string>>({});
   const [savingSiteKey, setSavingSiteKey] = useState<string | null>(null);
+  const [startingSiteKey, setStartingSiteKey] = useState<string | null>(null);
+  const [newSiteForm, setNewSiteForm] = useState({
+    siteName: "",
+    location: "",
+    latitude: "",
+    longitude: "",
+  });
+  const [addingSite, setAddingSite] = useState(false);
   const {
     isMobile,
     isTablet,
@@ -237,7 +252,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setLoadingSites(true);
       setSitesError("");
       const result = await apiGet("/api/sensors/sites");
-      const sites = Array.isArray(result) ? result : [];
+      const sites = (Array.isArray(result) ? result : []).filter((site: RegisteredSite) => !isPlaceholderSite(site));
       setRegisteredSites(sites);
       setSiteNameDrafts((prev) => {
         const next = { ...prev };
@@ -276,6 +291,113 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setError(err?.message || "Failed to update site name");
     } finally {
       setSavingSiteKey(null);
+    }
+  };
+
+  const handleStartReading = async (siteKey: string) => {
+    try {
+      setStartingSiteKey(siteKey);
+      setError("");
+      setSuccess("");
+      await apiPost(`/api/sensors/sites/${encodeURIComponent(siteKey)}/start-reading`, {});
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sg_manual_active_site_key", siteKey);
+      }
+      setSuccess("Reading started for selected site");
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      const errMsg = (err?.message || "").toString();
+      const isNotFound = /404/.test(errMsg);
+
+      if (isNotFound) {
+        try {
+          const site = registeredSites.find((item) => item.site_key === siteKey);
+          const fallbackName = (site?.site_name || site?.address || site?.site_key || "Site Name").toString().trim();
+
+          // Compatibility mode for backend instances that have not yet loaded the new start-reading route.
+          await apiPost("/api/sensors/interval-config", {
+            intervalMs: getIntervalMs(),
+            deviceName: fallbackName,
+          });
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem("sg_manual_active_site_key", siteKey);
+          }
+
+          setRegisteredSites((prev) => prev.map((item) => ({
+            ...item,
+            is_active: item.site_key === siteKey ? 1 : 0,
+          })));
+          setSuccess("Reading started (compatibility mode)");
+          return;
+        } catch (fallbackErr: any) {
+          const fallbackMsg = fallbackErr?.message || "Start Reading endpoint not available yet. Please restart/redeploy backend.";
+          setError(fallbackMsg);
+          return;
+        }
+      }
+
+      setError(errMsg || "Failed to start reading");
+    } finally {
+      setStartingSiteKey(null);
+    }
+  };
+
+  const handleAddManualSite = async () => {
+    const siteName = newSiteForm.siteName.trim();
+    const location = newSiteForm.location.trim();
+    const latitude = Number(newSiteForm.latitude);
+    const longitude = Number(newSiteForm.longitude);
+
+    setError("");
+    setSuccess("");
+
+    if (!siteName && !location) {
+      setError("Please provide a site name or location");
+      return;
+    }
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      setError("Please enter valid latitude and longitude values");
+      return;
+    }
+
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      setError("Coordinates are out of range");
+      return;
+    }
+
+    try {
+      setAddingSite(true);
+      const result = await apiPost("/api/sensors/sites", {
+        siteName,
+        location,
+        latitude,
+        longitude,
+      });
+
+      if (result?.exists) {
+        setSuccess("Nearby site already exists. Existing site was reused.");
+      } else {
+        setSuccess("New site added successfully");
+      }
+
+      setNewSiteForm({
+        siteName: "",
+        location: "",
+        latitude: "",
+        longitude: "",
+      });
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      const errMsg = (err?.message || "").toString();
+      if (/404/.test(errMsg)) {
+        setError("Add Site route not found (HTTP 404). Please restart/redeploy backend, then try again.");
+      } else {
+        setError(errMsg || "Failed to add new site");
+      }
+    } finally {
+      setAddingSite(false);
     }
   };
 
@@ -992,6 +1114,75 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             Rename registered sites here. This updates the persistent site registry label used by the system.
           </p>
 
+          <div style={{
+            marginTop: 16,
+            padding: 14,
+            borderRadius: 14,
+            border: "1px solid rgba(53,125,134,0.2)",
+            background: "rgba(53,125,134,0.04)",
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1.1fr 0.9fr 0.9fr auto",
+            gap: 10,
+            alignItems: "end",
+          }}>
+            <div>
+              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Site Name</Label>
+              <Input
+                value={newSiteForm.siteName}
+                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, siteName: e.target.value }))}
+                className="custom-input"
+                style={{ marginTop: 6 }}
+                placeholder="Example: Crossing Riverside"
+              />
+            </div>
+
+            <div>
+              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Location</Label>
+              <Input
+                value={newSiteForm.location}
+                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, location: e.target.value }))}
+                className="custom-input"
+                style={{ marginTop: 6 }}
+                placeholder="Barangay or full address"
+              />
+            </div>
+
+            <div>
+              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Latitude</Label>
+              <Input
+                type="number"
+                step="any"
+                value={newSiteForm.latitude}
+                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, latitude: e.target.value }))}
+                className="custom-input"
+                style={{ marginTop: 6 }}
+                placeholder="7.123456"
+              />
+            </div>
+
+            <div>
+              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Longitude</Label>
+              <Input
+                type="number"
+                step="any"
+                value={newSiteForm.longitude}
+                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, longitude: e.target.value }))}
+                className="custom-input"
+                style={{ marginTop: 6 }}
+                placeholder="125.123456"
+              />
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleAddManualSite}
+              disabled={addingSite}
+              style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 18px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 13, width: isMobile ? "100%" : "auto" }}
+            >
+              {addingSite ? "Adding..." : "Add Site"}
+            </Button>
+          </div>
+
           {sitesError && (
             <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13 }}>
               {sitesError}
@@ -1007,6 +1198,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               {registeredSites.map((site, idx) => {
                 const currentLabel = site.site_name || site.address || site.site_key;
                 const draftValue = siteNameDrafts[site.site_key] ?? currentLabel;
+                const isActiveSite = site.is_active === 1 || site.is_active === true;
                 return (
                   <div
                     key={site.site_key}
@@ -1021,7 +1213,14 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1e293b" }}>{currentLabel}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1e293b" }}>{currentLabel}</div>
+                        {isActiveSite && (
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", background: "#dbeafe", border: "1px solid #bfdbfe", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                            Active
+                          </span>
+                        )}
+                      </div>
                       <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 2, wordBreak: "break-word" }}>
                         Key: {site.site_key}
                       </div>
@@ -1039,6 +1238,24 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                     </div>
 
                     <div style={{ display: "flex", gap: 8, justifyContent: isMobile ? "flex-start" : "flex-end" }}>
+                      <Button
+                        type="button"
+                        onClick={() => handleStartReading(site.site_key)}
+                        disabled={startingSiteKey === site.site_key}
+                        style={{
+                          background: isActiveSite ? "#2563eb" : "#1d4ed8",
+                          color: "#fff",
+                          borderRadius: 100,
+                          padding: "10px 16px",
+                          fontWeight: 600,
+                          border: "none",
+                          fontFamily: POPPINS,
+                          fontSize: 13,
+                          opacity: startingSiteKey === site.site_key ? 0.8 : 1,
+                        }}
+                      >
+                        {startingSiteKey === site.site_key ? "Starting..." : (isActiveSite ? "Reading Active" : "Start Reading")}
+                      </Button>
                       <Button
                         type="button"
                         onClick={() => handleSaveSiteName(site.site_key)}

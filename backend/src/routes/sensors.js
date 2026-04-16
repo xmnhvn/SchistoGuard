@@ -309,6 +309,24 @@ function resolveSitesByBarangay(barangay) {
 
 function upsertSiteRegistry(data, nowIso, prebuiltIdentity) {
   const identity = prebuiltIdentity || buildSiteIdentity(data);
+  const hasCoordinates =
+    typeof data.latitude === 'number' &&
+    Number.isFinite(data.latitude) &&
+    typeof data.longitude === 'number' &&
+    Number.isFinite(data.longitude);
+
+  if (!hasCoordinates) {
+    db.run(
+      `DELETE FROM site_registry
+       WHERE site_key = ?
+         AND latitude IS NULL
+         AND longitude IS NULL`,
+      [identity.siteKey],
+      () => {}
+    );
+    return identity;
+  }
+
   db.run(
     `INSERT INTO site_registry (site_key, site_name, address, latitude, longitude, first_seen, last_seen)
      VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1629,8 +1647,19 @@ router.get('/sites', (req, res) => {
        latitude,
        longitude,
        first_seen,
-       last_seen
+       last_seen,
+       CASE
+         WHEN site_key = (
+           SELECT value
+           FROM settings
+           WHERE key = 'active_site_key'
+           LIMIT 1
+         ) THEN 1
+         ELSE 0
+       END AS is_active
      FROM site_registry
+     WHERE latitude IS NOT NULL
+       AND longitude IS NOT NULL
      ORDER BY COALESCE(last_seen, first_seen) DESC, site_name ASC`,
     [],
     (err, rows) => {
@@ -1638,6 +1667,136 @@ router.get('/sites', (req, res) => {
       res.json(rows || []);
     }
   );
+});
+
+router.post('/sites/:siteKey/start-reading', (req, res) => {
+  const siteKey = (req.params.siteKey || '').toString().trim();
+  if (!siteKey) {
+    return res.status(400).json({ error: 'siteKey is required' });
+  }
+
+  db.get(
+    `SELECT site_key, site_name, address, latitude, longitude
+     FROM site_registry
+     WHERE site_key = ?
+     LIMIT 1`,
+    [siteKey],
+    (selectErr, siteRow) => {
+      if (selectErr) return res.status(500).json({ error: selectErr.message });
+      if (!siteRow) return res.status(404).json({ error: 'Site not found' });
+
+      const nowIso = new Date().toISOString();
+      const startedSiteName = (siteRow.site_name || siteRow.address || siteRow.site_key || GLOBAL_DEVICE_NAME).toString().trim();
+
+      db.run(
+        `UPDATE site_registry
+         SET last_seen = ?
+         WHERE site_key = ?`,
+        [nowIso, siteKey],
+        (updateErr) => {
+          if (updateErr) return res.status(500).json({ error: updateErr.message });
+
+          db.setSetting('active_site_key', siteKey, (activeErr) => {
+            if (activeErr) return res.status(500).json({ error: activeErr.message });
+
+            db.setSetting('device_name', startedSiteName, (nameErr) => {
+              if (nameErr) return res.status(500).json({ error: nameErr.message });
+
+              GLOBAL_DEVICE_NAME = startedSiteName;
+
+              return res.json({
+                success: true,
+                message: 'Reading started for selected site',
+                site: {
+                  site_key: siteRow.site_key,
+                  site_name: siteRow.site_name,
+                  address: siteRow.address,
+                  latitude: siteRow.latitude,
+                  longitude: siteRow.longitude,
+                  last_seen: nowIso,
+                  is_active: 1,
+                },
+              });
+            });
+          });
+        }
+      );
+    }
+  );
+});
+
+router.post('/sites', async (req, res) => {
+  try {
+    const siteNameInput = (req.body.siteName || req.body.locationName || '').toString().trim();
+    const addressInput = (req.body.address || req.body.location || '').toString().trim();
+    const latitude = Number(req.body.latitude);
+    const longitude = Number(req.body.longitude);
+
+    if (!siteNameInput && !addressInput) {
+      return res.status(400).json({ error: 'siteName or location is required' });
+    }
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return res.status(400).json({ error: 'Valid latitude and longitude are required' });
+    }
+
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ error: 'Coordinates are out of range' });
+    }
+
+    const nearbySiteKey = await findNearestExistingSite(latitude, longitude);
+    if (nearbySiteKey) {
+      const existing = await db.query(
+        `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen
+         FROM site_registry
+         WHERE site_key = $1
+         LIMIT 1`,
+        [nearbySiteKey]
+      );
+
+      if (existing.rows[0]) {
+        return res.json({
+          success: true,
+          exists: true,
+          message: 'Nearby site already exists. Using existing site.',
+          site: existing.rows[0],
+        });
+      }
+    }
+
+    const siteName = siteNameInput || addressInput;
+    const address = addressInput || siteName;
+    const nowIso = new Date().toISOString();
+    const coordinateSeed = `coords-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    const baseKey = normalizeSiteKey(siteName || address || coordinateSeed, coordinateSeed);
+
+    let siteKey = baseKey;
+    for (let i = 0; i < 10; i += 1) {
+      // Keep generated site_key unique while preserving a readable base slug.
+      const existsResult = await db.query(
+        `SELECT site_key FROM site_registry WHERE site_key = $1 LIMIT 1`,
+        [siteKey]
+      );
+
+      if (existsResult.rows.length === 0) break;
+      siteKey = `${baseKey}-${i + 2}`;
+    }
+
+    const insertResult = await db.query(
+      `INSERT INTO site_registry (site_key, site_name, address, latitude, longitude, first_seen, last_seen)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING site_key, site_name, address, latitude, longitude, first_seen, last_seen`,
+      [siteKey, siteName, address, latitude, longitude, nowIso, nowIso]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Site added successfully',
+      site: insertResult.rows[0],
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Failed to add site' });
+  }
 });
 
 router.put('/sites/:siteKey', (req, res) => {

@@ -40,22 +40,27 @@ type SiteOption = {
   latitude?: number | null;
   longitude?: number | null;
   lastSeen?: string | null;
+  isActive?: boolean;
 };
 
 const SITE_STALE_MS = 15000;
-const BASAK_SITE_KEY = '10-143-90-164';
-const BASAK_SITE_COORDINATES = { lat: 7.606312, lng: 126.00713 };
 const ALL_SITES_KEY = 'all';
+
+function isHiddenPlaceholderSite(site: { siteKey?: string; siteName?: string | null; latitude?: number | null; longitude?: number | null }) {
+  const key = (site.siteKey || '').toString().trim().toLowerCase();
+  const name = (site.siteName || '').toString().trim().toLowerCase();
+  const looksLikeEspPlaceholder = key.includes('esp32-local') || name.includes('esp32.local');
+  const hasCoordinates =
+    typeof site.latitude === 'number' &&
+    Number.isFinite(site.latitude) &&
+    typeof site.longitude === 'number' &&
+    Number.isFinite(site.longitude);
+
+  return looksLikeEspPlaceholder || !hasCoordinates;
+}
 
 function resolveSiteCoordinates(site: SiteOption | null | undefined) {
   if (!site) return null;
-
-  const siteKey = site.siteKey.toLowerCase();
-  const siteName = site.siteName.toLowerCase();
-
-  if (siteKey === BASAK_SITE_KEY || siteName.includes('basak')) {
-    return BASAK_SITE_COORDINATES;
-  }
 
   if (site.latitude != null && site.longitude != null) {
     return { lat: site.latitude, lng: site.longitude };
@@ -137,6 +142,13 @@ export function Dashboard({
 
   useEffect(() => {
     selectedSiteKeyRef.current = selectedSiteKey;
+  }, [selectedSiteKey]);
+
+  useEffect(() => {
+    const normalized = (selectedSiteKey || '').toLowerCase();
+    if (normalized.includes('esp32-local')) {
+      setSelectedSiteKey(ALL_SITES_KEY);
+    }
   }, [selectedSiteKey]);
 
   useEffect(() => {
@@ -380,7 +392,16 @@ export function Dashboard({
     !!liveReading?.deviceConnected &&
     typeof liveReading?.latitude === "number" &&
     typeof liveReading?.longitude === "number";
-  const effectiveActiveSiteKey = hasPresentLiveLocation ? activeSiteKey : null;
+  const localManualActiveSiteKey =
+    typeof window !== "undefined"
+      ? localStorage.getItem("sg_manual_active_site_key")
+      : null;
+  const manualActiveSiteKey =
+    availableSites.find((site) => !!site.isActive)?.siteKey ||
+    (localManualActiveSiteKey && availableSites.some((site) => site.siteKey === localManualActiveSiteKey)
+      ? localManualActiveSiteKey
+      : null);
+  const effectiveActiveSiteKey = hasPresentLiveLocation ? activeSiteKey : manualActiveSiteKey;
   const isAllSitesSelected = selectedSiteKey === ALL_SITES_KEY;
   const dropdownSites: SiteOption[] = availableSites.length > 0
     ? [{ siteKey: ALL_SITES_KEY, siteName: "All sites" }, ...availableSites]
@@ -397,17 +418,42 @@ export function Dashboard({
 
         const lastSeenTs = site.lastSeen ? new Date(site.lastSeen).getTime() : Number.NaN;
         const isFreshSite = Number.isFinite(lastSeenTs) && (Date.now() - lastSeenTs <= SITE_STALE_MS);
+        const hasManualActivation = !!site.isActive;
         acc.push({
           id: site.siteKey,
           name: site.siteName,
           lat: coords.lat,
           lng: coords.lng,
-          isActive: site.siteKey === effectiveActiveSiteKey && isFreshSite,
+          isActive: site.siteKey === effectiveActiveSiteKey && (hasManualActivation || isFreshSite),
           isSelected: site.siteKey === selectedSiteKey,
         });
         return acc;
       }, [])
       .sort((a, b) => Number(b.isSelected) - Number(a.isSelected));
+
+    if (!isAllSitesSelected) {
+      const selectedWithCoords = selectedSite
+        ? fromRegistry.find((site) => site.id === selectedSite.siteKey) || null
+        : null;
+
+      if (selectedWithCoords) {
+        return [{
+          ...selectedWithCoords,
+          isSelected: true,
+        }];
+      }
+
+      // Avoid showing a mismatched marker when the selected site has no saved coordinates.
+      if (gpsSites && gpsSites.length > 0 && selectedSiteKey === effectiveActiveSiteKey) {
+        return gpsSites.map((site) => ({
+          ...site,
+          isActive: true,
+          isSelected: true,
+        }));
+      }
+
+      return undefined;
+    }
 
     if (fromRegistry.length > 0) return fromRegistry;
 
@@ -556,8 +602,10 @@ export function Dashboard({
             latitude: typeof site.latitude === 'number' ? site.latitude : null,
             longitude: typeof site.longitude === 'number' ? site.longitude : null,
             lastSeen: site.last_seen || site.first_seen || null,
+            isActive: site.is_active === 1 || site.is_active === true,
           }))
           .filter((site) => !!site.siteKey)
+          .filter((site) => !isHiddenPlaceholderSite(site))
           .sort((a, b) => a.siteName.localeCompare(b.siteName));
 
         setAvailableSites(mapped);

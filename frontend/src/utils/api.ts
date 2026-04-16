@@ -5,18 +5,19 @@
 
 // @ts-ignore - Vite env type handling
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+const LOCAL_BACKEND_BASE_URL = 'http://localhost:3001';
 
-function buildApiUrl(endpoint: string): string {
+function buildApiUrl(endpoint: string, baseUrl = API_BASE_URL): string {
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  if (!API_BASE_URL) {
+  if (!baseUrl) {
     return normalizedEndpoint;
   }
 
-  if (normalizedEndpoint.startsWith('/api') && API_BASE_URL.endsWith('/api')) {
-    return `${API_BASE_URL}${normalizedEndpoint.slice(4)}`;
+  if (normalizedEndpoint.startsWith('/api') && baseUrl.endsWith('/api')) {
+    return `${baseUrl}${normalizedEndpoint.slice(4)}`;
   }
 
-  return `${API_BASE_URL}${normalizedEndpoint}`;
+  return `${baseUrl}${normalizedEndpoint}`;
 }
 
 function addCacheBust(url: string): string {
@@ -71,8 +72,53 @@ async function fetchCsrfToken(): Promise<string | null> {
   return csrfTokenPromise;
 }
 
+async function fetchCsrfTokenForBase(baseUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(buildApiUrl('/api/auth/csrf-token', baseUrl), {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data?.csrfToken || null;
+  } catch {
+    return null;
+  }
+}
+
 function clearCsrfTokenCache() {
   csrfTokenCache = null;
+}
+
+function isLocalDevHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = (window.location?.hostname || '').toLowerCase();
+  return host === 'localhost' || host === '127.0.0.1';
+}
+
+function isLocalApiBase(baseUrl: string): boolean {
+  if (!baseUrl) return true;
+  return /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(baseUrl);
+}
+
+function shouldRetrySiteRouteOnLocal(endpoint: string, status: number): boolean {
+  if (status !== 404) return false;
+  if (!endpoint.startsWith('/api/sensors/sites')) return false;
+  if (!isLocalDevHost()) return false;
+  return !isLocalApiBase(API_BASE_URL);
+}
+
+function shouldRetryAnyApiOnLocalNetworkError(endpoint: string, error: unknown): boolean {
+  if (!isLocalDevHost()) return false;
+  if (isLocalApiBase(API_BASE_URL)) return false;
+  if (!endpoint.startsWith('/api/')) return false;
+
+  const message = (error as any)?.message?.toString?.() || '';
+  return /failed to fetch|networkerror|load failed/i.test(message);
 }
 
 interface FetchOptions extends RequestInit {
@@ -128,6 +174,50 @@ export async function apiCall(endpoint: string, options: FetchOptions = {}): Pro
       }
     }
 
+    // Localhost dev safety-net:
+    // if cloud backend returns 404 for new site routes, retry once against local backend.
+    if (!response.ok && shouldRetrySiteRouteOnLocal(endpoint, response.status)) {
+      const localUrl = method === 'GET'
+        ? addCacheBust(buildApiUrl(endpoint, LOCAL_BACKEND_BASE_URL))
+        : buildApiUrl(endpoint, LOCAL_BACKEND_BASE_URL);
+
+      let localCsrfHeader: Record<string, string> = {};
+      if (shouldAttachCsrfToken(endpoint, method)) {
+        const localToken = await fetchCsrfTokenForBase(LOCAL_BACKEND_BASE_URL);
+        if (localToken) {
+          localCsrfHeader = { 'x-csrf-token': localToken };
+        }
+      }
+
+      response = await fetch(localUrl, {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          ...localCsrfHeader,
+          ...(options.headers || {}),
+        },
+        ...options,
+      });
+
+      // Retry once against local backend if its CSRF token rotated.
+      if (response.status === 403 && shouldAttachCsrfToken(endpoint, method)) {
+        const localRefreshedToken = await fetchCsrfTokenForBase(LOCAL_BACKEND_BASE_URL);
+        if (localRefreshedToken) {
+          response = await fetch(localUrl, {
+            credentials: 'include',
+            cache: 'no-store',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-csrf-token': localRefreshedToken,
+              ...(options.headers || {}),
+            },
+            ...options,
+          });
+        }
+      }
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ 
         message: `HTTP ${response.status}` 
@@ -137,6 +227,43 @@ export async function apiCall(endpoint: string, options: FetchOptions = {}): Pro
 
     return await response.json();
   } catch (error) {
+    if (shouldRetryAnyApiOnLocalNetworkError(endpoint, error)) {
+      try {
+        const localUrl = method === 'GET'
+          ? addCacheBust(buildApiUrl(endpoint, LOCAL_BACKEND_BASE_URL))
+          : buildApiUrl(endpoint, LOCAL_BACKEND_BASE_URL);
+
+        let localCsrfHeader: Record<string, string> = {};
+        if (shouldAttachCsrfToken(endpoint, method)) {
+          const localToken = await fetchCsrfTokenForBase(LOCAL_BACKEND_BASE_URL);
+          if (localToken) {
+            localCsrfHeader = { 'x-csrf-token': localToken };
+          }
+        }
+
+        const localResponse = await fetch(localUrl, {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+            ...localCsrfHeader,
+            ...(options.headers || {}),
+          },
+          ...options,
+        });
+
+        if (!localResponse.ok) {
+          const localErr = await localResponse.json().catch(() => ({ message: `HTTP ${localResponse.status}` }));
+          throw new Error(localErr.message || `API Error: ${localResponse.status}`);
+        }
+
+        return await localResponse.json();
+      } catch (localError) {
+        console.error(`API Error (${endpoint}) local fallback:`, localError);
+        throw localError;
+      }
+    }
+
     console.error(`API Error (${endpoint}):`, error);
     throw error;
   }

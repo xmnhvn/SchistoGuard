@@ -67,9 +67,9 @@
 }
 
 .site-marker--active {
-  --marker-pulse: rgba(20, 184, 166, 0.26);
-  --marker-ring: rgba(20, 184, 166, 0.34);
-  --marker-dot: #0f766e;
+  --marker-pulse: rgba(59, 130, 246, 0.28);
+  --marker-ring: rgba(59, 130, 246, 0.36);
+  --marker-dot: #2563eb;
   --pulse-size: 220px;
   --ring-size: 66px;
   --dot-size: 16px;
