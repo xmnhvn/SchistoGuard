@@ -7,57 +7,37 @@ const session = require("express-session");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
 
-// Determine database type early
-const DB_TYPE = process.env.DB_TYPE || 'sqlite';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Initialize session store based on database type
-let sessionStore = undefined;
-
-if (DB_TYPE === 'postgres') {
-  // Production: Use PostgreSQL for session store with connection pool
-  try {
-    const pgSession = require("connect-pg-simple")(session);
-    const { Pool } = require('pg');
-    
-    // Create a connection pool for session store
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    });
-    
-    // Test pool connection
-    pool.query('SELECT NOW()', (err, result) => {
-      if (err) {
-        console.error('Session store pool connection error:', err);
-      } else {
-        console.log('✓ PostgreSQL session store pool connected');
-      }
-    });
-    
-    sessionStore = new pgSession({
-      pool: pool,
-      tableName: 'session',
-      createTableIfMissing: true
-    });
-    
-    console.log('✓ Using PostgreSQL session store (persistent with connection pool)');
-  } catch (err) {
-    console.error('⚠ PostgreSQL session store error:', err.message);
-    console.log('  Falling back to memory-based session store');
-  }
-} else {
-  // Development: Use SQLite for session store
-  try {
-    const SQLiteStore = require("connect-sqlite3")(session);
-    sessionStore = new SQLiteStore({ db: 'sessions.sqlite', dir: './' });
-    console.log('✓ Using SQLite session store (persistent)');
-  } catch (err) {
-    console.log('⚠ SQLite session store not available, using memory-based session store');
-    console.log('  Note: For development, install connect-sqlite3: npm install connect-sqlite3');
-    // Memory store will be used by default (no explicit store)
-  }
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is required. SchistoGuard now uses PostgreSQL only.');
 }
+
+// PostgreSQL session store is required so reads and writes stay on the cloud database.
+const pgSession = require("connect-pg-simple")(session);
+const { Pool } = require('pg');
+
+const sessionPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+sessionPool.query('SELECT NOW()', (err) => {
+  if (err) {
+    console.error('Session store pool connection error:', err);
+    process.exit(1);
+  }
+
+  console.log('✓ PostgreSQL session store pool connected');
+});
+
+const sessionStore = new pgSession({
+  pool: sessionPool,
+  tableName: 'session',
+  createTableIfMissing: true
+});
+
+console.log('✓ Using PostgreSQL session store only');
 
 const app = express();
 
@@ -184,5 +164,5 @@ app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
   console.log(`Environment: ${NODE_ENV}`);
   console.log(`Frontend URL: ${FRONTEND_URL}`);
-  console.log(`Database type: ${process.env.DB_TYPE || 'sqlite'}`);
+  console.log('Database type: postgres-only');
 });

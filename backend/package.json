@@ -23,11 +23,6 @@
     "concurrently": "^9.2.1",
     "nodemon": "^3.0.1"
   },
-  "optionalDependencies": {
-    "connect-sqlite3": "^0.9.16",
-    "serialport": "^13.0.0",
-    "sqlite3": "^5.1.7"
-  },
   "description": "",
   "keywords": [],
   "author": "",

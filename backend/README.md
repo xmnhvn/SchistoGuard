@@ -53,10 +53,9 @@ ESP32_BACKEND_URL=http://localhost:3001/api/sensors
 
 ## Database
 
-- **Production**: PostgreSQL on Railway
-- **Local Development**: SQLite (optional, for testing)
+SchistoGuard now uses PostgreSQL only.
 
-Set `DB_TYPE=postgres` or `DB_TYPE=sqlite` in `.env`.
+Set `DATABASE_URL` in `.env` to the Railway Postgres connection string.
 
 ## Environment Variables
 
