@@ -7,7 +7,6 @@ import {
   Activity,
   ChevronLeft,
   ChevronDown,
-  BadgeCheck,
   LocateFixed,
   Download,
   Thermometer,
@@ -43,6 +42,7 @@ type SiteOption = {
 
 const BASAK_SITE_KEY = '10-143-90-164';
 const BASAK_SITE_COORDINATES = { lat: 7.606312, lng: 126.00713 };
+const ALL_SITES_KEY = 'all';
 
 function resolveSiteCoordinates(site: SiteOption | null | undefined) {
   if (!site) return null;
@@ -143,7 +143,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [latestReading, setLatestReading] = useState<any>(null);
   const [liveReading, setLiveReading] = useState<any>(null);
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
-  const [selectedSiteKey, setSelectedSiteKey] = useState<string>('');
+  const [selectedSiteKey, setSelectedSiteKey] = useState<string>(ALL_SITES_KEY);
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const [showSiteDropdown, setShowSiteDropdown] = useState(false);
   const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
@@ -242,6 +242,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     .join(", ");
 
   const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+  const isAllSitesSelected = selectedSiteKey === ALL_SITES_KEY;
+  const dropdownSites = availableSites.length > 0
+    ? [{ siteKey: ALL_SITES_KEY, siteName: 'All sites' }, ...availableSites]
+    : [];
+  const selectedSiteLabel = isAllSitesSelected
+    ? 'All sites'
+    : (selectedSite?.siteName || (availableSites.length === 0 ? 'No sites' : 'Select site'));
+  const longestSiteLabel = dropdownSites.reduce((longest, site) => (
+    site.siteName.length > longest.length ? site.siteName : longest
+  ), selectedSiteLabel);
+  let measuredSiteControlWidth = 320;
+  if (typeof document !== 'undefined') {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.font = "500 13px Poppins, sans-serif";
+      measuredSiteControlWidth = Math.ceil(context.measureText(longestSiteLabel).width) + 56;
+    }
+  }
+  const isTabletViewport = screenWidth >= 600 && screenWidth < 1100;
+  const isNarrowViewport = screenWidth < 1600;
+  const siteControlWidthPx = Math.min(
+    Math.max(measuredSiteControlWidth, 220),
+    isTabletViewport ? 560 : (isNarrowViewport ? 520 : 620)
+  );
+  const fixedSiteControlWidth = `${siteControlWidthPx}px`;
 
   const mapSites = (() => {
     const fromRegistry = availableSites
@@ -403,6 +429,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const siteDropdownRef = useRef<HTMLDivElement>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
   const desktopBaselineDprRef = useRef<number | null>(null);
+  const hasManualSiteSelectionRef = useRef(false);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -437,9 +464,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         setAvailableSites(mapped);
 
         setSelectedSiteKey((prev) => {
+          if (prev === ALL_SITES_KEY) return prev;
+          if (!hasManualSiteSelectionRef.current && activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) {
+            return activeSiteKey;
+          }
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
           if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
-          return mapped[0]?.siteKey || '';
+          return ALL_SITES_KEY;
         });
       } catch {
         setAvailableSites([]);
@@ -618,7 +649,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           setDataOk(true);
           setDeviceConnected(true);
           if (data?.siteKey) {
-            setSelectedSiteKey((prev) => prev || data.siteKey || '');
+            setSelectedSiteKey((prev) => {
+              if (prev === ALL_SITES_KEY) return prev;
+              if (hasManualSiteSelectionRef.current) return prev || data.siteKey || '';
+              return data.siteKey || prev || '';
+            });
           }
           if (data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
@@ -708,7 +743,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isPreviewActive = showLiveUpdates && !isExitingLiveUpdates;
   const isSmallDesktop = !isMobileOrTablet && screenWidth <= 1600 && screenHeight <= 1000;
   const isDesktopViewport = !isMobileOrTablet;
+  const desktopPreviewLngOffset = isAllSitesSelected ? -0.0185 : -0.0050;
   const selectedSiteOperational = !!selectedSiteKey && !!activeSiteKey && selectedSiteKey === activeSiteKey && deviceConnected && backendOk && dataOk;
+  const hasLiveSensorValues =
+    !!latestReading &&
+    Number.isFinite(Number(latestReading.temperature)) &&
+    Number.isFinite(Number(latestReading.turbidity)) &&
+    Number.isFinite(Number(latestReading.ph));
+  const showLiveSensorCards = selectedSiteOperational && hasLiveSensorValues;
+  const temperatureStatus = showLiveSensorCards ? getSensorStatus('temperature', Number(latestReading.temperature)) : null;
+  const turbidityStatus = showLiveSensorCards ? getSensorStatus('turbidity', Number(latestReading.turbidity)) : null;
+  const phStatus = showLiveSensorCards ? getSensorStatus('ph', Number(latestReading.ph)) : null;
   const desktopSidePadding = '10%';
   const liveUpdatesContentPadding = isMobileOrTablet
     ? (screenWidth < 400 ? '72px 16px 16px'
@@ -878,7 +923,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               mobileMode={isMobileOrTablet}
               sites={mapSites}
               // On desktop preview, shift pin further right (-0.0032) to match Pic 2 framing
-              lngOffset={!isMobileOrTablet ? (isPreviewActive ? -0.0050 : -0.0075) : undefined}
+              lngOffset={!isMobileOrTablet ? (isPreviewActive ? desktopPreviewLngOffset : -0.0075) : undefined}
               latOffset={
                 isMobileOrTablet
                   ? isPreviewActive
@@ -1341,7 +1386,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   animation: 'slideInFromRight 0.6s 0.2s ease-out both',
                 }}
               >
-                {selectedSite?.siteName || siteData.siteName}
+                {selectedSiteLabel || siteData.siteName}
               </h1>
               <p
                 style={{
@@ -1408,8 +1453,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     minHeight: 34,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                     backdropFilter: 'blur(4px)',
-                    width: screenWidth < 600 ? '100%' : 'auto',
-                    maxWidth: screenWidth < 600 ? '100%' : 520,
+                    width: screenWidth < 600 ? '100%' : fixedSiteControlWidth,
+                    minWidth: 0,
+                    maxWidth: screenWidth < 600 ? '100%' : `calc(100vw - ${isSmallDesktop ? 260 : 340}px)`,
+                    boxSizing: 'border-box',
                   }}
                 >
                   <button
@@ -1421,26 +1468,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       color: '#337C85',
                       padding: 0,
                       fontFamily: "'Poppins', sans-serif",
-                      fontSize: 12,
-                      fontWeight: 600,
+                      fontSize: 13,
+                      fontWeight: 500,
                       display: 'inline-flex',
                       alignItems: 'center',
-                      justifyContent: screenWidth < 600 ? 'space-between' : 'flex-start',
                       gap: 6,
-                      width: screenWidth < 600 ? '100%' : 'auto',
+                      width: '100%',
+                      minWidth: 0,
                       maxWidth: '100%',
+                      outline: 'none',
                       cursor: 'pointer',
                     }}
                   >
                     <span
                       style={{
-                        whiteSpace: screenWidth < 600 ? 'normal' : 'nowrap',
-                        lineHeight: screenWidth < 600 ? 1.2 : 1,
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1,
                         textAlign: 'left',
-                        paddingRight: screenWidth < 600 ? 8 : 0,
                       }}
+                      title={selectedSiteLabel}
                     >
-                      {selectedSite?.siteName || (availableSites.length === 0 ? 'No sites' : 'Select site')}
+                      {selectedSiteLabel}
                     </span>
                     <ChevronDown
                       size={14}
@@ -1459,10 +1511,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         position: 'absolute',
                         top: 'calc(100% + 8px)',
                         left: 0,
-                        width: screenWidth < 600 ? '100%' : 'auto',
-                        minWidth: '100%',
+                        width: screenWidth < 600 ? '100%' : fixedSiteControlWidth,
+                        minWidth: 0,
+                        maxWidth: screenWidth < 600 ? '100%' : `calc(100vw - ${isSmallDesktop ? 48 : 64}px)`,
                         maxHeight: 220,
                         overflowY: 'auto',
+                        overflowX: 'hidden',
                         background: '#ffffff',
                         borderRadius: 12,
                         boxShadow: '0 10px 26px rgba(0,0,0,0.18)',
@@ -1484,13 +1538,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           No sites
                         </div>
                       ) : (
-                        availableSites.map((site) => {
+                        dropdownSites.map((site) => {
                           const isSelected = site.siteKey === selectedSiteKey;
+                          const hasOperationalSite = deviceConnected && backendOk && dataOk;
+                          const isActive = hasOperationalSite && site.siteKey === activeSiteKey;
+                          const selectedButInactive = isSelected && site.siteKey !== ALL_SITES_KEY && !isActive;
+                          const selectedActive = isSelected && site.siteKey !== ALL_SITES_KEY && isActive;
+                          const statusDotColor = isActive ? '#22c55e' : '#9ca3af';
+                          const rowBackground = hasOperationalSite
+                            ? (isSelected
+                              ? (selectedButInactive ? '#94a3b8' : (selectedActive ? '#16a34a' : '#3b82f6'))
+                              : 'transparent')
+                            : 'transparent';
+                          const rowTextColor = hasOperationalSite
+                            ? (isSelected ? '#ffffff' : (isActive ? '#15803d' : '#64748b'))
+                            : '#64748b';
                           return (
                             <button
                               key={site.siteKey}
                               type="button"
                               onClick={() => {
+                                hasManualSiteSelectionRef.current = true;
                                 setSelectedSiteKey(site.siteKey);
                                 setShowSiteDropdown(false);
                               }}
@@ -1500,8 +1568,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                 borderRadius: 10,
                                 padding: '8px 10px',
                                 textAlign: 'left',
-                                background: isSelected ? '#3b82f6' : 'transparent',
-                                color: isSelected ? '#ffffff' : '#64748b',
+                                background: rowBackground,
+                                color: rowTextColor,
                                 fontFamily: "'Poppins', sans-serif",
                                 fontSize: 13,
                                 fontWeight: isSelected ? 600 : 500,
@@ -1510,10 +1578,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                 gap: 8,
                                 cursor: 'pointer',
                                 whiteSpace: 'nowrap',
+                                opacity: hasOperationalSite ? (isActive ? 1 : 0.82) : 1,
                               }}
+                              title={selectedButInactive ? 'Selected site is not currently active' : ''}
                             >
-                              {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
-                              <span>{site.siteName}</span>
+                              <span
+                                style={{
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: '50%',
+                                  background: statusDotColor,
+                                  display: 'inline-block',
+                                  flexShrink: 0,
+                                  animation: isActive ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                                  "--dot-glow": isActive ? 'rgba(34,197,94,0.5)' : 'transparent',
+                                  boxShadow: hasOperationalSite
+                                    ? (isSelected ? '0 0 0 2px rgba(255,255,255,0.7)' : '0 0 0 2px rgba(148,163,184,0.2)')
+                                    : '0 0 0 2px rgba(148,163,184,0.2)',
+                                } as any}
+                              />
+                              <span
+                                style={{
+                                  minWidth: 0,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  flex: 1,
+                                }}
+                                title={site.siteName}
+                              >
+                                {site.siteName}
+                              </span>
                             </button>
                           );
                         })
@@ -1582,25 +1677,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   width: 10,
                   height: 10,
                   borderRadius: '50%',
-                  background: latestReading ? getSensorStatus('temperature', latestReading.temperature).color : '#9ca3af',
+                  background: temperatureStatus ? temperatureStatus.color : '#9ca3af',
                   display: 'inline-block',
-                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus('temperature', latestReading.temperature).color, 0.5) : 'transparent',
+                  animation: temperatureStatus ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                  "--dot-glow": temperatureStatus ? hexToRgba(temperatureStatus.color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-temperature.svg" alt="temp"
                   style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
                 <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 11.5 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 12) : 15, color: '#77ABB2' }}>Temperature</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
                   <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
-                    {latestReading ? latestReading.temperature : '—'}
+                    {showLiveSensorCards ? Number(latestReading.temperature) : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> °C</span>}
+                  <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> °C</span>
                 </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                    {getSensorStatus('temperature', latestReading.temperature).label}
-                  </p>
-                )}
+                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  {temperatureStatus ? temperatureStatus.label : 'Device not connected'}
+                </p>
               </div>
 
               {/* Turbidity Card */}
@@ -1625,25 +1718,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   width: 10,
                   height: 10,
                   borderRadius: '50%',
-                  background: latestReading ? getSensorStatus('turbidity', latestReading.turbidity).color : '#9ca3af',
+                  background: turbidityStatus ? turbidityStatus.color : '#9ca3af',
                   display: 'inline-block',
-                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus('turbidity', latestReading.turbidity).color, 0.5) : 'transparent',
+                  animation: turbidityStatus ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                  "--dot-glow": turbidityStatus ? hexToRgba(turbidityStatus.color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-turbidity.svg" alt="turbidity"
                   style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
                 <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 13) : 15, color: '#77ABB2' }}>Turbidity</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
                   <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
-                    {latestReading ? latestReading.turbidity : '—'}
+                    {showLiveSensorCards ? Number(latestReading.turbidity) : '—'}
                   </span>
-                  {latestReading && <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> NTU</span>}
+                  <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> NTU</span>
                 </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                    {getSensorStatus('turbidity', latestReading.turbidity).label}
-                  </p>
-                )}
+                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  {turbidityStatus ? turbidityStatus.label : 'Device not connected'}
+                </p>
               </div>
 
               {/* pH Card */}
@@ -1669,24 +1760,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   width: 10,
                   height: 10,
                   borderRadius: '50%',
-                  background: latestReading ? getSensorStatus('ph', latestReading.ph).color : '#9ca3af',
+                  background: phStatus ? phStatus.color : '#9ca3af',
                   display: 'inline-block',
-                  animation: latestReading ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                  "--dot-glow": latestReading ? hexToRgba(getSensorStatus('ph', latestReading.ph).color, 0.5) : 'transparent',
+                  animation: phStatus ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                  "--dot-glow": phStatus ? hexToRgba(phStatus.color, 0.5) : 'transparent',
                 } as any} />
                 <img src="/icons/icon-ph.svg" alt="ph"
                   style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
                 <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 13) : 15, color: '#77ABB2' }}>pH Level</p>
                 <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
                   <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
-                    {latestReading ? latestReading.ph : '—'}
+                    {showLiveSensorCards ? Number(latestReading.ph) : '—'}
                   </span>
                 </p>
-                {latestReading && (
-                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                    {getSensorStatus('ph', latestReading.ph).label}
-                  </p>
-                )}
+                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  {phStatus ? phStatus.label : 'Device not connected'}
+                </p>
               </div>
 
               {/* Data Interpretation & Analysis Card — persistent for educational guide */}

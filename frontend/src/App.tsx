@@ -561,5 +561,14 @@ export default function App() {
     );
   }
 
-  return null;
+  return (
+    <>
+      <LandingPage
+        onViewMap={() => setCurrentView('sensor-info')}
+        onLearnMore={() => setCurrentView('sensor-info')}
+        onEnterApp={() => setCurrentView('login')}
+      />
+      {pwaInstallPrompt}
+    </>
+  );
 }

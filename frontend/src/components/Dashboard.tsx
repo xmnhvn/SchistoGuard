@@ -9,7 +9,6 @@ import {
   LocateFixed,
   ChevronLeft,
   ChevronDown,
-  BadgeCheck,
   Info,
   Thermometer,
   Droplets,
@@ -432,15 +431,9 @@ export function Dashboard({
       .sort((a, b) => Number(b.isSelected) - Number(a.isSelected));
 
     if (!isAllSitesSelected) {
-      const selectedWithCoords = selectedSite
-        ? fromRegistry.find((site) => site.id === selectedSite.siteKey) || null
-        : null;
-
-      if (selectedWithCoords) {
-        return [{
-          ...selectedWithCoords,
-          isSelected: true,
-        }];
+      // Keep all known site markers visible while focusing the selected one.
+      if (fromRegistry.length > 0) {
+        return fromRegistry;
       }
 
       // Avoid showing a mismatched marker when the selected site has no saved coordinates.
@@ -467,6 +460,12 @@ export function Dashboard({
 
     return undefined;
   })();
+
+  const handleMapSiteSelect = (siteKey: string) => {
+    if (!siteKey) return;
+    if (!availableSites.some((site) => site.siteKey === siteKey)) return;
+    setSelectedSiteKey(siteKey);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -1238,9 +1237,19 @@ export function Dashboard({
           ) : (
             dropdownSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
-              const isActive = site.siteKey === effectiveActiveSiteKey;
+              const hasOperationalSite = backendOk && dataOk && !!deviceConnected && !!effectiveActiveSiteKey;
+              const isActive = hasOperationalSite && site.siteKey === effectiveActiveSiteKey;
               const selectedButInactive = isSelected && site.siteKey !== ALL_SITES_KEY && !isActive;
               const selectedActive = isSelected && site.siteKey !== ALL_SITES_KEY && isActive;
+              const statusDotColor = isActive ? "#22c55e" : "#9ca3af";
+              const rowBackground = hasOperationalSite
+                ? (isSelected
+                  ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
+                  : "transparent")
+                : "transparent";
+              const rowTextColor = hasOperationalSite
+                ? (isSelected ? "#ffffff" : (isActive ? "#15803d" : "#64748b"))
+                : "#64748b";
               return (
                 <button
                   key={site.siteKey}
@@ -1255,10 +1264,8 @@ export function Dashboard({
                     borderRadius: 10,
                     padding: "8px 10px",
                     textAlign: "left",
-                    background: isSelected
-                      ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
-                      : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive ? "#15803d" : (site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b")),
+                    background: rowBackground,
+                    color: rowTextColor,
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
@@ -1266,11 +1273,25 @@ export function Dashboard({
                     alignItems: "center",
                     gap: 8,
                     cursor: "pointer",
-                    opacity: isActive ? 1 : 0.82,
+                    opacity: hasOperationalSite ? (isActive ? 1 : 0.82) : 1,
                   }}
                   title={selectedButInactive ? "Selected site is not currently active" : ""}
                 >
-                  {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: statusDotColor,
+                      display: "inline-block",
+                      flexShrink: 0,
+                      animation: isActive ? "dotPulse 3s ease-in-out infinite" : "none",
+                      "--dot-glow": isActive ? "rgba(34,197,94,0.5)" : "transparent",
+                      boxShadow: hasOperationalSite
+                        ? (isSelected ? "0 0 0 2px rgba(255,255,255,0.7)" : "0 0 0 2px rgba(148,163,184,0.2)")
+                        : "0 0 0 2px rgba(148,163,184,0.2)",
+                    } as any}
+                  />
                   <span
                     style={{
                       minWidth: 0,
@@ -1387,9 +1408,19 @@ export function Dashboard({
           ) : (
             dropdownSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
-              const isActive = site.siteKey === effectiveActiveSiteKey;
+              const hasOperationalSite = backendOk && dataOk && !!deviceConnected && !!effectiveActiveSiteKey;
+              const isActive = hasOperationalSite && site.siteKey === effectiveActiveSiteKey;
               const selectedButInactive = isSelected && site.siteKey !== ALL_SITES_KEY && !isActive;
               const selectedActive = isSelected && site.siteKey !== ALL_SITES_KEY && isActive;
+              const statusDotColor = isActive ? "#22c55e" : "#9ca3af";
+              const rowBackground = hasOperationalSite
+                ? (isSelected
+                  ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
+                  : "transparent")
+                : "transparent";
+              const rowTextColor = hasOperationalSite
+                ? (isSelected ? "#ffffff" : (isActive ? "#15803d" : "#64748b"))
+                : "#64748b";
               return (
                 <button
                   key={site.siteKey}
@@ -1404,10 +1435,8 @@ export function Dashboard({
                     borderRadius: 10,
                     padding: "8px 10px",
                     textAlign: "left",
-                    background: isSelected
-                      ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
-                      : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive ? "#15803d" : (site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b")),
+                    background: rowBackground,
+                    color: rowTextColor,
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
@@ -1415,12 +1444,26 @@ export function Dashboard({
                     alignItems: "center",
                     gap: 8,
                     cursor: "pointer",
-                    opacity: isActive ? 1 : 0.82,
+                    opacity: hasOperationalSite ? (isActive ? 1 : 0.82) : 1,
                   }}
                   title={selectedButInactive ? "Selected site is not currently active" : ""}
                 >
-                  {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
-                  <span style={{ whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.25 }}>{site.siteName}</span>
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: statusDotColor,
+                      display: "inline-block",
+                      flexShrink: 0,
+                      animation: isActive ? "dotPulse 3s ease-in-out infinite" : "none",
+                      "--dot-glow": isActive ? "rgba(34,197,94,0.5)" : "transparent",
+                      boxShadow: hasOperationalSite
+                        ? (isSelected ? "0 0 0 2px rgba(255,255,255,0.7)" : "0 0 0 2px rgba(148,163,184,0.2)")
+                        : "0 0 0 2px rgba(148,163,184,0.2)",
+                    } as any}
+                  />
+                  <span style={{ whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.25, flex: 1 }}>{site.siteName}</span>
                 </button>
               );
             })
@@ -1549,9 +1592,9 @@ export function Dashboard({
       >
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           {compactCards ? (
-            <DashboardMap ref={mapRef} mobileMode={true} interactive={true} sites={mapSites} />
+            <DashboardMap ref={mapRef} mobileMode={true} interactive={true} sites={mapSites} onSiteSelect={handleMapSiteSelect} />
           ) : (
-            <DashboardMap ref={mapRef} sites={mapSites} />
+            <DashboardMap ref={mapRef} sites={mapSites} onSiteSelect={handleMapSiteSelect} />
           )}
         </div>
 
@@ -1765,7 +1808,7 @@ export function Dashboard({
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.8s ease" }}>
-          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={mapSites} latOffset={-0.00099} />
+          <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={mapSites} onSiteSelect={handleMapSiteSelect} latOffset={-0.00099} />
         </div>
 
         {/* ── GRADIENT OVERLAY — matches desktop: upper-left teal fading to transparent ── */}
@@ -2116,7 +2159,7 @@ export function Dashboard({
                       justifyContent: "center",
                       maxWidth: "100%",
                     }}>
-                        {riskDataAvailable ? overallRiskLabel : "No Data"}
+                        {riskDataAvailable ? overallRiskLabel : "Device Offline"}
                       </span>
                     </div>
                     <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -2171,7 +2214,7 @@ export function Dashboard({
                       justifyContent: "center",
                       maxWidth: "100%",
                     }}>
-                      {riskDataAvailable ? overallRiskLabel : "No Data"}
+                      {riskDataAvailable ? overallRiskLabel : "Device Offline"}
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -2408,7 +2451,7 @@ export function Dashboard({
                   overflowWrap: "break-word",
                 }}
               >
-                {riskDataAvailable ? overallRiskLabel : "No Data"}
+                {riskDataAvailable ? overallRiskLabel : "Device Offline"}
               </span>
             </div>
             <p style={{ margin: 0, fontSize: isNarrowDesktop ? 12 : 14, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
@@ -2468,7 +2511,7 @@ export function Dashboard({
           transition: "opacity 0.8s ease",
         }}
       >
-        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={desktopMapLngOffset} />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} onSiteSelect={handleMapSiteSelect} lngOffset={desktopMapLngOffset} />
       </div>
 
         {/* Top-right controls: single horizontal flow */}

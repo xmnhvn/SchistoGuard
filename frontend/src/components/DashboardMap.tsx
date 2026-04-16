@@ -12,6 +12,8 @@ interface DashboardMapProps {
     isActive?: boolean;
     isSelected?: boolean;
   }>;
+  /** Called when a site marker is clicked */
+  onSiteSelect?: (siteId: string) => void;
   /** When true, centers the map on the pin (for mobile/tablet fixed backgrounds) */
   mobileMode?: boolean;
   /** Override map interactivity. Defaults to !mobileMode when not provided. */
@@ -30,7 +32,7 @@ export interface DashboardMapHandle {
   returnToDashboard: () => void;
 }
 
-export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, mobileMode = false, interactive, onMapReady, lngOffset = 0, latOffset = 0 }, ref) {
+export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, onSiteSelect, mobileMode = false, interactive, onMapReady, lngOffset = 0, latOffset = 0 }, ref) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
@@ -237,6 +239,14 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
                 <div class="site-marker__ring"></div>
                 <div class="site-marker__dot"></div>
               </div>`;
+
+            if (site?.id) {
+              el.addEventListener('click', (event) => {
+                event.stopPropagation();
+                onSiteSelect?.(site.id);
+              });
+            }
+
             const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
               .setLngLat([site.lng, site.lat])
               .addTo(map.current!);
@@ -275,7 +285,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [sitesJson, mobileMode, interactive, lngOffset, latOffset, mapUnavailable]);
+  }, [sitesJson, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, mapUnavailable]);
 
 
   // Destroy map on unmount
