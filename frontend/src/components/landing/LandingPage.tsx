@@ -6,6 +6,8 @@ import {
   ArrowRight,
   Activity,
   ChevronLeft,
+  ChevronDown,
+  BadgeCheck,
   LocateFixed,
   Download,
   Thermometer,
@@ -29,6 +31,34 @@ interface LandingPageProps {
   onViewMap?: () => void;
   onLearnMore?: () => void;
   onEnterApp?: () => void;
+}
+
+type SiteOption = {
+  siteKey: string;
+  siteName: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+const BASAK_SITE_KEY = '10-143-90-164';
+const BASAK_SITE_COORDINATES = { lat: 7.606312, lng: 126.00713 };
+
+function resolveSiteCoordinates(site: SiteOption | null | undefined) {
+  if (!site) return null;
+
+  const siteKey = site.siteKey.toLowerCase();
+  const siteName = site.siteName.toLowerCase();
+
+  if (siteKey === BASAK_SITE_KEY || siteName.includes('basak')) {
+    return BASAK_SITE_COORDINATES;
+  }
+
+  if (site.latitude != null && site.longitude != null) {
+    return { lat: site.latitude, lng: site.longitude };
+  }
+
+  return null;
 }
 
 // Sensor status helper
@@ -111,6 +141,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [showLiveUpdates, setShowLiveUpdates] = useState(false);
   const [isExitingLiveUpdates, setIsExitingLiveUpdates] = useState(false);
   const [latestReading, setLatestReading] = useState<any>(null);
+  const [liveReading, setLiveReading] = useState<any>(null);
+  const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
+  const [selectedSiteKey, setSelectedSiteKey] = useState<string>('');
+  const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
+  const [showSiteDropdown, setShowSiteDropdown] = useState(false);
+  const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
   const [deviceConnected, setDeviceConnected] = useState(true);
@@ -205,6 +241,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     .filter(Boolean)
     .join(", ");
 
+  const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+
+  const mapSites = (() => {
+    const fromRegistry = availableSites
+      .reduce<Array<{ id: string; name: string; lat: number; lng: number; isActive: boolean; isSelected: boolean }>>((acc, site) => {
+        const coords = resolveSiteCoordinates(site);
+        if (!coords) return acc;
+
+        acc.push({
+          id: site.siteKey,
+          name: site.siteName,
+          lat: coords.lat,
+          lng: coords.lng,
+          isActive: site.siteKey === activeSiteKey && !!liveReading?.deviceConnected,
+          isSelected: site.siteKey === selectedSiteKey,
+        });
+        return acc;
+      }, [])
+      .sort((a, b) => Number(b.isSelected) - Number(a.isSelected));
+
+    if (fromRegistry.length > 0) return fromRegistry;
+
+    if (gpsSites && gpsSites.length > 0) {
+      return gpsSites.map((site) => ({
+        ...site,
+        isActive: false,
+        isSelected: true,
+      }));
+    }
+
+    return undefined;
+  })();
+
   const hasLiveCoordinates =
     !!latestReading &&
     Number.isFinite(Number(latestReading.latitude)) &&
@@ -219,8 +288,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const displayAddress =
     hasLiveDeviceLocation
-      ? (gpsAddress || liveApiAddress || metaAddress || "Resolving live device location...")
-      : "Waiting for live device location";
+      ? (selectedSiteAddress || gpsAddress || liveApiAddress || metaAddress || "Resolving live device location...")
+      : (selectedSiteAddress || "Waiting for live device location");
 
   // Strictly follow real sensor device location (from GSM/GPS data)
   // Fallback to last known location in localStorage if sensor is not yet available
@@ -331,8 +400,104 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   }, [gpsAddress, siteData.siteName]);
 
   const mapRef = useRef<DashboardMapHandle>(null);
+  const siteDropdownRef = useRef<HTMLDivElement>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
   const desktopBaselineDprRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!siteDropdownRef.current?.contains(event.target as Node)) {
+        setShowSiteDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const data = await apiGet('/api/sensors/sites');
+        if (!Array.isArray(data)) {
+          setAvailableSites([]);
+          return;
+        }
+
+        const mapped: SiteOption[] = data
+          .map((site: any) => ({
+            siteKey: (site.site_key || '').toString().trim(),
+            siteName: (site.site_name || site.address || site.site_key || 'Unnamed Site').toString().trim(),
+            address: (site.address || '').toString().trim() || null,
+            latitude: typeof site.latitude === 'number' ? site.latitude : null,
+            longitude: typeof site.longitude === 'number' ? site.longitude : null,
+          }))
+          .filter((site) => !!site.siteKey)
+          .sort((a, b) => a.siteName.localeCompare(b.siteName));
+
+        setAvailableSites(mapped);
+
+        setSelectedSiteKey((prev) => {
+          if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
+          if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
+          return mapped[0]?.siteKey || '';
+        });
+      } catch {
+        setAvailableSites([]);
+      }
+    };
+
+    fetchSites();
+    const interval = setInterval(fetchSites, 15000);
+    return () => clearInterval(interval);
+  }, [activeSiteKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveSelectedSiteAddress = async () => {
+      if (!selectedSite) {
+        setSelectedSiteAddress(null);
+        return;
+      }
+
+      const resolvedCoords = resolveSiteCoordinates(selectedSite);
+      if (!resolvedCoords) {
+        setSelectedSiteAddress(selectedSite.address || null);
+        return;
+      }
+
+      const cacheKey = `sg_${selectedSite.siteKey}_address`;
+      const cached = safeStorage.get(cacheKey);
+      if (cached) {
+        setSelectedSiteAddress(cached);
+        return;
+      }
+
+      try {
+        const addr = await reverseGeocode(resolvedCoords.lat, resolvedCoords.lng);
+        if (cancelled) return;
+        setSelectedSiteAddress(addr || selectedSite.address || null);
+        if (addr) {
+          safeStorage.set(cacheKey, addr);
+        }
+      } catch {
+        if (!cancelled) {
+          setSelectedSiteAddress(selectedSite.address || null);
+        }
+      }
+    };
+
+    resolveSelectedSiteAddress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSite]);
+
+  useEffect(() => {
+    if (!selectedSite?.siteName) return;
+    setSiteData((prev: any) => ({ ...prev, siteName: selectedSite.siteName }));
+  }, [selectedSite]);
 
   React.useEffect(() => {
     const getBrowserZoom = (): number => {
@@ -414,6 +579,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       apiGet("/api/sensors/latest")
         .then((data) => {
           console.log('[LandingPage] /api/sensors/latest response:', data);
+          setActiveSiteKey(data?.siteKey || null);
           if (data && data.deviceConnected === false) {
             console.log('[LandingPage] Device disconnected, checking for fallback coords:', { hasLat: typeof data.latitude === 'number', hasLng: typeof data.longitude === 'number', lat: data.latitude, lng: data.longitude });
             if (data.siteName && data.siteName !== "Site Name") setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
@@ -439,16 +605,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               console.log('[LandingPage] NO fallback coords, clearing map');
             }
             setDeviceConnected(false);
+            setLiveReading({ ...data, deviceConnected: false });
             setLatestReading(null);
             setBackendOk(true);
             setDataOk(false);
             return;
           }
           console.log('[LandingPage] Device connected, setting latestReading');
+          setLiveReading({ ...data, deviceConnected: true });
           setLatestReading(data);
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);
+          if (data?.siteKey) {
+            setSelectedSiteKey((prev) => prev || data.siteKey || '');
+          }
           if (data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
           }
@@ -537,6 +708,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isPreviewActive = showLiveUpdates && !isExitingLiveUpdates;
   const isSmallDesktop = !isMobileOrTablet && screenWidth <= 1600 && screenHeight <= 1000;
   const isDesktopViewport = !isMobileOrTablet;
+  const selectedSiteOperational = !!selectedSiteKey && !!activeSiteKey && selectedSiteKey === activeSiteKey && deviceConnected && backendOk && dataOk;
   const desktopSidePadding = '10%';
   const liveUpdatesContentPadding = isMobileOrTablet
     ? (screenWidth < 400 ? '72px 16px 16px'
@@ -704,20 +876,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ref={mapRef}
               interactive={showLiveUpdates && screenWidth >= 600}
               mobileMode={isMobileOrTablet}
-              sites={gpsSites}
+              sites={mapSites}
               // On desktop preview, shift pin further right (-0.0032) to match Pic 2 framing
-              lngOffset={!isMobileOrTablet ? (isPreviewActive ? -0.0020 : -0.0015) : undefined}
+              lngOffset={!isMobileOrTablet ? (isPreviewActive ? -0.0050 : -0.0075) : undefined}
               latOffset={
                 isMobileOrTablet
                   ? isPreviewActive
                     ? screenWidth < 380
-                      ? -0.0010 // Pic 1 - Galaxy (Lowered from -0.0015)
+                      ? -0.0014 // Mobile small: move point slightly upward
                       : screenWidth < 600
-                        ? -0.0008 // Pic 2 - iPhone 13 (Lowered from -0.0012)
+                        ? -0.0012 // iPhone: restore higher point placement
                         : screenWidth < 800
-                          ? -0.0016 // Pic 5 - iPad mini (Raised from -0.0008)
-                          : -0.0013 // Pic 3 & 4 - iPad Air/Pro (Raised from -0.0006)
-                    : -0.00099 // Dashboard default for mobile/tablet
+                          ? -0.0019 // iPad mini: lift marker upward
+                          : -0.0016 // iPad Air/Pro: lift marker upward
+                    : -0.00125 // Non-preview mobile/tablet baseline
                   : undefined
               }
               onMapReady={() => {
@@ -1089,7 +1261,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           className="fixed inset-0 z-40"
           style={{
             animation: isExitingLiveUpdates ? 'fadeOut 0.5s ease-out forwards' : 'fadeIn 0.3s ease-out forwards',
-            pointerEvents: 'none',
+            pointerEvents: 'auto',
           }}
         >
           {/* Dashboard-style gradient overlay - exact match to dashboard */}
@@ -1169,7 +1341,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   animation: 'slideInFromRight 0.6s 0.2s ease-out both',
                 }}
               >
-                {siteData.siteName}
+                {selectedSite?.siteName || siteData.siteName}
               </h1>
               <p
                 style={{
@@ -1187,9 +1359,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
+                flexDirection: screenWidth < 600 ? 'column' : 'row',
+                justifyContent: 'flex-start',
+                width: screenWidth < 600 ? '100%' : 'auto',
                 gap: 8,
                 marginTop: 12,
                 pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 50,
                 animation: 'slideInFromRight 0.6s 0.4s ease-out both',
               }}>
                 <div style={{
@@ -1198,10 +1375,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gap: 6,
                   background: 'rgba(255,255,255,0.92)',
                   borderRadius: 999,
-                  padding: '5px 14px',
+                  padding: '6px 14px',
+                  minHeight: 34,
                   fontSize: 12,
                   fontWeight: 600,
-                  color: (deviceConnected && backendOk && dataOk) ? '#15803d' : '#6b7280',
+                  alignSelf: 'flex-start',
+                  color: selectedSiteOperational ? '#15803d' : '#6b7280',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                   backdropFilter: 'blur(4px)',
                   fontFamily: "'Poppins', sans-serif",
@@ -1210,12 +1389,137 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     width: 7,
                     height: 7,
                     borderRadius: '50%',
-                    background: (deviceConnected && backendOk && dataOk) ? '#22c55e' : '#9ca3af',
+                    background: selectedSiteOperational ? '#22c55e' : '#9ca3af',
                     display: 'inline-block',
-                    animation: (deviceConnected && backendOk && dataOk) ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                    "--dot-glow": (deviceConnected && backendOk && dataOk) ? 'rgba(34,197,94,0.5)' : 'transparent',
+                    animation: selectedSiteOperational ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                    "--dot-glow": selectedSiteOperational ? 'rgba(34,197,94,0.5)' : 'transparent',
                   } as any} />
-                  {(deviceConnected && backendOk && dataOk) ? 'System Operational' : 'System Down'}
+                  {selectedSiteOperational ? 'System Operational' : 'System Down'}
+                </div>
+                <div
+                  ref={siteDropdownRef}
+                  style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'rgba(255,255,255,0.92)',
+                    borderRadius: 999,
+                    padding: '6px 14px',
+                    minHeight: 34,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                    backdropFilter: 'blur(4px)',
+                    width: screenWidth < 600 ? '100%' : 'auto',
+                    maxWidth: screenWidth < 600 ? '100%' : 520,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowSiteDropdown((prev) => !prev)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#337C85',
+                      padding: 0,
+                      fontFamily: "'Poppins', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: screenWidth < 600 ? 'space-between' : 'flex-start',
+                      gap: 6,
+                      width: screenWidth < 600 ? '100%' : 'auto',
+                      maxWidth: '100%',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span
+                      style={{
+                        whiteSpace: screenWidth < 600 ? 'normal' : 'nowrap',
+                        lineHeight: screenWidth < 600 ? 1.2 : 1,
+                        textAlign: 'left',
+                        paddingRight: screenWidth < 600 ? 8 : 0,
+                      }}
+                    >
+                      {selectedSite?.siteName || (availableSites.length === 0 ? 'No sites' : 'Select site')}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      color="#337C85"
+                      style={{
+                        transform: showSiteDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.18s ease',
+                        flexShrink: 0,
+                      }}
+                    />
+                  </button>
+
+                  {showSiteDropdown && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        left: 0,
+                        width: screenWidth < 600 ? '100%' : 'auto',
+                        minWidth: '100%',
+                        maxHeight: 220,
+                        overflowY: 'auto',
+                        background: '#ffffff',
+                        borderRadius: 12,
+                        boxShadow: '0 10px 26px rgba(0,0,0,0.18)',
+                        border: '1px solid #e2e8f0',
+                        padding: 6,
+                        zIndex: 120,
+                      }}
+                    >
+                      {availableSites.length === 0 ? (
+                        <div
+                          style={{
+                            padding: '8px 10px',
+                            color: '#64748b',
+                            fontSize: 13,
+                            fontFamily: "'Poppins', sans-serif",
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          No sites
+                        </div>
+                      ) : (
+                        availableSites.map((site) => {
+                          const isSelected = site.siteKey === selectedSiteKey;
+                          return (
+                            <button
+                              key={site.siteKey}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSiteKey(site.siteKey);
+                                setShowSiteDropdown(false);
+                              }}
+                              style={{
+                                width: '100%',
+                                border: 'none',
+                                borderRadius: 10,
+                                padding: '8px 10px',
+                                textAlign: 'left',
+                                background: isSelected ? '#3b82f6' : 'transparent',
+                                color: isSelected ? '#ffffff' : '#64748b',
+                                fontFamily: "'Poppins', sans-serif",
+                                fontSize: 13,
+                                fontWeight: isSelected ? 600 : 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
+                              <span>{site.siteName}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
                 {screenWidth >= 600 && (
                   <button

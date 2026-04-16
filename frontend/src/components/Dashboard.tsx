@@ -45,6 +45,7 @@ type SiteOption = {
 const SITE_STALE_MS = 15000;
 const BASAK_SITE_KEY = '10-143-90-164';
 const BASAK_SITE_COORDINATES = { lat: 7.606312, lng: 126.00713 };
+const ALL_SITES_KEY = 'all';
 
 function resolveSiteCoordinates(site: SiteOption | null | undefined) {
   if (!site) return null;
@@ -361,12 +362,18 @@ export function Dashboard({
     .join(", ");
 
   const displayAddress =
-    selectedSiteAddress ||
-    gpsAddress ||
-    (typeof latestReading?.address === "string" ? latestReading.address : null) ||
-    (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
-    metaAddress ||
-    "Device Address";
+    selectedSiteKey === ALL_SITES_KEY
+      ? (availableSites.length > 0
+        ? `Showing ${availableSites.length} recorded monitoring sites`
+        : "No recorded sites with map coordinates yet")
+      : (
+        selectedSiteAddress ||
+        gpsAddress ||
+        (typeof latestReading?.address === "string" ? latestReading.address : null) ||
+        (typeof lastSavedLocation?.address === "string" ? lastSavedLocation.address : null) ||
+        metaAddress ||
+        "Device Address"
+      );
 
   const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
   const hasPresentLiveLocation =
@@ -374,6 +381,13 @@ export function Dashboard({
     typeof liveReading?.latitude === "number" &&
     typeof liveReading?.longitude === "number";
   const effectiveActiveSiteKey = hasPresentLiveLocation ? activeSiteKey : null;
+  const isAllSitesSelected = selectedSiteKey === ALL_SITES_KEY;
+  const dropdownSites: SiteOption[] = availableSites.length > 0
+    ? [{ siteKey: ALL_SITES_KEY, siteName: "All sites" }, ...availableSites]
+    : [];
+  const selectedSiteLabel = isAllSitesSelected
+    ? "All sites"
+    : (selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site"));
 
   const mapSites = (() => {
     const fromRegistry = availableSites
@@ -550,6 +564,7 @@ export function Dashboard({
 
         setSelectedSiteKey((prev) => {
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
+          if (prev === ALL_SITES_KEY) return prev;
           if (effectiveActiveSiteKey && mapped.some((site) => site.siteKey === effectiveActiveSiteKey)) return effectiveActiveSiteKey;
           return mapped[0]?.siteKey || '';
         });
@@ -703,7 +718,8 @@ export function Dashboard({
         return;
       }
 
-      apiGet(`/api/sensors/history?siteKey=${encodeURIComponent(selectedSiteKey)}&interval=${getIntervalString()}&range=24h`)
+      const requestedSiteKey = selectedSiteKey === ALL_SITES_KEY ? ALL_SITES_KEY : selectedSiteKey;
+      apiGet(`/api/sensors/history?siteKey=${encodeURIComponent(requestedSiteKey)}&interval=${getIntervalString()}&range=24h`)
         .then((data) => {
           if (Array.isArray(data)) {
             setReadings(data);
@@ -718,10 +734,15 @@ export function Dashboard({
             const effectiveLatest = selectedIsActiveSite ? (currentLive || latestFromHistory) : latestFromHistory;
 
             setLatestReading(effectiveLatest || null);
-            setDeviceConnected(selectedIsActiveSite);
+            setDeviceConnected(selectedSiteKey === ALL_SITES_KEY ? !!effectiveLatest : selectedIsActiveSite);
             setDataOk(!!effectiveLatest);
 
-            if (selectedSite?.siteName) {
+            if (selectedSiteKey === ALL_SITES_KEY) {
+              setSiteData((prev: any) => ({
+                ...prev,
+                siteName: "All sites",
+              }));
+            } else if (selectedSite?.siteName) {
               setSiteData((prev: any) => ({
                 ...prev,
                 siteName: selectedSite.siteName,
@@ -779,7 +800,8 @@ export function Dashboard({
         return;
       }
 
-      apiGet(`/api/sensors/alerts?siteKey=${encodeURIComponent(selectedSiteKey)}`)
+      const requestedSiteKey = selectedSiteKey === ALL_SITES_KEY ? ALL_SITES_KEY : selectedSiteKey;
+      apiGet(`/api/sensors/alerts?siteKey=${encodeURIComponent(requestedSiteKey)}`)
         .then((data) => {
           if (Array.isArray(data)) {
             const sanitized = data
@@ -1044,7 +1066,26 @@ export function Dashboard({
   const mobileRiskPillFontSize = vw <= 360 ? (isLongRiskLabel ? 9.5 : 10.5) : vw <= 430 ? (isLongRiskLabel ? 10.5 : 11.5) : 12;
   const tabletRiskPillFontSize = vw <= 900 ? (isLongRiskLabel ? 12.5 : 13.5) : (isLongRiskLabel ? 13 : 15);
 
-  const dashboardOperational = !!selectedSiteKey && backendOk && dataOk && selectedSiteOnline;
+  const dashboardOperational = isAllSitesSelected
+    ? (availableSites.length > 0 && backendOk && dataOk)
+    : (!!selectedSiteKey && backendOk && dataOk && selectedSiteOnline);
+  const dashboardStatusLabel = isAllSitesSelected
+    ? `All sites overview${availableSites.length > 0 ? ` (${availableSites.length})` : ""}`
+    : (dashboardOperational ? "System Operational" : "Device Not Connected");
+  const desktopMapLngOffset = isAllSitesSelected ? -0.035 : -0.0075;
+  const longestSiteLabel = dropdownSites.reduce((longest, site) => (
+    site.siteName.length > longest.length ? site.siteName : longest
+  ), selectedSiteLabel);
+  let measuredSiteControlWidth = 320;
+  if (typeof document !== "undefined") {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.font = "500 13px Poppins, sans-serif";
+      measuredSiteControlWidth = Math.ceil(context.measureText(longestSiteLabel).width) + 84;
+    }
+  }
+  const desktopSiteControlWidth = `min(${Math.max(measuredSiteControlWidth, 220)}px, calc(100vw - ${isNarrowDesktop ? 260 : 340}px))`;
 
   const topRightSiteDropdownControl = (
     <div
@@ -1054,7 +1095,9 @@ export function Dashboard({
         background: "rgba(255,255,255,0.92)",
         borderRadius: 999,
         padding: "6px 12px",
-        width: "fit-content",
+        width: desktopSiteControlWidth,
+        minWidth: 0,
+        maxWidth: `calc(100vw - ${isNarrowDesktop ? 260 : 340}px)`,
         boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
@@ -1077,18 +1120,31 @@ export function Dashboard({
           display: "inline-flex",
           alignItems: "center",
           gap: 6,
-          whiteSpace: "nowrap",
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
           outline: "none",
           cursor: "pointer",
         }}
       >
-        <span>
-          {selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site")}
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            textAlign: "left",
+          }}
+          title={selectedSiteLabel}
+        >
+          {selectedSiteLabel}
         </span>
         <ChevronDown
           size={14}
           color="#337C85"
           style={{
+            flexShrink: 0,
             transform: showSiteDropdown ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 0.18s ease",
           }}
@@ -1101,9 +1157,12 @@ export function Dashboard({
             position: "absolute",
             top: "calc(100% + 8px)",
             left: 0,
-            minWidth: "100%",
+            width: desktopSiteControlWidth,
+            minWidth: 0,
+            maxWidth: `calc(100vw - ${isNarrowDesktop ? 48 : 64}px)`,
             maxHeight: 220,
             overflowY: "auto",
+            overflowX: "hidden",
             background: "#ffffff",
             borderRadius: 12,
             boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
@@ -1125,10 +1184,10 @@ export function Dashboard({
               No sites
             </div>
           ) : (
-            availableSites.map((site) => {
+            dropdownSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
               const isActive = site.siteKey === effectiveActiveSiteKey;
-              const selectedButInactive = isSelected && !isActive;
+              const selectedButInactive = isSelected && site.siteKey !== ALL_SITES_KEY && !isActive;
               return (
                 <button
                   key={site.siteKey}
@@ -1146,7 +1205,7 @@ export function Dashboard({
                     background: isSelected
                       ? (selectedButInactive ? "#94a3b8" : "#3b82f6")
                       : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#64748b"),
+                    color: isSelected ? "#ffffff" : (isActive || site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b"),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
@@ -1154,13 +1213,23 @@ export function Dashboard({
                     alignItems: "center",
                     gap: 8,
                     cursor: "pointer",
-                    whiteSpace: "nowrap",
                     opacity: isActive ? 1 : 0.82,
                   }}
                   title={selectedButInactive ? "Selected site is not currently active" : ""}
                 >
                   {isSelected && <BadgeCheck size={14} color="#ffffff" strokeWidth={2.2} />}
-                  <span>{site.siteName}</span>
+                  <span
+                    style={{
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      flex: 1,
+                    }}
+                    title={site.siteName}
+                  >
+                    {site.siteName}
+                  </span>
                 </button>
               );
             })
@@ -1217,9 +1286,9 @@ export function Dashboard({
             whiteSpace: "nowrap",
             textAlign: "left",
           }}
-          title={selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site")}
+          title={selectedSiteLabel}
         >
-          {selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site")}
+          {selectedSiteLabel}
         </span>
         <ChevronDown
           size={14}
@@ -1263,10 +1332,10 @@ export function Dashboard({
               No sites
             </div>
           ) : (
-            availableSites.map((site) => {
+            dropdownSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
               const isActive = site.siteKey === effectiveActiveSiteKey;
-              const selectedButInactive = isSelected && !isActive;
+              const selectedButInactive = isSelected && site.siteKey !== ALL_SITES_KEY && !isActive;
               return (
                 <button
                   key={site.siteKey}
@@ -1284,7 +1353,7 @@ export function Dashboard({
                     background: isSelected
                       ? (selectedButInactive ? "#94a3b8" : "#3b82f6")
                       : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive ? "#0f172a" : "#64748b"),
+                    color: isSelected ? "#ffffff" : (isActive || site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b"),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
@@ -1672,7 +1741,7 @@ export function Dashboard({
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)"
             }}>
-              {siteData.siteName}
+              {isAllSitesSelected ? "All sites" : siteData.siteName}
             </h1>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
@@ -1710,7 +1779,7 @@ export function Dashboard({
                   "--dot-glow": dashboardOperational ? "rgba(34,197,94,0.5)" : "transparent",
                 } as React.CSSProperties} />
                 <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {dashboardOperational ? "System Operational" : "Device Not Connected"}
+                  {dashboardStatusLabel}
                 </span>
               </div>
 
@@ -2145,7 +2214,7 @@ export function Dashboard({
             lineHeight: 1.15,
             fontFamily: "'Poppins', sans-serif",
           }}>
-            {siteData.siteName}
+            {isAllSitesSelected ? "All sites" : siteData.siteName}
           </h1>
           <p style={{
             color: "rgba(255,255,255,0.9)",
@@ -2345,7 +2414,7 @@ export function Dashboard({
           transition: "opacity 0.8s ease",
         }}
       >
-        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={-0.0075} />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={desktopMapLngOffset} />
       </div>
 
         {/* Top-right controls: single horizontal flow */}
@@ -2357,6 +2426,7 @@ export function Dashboard({
             display: "flex",
             alignItems: "center",
             gap: 10,
+            maxWidth: `calc(100vw - ${dPad * 2}px)`,
             zIndex: 3,
           }}
         >
@@ -2373,7 +2443,14 @@ export function Dashboard({
               color: "#15803d",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               backdropFilter: "blur(4px)",
+              maxWidth: isNarrowDesktop ? 250 : 320,
+              minWidth: 0,
+              flex: "0 1 auto",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
+            title={dashboardStatusLabel}
           >
             <span
               style={{
@@ -2385,9 +2462,12 @@ export function Dashboard({
                 animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
                 transition: "background 0.4s",
                 "--dot-glow": dashboardOperational ? hexToRgba("#22c55e", 0.5) : "transparent",
+                flexShrink: 0,
               } as React.CSSProperties}
             />
-            {dashboardOperational ? "System Operational" : "Device Not Connected"}
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+              {dashboardStatusLabel}
+            </span>
           </div>
 
           {topRightSiteDropdownControl}

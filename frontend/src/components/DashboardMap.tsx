@@ -92,16 +92,46 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     if (!mapContainer.current) return;
 
     const sitesToShow = sites && sites.length > 0 ? sites : [];
+    const hasExplicitSelectedSite = sitesToShow.some((site) => !!site.isSelected);
+    const isAllSitesOverview = sitesToShow.length > 1 && !hasExplicitSelectedSite;
 
     // If no sites, center map to Philippines as neutral view
     const center = sitesToShow[0] || { lat: 12.8797, lng: 121.7740, name: '', id: '' };
+    const currentViewKey = isAllSitesOverview
+      ? `all-sites:${sitesToShow.map((site) => site.id).join('|')}`
+      : center.id;
 
     // Center map exactly on marker (with offsets) for the selected site
     // This ensures consistent visual locking effect for each selected site
     const updateMapCenter = () => {
       let mapCenter: [number, number];
       let mapZoom: number;
-      if (sitesToShow.length >= 1) {
+      if (isAllSitesOverview) {
+        const bounds = new maplibregl.LngLatBounds();
+        sitesToShow.forEach((site) => {
+          bounds.extend([site.lng, site.lat]);
+        });
+
+        const fittedCamera = map.current
+          ? map.current.cameraForBounds(bounds, {
+              padding: mobileMode
+                ? { top: 112, right: 32, bottom: 112, left: 32 }
+                : { top: 112, right: 112, bottom: 112, left: 112 },
+              maxZoom: mobileMode ? 12 : 13,
+            })
+          : null;
+
+        if (fittedCamera?.center) {
+          mapCenter = [fittedCamera.center.lng + lngOffset, fittedCamera.center.lat + latOffset];
+          const fittedZoom = typeof fittedCamera.zoom === 'number' ? fittedCamera.zoom : (mobileMode ? 12 : 13);
+          mapZoom = Math.max(5, fittedZoom - (mobileMode ? 0.08 : 0.12));
+        } else {
+          const avgLat = sitesToShow.reduce((sum, site) => sum + site.lat, 0) / sitesToShow.length;
+          const avgLng = sitesToShow.reduce((sum, site) => sum + site.lng, 0) / sitesToShow.length;
+          mapCenter = [avgLng + lngOffset, avgLat + latOffset];
+          mapZoom = mobileMode ? 11.1 : 12.1;
+        }
+      } else if (sitesToShow.length >= 1) {
         mapCenter = [center.lng + lngOffset, center.lat + latOffset];
         mapZoom = 15; // Decreased zoom from 17 down to 15 for a wider view
       } else {
@@ -126,7 +156,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
             // We will dynamically enable/disable the actual handlers right after creation instead.
             interactive: true,
           });
-          previousSelectedSiteId.current = center.id;
+          previousSelectedSiteId.current = currentViewKey;
           if (!mobileMode) {
             originalDashboardView.current = { center: mapCenter, zoom: mapZoom };
           }
@@ -137,7 +167,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         }
       } else {
         // Only update center if the selected site changed or markers count changed
-        const selectedSiteChanged = center.id !== previousSelectedSiteId.current;
+        const selectedSiteChanged = currentViewKey !== previousSelectedSiteId.current;
         const markersCountChanged = sitesToShow.length !== markers.current.length;
         
         if (selectedSiteChanged || markersCountChanged) {
@@ -150,7 +180,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
             duration: 800,
             easing: (t) => t
           });
-          previousSelectedSiteId.current = center.id;
+          previousSelectedSiteId.current = currentViewKey;
         }
       }
       // Dynamically enable/disable interactivity based on prop
@@ -201,12 +231,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               ? 'site-marker--active'
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
-            // Set pulsating html only if active
-            const pulseHtml = site.isActive ? `<div class="site-marker__pulse"></div>` : '';
-
             el.innerHTML = `
               <div class="site-marker ${markerStateClass}">
-                ${pulseHtml}
+                <div class="site-marker__pulse"></div>
                 <div class="site-marker__ring"></div>
                 <div class="site-marker__dot"></div>
               </div>`;
