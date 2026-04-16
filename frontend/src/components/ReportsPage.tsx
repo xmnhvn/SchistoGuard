@@ -1397,7 +1397,7 @@ export const ReportsPage: React.FC = () => {
                   style={{
                     padding: "12px 14px",
                     background: "linear-gradient(135deg, #ffffff 0%, #f9fdfd 100%)",
-                    borderRadius: 20,
+                    borderRadius: 28,
                     border: "1px solid #e2e5ea",
                     display: "flex",
                     overflow: "hidden",
@@ -1422,7 +1422,7 @@ export const ReportsPage: React.FC = () => {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       <h2 style={{
-                        fontSize: 15, fontWeight: 700, color: "#1a2a3a",
+                        fontSize: 13, fontWeight: 700, color: "#1a2a3a",
                         margin: 0,
                         fontFamily: POPPINS,
                         lineHeight: "1.2"
@@ -1433,8 +1433,7 @@ export const ReportsPage: React.FC = () => {
                         fontSize: 11,
                         color: "#7b8a9a",
                         fontWeight: 500,
-                        fontFamily: POPPINS,
-                        marginTop: 2
+                        fontFamily: POPPINS
                       }}>
                         View and manage water quality reports
                       </span>

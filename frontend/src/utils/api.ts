@@ -107,7 +107,10 @@ function isLocalApiBase(baseUrl: string): boolean {
 
 function shouldRetrySiteRouteOnLocal(endpoint: string, status: number): boolean {
   if (status !== 404) return false;
-  if (!endpoint.startsWith('/api/sensors/sites')) return false;
+  const isSupportedFallbackRoute =
+    endpoint.startsWith('/api/sensors/sites') ||
+    endpoint.startsWith('/api/sensors/alerts/stats');
+  if (!isSupportedFallbackRoute) return false;
   if (!isLocalDevHost()) return false;
   return !isLocalApiBase(API_BASE_URL);
 }

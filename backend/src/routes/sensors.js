@@ -1694,6 +1694,73 @@ router.get("/alerts", (req, res) => {
     .catch((err) => res.status(500).json({ error: err.message }));
 });
 
+router.get("/alerts/stats", (req, res) => {
+  const site = (req.query.site || req.query.siteKey || req.query.address || '').toString().trim();
+
+  const handleAlertStats = (siteKey) => {
+    const query = siteKey
+      ? `SELECT
+           COUNT(*) AS total_count,
+           SUM(CASE WHEN level = 'critical' THEN 1 ELSE 0 END) AS critical_count,
+           AVG(
+             CASE
+               WHEN isAcknowledged = 1
+                 AND acknowledgedAt IS NOT NULL
+                 AND timestamp IS NOT NULL
+               THEN EXTRACT(EPOCH FROM (
+                 NULLIF(acknowledgedAt, '')::timestamptz - NULLIF(timestamp, '')::timestamptz
+               )) / 60.0
+               ELSE NULL
+             END
+           ) AS avg_response_minutes
+         FROM alerts
+         WHERE site_key = ?`
+      : `SELECT
+           COUNT(*) AS total_count,
+           SUM(CASE WHEN level = 'critical' THEN 1 ELSE 0 END) AS critical_count,
+           AVG(
+             CASE
+               WHEN isAcknowledged = 1
+                 AND acknowledgedAt IS NOT NULL
+                 AND timestamp IS NOT NULL
+               THEN EXTRACT(EPOCH FROM (
+                 NULLIF(acknowledgedAt, '')::timestamptz - NULLIF(timestamp, '')::timestamptz
+               )) / 60.0
+               ELSE NULL
+             END
+           ) AS avg_response_minutes
+         FROM alerts`;
+
+    const params = siteKey ? [siteKey] : [];
+
+    db.get(query, params, (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const totalCount = Number(row?.total_count) || 0;
+      const criticalCount = Number(row?.critical_count) || 0;
+      const avgResponseMinutes = Number.isFinite(Number(row?.avg_response_minutes))
+        ? Number(row.avg_response_minutes)
+        : null;
+
+      return res.json({
+        success: true,
+        totalCount,
+        criticalCount,
+        avgResponseMinutes,
+      });
+    });
+  };
+
+  if (site) {
+    if (site.toLowerCase() === 'all') return handleAlertStats(null);
+    return handleAlertStats(normalizeSiteKey(site));
+  }
+
+  getConfiguredActiveSiteSnapshot()
+    .then((snapshot) => handleAlertStats(snapshot?.siteKey || null))
+    .catch((err) => res.status(500).json({ error: err.message }));
+});
+
 router.get('/sites', (req, res) => {
   db.all(
     `SELECT

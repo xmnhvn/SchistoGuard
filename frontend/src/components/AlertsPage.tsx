@@ -25,6 +25,12 @@ interface SiteOption {
   siteName: string;
 }
 
+interface AlertStats {
+  totalCount: number;
+  criticalCount: number;
+  avgResponseMinutes: number | null;
+}
+
 export function AlertsPage({ onNavigate, visible = true, user, deviceConnected = true }: { onNavigate?: (view: string) => void; visible?: boolean; user?: any; deviceConnected?: boolean }) {
   // Use logged-in user for acknowledge
   const userName = user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown";
@@ -110,6 +116,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSite, setSelectedSite] = useState("all");
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
+  const [alertStats, setAlertStats] = useState<AlertStats>({ totalCount: 0, criticalCount: 0, avgResponseMinutes: null });
 
   useEffect(() => {
     apiGet('/api/sensors/latest')
@@ -123,8 +130,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
 
   useEffect(() => {
     const fetchAlerts = () => {
-      const effectiveSite = selectedSite !== 'all' ? selectedSite : (activeSiteKey || 'all');
-      const query = effectiveSite !== 'all' ? `?siteKey=${encodeURIComponent(effectiveSite)}` : '';
+      const query = selectedSite === 'all'
+        ? '?site=all'
+        : `?siteKey=${encodeURIComponent(selectedSite)}`;
       apiGet(`/api/sensors/alerts${query}`)
         .then((data) => {
           console.log('Fetched alerts:', data); // DEBUG LOG
@@ -142,11 +150,36 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
         })
         .catch((err) => { console.error('Error fetching alerts:', err); });
     };
+
+    const fetchAlertStats = () => {
+      const query = selectedSite === 'all'
+        ? '?site=all'
+        : `?siteKey=${encodeURIComponent(selectedSite)}`;
+      apiGet(`/api/sensors/alerts/stats${query}`)
+        .then((data) => {
+          setAlertStats({
+            totalCount: Number(data?.totalCount) || 0,
+            criticalCount: Number(data?.criticalCount) || 0,
+            avgResponseMinutes: Number.isFinite(Number(data?.avgResponseMinutes))
+              ? Number(data.avgResponseMinutes)
+              : null,
+          });
+        })
+        .catch((err) => {
+          console.error('Error fetching alert stats:', err);
+          setAlertStats({ totalCount: 0, criticalCount: 0, avgResponseMinutes: null });
+        });
+    };
+
     fetchAlerts();
+    fetchAlertStats();
     // Check for new alerts every 10 seconds
-    const interval = setInterval(fetchAlerts, 10000);
+    const interval = setInterval(() => {
+      fetchAlerts();
+      fetchAlertStats();
+    }, 10000);
     return () => clearInterval(interval);
-  }, [deviceConnected, selectedSite, activeSiteKey]);
+  }, [deviceConnected, selectedSite]);
 
   useEffect(() => {
     const fetchSites = async () => {
@@ -179,9 +212,9 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     if (!activeSiteKey) return;
 
     setSelectedSite((prev) => {
-      if (prev === 'all') return activeSiteKey;
+      if (prev === 'all') return prev;
       const siteExists = availableSites.some((site) => site.siteKey === prev);
-      if (!siteExists) return activeSiteKey;
+      if (!siteExists) return activeSiteKey || 'all';
       return prev;
     });
   }, [activeSiteKey, availableSites]);
@@ -246,21 +279,11 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
   });
 
   const unacknowledgedCount = alerts.filter(alert => !alert.isAcknowledged).length;
-  const criticalCount = alerts.filter(alert => alert.level === "critical" && !alert.isAcknowledged).length;
-
-  function getAverageResponseTime(alerts: any[]): string {
-    const acknowledged = alerts.filter(a => a.isAcknowledged && a.timestamp && a.acknowledgedAt);
-    if (acknowledged.length === 0) return "-";
-    const totalMs = acknowledged.reduce((sum, a) => {
-      const created = new Date(a.timestamp).getTime();
-      const acked = new Date(a.acknowledgedAt).getTime();
-      return sum + (acked - created);
-    }, 0);
-    const avgMs = totalMs / acknowledged.length;
-    const avgMin = Math.round(avgMs / 60000);
-    return avgMin < 1 ? "<1m" : `${avgMin}m`;
-  }
-  const avgResponseTime = getAverageResponseTime(alerts);
+  const totalAlertsCount = alertStats.totalCount || alerts.length;
+  const criticalCount = alertStats.criticalCount;
+  const avgResponseTime = alertStats.avgResponseMinutes == null
+    ? "-"
+    : (Math.round(alertStats.avgResponseMinutes) < 1 ? "<1m" : `${Math.round(alertStats.avgResponseMinutes)}m`);
   return (
     <div style={{
       fontFamily: POPPINS,
@@ -393,7 +416,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
           <StatCard
             icon={<Bell style={{ width: 20, height: 20, color: "#357D86" }} />}
             label="Total Alerts"
-            value={String(alerts.length)}
+            value={String(totalAlertsCount)}
             valueColor="#357D86"
             bgColor="#e6f2f3"
             sub="All alerts (history)"

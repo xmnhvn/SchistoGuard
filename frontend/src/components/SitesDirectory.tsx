@@ -19,7 +19,9 @@ interface SiteOption {
 
 const fetchReadings = async (selectedSite: string = 'all') => {
   try {
-    const query = selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
+    const query = selectedSite === 'all'
+      ? '?site=all'
+      : `?siteKey=${encodeURIComponent(selectedSite)}`;
     const data = await apiGet(`/api/sensors/history${query}`);
     return Array.isArray(data)
       ? data
@@ -1089,7 +1091,14 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
               {/* Body (inner-scroll only) */}
               <div
                 className="sg-ts-scroll"
-                style={{ overflowY: "auto", overflowX: "hidden", maxHeight: "100%", scrollbarWidth: "thin", msOverflowStyle: "auto" }}
+                style={{
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  maxHeight: "100%",
+                  paddingBottom: 16,
+                  scrollbarWidth: "thin",
+                  msOverflowStyle: "auto"
+                }}
               >
                 <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: POPPINS, tableLayout: "fixed" }}>
                   <colgroup>
