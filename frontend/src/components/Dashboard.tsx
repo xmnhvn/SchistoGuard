@@ -869,11 +869,14 @@ export function Dashboard({
             const latestFromHistory = data.length > 0 ? data[data.length - 1] : null;
             const currentLive = liveReadingRef.current;
             const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && !!currentLive?.deviceConnected;
-            const effectiveLatest = selectedIsActiveSite ? (currentLive || latestFromHistory) : latestFromHistory;
+            const hasAllSitesLiveDevice = !!currentLive?.deviceConnected && !!effectiveActiveSiteKey;
+            const effectiveLatest = selectedSiteKey === ALL_SITES_KEY
+              ? (hasAllSitesLiveDevice ? currentLive : null)
+              : (selectedIsActiveSite ? (currentLive || latestFromHistory) : latestFromHistory);
 
             setLatestReading(effectiveLatest || null);
-            setDeviceConnected(selectedSiteKey === ALL_SITES_KEY ? !!effectiveLatest : selectedIsActiveSite);
-            setDataOk(!!effectiveLatest);
+            setDeviceConnected(selectedSiteKey === ALL_SITES_KEY ? hasAllSitesLiveDevice : selectedIsActiveSite);
+            setDataOk(selectedSiteKey === ALL_SITES_KEY ? hasAllSitesLiveDevice : !!effectiveLatest);
 
             if (selectedSiteKey === ALL_SITES_KEY) {
               setSiteData((prev: any) => ({
