@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { apiPost, apiGet, apiCall, apiPut } from "../utils/api";
-import { Trash2, MoreHorizontal, Search, CheckCircle2, KeyRound } from "lucide-react";
+import { Trash2, MoreHorizontal, Search, CheckCircle2, KeyRound, Play, Square, Radio } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
   DropdownMenu,
@@ -203,6 +203,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [siteNameDrafts, setSiteNameDrafts] = useState<Record<string, string>>({});
   const [savingSiteKey, setSavingSiteKey] = useState<string | null>(null);
   const [startingSiteKey, setStartingSiteKey] = useState<string | null>(null);
+  const [stoppingSiteKey, setStoppingSiteKey] = useState<string | null>(null);
   const [newSiteForm, setNewSiteForm] = useState({
     siteName: "",
     location: "",
@@ -345,6 +346,28 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setError(errMsg || "Failed to start reading");
     } finally {
       setStartingSiteKey(null);
+    }
+  };
+
+  const handleStopReading = async (siteKey: string) => {
+    try {
+      setStoppingSiteKey(siteKey);
+      setError("");
+      setSuccess("");
+      await apiPost(`/api/sensors/sites/${encodeURIComponent(siteKey)}/stop-reading`, {});
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("sg_manual_active_site_key");
+      }
+      setRegisteredSites((prev) => prev.map((item) => ({
+        ...item,
+        is_active: 0,
+      })));
+      setSuccess("Reading stopped for selected site");
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      setError(err?.message || "Failed to stop reading");
+    } finally {
+      setStoppingSiteKey(null);
     }
   };
 
@@ -1204,24 +1227,48 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 const currentLabel = site.site_name || site.address || site.site_key;
                 const draftValue = siteNameDrafts[site.site_key] ?? currentLabel;
                 const isActiveSite = site.is_active === 1 || site.is_active === true;
+                const isStarting = startingSiteKey === site.site_key;
+                const isStopping = stoppingSiteKey === site.site_key;
                 return (
                   <div
                     key={site.site_key}
                     style={{
-                      padding: 16,
+                      padding: isMobile ? 16 : 20,
                       borderBottom: idx === registeredSites.length - 1 ? "none" : "1px solid rgba(0,0,0,0.05)",
-                      background: idx % 2 === 0 ? "rgba(0,0,0,0.01)" : "#fff",
+                      background: isActiveSite
+                        ? "linear-gradient(180deg, rgba(20,184,166,0.07), rgba(255,255,255,0.98))"
+                        : (idx % 2 === 0 ? "rgba(0,0,0,0.01)" : "#fff"),
                       display: "grid",
-                      gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr auto",
-                      gap: 12,
-                      alignItems: "center",
+                      gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1fr auto",
+                      gap: isMobile ? 14 : 18,
+                      alignItems: isMobile ? "stretch" : "center",
                     }}
                   >
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1e293b" }}>{currentLabel}</div>
                         {isActiveSite && (
-                          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#0f766e", background: "#ccfbf1", border: "1px solid #99f6e4", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                            color: "#0f766e",
+                            background: "#ccfbf1",
+                            border: "1px solid #99f6e4",
+                            borderRadius: 999,
+                            padding: "4px 10px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em"
+                          }}>
+                            <span style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              background: "#14b8a6",
+                              boxShadow: "0 0 0 6px rgba(20,184,166,0.12)"
+                            }} />
                             Active
                           </span>
                         )}
@@ -1242,30 +1289,100 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       />
                     </div>
 
-                    <div style={{ display: "flex", gap: 8, justifyContent: isMobile ? "flex-start" : "flex-end" }}>
-                      <Button
-                        type="button"
-                        onClick={() => handleStartReading(site.site_key)}
-                        disabled={startingSiteKey === site.site_key}
-                        style={{
-                          background: isActiveSite ? "#0f766e" : "#357D86",
-                          color: "#fff",
-                          borderRadius: 100,
-                          padding: "10px 16px",
-                          fontWeight: 600,
-                          border: "none",
+                    <div style={{
+                      display: "flex",
+                      flexDirection: isMobile ? "column" : "row",
+                      gap: 10,
+                      justifyContent: isMobile ? "flex-start" : "flex-end",
+                      alignItems: isMobile ? "stretch" : "center",
+                    }}>
+                      <div style={{
+                        display: "flex",
+                        flexDirection: isMobile ? "column" : "row",
+                        gap: 8,
+                        alignItems: isMobile ? "stretch" : "center",
+                        padding: isMobile ? 0 : "6px",
+                        borderRadius: 999,
+                        background: isActiveSite ? "rgba(20,184,166,0.08)" : "rgba(53,125,134,0.06)",
+                        border: isActiveSite ? "1px solid rgba(20,184,166,0.18)" : "1px solid rgba(53,125,134,0.12)",
+                      }}>
+                        <div style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          color: isActiveSite ? "#0f766e" : "#476072",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          padding: isMobile ? "10px 14px 0" : "0 6px 0 10px",
+                          minHeight: isMobile ? "auto" : 40,
                           fontFamily: POPPINS,
-                          fontSize: 13,
-                          opacity: startingSiteKey === site.site_key ? 0.8 : 1,
-                        }}
-                      >
-                        {startingSiteKey === site.site_key ? "Starting..." : (isActiveSite ? "Reading Active" : "Start Reading")}
-                      </Button>
+                        }}>
+                          <Radio size={14} />
+                          {isActiveSite ? "Reading in progress" : "Ready to start"}
+                        </div>
+                        {isActiveSite ? (
+                          <Button
+                            type="button"
+                            onClick={() => handleStopReading(site.site_key)}
+                            disabled={isStopping}
+                            style={{
+                              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                              color: "#fff",
+                              borderRadius: 999,
+                              padding: "10px 16px",
+                              fontWeight: 700,
+                              border: "none",
+                              fontFamily: POPPINS,
+                              fontSize: 13,
+                              boxShadow: "0 10px 20px rgba(239,68,68,0.18)",
+                              opacity: isStopping ? 0.82 : 1,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                              <Square size={14} />
+                              {isStopping ? "Stopping..." : "Stop Reading"}
+                            </span>
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            onClick={() => handleStartReading(site.site_key)}
+                            disabled={isStarting}
+                            style={{
+                              background: "linear-gradient(135deg, #357D86, #2b8f9d)",
+                              color: "#fff",
+                              borderRadius: 999,
+                              padding: "10px 16px",
+                              fontWeight: 700,
+                              border: "none",
+                              fontFamily: POPPINS,
+                              fontSize: 13,
+                              boxShadow: "0 10px 20px rgba(53,125,134,0.18)",
+                              opacity: isStarting ? 0.82 : 1,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                              <Play size={14} />
+                              {isStarting ? "Starting..." : "Start Reading"}
+                            </span>
+                          </Button>
+                        )}
+                      </div>
                       <Button
                         type="button"
                         onClick={() => handleSaveSiteName(site.site_key)}
                         disabled={savingSiteKey === site.site_key}
-                        style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 18px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 13 }}
+                        style={{
+                          background: "#357D86",
+                          color: "#fff",
+                          borderRadius: 100,
+                          padding: "10px 18px",
+                          fontWeight: 600,
+                          border: "none",
+                          fontFamily: POPPINS,
+                          fontSize: 13,
+                          minWidth: isMobile ? "100%" : 92,
+                        }}
                       >
                         {savingSiteKey === site.site_key ? "Saving..." : "Save"}
                       </Button>

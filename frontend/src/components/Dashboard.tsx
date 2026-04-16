@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { AlertItem } from "./AlertItem";
 import { AlertDetailsModal } from "./AlertDetailsModal";
 import { DashboardMap } from "./DashboardMap";
@@ -45,15 +45,28 @@ type SiteOption = {
 const SITE_STALE_MS = 15000;
 const ALL_SITES_KEY = 'all';
 
+function normalizeCoordinate(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
 function isHiddenPlaceholderSite(site: { siteKey?: string; siteName?: string | null; latitude?: number | null; longitude?: number | null }) {
   const key = (site.siteKey || '').toString().trim().toLowerCase();
   const name = (site.siteName || '').toString().trim().toLowerCase();
   const looksLikeEspPlaceholder = key.includes('esp32-local') || name.includes('esp32.local');
+  const latitude = normalizeCoordinate(site.latitude);
+  const longitude = normalizeCoordinate(site.longitude);
   const hasCoordinates =
-    typeof site.latitude === 'number' &&
-    Number.isFinite(site.latitude) &&
-    typeof site.longitude === 'number' &&
-    Number.isFinite(site.longitude);
+    latitude !== null &&
+    longitude !== null;
 
   return looksLikeEspPlaceholder || !hasCoordinates;
 }
@@ -61,8 +74,11 @@ function isHiddenPlaceholderSite(site: { siteKey?: string; siteName?: string | n
 function resolveSiteCoordinates(site: SiteOption | null | undefined) {
   if (!site) return null;
 
-  if (site.latitude != null && site.longitude != null) {
-    return { lat: site.latitude, lng: site.longitude };
+  const latitude = normalizeCoordinate(site.latitude);
+  const longitude = normalizeCoordinate(site.longitude);
+
+  if (latitude != null && longitude != null) {
+    return { lat: latitude, lng: longitude };
   }
 
   return null;
@@ -88,12 +104,15 @@ export function Dashboard({
   const [latestReading, setLatestReading] = useState<any>(null);
   const [liveReading, setLiveReading] = useState<any>(null);
   const [readings, setReadings] = useState<any[]>([]);
+  const [allSitesTransitioning, setAllSitesTransitioning] = useState(false);
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSiteKey, setSelectedSiteKey] = useState<string>('');
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const selectedSiteKeyRef = useRef<string>('');
   const activeSiteKeyRef = useRef<string | null>(null);
   const liveReadingRef = useRef<any>(null);
+  const readingsRequestRef = useRef(0);
+  const alertsRequestRef = useRef(0);
   const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
   const [siteData, setSiteData] = useState<any>(() => {
     try {
@@ -148,6 +167,25 @@ export function Dashboard({
     if (normalized.includes('esp32-local')) {
       setSelectedSiteKey(ALL_SITES_KEY);
     }
+  }, [selectedSiteKey]);
+
+  useLayoutEffect(() => {
+    if (selectedSiteKey !== ALL_SITES_KEY) return;
+
+    // Clear previously selected site data immediately so stale values do not flash
+    // while the all-sites request is still in flight.
+    setLatestReading(null);
+    setReadings([]);
+    setAlerts([]);
+    setDeviceConnected(false);
+    setDataOk(false);
+    setSiteData((prev: any) => ({
+      ...prev,
+      siteName: "All Sites",
+      area: "",
+      barangay: "",
+      municipality: "",
+    }));
   }, [selectedSiteKey]);
 
   useEffect(() => {
@@ -401,6 +439,7 @@ export function Dashboard({
       ? localManualActiveSiteKey
       : null);
   const effectiveActiveSiteKey = activeSiteKey || manualActiveSiteKey;
+  const hasLiveActiveDevice = !!deviceConnected && !!liveReading?.deviceConnected && !!effectiveActiveSiteKey;
   const isAllSitesSelected = selectedSiteKey === ALL_SITES_KEY;
   const dropdownSites: SiteOption[] = availableSites.length > 0
     ? [{ siteKey: ALL_SITES_KEY, siteName: "All Sites" }, ...availableSites]
@@ -418,12 +457,16 @@ export function Dashboard({
         const lastSeenTs = site.lastSeen ? new Date(site.lastSeen).getTime() : Number.NaN;
         const isFreshSite = Number.isFinite(lastSeenTs) && (Date.now() - lastSeenTs <= SITE_STALE_MS);
         const hasManualActivation = !!site.isActive;
+        const isMarkerActive =
+          hasLiveActiveDevice &&
+          site.siteKey === effectiveActiveSiteKey &&
+          (hasManualActivation || isFreshSite);
         acc.push({
           id: site.siteKey,
           name: site.siteName,
           lat: coords.lat,
           lng: coords.lng,
-          isActive: site.siteKey === effectiveActiveSiteKey && (hasManualActivation || isFreshSite),
+          isActive: isMarkerActive,
           isSelected: site.siteKey === selectedSiteKey,
         });
         return acc;
@@ -440,7 +483,7 @@ export function Dashboard({
       if (gpsSites && gpsSites.length > 0 && selectedSiteKey === effectiveActiveSiteKey) {
         return gpsSites.map((site) => ({
           ...site,
-          isActive: true,
+          isActive: hasLiveActiveDevice,
           isSelected: true,
         }));
       }
@@ -461,10 +504,43 @@ export function Dashboard({
     return undefined;
   })();
 
+  const applyImmediateSiteSwitch = (nextSiteKey: string) => {
+    if (!nextSiteKey) return;
+    if (nextSiteKey === selectedSiteKeyRef.current) return;
+
+    const switchingToAllSites = nextSiteKey === ALL_SITES_KEY;
+
+    // Invalidate in-flight requests immediately so stale responses cannot paint.
+    readingsRequestRef.current += 1;
+    alertsRequestRef.current += 1;
+    selectedSiteKeyRef.current = nextSiteKey;
+    setAllSitesTransitioning(switchingToAllSites);
+
+    // Clear prior site data in the same event tick as the site switch.
+    setLatestReading(null);
+    setReadings([]);
+    setAlerts([]);
+    setDeviceConnected(false);
+    setDataOk(false);
+
+    if (switchingToAllSites) {
+      setSelectedSiteAddress(null);
+      setSiteData((prev: any) => ({
+        ...prev,
+        siteName: "All Sites",
+        area: "",
+        barangay: "",
+        municipality: "",
+      }));
+    }
+
+    setSelectedSiteKey(nextSiteKey);
+  };
+
   const handleMapSiteSelect = (siteKey: string) => {
     if (!siteKey) return;
     if (!availableSites.some((site) => site.siteKey === siteKey)) return;
-    setSelectedSiteKey(siteKey);
+    applyImmediateSiteSwitch(siteKey);
   };
 
   useEffect(() => {
@@ -521,7 +597,12 @@ export function Dashboard({
     return Date.now() - ts <= SITE_STALE_MS;
   };
 
-  const selectedSiteOnline = !!selectedSiteKey && !!effectiveActiveSiteKey && effectiveActiveSiteKey === selectedSiteKey;
+  const selectedSiteOnline =
+    !!selectedSiteKey &&
+    !!effectiveActiveSiteKey &&
+    effectiveActiveSiteKey === selectedSiteKey &&
+    !!deviceConnected &&
+    !!liveReading?.deviceConnected;
 
   useEffect(() => {
     const check = () => {
@@ -598,8 +679,8 @@ export function Dashboard({
             siteKey: (site.site_key || '').toString().trim(),
             siteName: (site.site_name || site.address || site.site_key || 'Unnamed Site').toString().trim(),
             address: (site.address || '').toString().trim() || null,
-            latitude: typeof site.latitude === 'number' ? site.latitude : null,
-            longitude: typeof site.longitude === 'number' ? site.longitude : null,
+            latitude: normalizeCoordinate(site.latitude),
+            longitude: normalizeCoordinate(site.longitude),
             lastSeen: site.last_seen || site.first_seen || null,
             isActive: site.is_active === 1 || site.is_active === true,
           }))
@@ -756,7 +837,19 @@ export function Dashboard({
 
   useEffect(() => {
     const fetchReadings = () => {
+      const requestId = ++readingsRequestRef.current;
+
       if (!selectedSiteKey) {
+        if (requestId !== readingsRequestRef.current) return;
+        setReadings([]);
+        setLatestReading(null);
+        setDeviceConnected(false);
+        setDataOk(false);
+        return;
+      }
+
+      if (selectedSiteKey !== ALL_SITES_KEY && (!effectiveActiveSiteKey || selectedSiteKey !== effectiveActiveSiteKey)) {
+        if (requestId !== readingsRequestRef.current) return;
         setReadings([]);
         setLatestReading(null);
         setDeviceConnected(false);
@@ -767,6 +860,9 @@ export function Dashboard({
       const requestedSiteKey = selectedSiteKey === ALL_SITES_KEY ? ALL_SITES_KEY : selectedSiteKey;
       apiGet(`/api/sensors/history?siteKey=${encodeURIComponent(requestedSiteKey)}&interval=${getIntervalString()}&range=24h`)
         .then((data) => {
+          if (requestId !== readingsRequestRef.current) return;
+          if (selectedSiteKeyRef.current !== requestedSiteKey) return;
+
           if (Array.isArray(data)) {
             setReadings(data);
 
@@ -810,20 +906,28 @@ export function Dashboard({
             setDeviceConnected(false);
             setDataOk(false);
           }
+          if (requestedSiteKey === ALL_SITES_KEY) {
+            setAllSitesTransitioning(false);
+          }
           setBackendOk(true);
         })
         .catch(() => {
+          if (requestId !== readingsRequestRef.current) return;
+          if (selectedSiteKeyRef.current !== requestedSiteKey) return;
           setLatestReading(null);
           setBackendOk(false);
           setDataOk(false);
           setDeviceConnected(false);
+          if (requestedSiteKey === ALL_SITES_KEY) {
+            setAllSitesTransitioning(false);
+          }
         });
     };
     fetchReadings();
     const interval = setInterval(fetchReadings, 10000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intervalValue, intervalUnit, selectedSiteKey, activeSiteKey, selectedSite]);
+  }, [intervalValue, intervalUnit, selectedSiteKey, activeSiteKey, effectiveActiveSiteKey, selectedSite]);
 
   useEffect(() => {
     if (setSystemStatus) {
@@ -837,7 +941,16 @@ export function Dashboard({
 
   useEffect(() => {
     const fetchAlerts = () => {
+      const requestId = ++alertsRequestRef.current;
+
       if (!selectedSiteKey) {
+        if (requestId !== alertsRequestRef.current) return;
+        setAlerts([]);
+        return;
+      }
+
+      if (selectedSiteKey !== ALL_SITES_KEY && (!effectiveActiveSiteKey || selectedSiteKey !== effectiveActiveSiteKey)) {
+        if (requestId !== alertsRequestRef.current) return;
         setAlerts([]);
         return;
       }
@@ -845,6 +958,9 @@ export function Dashboard({
       const requestedSiteKey = selectedSiteKey === ALL_SITES_KEY ? ALL_SITES_KEY : selectedSiteKey;
       apiGet(`/api/sensors/alerts?siteKey=${encodeURIComponent(requestedSiteKey)}`)
         .then((data) => {
+          if (requestId !== alertsRequestRef.current) return;
+          if (selectedSiteKeyRef.current !== requestedSiteKey) return;
+
           if (Array.isArray(data)) {
             const sanitized = data
               .filter((alert) =>
@@ -937,37 +1053,6 @@ export function Dashboard({
       new CustomEvent("alertsUnreadCount", { detail: { count: unacknowledgedAlerts } })
     );
   }, [unacknowledgedAlerts]);
-
-  // ─── Risk Level computation ──────────────────────────────────────────────
-  let overallRiskComputed: "critical" | "warning" | "safe" = "safe";
-  if (latestReading) {
-    const temp = latestReading.temperature;
-    const turbidity = latestReading.turbidity;
-    const ph = latestReading.ph;
-
-    let tempRisk: "critical" | "warning" | "safe" = "safe";
-    if (temp >= 22 && temp <= 30) tempRisk = "critical";
-    else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) tempRisk = "warning";
-
-    let turbidityRisk: "critical" | "warning" | "safe" = "safe";
-    if (turbidity < 5) turbidityRisk = "critical";
-    else if (turbidity >= 5 && turbidity <= 15) turbidityRisk = "warning";
-
-    let phRisk: "critical" | "warning" | "safe" = "safe";
-    if (ph >= 6.5 && ph <= 8.0) phRisk = "critical";
-    else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) phRisk = "warning";
-
-    if ([tempRisk, turbidityRisk, phRisk].includes("critical")) overallRiskComputed = "critical";
-    else if ([tempRisk, turbidityRisk, phRisk].includes("warning")) overallRiskComputed = "warning";
-  }
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setStableOverallRisk((current) => (current === overallRiskComputed ? current : overallRiskComputed));
-    }, 1500);
-
-    return () => window.clearTimeout(timeout);
-  }, [overallRiskComputed]);
 
   const renderDataInterpretation = (compact: boolean = false) => {
     const riskData = {
@@ -1104,9 +1189,34 @@ export function Dashboard({
     return "Safe";
   };
 
-  const sensorDataVisible = deviceConnected && !!latestReading;
-  const displayedReadingsCount = readings.length;
-  const riskDataAvailable = deviceConnected;
+  const stableLatestReading = allSitesTransitioning ? null : latestReading;
+  const sensorDataVisible = !allSitesTransitioning && deviceConnected && !!stableLatestReading;
+  const displayedReadingsCount = allSitesTransitioning ? 0 : readings.length;
+  const riskDataAvailable = !allSitesTransitioning && deviceConnected;
+  const displayReading = sensorDataVisible ? stableLatestReading : null;
+  const temperatureStatus = displayReading ? getSensorStatus("temperature", displayReading.temperature) : null;
+  const turbidityStatus = displayReading ? getSensorStatus("turbidity", displayReading.turbidity) : null;
+  const phStatus = displayReading ? getSensorStatus("ph", displayReading.ph) : null;
+  const overallRiskComputed: "critical" | "warning" | "safe" =
+    temperatureStatus?.severity === "critical" ||
+    turbidityStatus?.severity === "critical" ||
+    phStatus?.severity === "critical"
+      ? "critical"
+      : (
+        temperatureStatus?.severity === "warning" ||
+        turbidityStatus?.severity === "warning" ||
+        phStatus?.severity === "warning"
+      )
+        ? "warning"
+        : "safe";
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setStableOverallRisk((current) => (current === overallRiskComputed ? current : overallRiskComputed));
+    }, 1500);
+
+    return () => window.clearTimeout(timeout);
+  }, [overallRiskComputed]);
 
   const overallRiskLabel = getOverallRiskLabel(stableOverallRisk);
   const isLongRiskLabel = overallRiskLabel.length > 16;
@@ -1255,7 +1365,7 @@ export function Dashboard({
                   key={site.siteKey}
                   type="button"
                   onClick={() => {
-                    setSelectedSiteKey(site.siteKey);
+                    applyImmediateSiteSwitch(site.siteKey);
                     setShowSiteDropdown(false);
                   }}
                   style={{
@@ -1426,7 +1536,7 @@ export function Dashboard({
                   key={site.siteKey}
                   type="button"
                   onClick={() => {
-                    setSelectedSiteKey(site.siteKey);
+                    applyImmediateSiteSwitch(site.siteKey);
                     setShowSiteDropdown(false);
                   }}
                   style={{
@@ -2795,24 +2905,24 @@ function SensorMiniCard({
 function getSensorStatus(
   type: "temperature" | "turbidity" | "ph",
   value: number
-): { label: string; color: string } {
+): { label: string; color: string; severity: "critical" | "warning" | "safe" } {
   if (type === "temperature") {
     if (value >= 22 && value <= 30)
-      return { label: "Needs Attention", color: "#ef4444" };
+      return { label: "Needs Attention", color: "#ef4444", severity: "critical" };
     if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
-      return { label: "Watch Zone", color: "#E7B213" };
-    return { label: "Safe", color: "#22c55e" };
+      return { label: "Watch Zone", color: "#E7B213", severity: "warning" };
+    return { label: "Safe", color: "#22c55e", severity: "safe" };
   }
   if (type === "turbidity") {
-    if (value < 5) return { label: "Needs Attention", color: "#ef4444" };
-    if (value <= 15) return { label: "Watch Zone", color: "#E7B213" };
-    return { label: "Safe", color: "#22c55e" };
+    if (value < 5) return { label: "Needs Attention", color: "#ef4444", severity: "critical" };
+    if (value <= 15) return { label: "Watch Zone", color: "#E7B213", severity: "warning" };
+    return { label: "Safe", color: "#22c55e", severity: "safe" };
   }
   if (type === "ph") {
-    if (value >= 6.5 && value <= 8.0) return { label: "Needs Attention", color: "#ef4444" };
+    if (value >= 6.5 && value <= 8.0) return { label: "Needs Attention", color: "#ef4444", severity: "critical" };
     if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
-      return { label: "Watch Zone", color: "#f59e0b" };
-    return { label: "Safe", color: "#22c55e" };
+      return { label: "Watch Zone", color: "#f59e0b", severity: "warning" };
+    return { label: "Safe", color: "#22c55e", severity: "safe" };
   }
-  return { label: "", color: "#9ca3af" };
+  return { label: "", color: "#9ca3af", severity: "safe" };
 }

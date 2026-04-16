@@ -1,4 +1,5 @@
 const db = require("../db");
+const classifyWater = require("./classifyWater");
 const REPORT_TIMEZONE = process.env.REPORT_TIMEZONE || process.env.SMS_SUMMARY_TIMEZONE || "Asia/Manila";
 const REPORT_LOCALE = process.env.REPORT_LOCALE || "en-US";
 
@@ -377,24 +378,10 @@ function formatPeriod(type, startDate, endDate) {
  * Determine risk level based on averages
  */
 function calculateRiskLevel(avgTurbidity, avgTemperature, avgPh) {
-  let riskScore = 0;
-  
-  // Turbidity risk (0-100 NTU scale)
-  if (avgTurbidity > 50) riskScore += 3;
-  else if (avgTurbidity > 25) riskScore += 2;
-  else if (avgTurbidity > 10) riskScore += 1;
-  
-  // Temperature risk (optimal: 20-30°C)
-  if (avgTemperature > 35 || avgTemperature < 15) riskScore += 2;
-  else if (avgTemperature > 32 || avgTemperature < 18) riskScore += 1;
-  
-  // pH risk (optimal: 6.5-8.5)
-  if (avgPh > 9 || avgPh < 6) riskScore += 2;
-  else if (avgPh > 8.5 || avgPh < 6.5) riskScore += 1;
-  
-  // Determine risk level
-  if (riskScore >= 5) return 'high';
-  if (riskScore >= 3) return 'moderate';
+  const normalizedStatus = classifyWater(avgTemperature, avgPh, avgTurbidity);
+
+  if (normalizedStatus === 'high-risk') return 'high';
+  if (normalizedStatus === 'possible-risk') return 'moderate';
   return 'low';
 }
 

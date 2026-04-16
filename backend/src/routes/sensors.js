@@ -872,7 +872,7 @@ async function checkSmsSummarySchedule() {
   const zonedNow = getZonedDateTimeParts(currentDate);
   const currentMinute = (zonedNow.hour * 60) + zonedNow.minute;
   const activeSites = await getActiveSiteSnapshots();
-  const sitesToProcess = activeSites.length ? activeSites : [await getCurrentSiteSnapshot()].filter(Boolean);
+  const sitesToProcess = activeSites.length ? activeSites : [];
 
   if (!sitesToProcess.length) return;
 
@@ -989,7 +989,7 @@ router.get('/sms-summary-debug', async (req, res) => {
     const zonedNow = getZonedDateTimeParts(currentDate);
     const currentMinute = (zonedNow.hour * 60) + zonedNow.minute;
     const activeSites = await getActiveSiteSnapshots();
-    const fallbackSite = await getCurrentSiteSnapshot();
+    const fallbackSite = await getConfiguredActiveSiteSnapshot();
 
     const recipientCounts = await new Promise((resolve, reject) => {
       db.query(
@@ -1153,7 +1153,7 @@ router.post('/sms-summary-trigger', async (req, res) => {
     }
 
     if (!siteSnapshot) {
-      siteSnapshot = await getCurrentSiteSnapshot();
+      siteSnapshot = await getConfiguredActiveSiteSnapshot();
     }
 
     if (!siteSnapshot) {
@@ -1345,9 +1345,9 @@ setInterval(async () => {
 
   // Route readings to the site selected via Start Reading.
   let siteIdentity = await getConfiguredActiveSiteSnapshot();
-  if (!siteIdentity) {
-    // Fallback when no active site has been selected yet.
-    siteIdentity = await buildSiteIdentityWithProximityCheck(latestData);
+  if (!siteIdentity?.siteKey) {
+    console.warn('[readings] Skipped: manual reading is stopped because no active site is configured');
+    return;
   }
 
   if (siteIdentity?.siteKey) {
@@ -1537,27 +1537,34 @@ router.post("/", async (req, res) => {
       address = null;
     }
   }
-  latestData = {
-    turbidity,
-    temperature,
-    ph,
-    device_ip,
-    latitude,
-    longitude,
-    address,
-    siteKey: normalizeSiteKey(address || device_ip || GLOBAL_DEVICE_NAME),
-    status,
-    timestamp: new Date()
-  };
-
   try {
     const activeSiteSnapshot = await getConfiguredActiveSiteSnapshot();
-    if (activeSiteSnapshot?.siteKey) {
-      latestData.siteKey = activeSiteSnapshot.siteKey;
-      latestData.address = activeSiteSnapshot.address || latestData.address || null;
+    if (!activeSiteSnapshot?.siteKey) {
+      latestData = null;
+      return res.json({
+        success: true,
+        status,
+        address,
+        ignored: true,
+        message: "Manual reading is stopped. Start a site in Admin Settings to accept readings."
+      });
     }
+
+    latestData = {
+      turbidity,
+      temperature,
+      ph,
+      device_ip,
+      latitude,
+      longitude,
+      address: activeSiteSnapshot.address || address || null,
+      siteKey: activeSiteSnapshot.siteKey,
+      status,
+      timestamp: new Date()
+    };
   } catch (activeSiteErr) {
     console.error('[active site resolve error]', activeSiteErr.message);
+    return res.status(500).json({ success: false, error: 'Failed to resolve active site' });
   }
 
   console.log("Received:", latestData);
@@ -1573,64 +1580,68 @@ router.post("/", async (req, res) => {
   });
 });
 
-router.get("/latest", (req, res) => {
+router.get("/latest", async (req, res) => {
+  const activeSiteSnapshot = await getConfiguredActiveSiteSnapshot().catch((err) => {
+    console.error('[API /latest] Failed to resolve configured active site:', err.message);
+    return null;
+  });
+
+  if (!activeSiteSnapshot?.siteKey) {
+    console.warn('[API /latest] Manual reading is stopped because no active site is configured');
+    return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME, siteKey: null });
+  }
+
   const sendDisconnectedWithLastLocation = () => {
-    console.log('[API /latest] Triggered fallback: querying raw_readings for last GPS location...');
+    console.log('[API /latest] Triggered fallback: querying raw_readings for active site last GPS location...');
     db.get(
-      "SELECT latitude, longitude, address, timestamp, site_key FROM raw_readings WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
-      [],
+      "SELECT latitude, longitude, address, timestamp, site_key FROM raw_readings WHERE site_key = ? AND latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+      [activeSiteSnapshot.siteKey],
       (dbErr, row) => {
         if (dbErr) {
           console.error('[API /latest] Failed to load last GPS location from DB:', dbErr.message);
-          return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+          return res.json({ deviceConnected: false, siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME, siteKey: activeSiteSnapshot.siteKey });
         }
 
-        console.log('[API /latest] Fallback query result:', row || 'NO ROW FOUND');
-
         if (row) {
-          console.log('[API /latest] Returning disconnected with fallback coords:', { lat: row.latitude, lng: row.longitude, ts: row.timestamp });
           return res.json({
             deviceConnected: false,
-            siteName: GLOBAL_DEVICE_NAME,
-            siteKey: row.site_key || null,
+            siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
+            siteKey: activeSiteSnapshot.siteKey,
             latitude: row.latitude,
             longitude: row.longitude,
-            address: row.address || null,
+            address: row.address || activeSiteSnapshot.address || null,
             timestamp: row.timestamp || null,
           });
         }
 
-        console.log('[API /latest] No GPS location found in raw_readings, returning bare disconnected status');
-        return res.json({ deviceConnected: false, siteName: GLOBAL_DEVICE_NAME });
+        return res.json({
+          deviceConnected: false,
+          siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
+          siteKey: activeSiteSnapshot.siteKey,
+          address: activeSiteSnapshot.address || null,
+        });
       }
     );
   };
 
-  if (latestData) {
-    // Consider device disconnected if last data is older than 10 seconds
+  if (latestData && latestData.siteKey === activeSiteSnapshot.siteKey) {
     const now = Date.now();
     const ts = new Date(latestData.timestamp).getTime();
     const diffMs = Math.abs(now - ts);
-    console.log('[API /latest] latestData fresh check: now=' + new Date(now).toISOString() + ' | ts=' + new Date(ts).toISOString() + ' | diffMs=' + diffMs + ' | threshold=10000ms | isFresh=' + (diffMs < 10000));
 
-    if (Math.abs(now - ts) < 10000) {
-      console.log('[API /latest] Data is fresh, returning as connected');
-      res.json({
+    if (diffMs < 10000) {
+      return res.json({
         ...latestData,
-        siteName: GLOBAL_DEVICE_NAME,
-        siteKey: latestData.siteKey || null,
+        siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
+        siteKey: activeSiteSnapshot.siteKey,
         deviceConnected: true,
         timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
-        address: latestData.address || null
+        address: latestData.address || activeSiteSnapshot.address || null
       });
-    } else {
-      console.warn('[API /latest] Device considered disconnected: data too old');
-      sendDisconnectedWithLastLocation();
     }
-  } else {
-    console.warn('[API /latest] No latestData available, device considered disconnected');
-    sendDisconnectedWithLastLocation();
   }
+
+  return sendDisconnectedWithLastLocation();
 });
 
 router.get("/history", (req, res) => {
@@ -1653,7 +1664,7 @@ router.get("/history", (req, res) => {
     return handleHistory(normalizeSiteKey(site));
   }
 
-  getCurrentSiteSnapshot()
+  getConfiguredActiveSiteSnapshot()
     .then((snapshot) => handleHistory(snapshot?.siteKey || null))
     .catch((err) => res.status(500).json({ error: err.message }));
 });
@@ -1678,7 +1689,7 @@ router.get("/alerts", (req, res) => {
     return handleAlerts(normalizeSiteKey(site));
   }
 
-  getCurrentSiteSnapshot()
+  getConfiguredActiveSiteSnapshot()
     .then((snapshot) => handleAlerts(snapshot?.siteKey || null))
     .catch((err) => res.status(500).json({ error: err.message }));
 });
@@ -1770,6 +1781,63 @@ router.post('/sites/:siteKey/start-reading', (req, res) => {
           });
         }
       );
+    }
+  );
+});
+
+router.post('/sites/:siteKey/stop-reading', (req, res) => {
+  const siteKey = (req.params.siteKey || '').toString().trim();
+  if (!siteKey) {
+    return res.status(400).json({ error: 'siteKey is required' });
+  }
+
+  db.get(
+    `SELECT site_key, site_name, address, latitude, longitude
+     FROM site_registry
+     WHERE site_key = ?
+     LIMIT 1`,
+    [siteKey],
+    (selectErr, siteRow) => {
+      if (selectErr) return res.status(500).json({ error: selectErr.message });
+      if (!siteRow) return res.status(404).json({ error: 'Site not found' });
+
+      db.getSetting('active_site_key', (settingErr, activeSiteKey) => {
+        if (settingErr) return res.status(500).json({ error: settingErr.message });
+
+        if ((activeSiteKey || '').toString().trim() !== siteKey) {
+          return res.json({
+            success: true,
+            message: 'Site is already not actively reading',
+            site: {
+              site_key: siteRow.site_key,
+              site_name: siteRow.site_name,
+              address: siteRow.address,
+              latitude: siteRow.latitude,
+              longitude: siteRow.longitude,
+              is_active: 0,
+            },
+          });
+        }
+
+        db.setSetting('active_site_key', '', (clearErr) => {
+          if (clearErr) return res.status(500).json({ error: clearErr.message });
+
+          latestData = null;
+
+          return res.json({
+            success: true,
+            message: 'Reading stopped for selected site',
+            site: {
+              site_key: siteRow.site_key,
+              site_name: siteRow.site_name,
+              address: siteRow.address,
+              latitude: siteRow.latitude,
+              longitude: siteRow.longitude,
+              is_active: 0,
+            },
+          });
+        });
+      });
     }
   );
 });
