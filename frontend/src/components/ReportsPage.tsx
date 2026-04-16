@@ -60,6 +60,14 @@ interface SiteOption {
   site_key: string;
   site_name?: string | null;
   address?: string | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+}
+
+interface SiteDataWindow {
+  siteKey: string;
+  firstReading: string | null;
+  lastReading: string | null;
 }
 
 const formatDateInputValue = (date: Date) => {
@@ -79,6 +87,89 @@ const formatTimeInputValue = (date: Date) => {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${hours}:${minutes}`;
+};
+
+const floorToMinute = (date: Date) => {
+  const next = new Date(date);
+  next.setSeconds(0, 0);
+  return next;
+};
+
+const ceilToMinute = (date: Date) => {
+  const next = new Date(date);
+  if (next.getSeconds() !== 0 || next.getMilliseconds() !== 0) {
+    next.setMinutes(next.getMinutes() + 1);
+  }
+  next.setSeconds(0, 0);
+  return next;
+};
+
+const clampValue = (value: string, min?: string | null, max?: string | null) => {
+  if (min && value < min) return min;
+  if (max && value > max) return max;
+  return value;
+};
+
+const getHourlyBoundsForDate = (
+  reportDate: string,
+  siteWindowBounds: {
+    minDate: string;
+    maxDate: string;
+    minTimeOnMinDate: string;
+    maxTimeOnMaxDate: string;
+  } | null
+) => {
+  if (!siteWindowBounds) {
+    return { minTime: "00:00", maxTime: "23:59" };
+  }
+
+  return {
+    minTime: reportDate === siteWindowBounds.minDate ? siteWindowBounds.minTimeOnMinDate : "00:00",
+    maxTime: reportDate === siteWindowBounds.maxDate ? siteWindowBounds.maxTimeOnMaxDate : "23:59",
+  };
+};
+
+const getQuarterFromMonth = (monthIndex: number) => Math.floor(monthIndex / 3) + 1;
+
+const addDays = (baseDate: Date, days: number) => {
+  const next = new Date(baseDate);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const HOUR_12_OPTIONS = Array.from({ length: 12 }, (_, index) => String(index + 1));
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
+
+const formatTimeGuideValue = (time24: string) => {
+  const [rawHour = '00', rawMinute = '00'] = (time24 || '00:00').split(':');
+  const hours = Number(rawHour);
+  const minutes = Number(rawMinute);
+  const safeHours = Number.isFinite(hours) ? hours : 0;
+  const safeMinutes = Number.isFinite(minutes) ? minutes : 0;
+  const meridiem = safeHours >= 12 ? 'PM' : 'AM';
+  const hour12 = safeHours % 12 || 12;
+  return `${hour12}:${String(safeMinutes).padStart(2, '0')} ${meridiem}`;
+};
+
+const getTimeParts12 = (time24: string) => {
+  const [rawHour = '00', rawMinute = '00'] = (time24 || '00:00').split(':');
+  const hours = Number(rawHour);
+  const safeHours = Number.isFinite(hours) ? hours : 0;
+  return {
+    hour: String(safeHours % 12 || 12),
+    minute: String(Number(rawMinute) || 0).padStart(2, '0'),
+    meridiem: safeHours >= 12 ? 'PM' : 'AM',
+  };
+};
+
+const to24HourValue = (hour12: string, minute: string, meridiem: string) => {
+  const normalizedHour = Math.min(12, Math.max(1, Number(hour12) || 12));
+  const normalizedMinute = Math.min(59, Math.max(0, Number(minute) || 0));
+  let hours24 = normalizedHour % 12;
+  if ((meridiem || 'AM').toUpperCase() === 'PM') {
+    hours24 += 12;
+  }
+  return `${String(hours24).padStart(2, '0')}:${String(normalizedMinute).padStart(2, '0')}`;
 };
 
 const POPPINS = "'Poppins', sans-serif";
@@ -130,10 +221,13 @@ export const ReportsPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createReportError, setCreateReportError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showMobileReportList, setShowMobileReportList] = useState(false);
   const [siteOptions, setSiteOptions] = useState<SiteOption[]>([]);
   const [selectedSiteKey, setSelectedSiteKey] = useState('');
+  const [siteDataWindow, setSiteDataWindow] = useState<SiteDataWindow | null>(null);
+  const [siteWindowLoading, setSiteWindowLoading] = useState(false);
   
   // Persistent Global Cache for Header Metadata
   const [address, setAddress] = useState<string | null>(() => {
@@ -175,6 +269,47 @@ export const ReportsPage: React.FC = () => {
     const timeoutId = window.setTimeout(() => setError(null), 4200);
     return () => window.clearTimeout(timeoutId);
   }, [error]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const fetchSiteWindow = async () => {
+      if (!selectedSiteKey) {
+        setSiteDataWindow(null);
+        return;
+      }
+
+      try {
+        setSiteWindowLoading(true);
+        const response = await apiGet(`/api/reports/site-window/${encodeURIComponent(selectedSiteKey)}`);
+        if (!cancelled) {
+          if (response?.success) {
+            setSiteDataWindow({
+              siteKey: response.siteKey,
+              firstReading: response.firstReading || null,
+              lastReading: response.lastReading || null,
+            });
+          } else {
+            setSiteDataWindow(null);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setSiteDataWindow(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setSiteWindowLoading(false);
+        }
+      }
+    };
+
+    fetchSiteWindow();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSiteKey]);
 
   // Fetch metadata for PDF header
   React.useEffect(() => {
@@ -225,6 +360,91 @@ export const ReportsPage: React.FC = () => {
     return Array.from({ length: 7 }, (_, index) => String(currentYear - 3 + index));
   }, []);
 
+  const selectedSiteOption = React.useMemo(
+    () => siteOptions.find((site) => site.site_key === selectedSiteKey) || null,
+    [siteOptions, selectedSiteKey]
+  );
+
+  const siteWindowBounds = React.useMemo(() => {
+    const firstReadingSource = siteDataWindow?.firstReading || selectedSiteOption?.first_seen || null;
+    const lastReadingSource = siteDataWindow?.lastReading || selectedSiteOption?.last_seen || null;
+
+    if (!firstReadingSource) return null;
+
+    const firstDate = new Date(firstReadingSource);
+    const latestBase = lastReadingSource ? new Date(lastReadingSource) : new Date(firstReadingSource);
+
+    if (Number.isNaN(firstDate.getTime()) || Number.isNaN(latestBase.getTime())) {
+      return null;
+    }
+
+    const minDate = formatDateInputValue(firstDate);
+    const maxDate = formatDateInputValue(latestBase);
+    const minTimeOnMinDate = formatTimeInputValue(firstDate);
+    const maxTimeOnMaxDate = formatTimeInputValue(latestBase);
+    const minMonth = formatMonthInputValue(firstDate);
+    const maxMonth = formatMonthInputValue(latestBase);
+    const minYear = firstDate.getFullYear();
+    const maxYear = latestBase.getFullYear();
+    const minQuarter = getQuarterFromMonth(firstDate.getMonth());
+    const maxQuarter = getQuarterFromMonth(latestBase.getMonth());
+
+    return {
+      firstDate,
+      latestBase,
+      minDate,
+      maxDate,
+      minTimeOnMinDate,
+      maxTimeOnMaxDate,
+      minMonth,
+      maxMonth,
+      minYear,
+      maxYear,
+      minQuarter,
+      maxQuarter,
+    };
+  }, [siteDataWindow, selectedSiteOption]);
+
+  const availableQuarterOptions = React.useMemo(() => {
+    if (!siteWindowBounds) {
+      return [
+        { value: "1", label: "Q1 (Jan-Mar)" },
+        { value: "2", label: "Q2 (Apr-Jun)" },
+        { value: "3", label: "Q3 (Jul-Sep)" },
+        { value: "4", label: "Q4 (Oct-Dec)" },
+      ];
+    }
+
+    const selectedYear = Number(quarterlyYear);
+
+    return [
+      { value: "1", label: "Q1 (Jan-Mar)" },
+      { value: "2", label: "Q2 (Apr-Jun)" },
+      { value: "3", label: "Q3 (Jul-Sep)" },
+      { value: "4", label: "Q4 (Oct-Dec)" },
+    ].filter((quarter) => {
+      const quarterValue = Number(quarter.value);
+      if (selectedYear === siteWindowBounds.minYear && quarterValue < siteWindowBounds.minQuarter) return false;
+      if (selectedYear === siteWindowBounds.maxYear && quarterValue > siteWindowBounds.maxQuarter) return false;
+      return true;
+    });
+  }, [quarterlyYear, siteWindowBounds]);
+
+  const availableYearOptions = React.useMemo(() => {
+    if (!siteWindowBounds) return yearOptions;
+    return yearOptions.filter((year) => {
+      const numericYear = Number(year);
+      return numericYear >= siteWindowBounds.minYear && numericYear <= siteWindowBounds.maxYear;
+    });
+  }, [siteWindowBounds, yearOptions]);
+
+  const hourlyStartParts = React.useMemo(() => getTimeParts12(hourlyStartTime), [hourlyStartTime]);
+  const hourlyEndParts = React.useMemo(() => getTimeParts12(hourlyEndTime), [hourlyEndTime]);
+  const hourlyTimeBounds = React.useMemo(
+    () => getHourlyBoundsForDate(hourlyReportDate, siteWindowBounds),
+    [hourlyReportDate, siteWindowBounds]
+  );
+
   const resetCreateForm = () => {
     const now = new Date();
     const weeklyStart = new Date(now);
@@ -241,7 +461,138 @@ export const ReportsPage: React.FC = () => {
     setQuarterlyYear(String(now.getFullYear()));
     setQuarterlyQuarter(String(Math.floor(now.getMonth() / 3) + 1));
     setSelectedSiteKey('');
+    setCreateReportError(null);
   };
+
+  React.useEffect(() => {
+    if (!siteWindowBounds) return;
+
+    setHourlyReportDate((prev) => clampValue(prev || siteWindowBounds.minDate, siteWindowBounds.minDate, siteWindowBounds.maxDate));
+    setDailyReportDate((prev) => clampValue(prev || siteWindowBounds.minDate, siteWindowBounds.minDate, siteWindowBounds.maxDate));
+    setWeeklyStartDate((prev) => clampValue(prev || siteWindowBounds.minDate, siteWindowBounds.minDate, siteWindowBounds.maxDate));
+    setWeeklyEndDate((prev) => clampValue(prev || siteWindowBounds.maxDate, siteWindowBounds.minDate, siteWindowBounds.maxDate));
+    setMonthlyPeriod((prev) => clampValue(prev || siteWindowBounds.minMonth, siteWindowBounds.minMonth, siteWindowBounds.maxMonth));
+    setQuarterlyYear((prev) => {
+      const fallback = String(siteWindowBounds.maxYear);
+      const next = prev || fallback;
+      const numericYear = Number(next);
+      if (Number.isNaN(numericYear)) return fallback;
+      if (numericYear < siteWindowBounds.minYear) return String(siteWindowBounds.minYear);
+      if (numericYear > siteWindowBounds.maxYear) return String(siteWindowBounds.maxYear);
+      return next;
+    });
+  }, [siteWindowBounds]);
+
+  React.useEffect(() => {
+    if (!siteWindowBounds) return;
+
+    setHourlyStartTime((prev) => {
+      const next = clampValue(prev || hourlyTimeBounds.minTime, hourlyTimeBounds.minTime, hourlyTimeBounds.maxTime);
+      return next;
+    });
+
+    setHourlyEndTime((prev) => {
+      const next = clampValue(prev || hourlyTimeBounds.maxTime, hourlyTimeBounds.minTime, hourlyTimeBounds.maxTime);
+      return next;
+    });
+  }, [hourlyReportDate, hourlyTimeBounds, siteWindowBounds]);
+
+  React.useEffect(() => {
+    if (!siteWindowBounds) return;
+
+    setHourlyEndTime((prev) => {
+      const minTime = hourlyStartTime || hourlyTimeBounds.minTime;
+      return clampValue(prev || minTime, minTime, hourlyTimeBounds.maxTime);
+    });
+  }, [hourlyStartTime, hourlyTimeBounds, siteWindowBounds]);
+
+  React.useEffect(() => {
+    if (!siteWindowBounds) return;
+
+    setWeeklyEndDate((prev) => {
+      const next = clampValue(prev || weeklyStartDate, weeklyStartDate, siteWindowBounds.maxDate);
+      return next;
+    });
+  }, [weeklyStartDate, siteWindowBounds]);
+
+  React.useEffect(() => {
+    if (!availableQuarterOptions.length) return;
+    if (!availableQuarterOptions.some((option) => option.value === quarterlyQuarter)) {
+      setQuarterlyQuarter(availableQuarterOptions[0].value);
+    }
+  }, [availableQuarterOptions, quarterlyQuarter]);
+
+  React.useEffect(() => {
+    if (!siteWindowBounds || !selectedSiteKey) return;
+
+    if (reportType === 'hourly') {
+      const suggestedDate = siteWindowBounds.maxDate;
+      const sameDayWindow = siteWindowBounds.minDate === siteWindowBounds.maxDate;
+      setHourlyReportDate(suggestedDate);
+      setHourlyStartTime(sameDayWindow ? siteWindowBounds.minTimeOnMinDate : "00:00");
+      setHourlyEndTime(siteWindowBounds.maxTimeOnMaxDate);
+      return;
+    }
+
+    if (reportType === 'daily') {
+      setDailyReportDate(siteWindowBounds.maxDate);
+      return;
+    }
+
+    if (reportType === 'weekly') {
+      const suggestedEnd = siteWindowBounds.latestBase;
+      const suggestedStart = addDays(suggestedEnd, -6);
+      const startDate = suggestedStart < siteWindowBounds.firstDate ? siteWindowBounds.firstDate : suggestedStart;
+      setWeeklyStartDate(formatDateInputValue(startDate));
+      setWeeklyEndDate(siteWindowBounds.maxDate);
+      return;
+    }
+
+    if (reportType === 'monthly') {
+      setMonthlyPeriod(siteWindowBounds.maxMonth);
+      return;
+    }
+
+    if (reportType === 'quarterly') {
+      setQuarterlyYear(String(siteWindowBounds.maxYear));
+      setQuarterlyQuarter(String(siteWindowBounds.maxQuarter));
+    }
+  }, [reportType, selectedSiteKey, siteWindowBounds]);
+
+  const reportSuggestionText = React.useMemo(() => {
+    if (!siteWindowBounds) return null;
+
+    if (reportType === 'hourly') {
+      const sameDayWindow = siteWindowBounds.minDate === siteWindowBounds.maxDate;
+      const startTime = sameDayWindow ? siteWindowBounds.minTimeOnMinDate : "00:00";
+      return `Suggested hourly report: ${siteWindowBounds.maxDate}, ${formatTimeGuideValue(startTime)} to ${formatTimeGuideValue(siteWindowBounds.maxTimeOnMaxDate)}.`;
+    }
+
+    if (reportType === 'daily') {
+      return `Suggested daily report date: ${siteWindowBounds.maxDate}.`;
+    }
+
+    if (reportType === 'weekly') {
+      const suggestedEnd = siteWindowBounds.latestBase;
+      const suggestedStart = addDays(suggestedEnd, -6);
+      const startDate = suggestedStart < siteWindowBounds.firstDate ? siteWindowBounds.firstDate : suggestedStart;
+      return `Suggested weekly report: ${formatDateInputValue(startDate)} to ${siteWindowBounds.maxDate}.`;
+    }
+
+    if (reportType === 'monthly') {
+      return `Suggested monthly report: ${siteWindowBounds.maxMonth}.`;
+    }
+
+    if (reportType === 'quarterly') {
+      return `Suggested quarterly report: ${siteWindowBounds.maxYear} Q${siteWindowBounds.maxQuarter}.`;
+    }
+
+    if (reportType === 'annual') {
+      return `Suggested annual report: ${siteWindowBounds.maxYear}.`;
+    }
+
+    return null;
+  }, [reportType, siteWindowBounds]);
 
   const buildCreatePeriodValue = () => {
     if (reportType === 'hourly') {
@@ -260,12 +611,25 @@ export const ReportsPage: React.FC = () => {
         throw new Error('Hourly start time should not be after end time.');
       }
 
+      if (siteWindowBounds) {
+        // Keep backend boundary checks aligned with minute-only controls in the UI.
+        const firstAllowed = floorToMinute(new Date(siteWindowBounds.firstDate));
+        const lastAllowed = ceilToMinute(new Date(siteWindowBounds.latestBase));
+        if (startValue < firstAllowed || endValue > lastAllowed) {
+          throw new Error('Selected hourly range is outside the available data collection window for this site.');
+        }
+      }
+
       return `hour:${hourlyReportDate}|${hourlyStartTime}|${hourlyEndTime}`;
     }
 
     if (reportType === 'daily') {
       if (!dailyReportDate) {
         throw new Error('Please choose a date for daily report.');
+      }
+
+      if (siteWindowBounds && (dailyReportDate < siteWindowBounds.minDate || dailyReportDate > siteWindowBounds.maxDate)) {
+        throw new Error('Selected daily date is outside the available data collection window for this site.');
       }
 
       return `day:${dailyReportDate}`;
@@ -278,6 +642,9 @@ export const ReportsPage: React.FC = () => {
       if (weeklyStartDate > weeklyEndDate) {
         throw new Error('Weekly start date should not be after end date.');
       }
+      if (siteWindowBounds && (weeklyStartDate < siteWindowBounds.minDate || weeklyEndDate > siteWindowBounds.maxDate)) {
+        throw new Error('Selected weekly range is outside the available data collection window for this site.');
+      }
       return `range:${weeklyStartDate}:${weeklyEndDate}`;
     }
 
@@ -285,12 +652,18 @@ export const ReportsPage: React.FC = () => {
       if (!monthlyPeriod) {
         throw new Error('Please choose a month for monthly report.');
       }
+      if (siteWindowBounds && (monthlyPeriod < siteWindowBounds.minMonth || monthlyPeriod > siteWindowBounds.maxMonth)) {
+        throw new Error('Selected month is outside the available data collection window for this site.');
+      }
       return `month:${monthlyPeriod}`;
     }
 
     if (reportType === 'quarterly') {
       if (!quarterlyYear || !quarterlyQuarter) {
         throw new Error('Please choose year and quarter for quarterly report.');
+      }
+      if (!availableQuarterOptions.some((option) => option.value === quarterlyQuarter)) {
+        throw new Error('Selected quarter is outside the available data collection window for this site.');
       }
       return `quarter:${quarterlyYear}-Q${quarterlyQuarter}`;
     }
@@ -302,18 +675,24 @@ export const ReportsPage: React.FC = () => {
     return selectedPeriod;
   };
 
-  const fetchReports = async () => {
+  const fetchReports = async ({ suppressError = false }: { suppressError?: boolean } = {}) => {
     setLoading(true);
-    setError(null);
+    if (!suppressError) {
+      setError(null);
+    }
     try {
       const response = await apiGet('/api/reports');
       if (response.success) {
         setReports(response.reports || []);
       } else {
-        setError(response.message || 'Failed to fetch reports');
+        if (!suppressError) {
+          setError(response.message || 'Failed to fetch reports');
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch reports');
+      if (!suppressError) {
+        setError(err.message || 'Failed to fetch reports');
+      }
     } finally {
       setLoading(false);
     }
@@ -336,6 +715,7 @@ export const ReportsPage: React.FC = () => {
     e.preventDefault();
     setCreating(true);
     setError(null);
+    setCreateReportError(null);
     setSuccessMessage(null);
 
     try {
@@ -351,18 +731,45 @@ export const ReportsPage: React.FC = () => {
       });
 
       if (response.success || response.report) {
+        if (response.report) {
+          setReports((prev) => {
+            const nextReports = Array.isArray(prev) ? prev : [];
+            const deduped = nextReports.filter((report) => report.id !== response.report.id);
+            return [response.report, ...deduped];
+          });
+        }
         setSuccessMessage('Report generated successfully!');
         setShowCreateReport(false);
         resetCreateForm();
-        await fetchReports();
+        await fetchReports({ suppressError: true });
       } else {
-        setError(response.message || 'Failed to create report');
+        setCreateReportError(response.message || 'Failed to create report');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create report');
+      setCreateReportError(err.message || 'Failed to create report');
     } finally {
       setCreating(false);
     }
+  };
+
+  const updateHourlyStartPart = (field: 'hour' | 'minute' | 'meridiem', value: string) => {
+    const next = {
+      ...hourlyStartParts,
+      [field]: value,
+    };
+    const nextTime = to24HourValue(next.hour, next.minute, next.meridiem);
+    const clampedStart = clampValue(nextTime, hourlyTimeBounds.minTime, hourlyTimeBounds.maxTime);
+    setHourlyStartTime(clampedStart);
+    setHourlyEndTime((prev) => clampValue(prev || clampedStart, clampedStart, hourlyTimeBounds.maxTime));
+  };
+
+  const updateHourlyEndPart = (field: 'hour' | 'minute' | 'meridiem', value: string) => {
+    const next = {
+      ...hourlyEndParts,
+      [field]: value,
+    };
+    const nextTime = to24HourValue(next.hour, next.minute, next.meridiem);
+    setHourlyEndTime(clampValue(nextTime, hourlyStartTime || hourlyTimeBounds.minTime, hourlyTimeBounds.maxTime));
   };
 
   const handleViewReport = (report: Report) => {
@@ -1277,7 +1684,12 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Create Report Dialog */}
-      <Dialog open={showCreateReport} onOpenChange={setShowCreateReport}>
+      <Dialog open={showCreateReport} onOpenChange={(open) => {
+        setShowCreateReport(open);
+        if (!open) {
+          setCreateReportError(null);
+        }
+      }}>
         <DialogContent
           hideCloseButton={true}
           style={{
@@ -1337,6 +1749,45 @@ export const ReportsPage: React.FC = () => {
               Select the type of report you want to generate.
             </p>
 
+            {createReportError && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: "12px 14px",
+                  borderRadius: 16,
+                  border: "1px solid rgba(239,68,68,0.18)",
+                  background: "rgba(254,242,242,0.95)",
+                  color: "#b91c1c",
+                  fontFamily: POPPINS,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <span>{createReportError}</span>
+                <button
+                  type="button"
+                  onClick={() => setCreateReportError(null)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: "#b91c1c",
+                    cursor: "pointer",
+                    padding: 0,
+                    lineHeight: 1,
+                    fontSize: 16,
+                    fontWeight: 700,
+                  }}
+                  aria-label="Close create report error"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
             <form className="space-y-6" style={{ rowGap: smallLaptopModal ? 16 : undefined }} onSubmit={handleCreateReport}>
               <div style={{ marginBottom: smallLaptopModal ? 10 : 12, fontSize: smallLaptopModal ? 12 : 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS }}>Report Type</div>
               <div className="flex flex-wrap gap-2">
@@ -1393,6 +1844,21 @@ export const ReportsPage: React.FC = () => {
                     })}
                   </SelectContent>
                 </Select>
+                {selectedSiteKey && siteWindowBounds && (
+                  <p style={{ fontSize: 11, color: "#7b8a9a", fontFamily: POPPINS, marginTop: 2 }}>
+                    You can generate reports from {siteWindowBounds.minDate} at {formatTimeGuideValue(siteWindowBounds.minTimeOnMinDate)} until {siteWindowBounds.maxDate} at {formatTimeGuideValue(siteWindowBounds.maxTimeOnMaxDate)}.
+                  </p>
+                )}
+                {selectedSiteKey && siteWindowBounds && reportSuggestionText && (
+                  <p style={{ fontSize: 11, color: "#357D86", fontFamily: POPPINS, marginTop: 2, fontWeight: 600 }}>
+                    {reportSuggestionText}
+                  </p>
+                )}
+                {selectedSiteKey && !siteWindowLoading && !siteWindowBounds && !selectedSiteOption?.first_seen && (
+                  <p style={{ fontSize: 11, color: "#b91c1c", fontFamily: POPPINS, marginTop: 2 }}>
+                    No collected readings found yet for this site.
+                  </p>
+                )}
               </div>
 
               <div style={{ marginBottom: smallLaptopModal ? 10 : 12, fontSize: smallLaptopModal ? 12 : 13, fontWeight: 600, color: "#1a2a3a", fontFamily: POPPINS, marginTop: smallLaptopModal ? 16 : 24 }}>Report Period</div>
@@ -1411,35 +1877,73 @@ export const ReportsPage: React.FC = () => {
                       className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                       value={hourlyReportDate}
                       onChange={(e) => setHourlyReportDate(e.target.value)}
+                      min={siteWindowBounds?.minDate}
+                      max={siteWindowBounds?.maxDate}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>Start Time</label>
-                    <input
-                      type="time"
-                      style={{
-                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
-                      }}
-                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
-                      value={hourlyStartTime}
-                      onChange={(e) => setHourlyStartTime(e.target.value)}
-                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Select value={hourlyStartParts.hour} onValueChange={(value) => updateHourlyStartPart('hour', value)} disabled={creating}>
+                        <SelectTrigger style={{ height: smallLaptopModal ? 44 : 50, borderRadius: 100, fontFamily: POPPINS }}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>{HOUR_12_OPTIONS.map((hour) => <SelectItem key={`start-hour-${hour}`} value={hour}>{hour}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={hourlyStartParts.minute} onValueChange={(value) => updateHourlyStartPart('minute', value)} disabled={creating}>
+                        <SelectTrigger style={{ height: smallLaptopModal ? 44 : 50, borderRadius: 100, fontFamily: POPPINS }}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>{MINUTE_OPTIONS.map((minute) => <SelectItem key={`start-minute-${minute}`} value={minute}>{minute}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={hourlyStartParts.meridiem} onValueChange={(value) => updateHourlyStartPart('meridiem', value)} disabled={creating}>
+                        <SelectTrigger style={{ height: smallLaptopModal ? 44 : 50, borderRadius: 100, fontFamily: POPPINS }}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p style={{ fontSize: 11, color: "#7b8a9a", fontFamily: POPPINS }}>Choose the starting time using hour, minute, and AM/PM.</p>
+                    {selectedSiteKey && siteWindowBounds && (
+                      <p style={{ fontSize: 11, color: "#357D86", fontFamily: POPPINS }}>
+                        Earliest allowed start for this date: {formatTimeGuideValue(hourlyTimeBounds.minTime)}.
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", fontFamily: POPPINS }}>End Time</label>
-                    <input
-                      type="time"
-                      style={{
-                        height: smallLaptopModal ? 44 : 50, borderRadius: 100, border: "1px solid #e2e5ea", background: "#fff",
-                        padding: smallLaptopModal ? "0 12px" : "0 14px", fontSize: smallLaptopModal ? 13 : 14, fontFamily: POPPINS, outline: "none",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
-                      }}
-                      className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
-                      value={hourlyEndTime}
-                      onChange={(e) => setHourlyEndTime(e.target.value)}
-                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Select value={hourlyEndParts.hour} onValueChange={(value) => updateHourlyEndPart('hour', value)} disabled={creating}>
+                        <SelectTrigger style={{ height: smallLaptopModal ? 44 : 50, borderRadius: 100, fontFamily: POPPINS }}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>{HOUR_12_OPTIONS.map((hour) => <SelectItem key={`end-hour-${hour}`} value={hour}>{hour}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={hourlyEndParts.minute} onValueChange={(value) => updateHourlyEndPart('minute', value)} disabled={creating}>
+                        <SelectTrigger style={{ height: smallLaptopModal ? 44 : 50, borderRadius: 100, fontFamily: POPPINS }}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>{MINUTE_OPTIONS.map((minute) => <SelectItem key={`end-minute-${minute}`} value={minute}>{minute}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={hourlyEndParts.meridiem} onValueChange={(value) => updateHourlyEndPart('meridiem', value)} disabled={creating}>
+                        <SelectTrigger style={{ height: smallLaptopModal ? 44 : 50, borderRadius: 100, fontFamily: POPPINS }}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p style={{ fontSize: 11, color: "#7b8a9a", fontFamily: POPPINS }}>Choose the ending time using hour, minute, and AM/PM.</p>
+                    {selectedSiteKey && siteWindowBounds && (
+                      <p style={{ fontSize: 11, color: "#357D86", fontFamily: POPPINS }}>
+                        Latest allowed end for this date: {formatTimeGuideValue(hourlyTimeBounds.maxTime)}.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -1457,6 +1961,8 @@ export const ReportsPage: React.FC = () => {
                     className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                     value={dailyReportDate}
                     onChange={(e) => setDailyReportDate(e.target.value)}
+                    min={siteWindowBounds?.minDate}
+                    max={siteWindowBounds?.maxDate}
                   />
                 </div>
               )}
@@ -1475,6 +1981,7 @@ export const ReportsPage: React.FC = () => {
                       className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                       value={weeklyStartDate}
                       onChange={(e) => setWeeklyStartDate(e.target.value)}
+                      min={siteWindowBounds?.minDate}
                       max={weeklyEndDate}
                     />
                   </div>
@@ -1490,6 +1997,7 @@ export const ReportsPage: React.FC = () => {
                       className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-medium"
                       value={weeklyEndDate}
                       onChange={(e) => setWeeklyEndDate(e.target.value)}
+                      max={siteWindowBounds?.maxDate}
                       min={weeklyStartDate}
                     />
                   </div>
@@ -1509,6 +2017,8 @@ export const ReportsPage: React.FC = () => {
                     className="focus:border-[#357D86] focus:ring-1 focus:ring-[#357D86]/20 transition-all font-semibold"
                     value={monthlyPeriod}
                     onChange={(e) => setMonthlyPeriod(e.target.value)}
+                    min={siteWindowBounds?.minMonth}
+                    max={siteWindowBounds?.maxMonth}
                   />
                 </div>
               )}
@@ -1527,7 +2037,7 @@ export const ReportsPage: React.FC = () => {
                       value={quarterlyYear}
                       onChange={(e) => setQuarterlyYear(e.target.value)}
                     >
-                      {yearOptions.map((year) => (
+                      {availableYearOptions.map((year) => (
                         <option key={year} value={year}>
                           {year}
                         </option>
@@ -1546,10 +2056,11 @@ export const ReportsPage: React.FC = () => {
                       value={quarterlyQuarter}
                       onChange={(e) => setQuarterlyQuarter(e.target.value)}
                     >
-                      <option value="1">Q1 (Jan-Mar)</option>
-                      <option value="2">Q2 (Apr-Jun)</option>
-                      <option value="3">Q3 (Jul-Sep)</option>
-                      <option value="4">Q4 (Oct-Dec)</option>
+                      {availableQuarterOptions.map((quarter) => (
+                        <option key={quarter.value} value={quarter.value}>
+                          {quarter.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -1575,7 +2086,7 @@ export const ReportsPage: React.FC = () => {
                     boxShadow: "0 4px 14px rgba(53, 125, 134, 0.25)"
                   }}
                   className="hover:opacity-95 transition-all active:scale-95 flex items-center justify-center gap-2"
-                  disabled={creating || !selectedSiteKey}
+                  disabled={creating || !selectedSiteKey || (selectedSiteKey !== '' && !siteWindowBounds && !selectedSiteOption?.first_seen)}
                 >
                   {creating ? (
                     <>

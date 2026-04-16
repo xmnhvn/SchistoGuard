@@ -411,67 +411,77 @@ function getStatistics(startDate, endDate, siteKey = null) {
   return new Promise((resolve, reject) => {
     const hasSiteFilter = typeof siteKey === "string" && siteKey.trim().length > 0;
     const timestampExpr = `NULLIF("timestamp", '')::timestamptz`;
-    const readingsQuery = hasSiteFilter
-      ? `SELECT 
-        CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END as totalSites,
-        COUNT(*) as totalReadings,
-        AVG(CASE WHEN turbidity > -50 THEN turbidity END) as avgTurbidity,
-        AVG(CASE WHEN temperature > -50 THEN temperature END) as avgTemperature,
-        AVG(CASE WHEN ph > -10 THEN ph END) as avgPh
-      FROM readings 
-      WHERE site_key = ? AND ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`
-      : `SELECT 
-        CASE
-          WHEN COUNT(*) > 0 THEN COUNT(DISTINCT COALESCE(NULLIF(site_key, ''), 'unknown-site'))
-          ELSE 0
-        END as totalSites,
-        COUNT(*) as totalReadings,
-        AVG(CASE WHEN turbidity > -50 THEN turbidity END) as avgTurbidity,
-        AVG(CASE WHEN temperature > -50 THEN temperature END) as avgTemperature,
-        AVG(CASE WHEN ph > -10 THEN ph END) as avgPh
-      FROM readings 
-      WHERE ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`;
+    const buildStatsQuery = (tableName) => (
+      hasSiteFilter
+        ? `SELECT 
+          CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END as totalSites,
+          COUNT(*) as totalReadings,
+          AVG(CASE WHEN turbidity > -50 THEN turbidity END) as avgTurbidity,
+          AVG(CASE WHEN temperature > -50 THEN temperature END) as avgTemperature,
+          AVG(CASE WHEN ph > -10 THEN ph END) as avgPh
+        FROM ${tableName}
+        WHERE site_key = ? AND ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`
+        : `SELECT 
+          CASE
+            WHEN COUNT(*) > 0 THEN COUNT(DISTINCT COALESCE(NULLIF(site_key, ''), 'unknown-site'))
+            ELSE 0
+          END as totalSites,
+          COUNT(*) as totalReadings,
+          AVG(CASE WHEN turbidity > -50 THEN turbidity END) as avgTurbidity,
+          AVG(CASE WHEN temperature > -50 THEN temperature END) as avgTemperature,
+          AVG(CASE WHEN ph > -10 THEN ph END) as avgPh
+        FROM ${tableName}
+        WHERE ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`
+    );
     const readingsParams = hasSiteFilter ? [siteKey, startDate, endDate] : [startDate, endDate];
 
-    // Get readings statistics
-    db.get(
-      readingsQuery,
-      readingsParams,
-      (err, readingsRow) => {
-        if (err) {
-          return reject(err);
+    const alertsQuery = hasSiteFilter
+      ? `SELECT COUNT(*) as alertsGenerated
+      FROM alerts 
+      WHERE site_key = ? AND ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`
+      : `SELECT COUNT(*) as alertsGenerated
+      FROM alerts 
+      WHERE ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`;
+    const alertsParams = hasSiteFilter ? [siteKey, startDate, endDate] : [startDate, endDate];
+
+    const resolveWithAlerts = (readingsRow) => {
+      db.get(
+        alertsQuery,
+        alertsParams,
+        (err, alertsRow) => {
+          if (err) {
+            return reject(err);
+          }
+
+          resolve({
+            totalSites: Number(readingsRow?.totalSites || 0),
+            totalReadings: Number(readingsRow?.totalReadings || 0),
+            avgTurbidity: parseFloat(readingsRow?.avgTurbidity || 0).toFixed(2),
+            avgTemperature: parseFloat(readingsRow?.avgTemperature || 0).toFixed(2),
+            avgPh: parseFloat(readingsRow?.avgPh || 0).toFixed(2),
+            alertsGenerated: alertsRow?.alertsGenerated || 0
+          });
+        }
+      );
+    };
+
+    db.get(buildStatsQuery("readings"), readingsParams, (err, readingsRow) => {
+      if (err) {
+        return reject(err);
+      }
+
+      if (Number(readingsRow?.totalReadings || 0) > 0) {
+        return resolveWithAlerts(readingsRow);
+      }
+
+      db.get(buildStatsQuery("raw_readings"), readingsParams, (rawErr, rawReadingsRow) => {
+        if (rawErr) {
+          return reject(rawErr);
         }
 
-        const alertsQuery = hasSiteFilter
-          ? `SELECT COUNT(*) as alertsGenerated
-          FROM alerts 
-          WHERE site_key = ? AND ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`
-          : `SELECT COUNT(*) as alertsGenerated
-          FROM alerts 
-          WHERE ${timestampExpr} BETWEEN ?::timestamptz AND ?::timestamptz`;
-        const alertsParams = hasSiteFilter ? [siteKey, startDate, endDate] : [startDate, endDate];
-        
-        // Get alerts count
-        db.get(
-          alertsQuery,
-          alertsParams,
-          (err, alertsRow) => {
-            if (err) {
-              return reject(err);
-            }
-            
-            resolve({
-              totalSites: Number(readingsRow?.totalSites || 0),
-              totalReadings: Number(readingsRow?.totalReadings || 0),
-              avgTurbidity: parseFloat(readingsRow?.avgTurbidity || 0).toFixed(2),
-              avgTemperature: parseFloat(readingsRow?.avgTemperature || 0).toFixed(2),
-              avgPh: parseFloat(readingsRow?.avgPh || 0).toFixed(2),
-              alertsGenerated: alertsRow?.alertsGenerated || 0
-            });
-          }
-        );
-      }
-    );
+        return resolveWithAlerts(rawReadingsRow);
+      });
+    });
   });
 }
 

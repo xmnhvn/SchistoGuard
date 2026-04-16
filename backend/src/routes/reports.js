@@ -39,6 +39,60 @@ router.get("/", (req, res) => {
   );
 });
 
+router.get("/site-window/:siteKey", (req, res) => {
+  const siteKey = (req.params.siteKey || "").toString().trim();
+
+  if (!siteKey) {
+    return res.status(400).json({ success: false, message: "siteKey is required" });
+  }
+
+  db.get(
+    `SELECT
+       MIN(timestamp) as "firstReading",
+       MAX(timestamp) as "lastReading"
+     FROM readings
+     WHERE site_key = ?`,
+    [siteKey],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: err.message });
+      }
+
+      if (row?.firstReading || row?.lastReading) {
+        return res.json({
+          success: true,
+          siteKey,
+          firstReading: row?.firstReading || null,
+          lastReading: row?.lastReading || null,
+          source: "readings",
+        });
+      }
+
+      db.get(
+        `SELECT
+           MIN(timestamp) as "firstReading",
+           MAX(timestamp) as "lastReading"
+         FROM raw_readings
+         WHERE site_key = ?`,
+        [siteKey],
+        (rawErr, rawRow) => {
+          if (rawErr) {
+            return res.status(500).json({ success: false, message: rawErr.message });
+          }
+
+          res.json({
+            success: true,
+            siteKey,
+            firstReading: rawRow?.firstReading || null,
+            lastReading: rawRow?.lastReading || null,
+            source: rawRow?.firstReading || rawRow?.lastReading ? "raw_readings" : null,
+          });
+        }
+      );
+    }
+  );
+});
+
 // Get single report by ID
 router.get("/:id", (req, res) => {
   const { id } = req.params;
