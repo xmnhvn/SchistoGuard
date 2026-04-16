@@ -13,6 +13,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { useResponsiveScale } from "../utils/useResponsiveScale";
 
 let _adminSettingsFirstLoadDone = false;
@@ -204,6 +214,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [savingSiteKey, setSavingSiteKey] = useState<string | null>(null);
   const [startingSiteKey, setStartingSiteKey] = useState<string | null>(null);
   const [stoppingSiteKey, setStoppingSiteKey] = useState<string | null>(null);
+  const [deletingSiteKey, setDeletingSiteKey] = useState<string | null>(null);
+  const [sitePendingDelete, setSitePendingDelete] = useState<RegisteredSite | null>(null);
   const [newSiteForm, setNewSiteForm] = useState({
     siteName: "",
     location: "",
@@ -426,6 +438,39 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       }
     } finally {
       setAddingSite(false);
+    }
+  };
+
+  const handleDeleteSite = async (site: RegisteredSite) => {
+    try {
+      setDeletingSiteKey(site.site_key);
+      setError("");
+      setSuccess("");
+
+      const result = await apiCall(`/api/sensors/sites/${encodeURIComponent(site.site_key)}`, {
+        method: "DELETE",
+      });
+
+      if (typeof window !== "undefined") {
+        const manualActiveSiteKey = localStorage.getItem("sg_manual_active_site_key");
+        if (manualActiveSiteKey === site.site_key) {
+          localStorage.removeItem("sg_manual_active_site_key");
+        }
+      }
+
+      setSiteNameDrafts((prev) => {
+        const next = { ...prev };
+        delete next[site.site_key];
+        return next;
+      });
+
+      setSuccess(result?.message || "Site deleted successfully");
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete site");
+    } finally {
+      setDeletingSiteKey(null);
+      setSitePendingDelete(null);
     }
   };
 
@@ -1130,6 +1175,95 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           </DialogContent>
         </Dialog>
 
+        <AlertDialog
+          open={!!sitePendingDelete}
+          onOpenChange={(open) => {
+            if (!open && !deletingSiteKey) {
+              setSitePendingDelete(null);
+            }
+          }}
+        >
+          <AlertDialogContent style={{ fontFamily: POPPINS, borderRadius: 24, maxWidth: 560, padding: 28 }}>
+            <AlertDialogHeader className="text-left">
+              <AlertDialogTitle style={{ fontSize: 24, fontWeight: 700, color: "#991b1b" }}>
+                Delete Site?
+              </AlertDialogTitle>
+              <AlertDialogDescription
+                style={{
+                  marginTop: 8,
+                  fontSize: 15,
+                  lineHeight: 1.7,
+                  color: "#475569",
+                }}
+              >
+                {sitePendingDelete ? (
+                  <>
+                    This will permanently delete{" "}
+                    <span style={{ fontWeight: 700, color: "#1e293b" }}>
+                      {sitePendingDelete.site_name || sitePendingDelete.address || sitePendingDelete.site_key}
+                    </span>
+                    {" "}and all readings, raw readings, alerts, and reports linked to this exact site only.
+                    Other sites will not be affected.
+                  </>
+                ) : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div
+              style={{
+                marginTop: 8,
+                padding: "14px 16px",
+                borderRadius: 16,
+                background: "rgba(239,68,68,0.06)",
+                border: "1px solid rgba(239,68,68,0.14)",
+                color: "#b91c1c",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              This action cannot be undone.
+            </div>
+
+            <AlertDialogFooter className="mt-2 !flex-row !justify-end !gap-3">
+              <AlertDialogCancel
+                disabled={!!deletingSiteKey}
+                style={{
+                  borderRadius: 999,
+                  minWidth: 110,
+                  height: 44,
+                  fontFamily: POPPINS,
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <button
+                  type="button"
+                  onClick={() => sitePendingDelete && handleDeleteSite(sitePendingDelete)}
+                  disabled={!!deletingSiteKey}
+                  style={{
+                    background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                    color: "#fff",
+                    borderRadius: 999,
+                    minWidth: 140,
+                    height: 44,
+                    border: "none",
+                    fontFamily: POPPINS,
+                    fontWeight: 700,
+                    padding: "0 18px",
+                    cursor: deletingSiteKey ? "not-allowed" : "pointer",
+                    opacity: deletingSiteKey ? 0.72 : 1,
+                    boxShadow: "0 12px 24px rgba(239,68,68,0.22)",
+                  }}
+                >
+                  {deletingSiteKey ? "Deleting..." : "Delete Site"}
+                </button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <div className="glass-card premium-shadow w-full" style={{
           borderRadius: 28,
           padding: 32,
@@ -1229,6 +1363,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 const isActiveSite = site.is_active === 1 || site.is_active === true;
                 const isStarting = startingSiteKey === site.site_key;
                 const isStopping = stoppingSiteKey === site.site_key;
+                const isDeleting = deletingSiteKey === site.site_key;
                 return (
                   <div
                     key={site.site_key}
@@ -1295,6 +1430,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       gap: 10,
                       justifyContent: isMobile ? "flex-start" : "flex-end",
                       alignItems: isMobile ? "stretch" : "center",
+                      position: "relative",
                     }}>
                       <div style={{
                         display: "flex",
@@ -1371,7 +1507,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       <Button
                         type="button"
                         onClick={() => handleSaveSiteName(site.site_key)}
-                        disabled={savingSiteKey === site.site_key}
+                        disabled={savingSiteKey === site.site_key || isDeleting}
                         style={{
                           background: "#357D86",
                           color: "#fff",
@@ -1386,6 +1522,63 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       >
                         {savingSiteKey === site.site_key ? "Saving..." : "Save"}
                       </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={isDeleting || isStarting || isStopping}
+                            style={{
+                              background: "#fff",
+                              color: "#475569",
+                              borderRadius: 999,
+                              width: 42,
+                              height: 42,
+                              padding: 0,
+                              border: "1px solid rgba(148,163,184,0.28)",
+                              fontFamily: POPPINS,
+                              boxShadow: "0 8px 18px rgba(15,23,42,0.06)",
+                              opacity: isDeleting ? 0.72 : 1,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: isDeleting || isStarting || isStopping ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          style={{
+                            minWidth: 170,
+                            background: "#fff",
+                            border: "1px solid rgba(239,68,68,0.12)",
+                            borderRadius: 14,
+                            padding: 6,
+                            boxShadow: "0 20px 45px rgba(15,23,42,0.14)",
+                            fontFamily: POPPINS,
+                          }}
+                        >
+                          <DropdownMenuItem
+                            onClick={() => setSitePendingDelete(site)}
+                            disabled={isDeleting}
+                            style={{
+                              color: "#dc2626",
+                              fontWeight: 700,
+                              borderRadius: 10,
+                              padding: "10px 12px",
+                              fontSize: 13,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              cursor: isDeleting ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            {isDeleting ? "Deleting..." : "Delete Site"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 );

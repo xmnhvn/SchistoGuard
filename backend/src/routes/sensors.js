@@ -1956,6 +1956,94 @@ router.put('/sites/:siteKey', (req, res) => {
   );
 });
 
+router.delete('/sites/:siteKey', async (req, res) => {
+  const siteKey = (req.params.siteKey || '').toString().trim();
+
+  if (!siteKey) {
+    return res.status(400).json({ error: 'siteKey is required' });
+  }
+
+  const client = db;
+
+  try {
+    const siteResult = await client.query(
+      `SELECT site_key, site_name, address
+       FROM site_registry
+       WHERE site_key = $1
+       LIMIT 1`,
+      [siteKey]
+    );
+
+    const site = siteResult.rows[0];
+    if (!site) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+
+    await client.query('BEGIN');
+
+    const rawReadingsResult = await client.query(
+      `DELETE FROM raw_readings
+       WHERE site_key = $1`,
+      [siteKey]
+    );
+
+    const readingsResult = await client.query(
+      `DELETE FROM readings
+       WHERE site_key = $1`,
+      [siteKey]
+    );
+
+    const alertsResult = await client.query(
+      `DELETE FROM alerts
+       WHERE site_key = $1`,
+      [siteKey]
+    );
+
+    const reportsResult = await client.query(
+      `DELETE FROM reports
+       WHERE "siteKey" = $1`,
+      [siteKey]
+    );
+
+    await client.query(
+      `DELETE FROM site_registry
+       WHERE site_key = $1`,
+      [siteKey]
+    );
+
+    await client.query(
+      `UPDATE settings
+       SET value = ''
+       WHERE key = 'active_site_key' AND value = $1`,
+      [siteKey]
+    );
+
+    await client.query('COMMIT');
+
+    if (deviceSiteCache.has(siteKey)) {
+      deviceSiteCache.delete(siteKey);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Site and related records deleted successfully',
+      deleted: {
+        siteKey,
+        siteName: site.site_name || site.address || site.site_key,
+        rawReadings: rawReadingsResult.rowCount || 0,
+        readings: readingsResult.rowCount || 0,
+        alerts: alertsResult.rowCount || 0,
+        reports: reportsResult.rowCount || 0,
+      },
+    });
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {}
+    return res.status(500).json({ error: err.message || 'Failed to delete site' });
+  }
+});
+
 // CSV upload endpoint for residents
 router.post("/upload-csv", (req, res) => {
   const { siteName, csv } = req.body;

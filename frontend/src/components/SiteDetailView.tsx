@@ -101,7 +101,9 @@ export function SiteDetailView({
   };
 
   const buildSiteQuery = () => {
-    return selectedSite !== 'all' ? `?siteKey=${encodeURIComponent(selectedSite)}` : '';
+    return selectedSite === 'all'
+      ? '?siteKey=all'
+      : `?siteKey=${encodeURIComponent(selectedSite)}`;
   };
 
   const isAllSitesSelected = selectedSite === 'all';

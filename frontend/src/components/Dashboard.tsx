@@ -447,6 +447,9 @@ export function Dashboard({
   const selectedSiteLabel = isAllSitesSelected
     ? "All Sites"
     : (selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site"));
+  const dashboardHeaderSiteName = isAllSitesSelected
+    ? "All Sites"
+    : (selectedSite?.siteName || siteData.siteName || selectedSiteLabel);
 
   const mapSites = (() => {
     const fromRegistry = availableSites
@@ -1951,7 +1954,7 @@ export function Dashboard({
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)"
             }}>
-              {isAllSitesSelected ? "All Sites" : siteData.siteName}
+              {dashboardHeaderSiteName}
             </h1>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
@@ -2424,7 +2427,7 @@ export function Dashboard({
             lineHeight: 1.15,
             fontFamily: "'Poppins', sans-serif",
           }}>
-            {isAllSitesSelected ? "All Sites" : siteData.siteName}
+            {dashboardHeaderSiteName}
           </h1>
           <p style={{
             color: "rgba(255,255,255,0.9)",
