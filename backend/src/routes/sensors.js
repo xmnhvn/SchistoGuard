@@ -20,7 +20,7 @@ const SMS_SUMMARY_CONNECTED_WINDOW_MS = 10000;
 const SMS_SUMMARY_TIMEZONE = process.env.SMS_SUMMARY_TIMEZONE || 'Asia/Manila';
 const SMS_TRANSPORT_MODE = (process.env.SMS_TRANSPORT_MODE || 'esp32-http').toLowerCase();
 const SMS_RELAY_TOKEN = process.env.SMS_RELAY_TOKEN || '';
-const SAME_SITE_RADIUS_METERS = 10;
+const SAME_SITE_RADIUS_METERS = 5;
 const deviceSiteCache = new Map();
 
 function hasRelayAuth(req) {
