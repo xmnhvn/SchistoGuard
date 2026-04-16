@@ -369,6 +369,11 @@ export function Dashboard({
     "Device Address";
 
   const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+  const hasPresentLiveLocation =
+    !!liveReading?.deviceConnected &&
+    typeof liveReading?.latitude === "number" &&
+    typeof liveReading?.longitude === "number";
+  const effectiveActiveSiteKey = hasPresentLiveLocation ? activeSiteKey : null;
 
   const mapSites = (() => {
     const fromRegistry = availableSites
@@ -383,7 +388,7 @@ export function Dashboard({
           name: site.siteName,
           lat: coords.lat,
           lng: coords.lng,
-          isActive: site.siteKey === activeSiteKey && !!liveReading?.deviceConnected && isFreshSite,
+          isActive: site.siteKey === effectiveActiveSiteKey && isFreshSite,
           isSelected: site.siteKey === selectedSiteKey,
         });
         return acc;
@@ -457,7 +462,7 @@ export function Dashboard({
     return Date.now() - ts <= SITE_STALE_MS;
   };
 
-  const selectedSiteOnline = !!selectedSiteKey && !!liveReading?.deviceConnected && !!activeSiteKey && activeSiteKey === selectedSiteKey;
+  const selectedSiteOnline = !!selectedSiteKey && !!effectiveActiveSiteKey && effectiveActiveSiteKey === selectedSiteKey;
 
   useEffect(() => {
     const check = () => {
@@ -545,7 +550,7 @@ export function Dashboard({
 
         setSelectedSiteKey((prev) => {
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
-          if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
+          if (effectiveActiveSiteKey && mapped.some((site) => site.siteKey === effectiveActiveSiteKey)) return effectiveActiveSiteKey;
           return mapped[0]?.siteKey || '';
         });
       } catch {
@@ -556,14 +561,14 @@ export function Dashboard({
     fetchSites();
     const interval = setInterval(fetchSites, 15000);
     return () => clearInterval(interval);
-  }, [activeSiteKey]);
+  }, [effectiveActiveSiteKey]);
 
   // Only initialize selectedSiteKey to activeSiteKey on first load with no selection
   useEffect(() => {
-    if (!selectedSiteKey && activeSiteKey) {
-      setSelectedSiteKey(activeSiteKey);
+    if (!selectedSiteKey && effectiveActiveSiteKey) {
+      setSelectedSiteKey(effectiveActiveSiteKey);
     }
-  }, []);
+  }, [selectedSiteKey, effectiveActiveSiteKey]);
 
   useEffect(() => {
     const fetchLatest = () => {
@@ -602,9 +607,9 @@ export function Dashboard({
             }
             setLatestReading(null);
             setLiveReading({ ...data, deviceConnected: false });
-            setActiveSiteKey(data.siteKey || null);
+            setActiveSiteKey(null);
             // Only initialize selectedSiteKey if nothing is selected yet (first load)
-            setSelectedSiteKey((prev) => prev || data.siteKey || '');
+            setSelectedSiteKey((prev) => prev || '');
             setDeviceConnected(false);
             setBackendOk(true);
             setDataOk(false);
@@ -612,7 +617,9 @@ export function Dashboard({
           }
           console.log('[Dashboard] Device connected, setting latestReading');
           setLiveReading({ ...data, deviceConnected: true });
-          setActiveSiteKey(data?.siteKey || null);
+          const hasPresentCoords = typeof data?.latitude === 'number' && typeof data?.longitude === 'number';
+          const resolvedActiveSiteKey = hasPresentCoords ? (data?.siteKey || null) : null;
+          setActiveSiteKey(resolvedActiveSiteKey);
           setBackendOk(true);
           // Only update siteName from telemetry if it's not the generic default, 
           // to prevent overwriting custom Admin settings.
@@ -625,8 +632,8 @@ export function Dashboard({
           }
 
           // Only initialize selectedSiteKey if nothing is selected yet (first load)
-          if (data?.siteKey) {
-            setSelectedSiteKey((prev) => prev || data.siteKey || '');
+          if (resolvedActiveSiteKey) {
+            setSelectedSiteKey((prev) => prev || resolvedActiveSiteKey || '');
           }
         })
         .catch(() => {
@@ -703,7 +710,11 @@ export function Dashboard({
 
             const latestFromHistory = data.length > 0 ? data[data.length - 1] : null;
             const currentLive = liveReadingRef.current;
-            const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && !!currentLive?.deviceConnected;
+            const hasCurrentLiveLocation =
+              !!currentLive?.deviceConnected &&
+              typeof currentLive?.latitude === 'number' &&
+              typeof currentLive?.longitude === 'number';
+            const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && hasCurrentLiveLocation;
             const effectiveLatest = selectedIsActiveSite ? (currentLive || latestFromHistory) : latestFromHistory;
 
             setLatestReading(effectiveLatest || null);
@@ -1116,7 +1127,7 @@ export function Dashboard({
           ) : (
             availableSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
-              const isActive = site.siteKey === activeSiteKey;
+              const isActive = site.siteKey === effectiveActiveSiteKey;
               const selectedButInactive = isSelected && !isActive;
               return (
                 <button
@@ -1254,7 +1265,7 @@ export function Dashboard({
           ) : (
             availableSites.map((site) => {
               const isSelected = site.siteKey === selectedSiteKey;
-              const isActive = site.siteKey === activeSiteKey;
+              const isActive = site.siteKey === effectiveActiveSiteKey;
               const selectedButInactive = isSelected && !isActive;
               return (
                 <button
