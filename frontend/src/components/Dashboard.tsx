@@ -404,10 +404,10 @@ export function Dashboard({
   const effectiveActiveSiteKey = activeSiteKey || manualActiveSiteKey;
   const isAllSitesSelected = selectedSiteKey === ALL_SITES_KEY;
   const dropdownSites: SiteOption[] = availableSites.length > 0
-    ? [{ siteKey: ALL_SITES_KEY, siteName: "All sites" }, ...availableSites]
+    ? [{ siteKey: ALL_SITES_KEY, siteName: "All Sites" }, ...availableSites]
     : [];
   const selectedSiteLabel = isAllSitesSelected
-    ? "All sites"
+    ? "All Sites"
     : (selectedSite?.siteName || (availableSites.length === 0 ? "No sites" : "Select site"));
 
   const mapSites = (() => {
@@ -783,7 +783,7 @@ export function Dashboard({
             if (selectedSiteKey === ALL_SITES_KEY) {
               setSiteData((prev: any) => ({
                 ...prev,
-                siteName: "All sites",
+                siteName: "All Sites",
               }));
             } else if (selectedSite?.siteName) {
               setSiteData((prev: any) => ({
@@ -1104,6 +1104,11 @@ export function Dashboard({
     if (risk === "warning") return "Watch Zone";
     return "Safe";
   };
+
+  const sensorDataVisible = deviceConnected && !!latestReading;
+  const displayedReadingsCount = readings.length;
+  const riskDataAvailable = deviceConnected;
+
   const overallRiskLabel = getOverallRiskLabel(stableOverallRisk);
   const isLongRiskLabel = overallRiskLabel.length > 16;
   const mobileRiskPillFontSize = vw <= 360 ? (isLongRiskLabel ? 9.5 : 10.5) : vw <= 430 ? (isLongRiskLabel ? 10.5 : 11.5) : 12;
@@ -1113,7 +1118,7 @@ export function Dashboard({
     ? (availableSites.length > 0 && backendOk && dataOk)
     : (!!selectedSiteKey && backendOk && dataOk && selectedSiteOnline);
   const dashboardStatusLabel = isAllSitesSelected
-    ? `All sites overview${availableSites.length > 0 ? ` (${availableSites.length})` : ""}`
+    ? `All Sites Overview${availableSites.length > 0 ? ` (${availableSites.length})` : ""}`
     : (dashboardOperational ? "System Operational" : "Device Not Connected");
   const desktopMapLngOffset = isAllSitesSelected ? -0.035 : -0.0075;
   const longestSiteLabel = dropdownSites.reduce((longest, site) => (
@@ -1702,11 +1707,11 @@ export function Dashboard({
             <SensorMiniCard
               label="Temperature"
               iconSrc="/icons/icon-temperature.svg"
-              value={!deviceConnected ? "-" : latestReading ? `${latestReading.temperature}` : "—"}
+              value={!sensorDataVisible ? "-" : `${latestReading.temperature}`}
               unit="°C"
-              sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-              dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-              active={deviceConnected && !!latestReading}
+              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", latestReading.temperature).label}
+              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color}
+              active={sensorDataVisible}
               compact={compactCards}
               fadeIn={animationEnabled}
             />
@@ -1714,11 +1719,11 @@ export function Dashboard({
             <SensorMiniCard
               label="Turbidity"
               iconSrc="/icons/icon-turbidity.svg"
-              value={!deviceConnected ? "-" : latestReading ? `${latestReading.turbidity}` : "—"}
+              value={!sensorDataVisible ? "-" : `${latestReading.turbidity}`}
               unit="NTU"
-              sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-              dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-              active={deviceConnected && !!latestReading}
+              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", latestReading.turbidity).label}
+              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color}
+              active={sensorDataVisible}
               compact={compactCards}
               fadeIn={animationEnabled}
             />
@@ -1726,11 +1731,11 @@ export function Dashboard({
             <SensorMiniCard
               label="pH Level"
               iconSrc="/icons/icon-ph.svg"
-              value={!deviceConnected ? "-" : latestReading ? `${latestReading.ph}` : "—"}
+              value={!sensorDataVisible ? "-" : `${latestReading.ph}`}
               unit=""
-              sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-              dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-              active={deviceConnected && !!latestReading}
+              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", latestReading.ph).label}
+              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color}
+              active={sensorDataVisible}
               compact={compactCards}
               fadeIn={animationEnabled}
             />
@@ -1786,7 +1791,7 @@ export function Dashboard({
               fontFamily: POPPINS, lineHeight: 1.2,
               textShadow: "0 1px 6px rgba(0,0,0,0.18)"
             }}>
-              {isAllSitesSelected ? "All sites" : siteData.siteName}
+              {isAllSitesSelected ? "All Sites" : siteData.siteName}
             </h1>
             {/* Address (sync with LandingPage logic) */}
             <p style={{
@@ -1864,11 +1869,11 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Temperature"
                   iconSrc="/icons/icon-temperature.svg"
-                  value={!deviceConnected ? "-" : latestReading ? `${latestReading.temperature}` : "—"}
+                  value={!sensorDataVisible ? "-" : `${latestReading.temperature}`}
                   unit="°C"
-                  sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-                  dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-                  active={deviceConnected && !!latestReading}
+                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", latestReading.temperature).label}
+                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color}
+                  active={sensorDataVisible}
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
@@ -1883,10 +1888,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: !deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af",
+                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color,
                     display: "inline-block",
-                    animation: deviceConnected && latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": !deviceConnected ? "transparent" : latestReading ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
+                    animation: sensorDataVisible ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-temperature.svg" alt="temp"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -1894,15 +1899,15 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!deviceConnected ? "-" : latestReading ? latestReading.temperature : "—"}
+                        {!sensorDataVisible ? "-" : latestReading.temperature}
                       </span>
-                      {deviceConnected && latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
+                      {sensorDataVisible && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
                     </p>
-                    {!deviceConnected ? (
+                    {!sensorDataVisible ? (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         Device not connected
                       </p>
-                    ) : latestReading && (
+                    ) : (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         {getSensorStatus("temperature", latestReading.temperature).label}
                       </p>
@@ -1916,11 +1921,11 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Turbidity"
                   iconSrc="/icons/icon-turbidity.svg"
-                  value={!deviceConnected ? "-" : latestReading ? `${latestReading.turbidity}` : "—"}
+                  value={!sensorDataVisible ? "-" : `${latestReading.turbidity}`}
                   unit="NTU"
-                  sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-                  dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-                  active={deviceConnected && !!latestReading}
+                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", latestReading.turbidity).label}
+                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color}
+                  active={sensorDataVisible}
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
@@ -1935,10 +1940,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: !deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af",
+                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color,
                     display: "inline-block",
-                    animation: deviceConnected && latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": !deviceConnected ? "transparent" : latestReading ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
+                    animation: sensorDataVisible ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-turbidity.svg" alt="turbidity"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -1946,15 +1951,15 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!deviceConnected ? "-" : latestReading ? latestReading.turbidity : "—"}
+                        {!sensorDataVisible ? "-" : latestReading.turbidity}
                       </span>
-                      {deviceConnected && latestReading && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
+                      {sensorDataVisible && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
                     </p>
-                    {!deviceConnected ? (
+                    {!sensorDataVisible ? (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         Device not connected
                       </p>
-                    ) : latestReading && (
+                    ) : (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         {getSensorStatus("turbidity", latestReading.turbidity).label}
                       </p>
@@ -1968,11 +1973,11 @@ export function Dashboard({
                 <SensorMiniCard
                   label="pH Level"
                   iconSrc="/icons/icon-ph.svg"
-                  value={!deviceConnected ? "-" : latestReading ? `${latestReading.ph}` : "—"}
+                  value={!sensorDataVisible ? "-" : `${latestReading.ph}`}
                   unit=""
-                  sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-                  dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-                  active={deviceConnected && !!latestReading}
+                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", latestReading.ph).label}
+                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color}
+                  active={sensorDataVisible}
                   compact
                   fixedHeight={140}
                   fadeIn={animationEnabled}
@@ -1987,10 +1992,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: !deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af",
+                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color,
                     display: "inline-block",
-                    animation: deviceConnected && latestReading ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": !deviceConnected ? "transparent" : latestReading ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
+                    animation: sensorDataVisible ? "dotPulse 3s ease-in-out infinite" : "none",
+                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-ph.svg" alt="ph"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -1998,14 +2003,14 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!deviceConnected ? "-" : latestReading ? latestReading.ph : "—"}
+                        {!sensorDataVisible ? "-" : latestReading.ph}
                       </span>
                     </p>
-                    {!deviceConnected ? (
+                    {!sensorDataVisible ? (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         Device not connected
                       </p>
-                    ) : latestReading && (
+                    ) : (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
                         {getSensorStatus("ph", latestReading.ph).label}
                       </p>
@@ -2032,7 +2037,7 @@ export function Dashboard({
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
                     <span style={{ fontSize: 26, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
-                      {readings.length}
+                      {displayedReadingsCount}
                     </span>
                     <img src="/icons/icon-readings.svg" alt="readings"
                       style={{ width: 34, height: 34, objectFit: "contain" }} />
@@ -2065,7 +2070,7 @@ export function Dashboard({
                       </p>
                     </div>
                     <p style={{ margin: 0, fontSize: 44, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
-                      {readings.length}
+                      {displayedReadingsCount}
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -2090,15 +2095,15 @@ export function Dashboard({
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
                       <img src="/icons/icon-risk.svg" alt="risk"
-                        style={{ width: 38, height: 38, objectFit: "contain", opacity: deviceConnected ? 1 : 0.4 }} />
+                        style={{ width: 38, height: 38, objectFit: "contain", opacity: riskDataAvailable ? 1 : 0.4 }} />
                     <span style={{
-                      background: deviceConnected ? "transparent" : "#f3f4f6", 
-                      color: deviceConnected ? riskColor : "#6b7280", 
+                      background: riskDataAvailable ? "transparent" : "#f3f4f6", 
+                      color: riskDataAvailable ? riskColor : "#6b7280", 
                       borderRadius: 999,
-                      border: deviceConnected ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
+                      border: riskDataAvailable ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
                       padding: "6px 20px",
                       fontWeight: 700, fontSize: tabletRiskPillFontSize,
-                      fontFamily: POPPINS, textTransform: deviceConnected ? "capitalize" as const : "none",
+                      fontFamily: POPPINS, textTransform: riskDataAvailable ? "capitalize" as const : "none",
                       textAlign: "center" as const,
                       whiteSpace: "normal" as const,
                       lineHeight: 1.15,
@@ -2107,7 +2112,7 @@ export function Dashboard({
                       justifyContent: "center",
                       maxWidth: "100%",
                     }}>
-                        {deviceConnected ? overallRiskLabel : "No Data"}
+                        {riskDataAvailable ? overallRiskLabel : "No Data"}
                       </span>
                     </div>
                     <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -2146,14 +2151,14 @@ export function Dashboard({
                   }}>Risk Level</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                     <img src="/icons/icon-risk.svg" alt="risk"
-                      style={{ width: 32, height: 32, objectFit: "contain", opacity: deviceConnected ? 1 : 0.4 }} />
+                      style={{ width: 32, height: 32, objectFit: "contain", opacity: riskDataAvailable ? 1 : 0.4 }} />
                     <span style={{
-                      background: deviceConnected ? "transparent" : "#f3f4f6", 
-                      color: deviceConnected ? riskColor : "#6b7280", 
+                      background: riskDataAvailable ? "transparent" : "#f3f4f6", 
+                      color: riskDataAvailable ? riskColor : "#6b7280", 
                       borderRadius: 999,
-                      border: deviceConnected ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
+                      border: riskDataAvailable ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
                       padding: "5px 12px", fontWeight: 700, fontSize: mobileRiskPillFontSize,
-                      fontFamily: POPPINS, textTransform: deviceConnected ? "capitalize" as const : "none",
+                      fontFamily: POPPINS, textTransform: riskDataAvailable ? "capitalize" as const : "none",
                       textAlign: "center" as const,
                       whiteSpace: "normal" as const,
                       lineHeight: 1.15,
@@ -2162,7 +2167,7 @@ export function Dashboard({
                       justifyContent: "center",
                       maxWidth: "100%",
                     }}>
-                      {deviceConnected ? overallRiskLabel : "No Data"}
+                      {riskDataAvailable ? overallRiskLabel : "No Data"}
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontFamily: POPPINS }}>
@@ -2259,7 +2264,7 @@ export function Dashboard({
             lineHeight: 1.15,
             fontFamily: "'Poppins', sans-serif",
           }}>
-            {isAllSitesSelected ? "All sites" : siteData.siteName}
+            {isAllSitesSelected ? "All Sites" : siteData.siteName}
           </h1>
           <p style={{
             color: "rgba(255,255,255,0.9)",
@@ -2278,11 +2283,11 @@ export function Dashboard({
           <SensorMiniCard
             label="Temperature"
             iconSrc="/icons/icon-temperature.svg"
-            value={!deviceConnected ? "-" : latestReading ? `${latestReading.temperature}` : "—"}
+            value={!sensorDataVisible ? "-" : `${latestReading.temperature}`}
             unit="°C"
-            sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("temperature", latestReading.temperature).label : ""}
-            dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("temperature", latestReading.temperature).color : "#9ca3af"}
-            active={deviceConnected && !!latestReading}
+            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", latestReading.temperature).label}
+            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color}
+            active={sensorDataVisible}
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
@@ -2291,11 +2296,11 @@ export function Dashboard({
           <SensorMiniCard
             label="Turbidity"
             iconSrc="/icons/icon-turbidity.svg"
-            value={!deviceConnected ? "-" : latestReading ? `${latestReading.turbidity}` : "—"}
+            value={!sensorDataVisible ? "-" : `${latestReading.turbidity}`}
             unit="NTU"
-            sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).label : ""}
-            dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("turbidity", latestReading.turbidity).color : "#9ca3af"}
-            active={deviceConnected && !!latestReading}
+            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", latestReading.turbidity).label}
+            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color}
+            active={sensorDataVisible}
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
@@ -2304,11 +2309,11 @@ export function Dashboard({
           <SensorMiniCard
             label="pH Level"
             iconSrc="/icons/icon-ph.svg"
-            value={!deviceConnected ? "-" : latestReading ? `${latestReading.ph}` : "—"}
+            value={!sensorDataVisible ? "-" : `${latestReading.ph}`}
             unit=""
-            sub={!deviceConnected ? "Device not connected" : latestReading ? getSensorStatus("ph", latestReading.ph).label : ""}
-            dot={!deviceConnected ? "#9ca3af" : latestReading ? getSensorStatus("ph", latestReading.ph).color : "#9ca3af"}
-            active={deviceConnected && !!latestReading}
+            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", latestReading.ph).label}
+            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color}
+            active={sensorDataVisible}
             compact
             fixedHeight={cardH}
             fadeIn={animationEnabled}
@@ -2341,7 +2346,7 @@ export function Dashboard({
               </p>
             </div>
             <p style={{ margin: 0, fontSize: isNarrowDesktop ? 40 : 52, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
-              {readings.length}
+              {displayedReadingsCount}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 10, flexShrink: 0 }}>
@@ -2376,18 +2381,18 @@ export function Dashboard({
               Risk Level
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: isNarrowDesktop ? 12 : 18, marginBottom: isNarrowDesktop ? 8 : 14, flexWrap: "wrap" }}>
-              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain", opacity: deviceConnected ? 1 : 0.4 }} />
+              <img src="/icons/icon-risk.svg" alt="risk" style={{ width: isNarrowDesktop ? 32 : 44, height: isNarrowDesktop ? 32 : 44, objectFit: "contain", opacity: riskDataAvailable ? 1 : 0.4 }} />
               <span
                 style={{
-                  background: deviceConnected ? "transparent" : "#f3f4f6",
-                  color: deviceConnected ? riskColor : "#6b7280",
-                  border: deviceConnected ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
+                  background: riskDataAvailable ? "transparent" : "#f3f4f6",
+                  color: riskDataAvailable ? riskColor : "#6b7280",
+                  border: riskDataAvailable ? `1.5px solid ${riskColor}` : "1.5px solid #d1d5db",
                   borderRadius: 999,
                   padding: isNarrowDesktop ? "6px 14px" : "8px 20px",
                   fontWeight: 700,
                   fontSize: isNarrowDesktop ? 14 : 16,
                   fontFamily: "'Poppins', sans-serif",
-                  textTransform: deviceConnected ? "capitalize" : "none",
+                  textTransform: riskDataAvailable ? "capitalize" : "none",
                   textAlign: "center",
                   whiteSpace: "normal",
                   lineHeight: 1.15,
@@ -2399,7 +2404,7 @@ export function Dashboard({
                   overflowWrap: "break-word",
                 }}
               >
-                {deviceConnected ? overallRiskLabel : "No Data"}
+                {riskDataAvailable ? overallRiskLabel : "No Data"}
               </span>
             </div>
             <p style={{ margin: 0, fontSize: isNarrowDesktop ? 12 : 14, color: "#9ca3af", fontFamily: "'Poppins', sans-serif" }}>
