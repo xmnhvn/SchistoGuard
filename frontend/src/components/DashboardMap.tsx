@@ -201,12 +201,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               ? 'site-marker--active'
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
-            // Set pulsating html only if active
-            const pulseHtml = site.isActive ? `<div class="site-marker__pulse"></div>` : '';
-
             el.innerHTML = `
               <div class="site-marker ${markerStateClass}">
-                ${pulseHtml}
+                <div class="site-marker__pulse"></div>
                 <div class="site-marker__ring"></div>
                 <div class="site-marker__dot"></div>
               </div>`;

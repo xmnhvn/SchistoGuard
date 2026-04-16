@@ -1618,9 +1618,84 @@ router.get("/alerts", (req, res) => {
 
 router.get('/sites', (req, res) => {
   db.all(
-    `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen
-     FROM site_registry
-     ORDER BY last_seen DESC`,
+    `WITH reading_stats AS (
+       SELECT
+         site_key,
+         MIN("timestamp") AS first_seen,
+         MAX("timestamp") AS last_seen
+       FROM readings
+       WHERE site_key IS NOT NULL AND TRIM(site_key) <> ''
+       GROUP BY site_key
+     ),
+     reading_latest AS (
+       SELECT DISTINCT ON (site_key)
+         site_key,
+         NULLIF(TRIM(address), '') AS address,
+         latitude,
+         longitude,
+         "timestamp" AS last_seen
+       FROM readings
+       WHERE site_key IS NOT NULL AND TRIM(site_key) <> ''
+       ORDER BY site_key, "timestamp" DESC
+     ),
+     raw_stats AS (
+       SELECT
+         site_key,
+         MIN("timestamp") AS first_seen,
+         MAX("timestamp") AS last_seen
+       FROM raw_readings
+       WHERE site_key IS NOT NULL AND TRIM(site_key) <> ''
+       GROUP BY site_key
+     ),
+     raw_latest AS (
+       SELECT DISTINCT ON (site_key)
+         site_key,
+         NULLIF(TRIM(address), '') AS address,
+         latitude,
+         longitude,
+         "timestamp" AS last_seen
+       FROM raw_readings
+       WHERE site_key IS NOT NULL AND TRIM(site_key) <> ''
+       ORDER BY site_key, "timestamp" DESC
+     ),
+     all_site_keys AS (
+       SELECT site_key FROM site_registry
+       UNION
+       SELECT site_key FROM readings WHERE site_key IS NOT NULL AND TRIM(site_key) <> ''
+       UNION
+       SELECT site_key FROM raw_readings WHERE site_key IS NOT NULL AND TRIM(site_key) <> ''
+     )
+     SELECT
+       k.site_key,
+       COALESCE(
+         NULLIF(TRIM(sr.site_name), ''),
+         NULLIF(TRIM(sr.address), ''),
+         NULLIF(TRIM(rl.address), ''),
+         NULLIF(TRIM(rawl.address), ''),
+         k.site_key
+       ) AS site_name,
+       COALESCE(
+         NULLIF(TRIM(sr.address), ''),
+         NULLIF(TRIM(rl.address), ''),
+         NULLIF(TRIM(rawl.address), '')
+       ) AS address,
+       COALESCE(sr.latitude, rl.latitude, rawl.latitude) AS latitude,
+       COALESCE(sr.longitude, rl.longitude, rawl.longitude) AS longitude,
+       COALESCE(sr.first_seen, rs.first_seen, raws.first_seen) AS first_seen,
+       GREATEST(
+         COALESCE(sr.last_seen, '0001-01-01T00:00:00Z'),
+         COALESCE(rs.last_seen, '0001-01-01T00:00:00Z'),
+         COALESCE(raws.last_seen, '0001-01-01T00:00:00Z')
+       ) AS last_seen
+     FROM all_site_keys k
+     LEFT JOIN site_registry sr ON sr.site_key = k.site_key
+     LEFT JOIN reading_latest rl ON rl.site_key = k.site_key
+     LEFT JOIN reading_stats rs ON rs.site_key = k.site_key
+     LEFT JOIN raw_latest rawl ON rawl.site_key = k.site_key
+     LEFT JOIN raw_stats raws ON raws.site_key = k.site_key
+     WHERE COALESCE(sr.latitude, rl.latitude, rawl.latitude) IS NOT NULL
+       AND COALESCE(sr.longitude, rl.longitude, rawl.longitude) IS NOT NULL
+     ORDER BY last_seen DESC, site_name ASC`,
     [],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
