@@ -364,7 +364,7 @@ export function Dashboard({
   const displayAddress =
     selectedSiteKey === ALL_SITES_KEY
       ? (availableSites.length > 0
-        ? `Showing ${availableSites.length} recorded monitoring site${availableSites.length === 1 ? "" : "s"} from the database`
+        ? `Showing ${availableSites.length} recorded monitoring sites`
         : "No recorded sites with map coordinates yet")
       : (
         selectedSiteAddress ||
@@ -1072,7 +1072,20 @@ export function Dashboard({
   const dashboardStatusLabel = isAllSitesSelected
     ? `All sites overview${availableSites.length > 0 ? ` (${availableSites.length})` : ""}`
     : (dashboardOperational ? "System Operational" : "Device Not Connected");
-  const desktopDropdownWidth = isNarrowDesktop ? "clamp(260px, 32vw, 360px)" : "clamp(320px, 34vw, 460px)";
+  const desktopMapLngOffset = isAllSitesSelected ? -0.035 : -0.0075;
+  const longestSiteLabel = dropdownSites.reduce((longest, site) => (
+    site.siteName.length > longest.length ? site.siteName : longest
+  ), selectedSiteLabel);
+  let measuredSiteControlWidth = 320;
+  if (typeof document !== "undefined") {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.font = "500 13px Poppins, sans-serif";
+      measuredSiteControlWidth = Math.ceil(context.measureText(longestSiteLabel).width) + 84;
+    }
+  }
+  const desktopSiteControlWidth = `min(${Math.max(measuredSiteControlWidth, 220)}px, calc(100vw - ${isNarrowDesktop ? 260 : 340}px))`;
 
   const topRightSiteDropdownControl = (
     <div
@@ -1082,8 +1095,9 @@ export function Dashboard({
         background: "rgba(255,255,255,0.92)",
         borderRadius: 999,
         padding: "6px 12px",
-        width: desktopDropdownWidth,
+        width: desktopSiteControlWidth,
         minWidth: 0,
+        maxWidth: `calc(100vw - ${isNarrowDesktop ? 260 : 340}px)`,
         boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
@@ -1107,6 +1121,7 @@ export function Dashboard({
           alignItems: "center",
           gap: 6,
           width: "100%",
+          maxWidth: "100%",
           minWidth: 0,
           outline: "none",
           cursor: "pointer",
@@ -1142,9 +1157,12 @@ export function Dashboard({
             position: "absolute",
             top: "calc(100% + 8px)",
             left: 0,
-            minWidth: "100%",
+            width: desktopSiteControlWidth,
+            minWidth: 0,
+            maxWidth: `calc(100vw - ${isNarrowDesktop ? 48 : 64}px)`,
             maxHeight: 220,
             overflowY: "auto",
+            overflowX: "hidden",
             background: "#ffffff",
             borderRadius: 12,
             boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
@@ -2396,7 +2414,7 @@ export function Dashboard({
           transition: "opacity 0.8s ease",
         }}
       >
-        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={-0.0075} />
+        <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} lngOffset={desktopMapLngOffset} />
       </div>
 
         {/* Top-right controls: single horizontal flow */}
