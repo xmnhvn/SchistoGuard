@@ -20,7 +20,7 @@ const SMS_SUMMARY_CONNECTED_WINDOW_MS = 10000;
 const SMS_SUMMARY_TIMEZONE = process.env.SMS_SUMMARY_TIMEZONE || 'Asia/Manila';
 const SMS_TRANSPORT_MODE = (process.env.SMS_TRANSPORT_MODE || 'esp32-http').toLowerCase();
 const SMS_RELAY_TOKEN = process.env.SMS_RELAY_TOKEN || '';
-const SAME_SITE_DISTANCE_DEG = 0.0025;
+const SAME_SITE_RADIUS_METERS = 10;
 const deviceSiteCache = new Map();
 
 function hasRelayAuth(req) {
@@ -38,10 +38,20 @@ function isNearbyCoordinate(a, b) {
   if (!isFiniteCoordinate(a.lat) || !isFiniteCoordinate(a.lng)) return false;
   if (!isFiniteCoordinate(b.lat) || !isFiniteCoordinate(b.lng)) return false;
 
-  const dLat = a.lat - b.lat;
-  const dLng = a.lng - b.lng;
-  const distance = Math.sqrt((dLat * dLat) + (dLng * dLng));
-  return distance <= SAME_SITE_DISTANCE_DEG;
+  const earthRadiusMeters = 6371000;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const deltaLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const deltaLng = ((b.lng - a.lng) * Math.PI) / 180;
+
+  const sinLat = Math.sin(deltaLat / 2);
+  const sinLng = Math.sin(deltaLng / 2);
+  const aValue =
+    (sinLat * sinLat) +
+    (Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng);
+  const distance = 2 * earthRadiusMeters * Math.atan2(Math.sqrt(aValue), Math.sqrt(1 - aValue));
+
+  return distance <= SAME_SITE_RADIUS_METERS;
 }
 
 // Find an existing site in DB with nearby coordinates; returns site_key if found, null otherwise
@@ -98,26 +108,13 @@ function buildSiteIdentity(data) {
     lat: isFiniteCoordinate(data.latitude) ? data.latitude : null,
     lng: isFiniteCoordinate(data.longitude) ? data.longitude : null,
   };
-  const currentCoordinateBucket =
-    isFiniteCoordinate(currentCoords.lat) && isFiniteCoordinate(currentCoords.lng)
-      ? `${currentCoords.lat.toFixed(4)}:${currentCoords.lng.toFixed(4)}`
-      : null;
 
   const cached = deviceSiteCache.get(deviceId);
   const cachedNormalizedAddress = cached?.address ? normalizeSiteKey(cached.address) : null;
-  const cachedCoordinateBucket =
-    cached && isFiniteCoordinate(cached.latitude) && isFiniteCoordinate(cached.longitude)
-      ? `${cached.latitude.toFixed(4)}:${cached.longitude.toFixed(4)}`
-      : null;
   const hasAddressChanged = Boolean(normalizedAddress && normalizedAddress !== cachedNormalizedAddress);
-  const hasCoordinateBucketChanged = Boolean(
-    currentCoordinateBucket && currentCoordinateBucket !== (cachedCoordinateBucket || '')
-  );
-  const shouldForceNewSiteFromCoordinates = !address && hasCoordinateBucketChanged;
   if (
     cached &&
     !hasAddressChanged &&
-    !shouldForceNewSiteFromCoordinates &&
     isNearbyCoordinate(
       { lat: cached.latitude, lng: cached.longitude },
       { lat: currentCoords.lat, lng: currentCoords.lng }
@@ -175,7 +172,7 @@ async function buildSiteIdentityWithProximityCheck(data) {
   };
 
   // Check if coordinates match an existing nearby site in database
-  if (currentCoords.lat && currentCoords.lng) {
+  if (isFiniteCoordinate(currentCoords.lat) && isFiniteCoordinate(currentCoords.lng)) {
     const nearestSiteKey = await findNearestExistingSite(currentCoords.lat, currentCoords.lng);
     if (nearestSiteKey) {
       // Get the site details from database and return them
