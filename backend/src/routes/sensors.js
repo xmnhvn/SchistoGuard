@@ -1550,6 +1550,16 @@ router.post("/", async (req, res) => {
     timestamp: new Date()
   };
 
+  try {
+    const activeSiteSnapshot = await getConfiguredActiveSiteSnapshot();
+    if (activeSiteSnapshot?.siteKey) {
+      latestData.siteKey = activeSiteSnapshot.siteKey;
+      latestData.address = activeSiteSnapshot.address || latestData.address || null;
+    }
+  } catch (activeSiteErr) {
+    console.error('[active site resolve error]', activeSiteErr.message);
+  }
+
   console.log("Received:", latestData);
   console.log(`✓ ESP32 connected - IP: ${device_ip}`);
   

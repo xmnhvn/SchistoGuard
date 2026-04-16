@@ -401,7 +401,7 @@ export function Dashboard({
     (localManualActiveSiteKey && availableSites.some((site) => site.siteKey === localManualActiveSiteKey)
       ? localManualActiveSiteKey
       : null);
-  const effectiveActiveSiteKey = hasPresentLiveLocation ? activeSiteKey : manualActiveSiteKey;
+  const effectiveActiveSiteKey = activeSiteKey || manualActiveSiteKey;
   const isAllSitesSelected = selectedSiteKey === ALL_SITES_KEY;
   const dropdownSites: SiteOption[] = availableSites.length > 0
     ? [{ siteKey: ALL_SITES_KEY, siteName: "All sites" }, ...availableSites]
@@ -670,7 +670,7 @@ export function Dashboard({
             }
             setLatestReading(null);
             setLiveReading({ ...data, deviceConnected: false });
-            setActiveSiteKey(null);
+            setActiveSiteKey(incomingActive || activeSiteKeyRef.current || null);
             // Only initialize selectedSiteKey if nothing is selected yet (first load)
             setSelectedSiteKey((prev) => prev || '');
             setDeviceConnected(false);
@@ -680,8 +680,7 @@ export function Dashboard({
           }
           console.log('[Dashboard] Device connected, setting latestReading');
           setLiveReading({ ...data, deviceConnected: true });
-          const hasPresentCoords = typeof data?.latitude === 'number' && typeof data?.longitude === 'number';
-          const resolvedActiveSiteKey = hasPresentCoords ? (data?.siteKey || null) : null;
+          const resolvedActiveSiteKey = data?.siteKey || activeSiteKeyRef.current || null;
           setActiveSiteKey(resolvedActiveSiteKey);
           setBackendOk(true);
           // Only update siteName from telemetry if it's not the generic default, 
@@ -774,11 +773,7 @@ export function Dashboard({
 
             const latestFromHistory = data.length > 0 ? data[data.length - 1] : null;
             const currentLive = liveReadingRef.current;
-            const hasCurrentLiveLocation =
-              !!currentLive?.deviceConnected &&
-              typeof currentLive?.latitude === 'number' &&
-              typeof currentLive?.longitude === 'number';
-            const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && hasCurrentLiveLocation;
+            const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && !!currentLive?.deviceConnected;
             const effectiveLatest = selectedIsActiveSite ? (currentLive || latestFromHistory) : latestFromHistory;
 
             setLatestReading(effectiveLatest || null);
