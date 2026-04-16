@@ -1236,6 +1236,7 @@ export function Dashboard({
               const isSelected = site.siteKey === selectedSiteKey;
               const isActive = site.siteKey === effectiveActiveSiteKey;
               const selectedButInactive = isSelected && site.siteKey !== ALL_SITES_KEY && !isActive;
+              const selectedActive = isSelected && site.siteKey !== ALL_SITES_KEY && isActive;
               return (
                 <button
                   key={site.siteKey}
@@ -1251,9 +1252,9 @@ export function Dashboard({
                     padding: "8px 10px",
                     textAlign: "left",
                     background: isSelected
-                      ? (selectedButInactive ? "#94a3b8" : "#3b82f6")
+                      ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
                       : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive || site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b"),
+                    color: isSelected ? "#ffffff" : (isActive ? "#15803d" : (site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b")),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
@@ -1384,6 +1385,7 @@ export function Dashboard({
               const isSelected = site.siteKey === selectedSiteKey;
               const isActive = site.siteKey === effectiveActiveSiteKey;
               const selectedButInactive = isSelected && site.siteKey !== ALL_SITES_KEY && !isActive;
+              const selectedActive = isSelected && site.siteKey !== ALL_SITES_KEY && isActive;
               return (
                 <button
                   key={site.siteKey}
@@ -1399,9 +1401,9 @@ export function Dashboard({
                     padding: "8px 10px",
                     textAlign: "left",
                     background: isSelected
-                      ? (selectedButInactive ? "#94a3b8" : "#3b82f6")
+                      ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
                       : "transparent",
-                    color: isSelected ? "#ffffff" : (isActive || site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b"),
+                    color: isSelected ? "#ffffff" : (isActive ? "#15803d" : (site.siteKey === ALL_SITES_KEY ? "#0f172a" : "#64748b")),
                     fontFamily: POPPINS,
                     fontSize: 13,
                     fontWeight: isSelected ? 600 : 500,
