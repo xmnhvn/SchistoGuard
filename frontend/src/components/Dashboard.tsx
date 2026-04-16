@@ -1130,10 +1130,14 @@ export function Dashboard({
     const context = canvas.getContext("2d");
     if (context) {
       context.font = "500 13px Poppins, sans-serif";
-      measuredSiteControlWidth = Math.ceil(context.measureText(longestSiteLabel).width) + 84;
+      measuredSiteControlWidth = Math.ceil(context.measureText(longestSiteLabel).width) + 56;
     }
   }
-  const desktopSiteControlWidth = `min(${Math.max(measuredSiteControlWidth, 220)}px, calc(100vw - ${isNarrowDesktop ? 260 : 340}px))`;
+  const siteControlWidthPx = Math.min(
+    Math.max(measuredSiteControlWidth, 220),
+    isTablet ? 560 : (isNarrowDesktop ? 520 : 620)
+  );
+  const desktopSiteControlWidth = `${siteControlWidthPx}px`;
 
   const topRightSiteDropdownControl = (
     <div
