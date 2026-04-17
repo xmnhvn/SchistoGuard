@@ -455,7 +455,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         setSelectedSiteKey((prev) => {
           if (prev === ALL_SITES_KEY) return prev;
+          if (!hasManualSiteSelectionRef.current && activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) {
+            return activeSiteKey;
+          }
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
+          if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
           return ALL_SITES_KEY;
         });
       } catch {
@@ -641,6 +645,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           setBackendOk(true);
           setDataOk(true);
           setDeviceConnected(true);
+          if (data?.siteKey) {
+            setSelectedSiteKey((prev) => {
+              if (prev === ALL_SITES_KEY) return prev;
+              if (hasManualSiteSelectionRef.current) return prev || data.siteKey || '';
+              return data.siteKey || prev || '';
+            });
+          }
           if (data && data.siteName && data.siteName !== "Site Name") {
             setSiteData((prev: any) => ({ ...prev, siteName: data.siteName }));
           }
