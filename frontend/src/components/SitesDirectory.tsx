@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { apiGet } from '../utils/api';
+import { reverseGeocode } from '../utils/reverseGeocode';
 import { PDFHeader } from './PDFHeader';
 import { useResponsiveScale } from '../utils/useResponsiveScale';
 
@@ -155,13 +156,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           localStorage.setItem("sg_latest_site_name", data.siteName);
         }
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-          import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
-            reverseGeocode(data.latitude, data.longitude).then(addr => {
-              if (addr) {
-                setAddress(addr);
-                localStorage.setItem("sg_latest_address", addr);
-              }
-            });
+          reverseGeocode(data.latitude, data.longitude).then(addr => {
+            if (addr) {
+              setAddress(addr);
+              localStorage.setItem("sg_latest_address", addr);
+            }
           });
         }
       }
@@ -179,13 +178,11 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
           localStorage.setItem("sg_latest_site_name", latestWithGps.siteName);
         }
         if (!address) {
-          import('../utils/reverseGeocode').then(({ reverseGeocode }) => {
-            reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
-              if (addr) {
-                setAddress(addr);
-                localStorage.setItem("sg_latest_address", addr);
-              }
-            });
+          reverseGeocode(latestWithGps.latitude, latestWithGps.longitude).then(addr => {
+            if (addr) {
+              setAddress(addr);
+              localStorage.setItem("sg_latest_address", addr);
+            }
           });
         }
       }

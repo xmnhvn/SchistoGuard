@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import heic2any from "heic2any";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -373,6 +372,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
       if (isHEIC) {
         try {
+          const { default: heic2any } = await import("heic2any");
           const converted = await heic2any({
             blob: file,
             toType: "image/jpeg",

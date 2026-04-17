@@ -27,7 +27,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,json}'],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // Keep the explicit cap aligned with Workbox's default 2 MiB limit so
+        // future regressions fail the build instead of silently bloating.
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
@@ -98,6 +100,9 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'build',
+    // The largest remaining bundles are route-level lazy chunks, not the
+    // initial entry bundle, so use a warning threshold that fits this setup.
+    chunkSizeWarningLimit: 1500,
   },
   server: {
     port: 3000,

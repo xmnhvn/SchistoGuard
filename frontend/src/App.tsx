@@ -1,17 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { NavigationProvider } from './components/Navigation';
-import { Dashboard } from './components/Dashboard';
-import { AlertsPage } from './components/AlertsPage';
-import { ReportsPage } from './components/ReportsPage';
-import { SitesDirectory } from './components/SitesDirectory';
-import { SiteDetailView } from './components/SiteDetailView';
-import { SettingsPage } from './components/SettingsPage';
-import { AdminSettingsPage } from './components/AdminSettingsPage';
-import { UserProfilePage } from './components/UserProfilePage';
-import { LandingPage } from './components/landing/LandingPage';
-import { LoginForm } from './components/LoginForm';
-import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
@@ -20,6 +9,42 @@ import { apiGet, apiPost, apiPut } from './utils/api';
 import { toast } from 'sonner';
 
 type ViewType = 'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings' | 'user-profile';
+
+const Dashboard = lazy(() => import('./components/Dashboard').then((module) => ({ default: module.Dashboard })));
+const AlertsPage = lazy(() => import('./components/AlertsPage').then((module) => ({ default: module.AlertsPage })));
+const ReportsPage = lazy(() => import('./components/ReportsPage').then((module) => ({ default: module.ReportsPage })));
+const SitesDirectory = lazy(() => import('./components/SitesDirectory').then((module) => ({ default: module.SitesDirectory })));
+const SiteDetailView = lazy(() => import('./components/SiteDetailView').then((module) => ({ default: module.SiteDetailView })));
+const SettingsPage = lazy(() => import('./components/SettingsPage').then((module) => ({ default: module.SettingsPage })));
+const AdminSettingsPage = lazy(() => import('./components/AdminSettingsPage').then((module) => ({ default: module.AdminSettingsPage })));
+const UserProfilePage = lazy(() => import('./components/UserProfilePage').then((module) => ({ default: module.UserProfilePage })));
+const LandingPage = lazy(() => import('./components/landing/LandingPage').then((module) => ({ default: module.LandingPage })));
+const LoginForm = lazy(() => import('./components/LoginForm').then((module) => ({ default: module.LoginForm })));
+const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt').then((module) => ({ default: module.PWAInstallPrompt })));
+
+function AppSplashScreen() {
+  return (
+    <div className="fixed inset-0 h-[100dvh] w-full flex items-center justify-center bg-white z-[100]">
+      <div className="flex items-center space-x-3 animate-pulse">
+        <img
+          src="/schistoguard.png"
+          alt="SchistoGuard Logo"
+          style={{ width: 48, height: 48, objectFit: "contain" }}
+        />
+        <h1
+          style={{
+            fontFamily: "Poppins, sans-serif",
+            color: "#357D86",
+            fontWeight: 600,
+            fontSize: 32,
+          }}
+        >
+          SchistoGuard
+        </h1>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard' | 'sensor-info' | 'sites' | 'site-details' | 'alerts' | 'reports' | 'recipients' | 'admin-settings' | 'user-profile'>('landing');
@@ -358,45 +383,28 @@ export default function App() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 h-[100dvh] w-full flex items-center justify-center bg-white z-[100]">
-        <div className="flex items-center space-x-3 animate-pulse">
-          <img
-            src="/schistoguard.png"
-            alt="SchistoGuard Logo"
-            style={{ width: 48, height: 48, objectFit: "contain" }}
-          />
-          <h1
-            style={{
-              fontFamily: "Poppins, sans-serif",
-              color: "#357D86",
-              fontWeight: 600,
-              fontSize: 32,
-            }}
-          >
-            SchistoGuard
-          </h1>
-        </div>
-      </div>
-    );
+    return <AppSplashScreen />;
   }
 
   if (currentView === 'landing') {
     return (
-      <>
+      <Suspense fallback={<AppSplashScreen />}>
+        <>
         <LandingPage
           onViewMap={() => setCurrentView('sensor-info')}
           onLearnMore={() => setCurrentView('sensor-info')}
           onEnterApp={() => setCurrentView('login')}
         />
         {pwaInstallPrompt}
-      </>
+        </>
+      </Suspense>
     );
   }
 
   if (currentView === 'sensor-info') {
     return (
-      <>
+      <Suspense fallback={<AppSplashScreen />}>
+        <>
         <div
           className="scrollbar-hide min-h-screen bg-gradient-to-b from-green-50 to-white"
           style={isMobile ? { padding: 0, background: 'none', height: '100vh', overflowY: 'auto' } : { height: '100vh', overflowY: 'auto' }}
@@ -442,22 +450,26 @@ export default function App() {
           </div>
         </div>
         {pwaInstallPrompt}
-      </>
+        </>
+      </Suspense>
     );
   }
 
   if (currentView === 'login') {
     return (
-      <>
+      <Suspense fallback={<AppSplashScreen />}>
+        <>
         <LoginForm onLogin={handleLogin} onCancel={() => setCurrentView('landing')} />
         {pwaInstallPrompt}
-      </>
+        </>
+      </Suspense>
     );
   }
 
   if (isAuthenticated) {
     return (
-      <>
+      <Suspense fallback={<AppSplashScreen />}>
+        <>
         <NavigationProvider
           currentView={currentView}
           onNavigate={handleNavigate}
@@ -557,18 +569,21 @@ export default function App() {
           </Dialog>
         </NavigationProvider>
         {pwaInstallPrompt}
-      </>
+        </>
+      </Suspense>
     );
   }
 
   return (
-    <>
+    <Suspense fallback={<AppSplashScreen />}>
+      <>
       <LandingPage
         onViewMap={() => setCurrentView('sensor-info')}
         onLearnMore={() => setCurrentView('sensor-info')}
         onEnterApp={() => setCurrentView('login')}
       />
       {pwaInstallPrompt}
-    </>
+      </>
+    </Suspense>
   );
 }
