@@ -41,6 +41,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const [mapUnavailable, setMapUnavailable] = useState(false);
   const markers = useRef<maplibregl.Marker[]>([]);
   const photoBubbleMarker = useRef<maplibregl.Marker | null>(null);
+  const previousPhotoBubbleKey = useRef<string>('');
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const previousSitesJson = useRef<string>('');
@@ -269,28 +270,46 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     }
 
     const selectedPhotoSite = sitesToShow.find((site) => site.isSelected && site.sitePhoto);
-    if (photoBubbleMarker.current) {
-      photoBubbleMarker.current.remove();
-      photoBubbleMarker.current = null;
-    }
+    const photoBubbleKey = selectedPhotoSite
+      ? `${selectedPhotoSite.id}:${selectedPhotoSite.sitePhoto ?? ''}`
+      : '';
 
-    if (selectedPhotoSite && map.current) {
-      const bubbleEl = document.createElement('div');
-      bubbleEl.className = 'site-photo-bubble';
-      bubbleEl.innerHTML = `
-        <div class="site-photo-bubble__frame">
-          <img src="${selectedPhotoSite.sitePhoto}" alt="${selectedPhotoSite.name.replace(/"/g, '&quot;')}" class="site-photo-bubble__image" />
-        </div>
-        <div class="site-photo-bubble__stem"></div>
-        <div class="site-photo-bubble__tip"></div>
-      `;
+    if (!selectedPhotoSite || !map.current) {
+      if (photoBubbleMarker.current) {
+        photoBubbleMarker.current.remove();
+        photoBubbleMarker.current = null;
+      }
+      previousPhotoBubbleKey.current = '';
+    } else {
+      const bubbleLngLat: [number, number] = [selectedPhotoSite.lng, selectedPhotoSite.lat];
 
-      photoBubbleMarker.current = new maplibregl.Marker({
-        element: bubbleEl,
-        anchor: 'bottom',
-      })
-        .setLngLat([selectedPhotoSite.lng, selectedPhotoSite.lat])
-        .addTo(map.current);
+      if (photoBubbleMarker.current && previousPhotoBubbleKey.current === photoBubbleKey) {
+        photoBubbleMarker.current.setLngLat(bubbleLngLat);
+      } else {
+        if (photoBubbleMarker.current) {
+          photoBubbleMarker.current.remove();
+          photoBubbleMarker.current = null;
+        }
+
+        const bubbleEl = document.createElement('div');
+        bubbleEl.className = 'site-photo-pin';
+        bubbleEl.innerHTML = `
+          <div class="site-photo-pin__shell">
+            <div class="site-photo-pin__frame">
+              <img src="${selectedPhotoSite.sitePhoto}" alt="${selectedPhotoSite.name.replace(/"/g, '&quot;')}" class="site-photo-pin__image" />
+            </div>
+          </div>
+        `;
+
+        photoBubbleMarker.current = new maplibregl.Marker({
+          element: bubbleEl,
+          anchor: 'bottom',
+        })
+          .setLngLat(bubbleLngLat)
+          .addTo(map.current);
+
+        previousPhotoBubbleKey.current = photoBubbleKey;
+      }
     }
 
     // Wait for the map to become completely idle (all tiles loaded and painted)
@@ -325,6 +344,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         map.current = null;
         markers.current = [];
         photoBubbleMarker.current = null;
+        previousPhotoBubbleKey.current = '';
         previousSitesJson.current = '';
       }
     };
