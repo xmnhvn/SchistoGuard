@@ -40,22 +40,29 @@ type SiteOption = {
   longitude?: number | null;
 };
 
-const BASAK_SITE_KEY = '10-143-90-164';
-const BASAK_SITE_COORDINATES = { lat: 7.606312, lng: 126.00713 };
 const ALL_SITES_KEY = 'all';
+
+function normalizeCoordinate(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
 
 function resolveSiteCoordinates(site: SiteOption | null | undefined) {
   if (!site) return null;
 
-  const siteKey = site.siteKey.toLowerCase();
-  const siteName = site.siteName.toLowerCase();
+  const latitude = normalizeCoordinate(site.latitude);
+  const longitude = normalizeCoordinate(site.longitude);
 
-  if (siteKey === BASAK_SITE_KEY || siteName.includes('basak')) {
-    return BASAK_SITE_COORDINATES;
-  }
-
-  if (site.latitude != null && site.longitude != null) {
-    return { lat: site.latitude, lng: site.longitude };
+  if (latitude != null && longitude != null) {
+    return { lat: latitude, lng: longitude };
   }
 
   return null;
@@ -455,8 +462,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             siteKey: (site.site_key || '').toString().trim(),
             siteName: (site.site_name || site.address || site.site_key || 'Unnamed Site').toString().trim(),
             address: (site.address || '').toString().trim() || null,
-            latitude: typeof site.latitude === 'number' ? site.latitude : null,
-            longitude: typeof site.longitude === 'number' ? site.longitude : null,
+            latitude: normalizeCoordinate(site.latitude),
+            longitude: normalizeCoordinate(site.longitude),
           }))
           .filter((site) => !!site.siteKey)
           .sort((a, b) => a.siteName.localeCompare(b.siteName));
@@ -746,6 +753,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const desktopPreviewLngOffset = isAllSitesSelected ? -0.0185 : -0.0050;
   const selectedSiteOperational = !!selectedSiteKey && !!activeSiteKey && selectedSiteKey === activeSiteKey && deviceConnected && backendOk && dataOk;
   const mobilePreviewStatusLabel = selectedSiteOperational ? 'System Operational' : 'Device Not Connected';
+  const mobileAllSitesLatOffset = isAllSitesSelected
+    ? (
+      screenWidth < 380
+        ? -0.0048
+        : screenWidth < 600
+          ? -0.0045
+          : screenWidth < 800
+            ? -0.0056
+            : -0.0052
+    )
+    : null;
+  const mobileSingleSiteLatOffset = !isAllSitesSelected && isMobileOrTablet
+    ? (
+      isPreviewActive
+        ? (
+          screenWidth < 380
+            ? -0.0032
+            : screenWidth < 600
+              ? -0.003
+              : screenWidth < 800
+                ? -0.0042
+                : (screenWidth <= 900 && screenHeight >= 1100 ? -0.0049 : -0.0038)
+        )
+        : (
+          screenWidth < 380
+            ? -0.0028
+            : screenWidth < 600
+              ? -0.0026
+              : screenWidth < 800
+                ? -0.0037
+                : (screenWidth <= 900 && screenHeight >= 1100 ? -0.0044 : -0.0033)
+        )
+    )
+    : null;
+  const landingAllSitesPadding = isMobileOrTablet && isAllSitesSelected
+    ? (
+      isPreviewActive
+        ? (
+          screenWidth < 600
+            ? { top: 92, right: 28, bottom: 460, left: 28 }
+            : screenWidth < 800
+              ? { top: 116, right: 36, bottom: 560, left: 36 }
+              : { top: 132, right: 40, bottom: 620, left: 40 }
+        )
+        : (
+          screenWidth < 600
+            ? { top: 120, right: 28, bottom: 430, left: 28 }
+            : screenWidth < 800
+              ? { top: 152, right: 36, bottom: 520, left: 36 }
+              : { top: 168, right: 40, bottom: 580, left: 40 }
+        )
+    )
+    : undefined;
   const hasLiveSensorValues =
     !!latestReading &&
     Number.isFinite(Number(latestReading.temperature)) &&
@@ -923,19 +983,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               interactive={showLiveUpdates && screenWidth >= 600}
               mobileMode={isMobileOrTablet}
               sites={mapSites}
+              allSitesPadding={landingAllSitesPadding}
               // On desktop preview, shift pin further right (-0.0032) to match Pic 2 framing
               lngOffset={!isMobileOrTablet ? (isPreviewActive ? desktopPreviewLngOffset : -0.0075) : undefined}
               latOffset={
                 isMobileOrTablet
                   ? isPreviewActive
-                    ? screenWidth < 380
-                      ? -0.0014 // Mobile small: move point slightly upward
-                      : screenWidth < 600
-                        ? -0.0012 // iPhone: restore higher point placement
-                        : screenWidth < 800
-                          ? -0.0019 // iPad mini: lift marker upward
-                          : -0.0016 // iPad Air/Pro: lift marker upward
-                    : -0.00125 // Non-preview mobile/tablet baseline
+                    ? (
+                      mobileAllSitesLatOffset ??
+                      mobileSingleSiteLatOffset ??
+                      (screenWidth < 380
+                        ? -0.0014 // Mobile small: move point slightly upward
+                        : screenWidth < 600
+                          ? -0.0012 // iPhone: restore higher point placement
+                          : screenWidth < 800
+                            ? -0.0019 // iPad mini: lift marker upward
+                            : -0.0016 // iPad Air/Pro: lift marker upward
+                      )
+                    )
+                    : (mobileAllSitesLatOffset ?? mobileSingleSiteLatOffset ?? -0.00125) // Non-preview mobile/tablet baseline
                   : undefined
               }
               onMapReady={() => {

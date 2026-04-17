@@ -24,6 +24,8 @@ interface DashboardMapProps {
   lngOffset?: number;
   /** Latitude offset to shift the map center (negative = pin moves up on screen) */
   latOffset?: number;
+  /** Optional fit-bounds padding override for multi-site overview layouts */
+  allSitesPadding?: { top: number; right: number; bottom: number; left: number };
 }
 
 export interface DashboardMapHandle {
@@ -32,7 +34,7 @@ export interface DashboardMapHandle {
   returnToDashboard: () => void;
 }
 
-export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, onSiteSelect, mobileMode = false, interactive, onMapReady, lngOffset = 0, latOffset = 0 }, ref) {
+export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(function DashboardMap({ sites, onSiteSelect, mobileMode = false, interactive, onMapReady, lngOffset = 0, latOffset = 0, allSitesPadding }, ref) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
@@ -116,9 +118,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
         const fittedCamera = map.current
           ? map.current.cameraForBounds(bounds, {
-              padding: mobileMode
+              padding: allSitesPadding ?? (mobileMode
                 ? { top: 112, right: 32, bottom: 112, left: 32 }
-                : { top: 112, right: 112, bottom: 112, left: 112 },
+                : { top: 112, right: 112, bottom: 112, left: 112 }),
               maxZoom: mobileMode ? 12 : 13,
             })
           : null;
@@ -285,7 +287,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [sitesJson, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, mapUnavailable]);
+  }, [sitesJson, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, allSitesPadding, mapUnavailable]);
 
 
   // Destroy map on unmount
