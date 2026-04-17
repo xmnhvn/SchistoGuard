@@ -1942,6 +1942,7 @@ router.post('/sites', async (req, res) => {
   try {
     const siteNameInput = (req.body.siteName || req.body.locationName || '').toString().trim();
     const addressInput = (req.body.address || req.body.location || '').toString().trim();
+    const sitePhoto = req.body.sitePhoto;
     const latitude = Number(req.body.latitude);
     const longitude = Number(req.body.longitude);
 
@@ -1955,6 +1956,10 @@ router.post('/sites', async (req, res) => {
 
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
       return res.status(400).json({ error: 'Coordinates are out of range' });
+    }
+
+    if (sitePhoto !== undefined && sitePhoto !== null && typeof sitePhoto !== 'string') {
+      return res.status(400).json({ error: 'sitePhoto must be a Base64 string' });
     }
 
     const nearbySiteKey = await findNearestExistingSite(latitude, longitude);
@@ -1996,10 +2001,10 @@ router.post('/sites', async (req, res) => {
     }
 
     const insertResult = await db.query(
-      `INSERT INTO site_registry (site_key, site_name, address, latitude, longitude, first_seen, last_seen)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING site_key, site_name, address, latitude, longitude, first_seen, last_seen`,
-      [siteKey, siteName, address, latitude, longitude, nowIso, nowIso]
+      `INSERT INTO site_registry (site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo`,
+      [siteKey, siteName, address, latitude, longitude, nowIso, nowIso, sitePhoto ?? null]
     );
 
     return res.status(201).json({
@@ -2021,14 +2026,14 @@ router.put('/sites/:siteKey', (req, res) => {
     return res.status(400).json({ error: 'siteName is required' });
   }
 
-  // Basic check for photo if provided (Base64 string)
-  if (sitePhoto && typeof sitePhoto !== 'string') {
+  // Basic check for photo if provided (Base64 string or explicit null to remove)
+  if (sitePhoto !== undefined && sitePhoto !== null && typeof sitePhoto !== 'string') {
     return res.status(400).json({ error: 'sitePhoto must be a Base64 string' });
   }
 
   db.run(
     `UPDATE site_registry
-     SET site_name = ?, site_photo = COALESCE(?, site_photo)
+     SET site_name = ?, site_photo = ?
      WHERE site_key = ?`,
     [trimmedSiteName, sitePhoto !== undefined ? sitePhoto : null, siteKey],
     function (err) {

@@ -181,6 +181,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [sitePhotoDrafts, setSitePhotoDrafts] = useState<Record<string, string | null>>({});
   const [sitePhotoLoading, setSitePhotoLoading] = useState<Record<string, boolean>>({});
   const [savingSiteKey, setSavingSiteKey] = useState<string | null>(null);
+  const [savingPhotoSiteKey, setSavingPhotoSiteKey] = useState<string | null>(null);
   const [startingSiteKey, setStartingSiteKey] = useState<string | null>(null);
   const [stoppingSiteKey, setStoppingSiteKey] = useState<string | null>(null);
   const [deletingSiteKey, setDeletingSiteKey] = useState<string | null>(null);
@@ -192,6 +193,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     longitude: "",
   });
   const [addingSite, setAddingSite] = useState(false);
+  const [newSitePhotoDraft, setNewSitePhotoDraft] = useState<string | null>(null);
+  const [newSitePhotoLoading, setNewSitePhotoLoading] = useState(false);
   const {
     isMobile,
     isTablet,
@@ -272,7 +275,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         siteName: nextName,
         sitePhoto: nextPhoto,
       });
-      toast.success(result?.success ? "Site settings updated successfully" : "Site settings updated");
+      setShowSuccess(true);
       
       // Clear drafts for this site after successful save
       setSiteNameDrafts(prev => {
@@ -291,6 +294,59 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       toast.error(err?.message || "Failed to update site settings");
     } finally {
       setSavingSiteKey(null);
+    }
+  };
+
+  const handleSaveSitePhoto = async (siteKey: string) => {
+    const site = registeredSites.find((item) => item.site_key === siteKey);
+    if (!site) return;
+
+    const nextName = (siteNameDrafts[siteKey] !== undefined ? siteNameDrafts[siteKey] : (site.site_name || site.address || site.site_key)).trim();
+    const nextPhoto = sitePhotoDrafts[siteKey] !== undefined ? sitePhotoDrafts[siteKey] : (site.site_photo || null);
+
+    if (!nextName) {
+      toast.error("Site name cannot be empty");
+      return;
+    }
+
+    try {
+      setSavingPhotoSiteKey(siteKey);
+      await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
+        siteName: nextName,
+        sitePhoto: nextPhoto,
+      });
+      setShowSuccess(true);
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save site photo");
+    } finally {
+      setSavingPhotoSiteKey(null);
+    }
+  };
+
+  const handleRemoveSitePhoto = async (siteKey: string) => {
+    const site = registeredSites.find((item) => item.site_key === siteKey);
+    if (!site) return;
+
+    const nextName = (siteNameDrafts[siteKey] !== undefined ? siteNameDrafts[siteKey] : (site.site_name || site.address || site.site_key)).trim();
+    if (!nextName) {
+      toast.error("Site name cannot be empty");
+      return;
+    }
+
+    try {
+      setSavingPhotoSiteKey(siteKey);
+      await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
+        siteName: nextName,
+        sitePhoto: null,
+      });
+      setSitePhotoDrafts((prev) => ({ ...prev, [siteKey]: null }));
+      setShowSuccess(true);
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove site photo");
+    } finally {
+      setSavingPhotoSiteKey(null);
     }
   };
 
@@ -392,6 +448,100 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     runConversion();
   };
 
+  const handleNewSitePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select a valid image file (JPG, PNG, etc).");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Original file is too large (max 15MB)");
+      return;
+    }
+
+    setNewSitePhotoLoading(true);
+
+    const processFile = async (targetFile: File | Blob) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const MAX_WIDTH = 1000;
+            const MAX_HEIGHT = 1000;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              setNewSitePhotoDraft(canvas.toDataURL('image/jpeg', 0.7));
+            } else {
+              toast.error("Failed to initialize image processor");
+            }
+          } catch {
+            toast.error("Error resizing image. Please try a different photo.");
+          } finally {
+            setNewSitePhotoLoading(false);
+          }
+        };
+        img.onerror = () => {
+          toast.error("The selected file is not a supported image format or is corrupted.");
+          setNewSitePhotoLoading(false);
+        };
+        if (event.target?.result) {
+          img.src = event.target.result as string;
+        }
+      };
+      reader.onerror = () => {
+        toast.error("Failed to read the file from your device.");
+        setNewSitePhotoLoading(false);
+      };
+      reader.readAsDataURL(targetFile);
+    };
+
+    const runConversion = async () => {
+      const fileName = file.name.toLowerCase();
+      const isHEIC = fileName.endsWith(".heic") || fileName.endsWith(".heif") || file.type === "image/heic" || file.type === "image/heif";
+
+      if (isHEIC) {
+        try {
+          const { default: heic2any } = await import("heic2any");
+          const converted = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8
+          });
+          const resultBlob = Array.isArray(converted) ? converted[0] : converted;
+          processFile(resultBlob);
+        } catch {
+          toast.error("Failed to convert HEIC image. Please try a JPG or PNG instead.");
+          setNewSitePhotoLoading(false);
+        }
+      } else {
+        processFile(file);
+      }
+    };
+
+    runConversion();
+  };
+
   const handleStartReading = async (siteKey: string) => {
     try {
       setStartingSiteKey(siteKey);
@@ -431,7 +581,45 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   };
 
   const handleAddManualSite = async () => {
-    alert("This feature is placeholder and would require a coordinate picker.");
+    const siteName = newSiteForm.siteName.trim();
+    const location = newSiteForm.location.trim();
+    const latitude = Number(newSiteForm.latitude);
+    const longitude = Number(newSiteForm.longitude);
+
+    if (!siteName && !location) {
+      toast.error("Site name or location is required");
+      return;
+    }
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      toast.error("Valid latitude and longitude are required");
+      return;
+    }
+
+    try {
+      setAddingSite(true);
+      const result = await apiPost("/api/sensors/sites", {
+        siteName,
+        location,
+        latitude,
+        longitude,
+        sitePhoto: newSitePhotoDraft,
+      });
+
+      toast.success(result?.message || "Site added successfully");
+      setNewSiteForm({
+        siteName: "",
+        location: "",
+        latitude: "",
+        longitude: "",
+      });
+      setNewSitePhotoDraft(null);
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to add site");
+    } finally {
+      setAddingSite(false);
+    }
   };
 
   const handleDeleteSite = async (siteKey: string) => {
@@ -453,6 +641,16 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setTimeout(() => { _adminSettingsFirstLoadDone = true; }, 50);
     }
   }, []);
+
+  useEffect(() => {
+    if (!showSuccess) return;
+
+    const timeout = window.setTimeout(() => {
+      setShowSuccess(false);
+    }, 2400);
+
+    return () => window.clearTimeout(timeout);
+  }, [showSuccess]);
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -571,6 +769,19 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       }
       .user-card-item {
         transition: all 0.2s ease !important;
+      }
+      @keyframes successPopIn {
+        from { opacity: 0; transform: translateY(12px) scale(0.96); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes successBadgePulse {
+        0% { transform: scale(0.75); opacity: 0.4; }
+        60% { transform: scale(1.08); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      @keyframes successCheckDraw {
+        from { stroke-dashoffset: 24; }
+        to { stroke-dashoffset: 0; }
       }
     `}</style>
   ), [POPPINS]);
@@ -995,6 +1206,100 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+          <DialogContent
+            showCloseButton={false}
+            style={{
+              fontFamily: POPPINS,
+              borderRadius: 32,
+              padding: isMobile ? 24 : 30,
+              maxWidth: 560,
+              background: "rgba(248, 252, 253, 0.98)",
+              border: "1px solid rgba(53, 125, 134, 0.12)",
+              boxShadow: "0 28px 70px rgba(18, 52, 66, 0.18)",
+              animation: "successPopIn 0.24s ease-out",
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Close success dialog"
+              onClick={() => setShowSuccess(false)}
+              style={{
+                position: "absolute",
+                top: 18,
+                right: 18,
+                width: 40,
+                height: 40,
+                borderRadius: 999,
+                border: "1px solid rgba(53, 125, 134, 0.16)",
+                background: "#ffffff",
+                color: "#7b8a9a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: 24, lineHeight: 1, marginTop: -2 }}>×</span>
+            </button>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: isMobile ? 14 : 18,
+                paddingRight: 36,
+                minHeight: 110,
+              }}
+            >
+              <div
+                style={{
+                  width: isMobile ? 42 : 50,
+                  height: isMobile ? 42 : 50,
+                  borderRadius: 999,
+                  background: "linear-gradient(135deg, #24495a 0%, #357D86 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  animation: "successBadgePulse 0.45s ease-out",
+                  boxShadow: "0 14px 28px rgba(53, 125, 134, 0.22)",
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M6 12.5L10 16.5L18 7.5"
+                    stroke="#ffffff"
+                    strokeWidth="2.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      strokeDasharray: 24,
+                      strokeDashoffset: 0,
+                      animation: "successCheckDraw 0.38s ease-out",
+                    }}
+                  />
+                </svg>
+              </div>
+
+              <div>
+                <DialogTitle
+                  style={{
+                    margin: 0,
+                    fontSize: isMobile ? 24 : 28,
+                    lineHeight: 1.2,
+                    fontWeight: 700,
+                    color: "#23485a",
+                    fontFamily: POPPINS,
+                  }}
+                >
+                  Site settings updated successfully
+                </DialogTitle>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <AlertDialog
           open={!!sitePendingDelete}
           onOpenChange={(open) => {
@@ -1103,7 +1408,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             border: "1px solid rgba(53,125,134,0.2)",
             background: "rgba(53,125,134,0.04)",
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1.1fr 0.9fr 0.9fr auto",
+            gridTemplateColumns: isMobile ? "1fr" : "1.05fr 1.05fr 0.8fr 0.8fr 1fr auto",
             gap: 10,
             alignItems: "end",
           }}>
@@ -1155,10 +1460,77 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               />
             </div>
 
+            <div>
+              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Site Photo (Optional)</Label>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: "rgba(0,0,0,0.03)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  border: "1px solid rgba(0,0,0,0.05)"
+                }}>
+                  {newSitePhotoLoading ? (
+                    <Loader2 size={20} className="animate-spin text-schistoguard-teal" />
+                  ) : newSitePhotoDraft ? (
+                    <img src={newSitePhotoDraft} alt="New site" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <ImageIcon size={20} color="#cbd5e1" />
+                  )}
+                </div>
+                <Label
+                  htmlFor="new-site-photo-upload"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 14px",
+                    borderRadius: 100,
+                    background: "rgba(53,125,134,0.06)",
+                    color: "#357D86",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Camera size={14} />
+                  {newSitePhotoDraft ? "Change" : "Upload"}
+                </Label>
+                {newSitePhotoDraft && (
+                  <button
+                    type="button"
+                    onClick={() => setNewSitePhotoDraft(null)}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "#dc2626",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: POPPINS,
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
+                <input
+                  id="new-site-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleNewSitePhotoChange}
+                />
+              </div>
+            </div>
+
             <Button
               type="button"
               onClick={handleAddManualSite}
-              disabled={addingSite}
+              disabled={addingSite || newSitePhotoLoading}
               style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 18px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 13, width: isMobile ? "100%" : "auto" }}
             >
               {addingSite ? "Adding..." : "Add Site"}
@@ -1246,7 +1618,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
                     <div>
                       <Label style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Site Photo</Label>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
                         <div style={{ 
                           width: 48, 
                           height: 48, 
@@ -1293,6 +1665,40 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           style={{ display: "none" }}
                           onChange={(e) => handleSitePhotoChange(site.site_key, e)}
                         />
+                        <Button
+                          type="button"
+                          disabled={!!sitePhotoLoading[site.site_key] || savingPhotoSiteKey === site.site_key}
+                          onClick={() => handleSaveSitePhoto(site.site_key)}
+                          style={{
+                            background: "rgba(53,125,134,0.12)",
+                            color: "#215f67",
+                            borderRadius: 100,
+                            padding: "8px 14px",
+                            fontWeight: 700,
+                            border: "1px solid rgba(53,125,134,0.12)",
+                            fontFamily: POPPINS,
+                            fontSize: 12,
+                            boxShadow: "none",
+                          }}
+                        >
+                          {savingPhotoSiteKey === site.site_key ? "Saving Photo..." : "Save Photo"}
+                        </Button>
+                        <button
+                          type="button"
+                          disabled={savingPhotoSiteKey === site.site_key || !!sitePhotoLoading[site.site_key] || !sitePhotoDrafts[site.site_key]}
+                          onClick={() => handleRemoveSitePhoto(site.site_key)}
+                          style={{
+                            border: "none",
+                            background: "transparent",
+                            color: !sitePhotoDrafts[site.site_key] ? "#94a3b8" : "#dc2626",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: !sitePhotoDrafts[site.site_key] ? "not-allowed" : "pointer",
+                            fontFamily: POPPINS,
+                          }}
+                        >
+                          Remove Photo
+                        </button>
                       </div>
                     </div>
 

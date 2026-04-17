@@ -126,11 +126,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [latestReading, setLatestReading] = useState<any>(null);
   const [liveReading, setLiveReading] = useState<any>(null);
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
+  const [sitesLoading, setSitesLoading] = useState(true);
   const [selectedSiteKey, setSelectedSiteKey] = useState<string>(ALL_SITES_KEY);
   const [selectedSiteDBReading, setSelectedSiteDBReading] = useState<any>(null);
   const [allSitesReadings, setAllSitesReadings] = useState<any[]>([]);
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const [showSiteDropdown, setShowSiteDropdown] = useState(false);
+  const [sitePhotoLoaded, setSitePhotoLoaded] = useState(false);
+  const [sitePhotoFailed, setSitePhotoFailed] = useState(false);
   const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
   const [backendOk, setBackendOk] = useState(true);
   const [dataOk, setDataOk] = useState(true);
@@ -429,6 +432,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     const fetchSites = async () => {
       try {
+        setSitesLoading(true);
         const data = await apiGet('/api/sensors/sites');
         if (!Array.isArray(data)) {
           setAvailableSites([]);
@@ -460,6 +464,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         });
       } catch {
         setAvailableSites([]);
+      } finally {
+        setSitesLoading(false);
       }
     };
 
@@ -515,6 +521,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (!selectedSite?.siteName) return;
     setSiteData((prev: any) => ({ ...prev, siteName: selectedSite.siteName }));
   }, [selectedSite]);
+
+  useEffect(() => {
+    setSitePhotoLoaded(false);
+    setSitePhotoFailed(false);
+  }, [selectedSiteKey, selectedSite?.sitePhoto]);
 
   React.useEffect(() => {
     const getBrowserZoom = (): number => {
@@ -1985,19 +1996,56 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   justifyContent: 'center',
                   gap: 10,
                   minHeight: screenWidth < 600 ? 100 : (isSmallDesktop ? 100 : 120),
+                  position: 'relative',
+                  overflow: 'hidden',
                 }}
               >
-                {selectedSite?.sitePhoto ? (
-                  <img 
-                    src={selectedSite.sitePhoto} 
-                    alt="Site" 
-                    style={{ 
-                      width: "100%", 
-                      height: "100%", 
-                      objectFit: "cover", 
-                      borderRadius: 20,
-                      animation: 'fadeIn 0.5s ease-out'
-                    }} 
+                {selectedSite?.sitePhoto && !sitePhotoFailed ? (
+                  <>
+                    {!sitePhotoLoaded && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: screenWidth < 600 ? 16 : screenWidth >= 1100 ? (isSmallDesktop ? 16 : 18) : 22,
+                          borderRadius: 16,
+                          overflow: 'hidden',
+                          background: 'linear-gradient(90deg, rgba(226,232,240,0.8) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.8) 100%)',
+                          backgroundSize: '200% 100%',
+                          animation: 'sitePhotoShimmer 1.2s ease-in-out infinite',
+                        }}
+                      />
+                    )}
+                    <img
+                      src={selectedSite.sitePhoto}
+                      alt="Site"
+                      onLoad={() => {
+                        setSitePhotoLoaded(true);
+                        setSitePhotoFailed(false);
+                      }}
+                      onError={() => {
+                        setSitePhotoLoaded(false);
+                        setSitePhotoFailed(true);
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: 20,
+                        animation: sitePhotoLoaded ? 'fadeIn 0.35s ease-out' : 'none',
+                        opacity: sitePhotoLoaded ? 1 : 0,
+                      }}
+                    />
+                  </>
+                ) : sitesLoading && !isAllSitesSelected ? (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: 16,
+                      background: 'linear-gradient(90deg, rgba(226,232,240,0.8) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.8) 100%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'sitePhotoShimmer 1.2s ease-in-out infinite',
+                    }}
                   />
                 ) : (
                   <>
@@ -2020,6 +2068,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes sitePhotoShimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
         @keyframes fadeOut {
           from { opacity: 1; }
