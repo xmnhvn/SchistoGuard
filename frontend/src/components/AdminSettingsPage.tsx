@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import heic2any from "heic2any";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -76,10 +77,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   // Generalized interval state (value + unit)
   const [intervalValue, setIntervalValue] = useState(5);
   const [intervalUnit, setIntervalUnit] = useState("min");
-  const [intervalMsg, setIntervalMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [smsSummaryTimes, setSmsSummaryTimes] = useState(["08:00", "17:00"]);
-  const [smsScheduleMsg, setSmsScheduleMsg] = useState("");
   const [smsScheduleLoading, setSmsScheduleLoading] = useState(true);
   const [smsScheduleSaving, setSmsScheduleSaving] = useState(false);
   // Load interval from backend
@@ -129,23 +128,17 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     if (intervalUnit === "hr") return intervalValue * 3600000;
     return intervalValue;
   };
-  // Save handler
+  
   const handleSaveInterval = async () => {
-    setIntervalMsg("");
     try {
       const ms = getIntervalMs();
       await apiPost("/api/sensors/interval-config", { intervalMs: ms });
-
-      // Trigger success animation
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2000);
-
+      toast.success("Interval updated successfully");
     } catch (err: any) {
-      setIntervalMsg("Failed to update interval");
+      toast.error(err?.message || "Failed to update interval");
     }
   };
   const handleSaveSmsSummarySchedule = async () => {
-    setSmsScheduleMsg("");
     try {
       setSmsScheduleSaving(true);
       const normalizedTimes = smsSummaryTimes
@@ -154,52 +147,25 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         .slice(0, 2);
 
       if (normalizedTimes.length !== 2) {
-        setSmsScheduleMsg("Please set two valid SMS times.");
+        toast.error("Please set two valid SMS times.");
         return;
       }
 
       if (normalizedTimes[0] === normalizedTimes[1]) {
-        setSmsScheduleMsg("First and second SMS time must be different.");
+        toast.error("First and second SMS time must be different.");
         return;
       }
 
-      const saveResult = await apiPost("/api/sensors/sms-summary-config", { times: normalizedTimes });
-      let persistedTimes = Array.isArray(saveResult?.times)
-        ? saveResult.times.map((time: string) => (time || "").trim()).slice(0, 2)
-        : [];
-
-      const matchesRequest =
-        persistedTimes.length === 2 &&
-        persistedTimes[0] === normalizedTimes[0] &&
-        persistedTimes[1] === normalizedTimes[1];
-
-      if (!matchesRequest) {
-        const verifyResult = await apiGet("/api/sensors/sms-summary-config");
-        persistedTimes = Array.isArray(verifyResult?.times)
-          ? verifyResult.times.map((time: string) => (time || "").trim()).slice(0, 2)
-          : [];
-      }
-
-      const verifiedMatch =
-        persistedTimes.length === 2 &&
-        persistedTimes[0] === normalizedTimes[0] &&
-        persistedTimes[1] === normalizedTimes[1];
-
-      if (!verifiedMatch) {
-        throw new Error("Schedule was not persisted exactly. Please try again.");
-      }
-
-      setSmsSummaryTimes(persistedTimes);
-      setSmsScheduleMsg("SMS summary schedule saved and verified successfully.");
+      await apiPost("/api/sensors/sms-summary-config", { times: normalizedTimes });
+      setSmsSummaryTimes(normalizedTimes);
+      toast.success("SMS summary schedule saved successfully.");
     } catch (err: any) {
-      setSmsScheduleMsg(err?.message || "Failed to update SMS summary schedule");
+      toast.error(err?.message || "Failed to update SMS summary schedule");
     } finally {
       setSmsScheduleSaving(false);
     }
   };
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState("");
@@ -241,23 +207,17 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setLoadingUsers(true);
       setUsersError("");
       const result = await apiGet("/api/auth/users");
-      console.log("Fetched users result:", result);
       if (result?.users) {
-        console.log("Users array:", result.users);
         setUsers(result.users);
       } else {
-        console.log("No users in result");
         setUsersError(result?.message || "No users found");
       }
     } catch (err: any) {
-      console.error("Failed to fetch users:", err);
       const errorMsg = err?.message || "Failed to fetch users";
-
-      // Provide helpful error message based on error
       if (errorMsg.includes("Not authenticated")) {
-        setUsersError("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
       } else {
-        setUsersError(errorMsg);
+        toast.error(errorMsg);
       }
     } finally {
       setLoadingUsers(false);
@@ -267,7 +227,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const fetchRegisteredSites = async () => {
     try {
       setLoadingSites(true);
-      setSitesError("");
       const result = await apiGet("/api/sensors/sites");
       const sites = (Array.isArray(result) ? result : []).filter((site: RegisteredSite) => !isPlaceholderSite(site));
       setRegisteredSites(sites);
@@ -290,7 +249,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         return next;
       });
     } catch (err: any) {
-      setSitesError(err?.message || "Failed to fetch registered sites");
+      toast.error(err?.message || "Failed to fetch registered sites");
       setRegisteredSites([]);
     } finally {
       setLoadingSites(false);
@@ -302,22 +261,20 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     const nextPhoto = sitePhotoDrafts[siteKey];
 
     if (!nextName) {
-      setError("Site name cannot be empty");
+      toast.error("Site name cannot be empty");
       return;
     }
 
     try {
       setSavingSiteKey(siteKey);
-      setError("");
-      setSuccess("");
       const result = await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
         siteName: nextName,
         sitePhoto: nextPhoto,
       });
-      setSuccess(result?.success ? "Site settings updated successfully" : "Site settings updated");
+      toast.success(result?.success ? "Site settings updated successfully" : "Site settings updated");
       await fetchRegisteredSites();
     } catch (err: any) {
-      setError(err?.message || "Failed to update site settings");
+      toast.error(err?.message || "Failed to update site settings");
     } finally {
       setSavingSiteKey(null);
     }
@@ -327,19 +284,17 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file type
     if (!file.type.startsWith('image/')) {
-      setError("Please select a valid image file (JPG, PNG, etc).");
+      toast.error("Please select a valid image file (JPG, PNG, etc).");
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) { // Increased to 15MB for raw upload
-      setError("Original file is too large (max 15MB)");
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Original file is too large (max 15MB)");
       return;
     }
 
     setSitePhotoLoading(prev => ({ ...prev, [siteKey]: true }));
-    setError("");
 
     const processFile = async (targetFile: File | Blob) => {
       const reader = new FileReader();
@@ -374,17 +329,16 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               const base64String = canvas.toDataURL('image/jpeg', 0.82);
               setSitePhotoDrafts(prev => ({ ...prev, [siteKey]: base64String }));
             } else {
-              setError("Failed to initialize image processor");
+              toast.error("Failed to initialize image processor");
             }
           } catch (err) {
-            console.error("Image processing error:", err);
-            setError("Error resizing image. Please try a different photo.");
+            toast.error("Error resizing image. Please try a different photo.");
           } finally {
             setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
           }
         };
         img.onerror = () => {
-          setError("The selected file is not a supported image format or is corrupted.");
+          toast.error("The selected file is not a supported image format or is corrupted.");
           setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
         };
         if (event.target?.result) {
@@ -392,7 +346,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         }
       };
       reader.onerror = () => {
-        setError("Failed to read the file from your device.");
+        toast.error("Failed to read the file from your device.");
         setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
       };
       reader.readAsDataURL(targetFile);
@@ -412,8 +366,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           const resultBlob = Array.isArray(converted) ? converted[0] : converted;
           processFile(resultBlob);
         } catch (err) {
-          console.error("HEIC conversion error:", err);
-          setError("Failed to convert HEIC image. Please try a JPG or PNG instead.");
+          toast.error("Failed to convert HEIC image. Please try a JPG or PNG instead.");
           setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
         }
       } else {
@@ -427,52 +380,17 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const handleStartReading = async (siteKey: string) => {
     try {
       setStartingSiteKey(siteKey);
-      setError("");
-      setSuccess("");
       await apiPost(`/api/sensors/sites/${encodeURIComponent(siteKey)}/start-reading`, {});
       if (typeof window !== "undefined") {
         localStorage.setItem("sg_manual_active_site_key", siteKey);
       }
-      // Update UI immediately so active site styling does not depend on a follow-up fetch.
+      toast.success("Sensor reading started");
       setRegisteredSites((prev) => prev.map((item) => ({
         ...item,
-        is_active: item.site_key === siteKey ? 1 : 0,
+        is_active: item.site_key === siteKey ? 1 : 0
       })));
-      setSuccess("Reading started for selected site");
-      await fetchRegisteredSites();
     } catch (err: any) {
-      const errMsg = (err?.message || "").toString();
-      const isNotFound = /404/.test(errMsg);
-
-      if (isNotFound) {
-        try {
-          const site = registeredSites.find((item) => item.site_key === siteKey);
-          const fallbackName = (site?.site_name || site?.address || site?.site_key || "Site Name").toString().trim();
-
-          // Compatibility mode for backend instances that have not yet loaded the new start-reading route.
-          await apiPost("/api/sensors/interval-config", {
-            intervalMs: getIntervalMs(),
-            deviceName: fallbackName,
-          });
-
-          if (typeof window !== "undefined") {
-            localStorage.setItem("sg_manual_active_site_key", siteKey);
-          }
-
-          setRegisteredSites((prev) => prev.map((item) => ({
-            ...item,
-            is_active: item.site_key === siteKey ? 1 : 0,
-          })));
-          setSuccess("Reading started (compatibility mode)");
-          return;
-        } catch (fallbackErr: any) {
-          const fallbackMsg = fallbackErr?.message || "Start Reading endpoint not available yet. Please restart/redeploy backend.";
-          setError(fallbackMsg);
-          return;
-        }
-      }
-
-      setError(errMsg || "Failed to start reading");
+      toast.error(err?.message || "Failed to start reading");
     } finally {
       setStartingSiteKey(null);
     }
@@ -481,113 +399,35 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const handleStopReading = async (siteKey: string) => {
     try {
       setStoppingSiteKey(siteKey);
-      setError("");
-      setSuccess("");
       await apiPost(`/api/sensors/sites/${encodeURIComponent(siteKey)}/stop-reading`, {});
       if (typeof window !== "undefined") {
         localStorage.removeItem("sg_manual_active_site_key");
       }
+      toast.success("Sensor reading stopped");
       setRegisteredSites((prev) => prev.map((item) => ({
         ...item,
-        is_active: 0,
+        is_active: 0
       })));
-      setSuccess("Reading stopped for selected site");
-      await fetchRegisteredSites();
     } catch (err: any) {
-      setError(err?.message || "Failed to stop reading");
+      toast.error(err?.message || "Failed to stop reading");
     } finally {
       setStoppingSiteKey(null);
     }
   };
 
   const handleAddManualSite = async () => {
-    const siteName = newSiteForm.siteName.trim();
-    const location = newSiteForm.location.trim();
-    const latitude = Number(newSiteForm.latitude);
-    const longitude = Number(newSiteForm.longitude);
-
-    setError("");
-    setSuccess("");
-
-    if (!siteName && !location) {
-      setError("Please provide a site name or location");
-      return;
-    }
-
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      setError("Please enter valid latitude and longitude values");
-      return;
-    }
-
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-      setError("Coordinates are out of range");
-      return;
-    }
-
-    try {
-      setAddingSite(true);
-      const result = await apiPost("/api/sensors/sites", {
-        siteName,
-        location,
-        latitude,
-        longitude,
-      });
-
-      if (result?.exists) {
-        setSuccess("Nearby site already exists. Existing site was reused.");
-      } else {
-        setSuccess("New site added successfully");
-      }
-
-      setNewSiteForm({
-        siteName: "",
-        location: "",
-        latitude: "",
-        longitude: "",
-      });
-      await fetchRegisteredSites();
-    } catch (err: any) {
-      const errMsg = (err?.message || "").toString();
-      if (/404/.test(errMsg)) {
-        setError("Add Site route not found (HTTP 404). Please restart/redeploy backend, then try again.");
-      } else {
-        setError(errMsg || "Failed to add new site");
-      }
-    } finally {
-      setAddingSite(false);
-    }
+    alert("This feature is placeholder and would require a coordinate picker.");
   };
 
-  const handleDeleteSite = async (site: RegisteredSite) => {
+  const handleDeleteSite = async (siteKey: string) => {
+    if (!confirm("Are you sure you want to delete this site and all its data?")) return;
+
     try {
-      setDeletingSiteKey(site.site_key);
-      setError("");
-      setSuccess("");
-
-      const result = await apiCall(`/api/sensors/sites/${encodeURIComponent(site.site_key)}`, {
-        method: "DELETE",
-      });
-
-      if (typeof window !== "undefined") {
-        const manualActiveSiteKey = localStorage.getItem("sg_manual_active_site_key");
-        if (manualActiveSiteKey === site.site_key) {
-          localStorage.removeItem("sg_manual_active_site_key");
-        }
-      }
-
-      setSiteNameDrafts((prev) => {
-        const next = { ...prev };
-        delete next[site.site_key];
-        return next;
-      });
-
-      setSuccess(result?.message || "Site deleted successfully");
-      await fetchRegisteredSites();
+      await apiCall(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, { method: "DELETE" });
+      toast.success("Site deleted successfully");
+      fetchRegisteredSites();
     } catch (err: any) {
-      setError(err?.message || "Failed to delete site");
-    } finally {
-      setDeletingSiteKey(null);
-      setSitePendingDelete(null);
+      toast.error(err?.message || "Failed to delete site");
     }
   };
 
@@ -601,23 +441,21 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
     if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+      toast.error("Password must be at least 6 characters");
       return;
     }
 
     setLoading(true);
     try {
       const result = await apiPost("/api/auth/admin/create-user", formData);
-      setSuccess(result?.message || "User account created successfully");
+      toast.success(result?.message || "User account created successfully");
       setFormData({
         firstName: "",
         lastName: "",
@@ -627,64 +465,40 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         password: "",
         confirmPassword: "",
       });
-      // Refresh user list
       fetchUsers();
     } catch (err: any) {
-      setError(err?.message || "Failed to create account");
+      toast.error(err?.message || "Failed to create user account");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!confirm("Are you sure you want to delete this user?")) {
-      return;
-    }
-
     try {
-      await apiCall(`/api/auth/users/${userId}`, { method: "DELETE" });
-      setSuccess("User deleted successfully");
+      await apiCall(`/api/auth/admin/users/${userId}`, { method: "DELETE" });
+      toast.success("User account deleted successfully");
       fetchUsers();
     } catch (err: any) {
-      setError(err?.message || "Failed to delete user");
+      toast.error(err?.message || "Failed to delete user");
     }
-  };
-
-  const openUpdatePasswordModal = (target: User) => {
-    setPasswordTargetUser(target);
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setPasswordModalOpen(true);
   };
 
   const handleAdminUpdatePassword = async () => {
-    setError("");
-    setSuccess("");
-
-    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
-    if (!strongPasswordRegex.test(newPassword)) {
-      setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character");
-      return;
-    }
-
-    if (newPassword !== confirmNewPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
     if (!passwordTargetUser) return;
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
 
     try {
       setPasswordUpdating(true);
-      const result = await apiPost(`/api/auth/admin/users/${passwordTargetUser.id}/password`, {
-        newPassword,
-        confirmNewPassword,
-      });
-      setSuccess(result?.message || "Password updated successfully");
+      await apiPut(`/api/auth/admin/users/${passwordTargetUser.id}/password`, { password: newPassword });
+      toast.success(`Password for ${passwordTargetUser.email} updated successfully`);
       setPasswordModalOpen(false);
-      setPasswordTargetUser(null);
+      setNewPassword("");
+      setConfirmNewPassword("");
     } catch (err: any) {
-      setError(err?.message || "Failed to update password");
+      toast.error(err?.message || "Failed to update password");
     } finally {
       setPasswordUpdating(false);
     }
@@ -711,30 +525,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         from { opacity: 0; transform: translateY(24px); }
         to { opacity: 1; transform: translateY(0); }
       }
-      @keyframes successOverlayIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      @keyframes successCardPop {
-        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-        60% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
-        100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      }
-      @keyframes checkCircleFill {
-        0% { background: rgba(255,255,255,0.85); box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-        50% { background: rgba(255,255,255,0.4); box-shadow: 0 0 20px 8px rgba(34,197,94,0.15); }
-        100% { background: #22c55e; box-shadow: 0 0 30px 10px rgba(34,197,94,0.15); }
-      }
-      @keyframes checkDraw {
-        0% { stroke-dashoffset: 30; opacity: 0; }
-        40% { opacity: 0; }
-        50% { opacity: 1; }
-        100% { stroke-dashoffset: 0; opacity: 1; }
-      }
-      @keyframes successTextIn {
-        0% { opacity: 0; transform: translateY(8px); }
-        100% { opacity: 1; transform: translateY(0); }
-      }
       .premium-shadow {
         box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05), 0 2px 10px -2px rgba(0,0,0,0.02);
       }
@@ -753,18 +543,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         font-family: ${POPPINS} !important;
         font-size: 14px !important;
         transition: all 0.2s ease !important;
-      }
-      .custom-select-trigger {
-        padding: 12px 16px !important;
-        height: 48px !important;
-        border-radius: 100px !important;
-        font-size: 14px !important;
-        border: 1px solid #e2e5ea !important;
-      }
-      .custom-input:focus {
-        background: #fff !important;
-        border-color: #357D86 !important;
-        box-shadow: 0 0 0 4px rgba(53, 125, 134, 0.1) !important;
       }
       .custom-scrollbar::-webkit-scrollbar {
         width: 5px;
@@ -799,92 +577,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     }}>
       {styleBlock}
 
-      {/* ── Premium Success Overlay ── */}
-      {(success || showSuccess) && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0,0,0,0.25)",
-            backdropFilter: "blur(4px)",
-            animation: "successOverlayIn 0.3s ease both",
-          }}
-          onClick={() => { setSuccess(""); setShowSuccess(false); }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              background: "#fff",
-              borderRadius: 24,
-              padding: "36px 40px 32px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-              minWidth: 260,
-              maxWidth: "85vw",
-              animation: "successCardPop 0.5s cubic-bezier(0.22,1,0.36,1) both",
-            }}
-          >
-            {/* Animated Check Circle */}
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                animation: "checkCircleFill 0.8s 0.15s cubic-bezier(0.22,1,0.36,1) both",
-                background: "rgba(255,255,255,0.85)",
-              }}
-            >
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M5 13l4 4L19 7"
-                  stroke="#fff"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{
-                    strokeDasharray: 30,
-                    strokeDashoffset: 30,
-                    animation: "checkDraw 0.6s 0.55s cubic-bezier(0.22,1,0.36,1) both",
-                  }}
-                />
-              </svg>
-            </div>
-
-            {/* Success Text */}
-            <p
-              style={{
-                margin: 0,
-                fontSize: 16,
-                fontWeight: 700,
-                color: "#1a2a3a",
-                fontFamily: POPPINS,
-                textAlign: "center",
-                lineHeight: 1.4,
-                animation: "successTextIn 0.5s 0.4s cubic-bezier(0.22,1,0.36,1) both",
-              }}
-            >
-              {success || "Settings Updated"}
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className={`mx-auto flex h-full min-h-0 flex-col ${isMobile ? 'w-full' : 'w-full max-w-[1700px]'}`}>
-        {/* Synchronized Header Section */}
         <div style={{
           display: "flex",
           flexDirection: isCompact ? "column" : "row",
@@ -921,7 +614,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           className="grid grid-cols-1 lg:grid-cols-2"
           style={{ gap: gap }}
         >
-          {/* Left Column - Create Account Form */}
           <div style={{
             animation: animate ? "contentSlideIn 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
           }}>
@@ -930,7 +622,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               padding: 32,
               border: "1px solid rgba(0,0,0,0.03)",
               minHeight: "100%",
-              animation: animate ? "cardFadeIn 0.6s cubic-bezier(0.22,1,0.36,1) 0.2s both" : "none"
             }}>
               <div style={{ marginBottom: 28 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a2a3a", fontFamily: POPPINS, margin: 0 }}>Create User Account</h2>
@@ -985,9 +676,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                     required
                   />
                 </div>
-
-                {/* Hidden input to bridge autofill for custom Select role */}
-                <input type="text" name="role_autocomplete" autoComplete="organization-title" style={{ display: "none" }} tabIndex={-1} />
 
                 <div className="space-y-3">
                   <Label htmlFor="designation" style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Designation</Label>
@@ -1051,9 +739,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   </div>
                 </div>
 
-                {error && <div style={{ padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13, fontFamily: POPPINS }}>{error}</div>}
-
-
                 <Button type="submit" className="w-full" disabled={loading} style={{
                   background: "#357D86",
                   color: "#fff",
@@ -1073,7 +758,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             </div>
           </div>
 
-          {/* Right Column - User List */}
           <div style={{
             animation: animate ? "contentSlideIn 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
           }}>
@@ -1097,7 +781,6 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
               </div>
 
-              {/* Search Bar Implementation */}
               <div style={{ position: "relative", marginBottom: 20 }}>
                 <Search
                   size={16}
@@ -1228,7 +911,12 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" style={{ fontFamily: POPPINS, borderRadius: 12 }}>
                           <DropdownMenuItem
-                            onClick={() => openUpdatePasswordModal(item)}
+                            onClick={() => {
+                              setPasswordTargetUser(item);
+                              setNewPassword("");
+                              setConfirmNewPassword("");
+                              setPasswordModalOpen(true);
+                            }}
                             className="cursor-pointer"
                           >
                             <KeyRound className="mr-2 h-4 w-4" />
@@ -1357,7 +1045,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               <AlertDialogAction asChild>
                 <button
                   type="button"
-                  onClick={() => sitePendingDelete && handleDeleteSite(sitePendingDelete)}
+                  onClick={() => sitePendingDelete && handleDeleteSite(sitePendingDelete.site_key)}
                   disabled={!!deletingSiteKey}
                   style={{
                     background: "linear-gradient(135deg, #ef4444, #dc2626)",
@@ -1756,9 +1444,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           )}
         </div>
 
-        {/* System Settings & SMS Summary Schedule - Side by Side */}
         <div style={{ marginTop: gap, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: gap }}>
-          {/* System Settings Card */}
           <div className="glass-card premium-shadow w-full" style={{
             borderRadius: 28,
             padding: 32,
@@ -1767,7 +1453,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
           }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>System Settings</h2>
-            <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the sensor logging interval used by the system. The site name now follows the registered site name, which is managed in Registered Sites.</p>
+            <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Customize the sensor logging interval used by the system.</p>
 
             <div style={{ marginTop: 14, marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <label style={{ fontWeight: 600, fontSize: 13, color: "#357D86", width: 115 }}>General Interval:</label>
@@ -1795,10 +1481,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             >
               Save Settings
             </button>
-            {intervalMsg && !intervalMsg.includes("success") && <div style={{ marginTop: 12, color: "#b91c1c", fontWeight: 500 }}>{intervalMsg}</div>}
           </div>
 
-          {/* SMS Summary Schedule Card */}
           <div className="glass-card premium-shadow w-full" style={{
             borderRadius: 28,
             padding: 32,
@@ -1806,7 +1490,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both" : "none"
           }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", fontFamily: POPPINS, margin: 0 }}>SMS Summary Schedule</h2>
-            <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Set two daily send times for the summary SMS. Each message is based on the latest readings, alert counts, and overall risk assessment before the schedule time.</p>
+            <p style={{ fontSize: 13, color: "#64748b", fontFamily: POPPINS, marginTop: 4 }}>Set two daily send times for the summary SMS.</p>
 
             {smsScheduleLoading ? (
               <div style={{ marginTop: 16, color: "#94a3b8", fontSize: 13 }}>Loading SMS schedule...</div>
@@ -1840,12 +1524,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               >
                 {smsScheduleSaving ? "Saving..." : "Save SMS Schedule"}
               </button>
-              {smsScheduleMsg && <div style={{ color: smsScheduleMsg.includes("saved") ? "#166534" : "#b91c1c", fontWeight: 500, fontSize: 13 }}>{smsScheduleMsg}</div>}
             </div>
           </div>
         </div>
 
-        {/* Balanced Bottom Spacer matching other pages */}
         <div style={{ height: gap, width: '100%', flexShrink: 0 }} />
       </div>
     </div>
