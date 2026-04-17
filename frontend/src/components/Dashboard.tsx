@@ -40,6 +40,7 @@ type SiteOption = {
   longitude?: number | null;
   lastSeen?: string | null;
   isActive?: boolean;
+  sitePhoto?: string | null;
 };
 
 const SITE_STALE_MS = 15000;
@@ -453,7 +454,7 @@ export function Dashboard({
 
   const mapSites = (() => {
     const fromRegistry = availableSites
-      .reduce<Array<{ id: string; name: string; lat: number; lng: number; isActive: boolean; isSelected: boolean }>>((acc, site) => {
+      .reduce<Array<{ id: string; name: string; lat: number; lng: number; isActive: boolean; isSelected: boolean; sitePhoto?: string | null }>>((acc, site) => {
         const coords = resolveSiteCoordinates(site);
         if (!coords) return acc;
 
@@ -471,6 +472,7 @@ export function Dashboard({
           lng: coords.lng,
           isActive: isMarkerActive,
           isSelected: site.siteKey === selectedSiteKey,
+          sitePhoto: site.sitePhoto || null,
         });
         return acc;
       }, [])
@@ -686,6 +688,7 @@ export function Dashboard({
             longitude: normalizeCoordinate(site.longitude),
             lastSeen: site.last_seen || site.first_seen || null,
             isActive: site.is_active === 1 || site.is_active === true,
+            sitePhoto: site.site_photo || null,
           }))
           .filter((site) => !!site.siteKey)
           .filter((site) => !isHiddenPlaceholderSite(site))
