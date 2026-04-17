@@ -1815,7 +1815,11 @@ router.get('/sites', (req, res) => {
      ORDER BY COALESCE(last_seen, first_seen) DESC, site_name ASC`,
     [],
     (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
+      if (err) {
+        console.error('[GET /sites error]', err);
+        return res.status(500).json({ error: err.message });
+      }
+      console.log(`[GET /sites] Found ${rows?.length || 0} sites`);
       res.json(rows || []);
     }
   );
