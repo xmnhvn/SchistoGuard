@@ -39,7 +39,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
-  const [hiddenPhotoSiteId, setHiddenPhotoSiteId] = useState<string | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
   const photoBubbleMarker = useRef<maplibregl.Marker | null>(null);
   const previousPhotoBubbleKey = useRef<string>('');
@@ -94,13 +93,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
   // Use JSON stringify to prevent infinite unneeded re-renders when parent passes a new array reference
   const sitesJson = sites ? JSON.stringify(sites) : '';
-
-  useEffect(() => {
-    const selectedSiteId = sites?.find((site) => site.isSelected)?.id || null;
-    if (hiddenPhotoSiteId && hiddenPhotoSiteId !== selectedSiteId) {
-      setHiddenPhotoSiteId(null);
-    }
-  }, [sitesJson, sites, hiddenPhotoSiteId]);
 
   useEffect(() => {
     if (mapUnavailable) return;
@@ -256,11 +248,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
             if (site?.id) {
               el.addEventListener('click', (event) => {
                 event.stopPropagation();
-                if (!mobileMode && site.isSelected && site.sitePhoto) {
-                  setHiddenPhotoSiteId((prev) => (prev === site.id ? null : site.id));
-                  return;
-                }
-                setHiddenPhotoSiteId(null);
                 onSiteSelect?.(site.id);
               });
             }
@@ -282,9 +269,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       previousSitesJson.current = sitesJson;
     }
 
-    const selectedPhotoSite = !mobileMode
-      ? sitesToShow.find((site) => site.isSelected && site.sitePhoto && site.id !== hiddenPhotoSiteId)
-      : undefined;
+    const selectedPhotoSite = sitesToShow.find((site) => site.isSelected && site.sitePhoto);
     const photoBubbleKey = selectedPhotoSite
       ? `${selectedPhotoSite.id}:${selectedPhotoSite.sitePhoto ?? ''}`
       : '';
@@ -310,7 +295,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         bubbleEl.className = 'site-photo-pin';
         bubbleEl.innerHTML = `
           <div class="site-photo-pin__shell">
-            <div class="site-photo-pin__bridge"></div>
             <div class="site-photo-pin__frame">
               <img src="${selectedPhotoSite.sitePhoto}" alt="${selectedPhotoSite.name.replace(/"/g, '&quot;')}" class="site-photo-pin__image" />
             </div>
@@ -349,7 +333,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [sitesJson, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, allSitesPadding, mapUnavailable, hiddenPhotoSiteId]);
+  }, [sitesJson, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, allSitesPadding, mapUnavailable]);
 
 
   // Destroy map on unmount

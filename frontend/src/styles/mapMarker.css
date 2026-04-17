@@ -93,68 +93,43 @@
 
 .site-photo-pin {
   position: relative;
-  width: 176px;
-  height: 214px;
+  width: 164px;
+  height: 196px;
   pointer-events: none;
-  transform: translateY(-6px);
+  transform: translateY(-8px);
   animation: site-photo-pin-in 0.22s ease-out;
 }
 
 .site-photo-pin__shell {
   position: absolute;
   inset: 0;
-  filter: drop-shadow(0 12px 24px rgba(15, 23, 42, 0.08));
 }
 
 .site-photo-pin__shell::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: 16px;
-  width: 160px;
-  height: 160px;
+  bottom: 20px;
+  width: 76px;
+  height: 76px;
   background: rgba(255, 255, 255, 0.98);
-  border-radius: 999px;
-  transform: translateX(-50%);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22);
-}
-
-.site-photo-pin__shell::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  width: 92px;
-  height: 108px;
-  background: rgba(255, 255, 255, 0.98);
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
-  transform: translateX(-50%);
-  filter: drop-shadow(0 14px 24px rgba(15, 23, 42, 0.14));
-}
-
-.site-photo-pin__bridge {
-  position: absolute;
-  left: 50%;
-  top: 126px;
-  width: 88px;
-  height: 52px;
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 0 0 44px 44px;
-  transform: translateX(-50%);
-  z-index: 0;
+  border-radius: 22px 22px 28px 28px;
+  transform: translateX(-50%) rotate(45deg);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
 }
 
 .site-photo-pin__frame {
   position: absolute;
-  top: 22px;
+  top: 0;
   left: 50%;
-  width: 136px;
-  height: 136px;
+  width: 146px;
+  height: 146px;
   border-radius: 999px;
   overflow: hidden;
   background: #ffffff;
   border: 6px solid rgba(255, 255, 255, 0.99);
   transform: translateX(-50%);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22);
   z-index: 1;
 }
 
@@ -173,6 +148,6 @@
   }
   to {
     opacity: 1;
-    transform: translateY(-6px) scale(1);
+    transform: translateY(-8px) scale(1);
   }
 }

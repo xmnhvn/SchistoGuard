@@ -675,6 +675,7 @@ export function Dashboard({
       try {
         const data = await apiGet('/api/sensors/sites');
         if (!Array.isArray(data)) {
+          setAvailableSites([]);
           return;
         }
 
@@ -702,8 +703,7 @@ export function Dashboard({
           return mapped[0]?.siteKey || '';
         });
       } catch {
-        // Keep the current site registry visible during transient polling failures
-        // so the selected site UI and photo overlays do not flicker out.
+        setAvailableSites([]);
       }
     };
 
