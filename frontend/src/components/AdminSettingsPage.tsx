@@ -257,8 +257,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   };
 
   const handleSaveSiteSettings = async (siteKey: string) => {
-    const nextName = (siteNameDrafts[siteKey] || "").trim();
-    const nextPhoto = sitePhotoDrafts[siteKey];
+    const site = registeredSites.find(s => s.site_key === siteKey);
+    const nextName = (siteNameDrafts[siteKey] !== undefined ? siteNameDrafts[siteKey] : (site?.site_name || "")).trim();
+    // Default to existing photo if no new draft exists
+    const nextPhoto = sitePhotoDrafts[siteKey] !== undefined ? sitePhotoDrafts[siteKey] : (site?.site_photo || null);
 
     if (!nextName) {
       toast.error("Site name cannot be empty");
@@ -272,6 +274,19 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         sitePhoto: nextPhoto,
       });
       toast.success(result?.success ? "Site settings updated successfully" : "Site settings updated");
+      
+      // Clear drafts for this site after successful save
+      setSiteNameDrafts(prev => {
+        const next = { ...prev };
+        delete next[siteKey];
+        return next;
+      });
+      setSitePhotoDrafts(prev => {
+        const next = { ...prev };
+        delete next[siteKey];
+        return next;
+      });
+
       await fetchRegisteredSites();
     } catch (err: any) {
       toast.error(err?.message || "Failed to update site settings");
@@ -306,8 +321,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             let width = img.width;
             let height = img.height;
 
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1200;
+            const MAX_WIDTH = 1000;
+            const MAX_HEIGHT = 1000;
 
             if (width > height) {
               if (width > MAX_WIDTH) {
@@ -326,7 +341,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             const ctx = canvas.getContext('2d');
             if (ctx) {
               ctx.drawImage(img, 0, 0, width, height);
-              const base64String = canvas.toDataURL('image/jpeg', 0.82);
+              const base64String = canvas.toDataURL('image/jpeg', 0.7);
               setSitePhotoDrafts(prev => ({ ...prev, [siteKey]: base64String }));
             } else {
               toast.error("Failed to initialize image processor");
@@ -1363,21 +1378,26 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       </div>
                       <Button
                         type="button"
+                        disabled={!!savingSiteKey || !!sitePhotoLoading[site.site_key]}
                         onClick={() => handleSaveSiteSettings(site.site_key)}
-                        disabled={savingSiteKey === site.site_key || isDeleting}
                         style={{
-                          background: "#357D86",
+                          background: "linear-gradient(135deg, #357D86, #2d6a72)",
                           color: "#fff",
-                          borderRadius: 100,
-                          padding: "10px 18px",
+                          borderRadius: "100px",
+                          padding: "0 24px",
+                          height: 44,
+                          fontSize: 14,
                           fontWeight: 600,
-                          border: "none",
                           fontFamily: POPPINS,
-                          fontSize: 13,
-                          minWidth: isMobile ? "100%" : 92,
+                          boxShadow: "0 4px 12px rgba(53, 125, 134, 0.25)",
+                          minWidth: 100,
                         }}
                       >
-                        {savingSiteKey === site.site_key ? "Saving..." : "Save"}
+                        {savingSiteKey === site.site_key ? (
+                          sitePhotoDrafts[site.site_key] ? "Uploading..." : "Saving..."
+                        ) : (
+                          "Save Settings"
+                        )}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

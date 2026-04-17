@@ -2024,31 +2024,24 @@ router.put('/sites/:siteKey', (req, res) => {
 
   db.run(
     `UPDATE site_registry
-     SET site_name = ?, site_photo = ?
+     SET site_name = ?, site_photo = COALESCE(?, site_photo)
      WHERE site_key = ?`,
     [trimmedSiteName, sitePhoto !== undefined ? sitePhoto : null, siteKey],
     function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Site not found' });
+      if (err) {
+        return res.status(500).json({ error: err.message || 'Failed to update site' });
       }
 
-      db.setSetting('device_name', trimmedSiteName, (settingErr) => {
-        if (settingErr) return res.status(500).json({ error: settingErr.message });
-
-        GLOBAL_DEVICE_NAME = trimmedSiteName;
-
-        db.get(
-          `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen
-           FROM site_registry
-           WHERE site_key = ?`,
-          [siteKey],
-          (selectErr, row) => {
-            if (selectErr) return res.status(500).json({ error: selectErr.message });
-            res.json({ success: true, deviceName: trimmedSiteName, site: row });
-          }
-        );
-      });
+      db.get(
+        `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo
+         FROM site_registry
+         WHERE site_key = ?`,
+        [siteKey],
+        (selectErr, row) => {
+          if (selectErr) return res.status(500).json({ error: selectErr.message });
+          res.json({ success: true, site: row });
+        }
+      );
     }
   );
 });
