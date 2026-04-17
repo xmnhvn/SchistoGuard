@@ -11,7 +11,6 @@ interface DashboardMapProps {
     lng: number;
     isActive?: boolean;
     isSelected?: boolean;
-    sitePhoto?: string | null;
   }>;
   /** Called when a site marker is clicked */
   onSiteSelect?: (siteId: string) => void;
@@ -237,14 +236,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
             el.innerHTML = `
-              ${site.isSelected && site.sitePhoto ? `
-                <div class="site-marker__photo-callout">
-                  <div class="site-marker__photo-frame">
-                    <img src="${site.sitePhoto}" alt="${site.name.replace(/"/g, '&quot;')}" class="site-marker__photo-image" />
-                  </div>
-                  <div class="site-marker__photo-tail"></div>
-                </div>
-              ` : ''}
               <div class="site-marker ${markerStateClass}">
                 <div class="site-marker__pulse"></div>
                 <div class="site-marker__ring"></div>
