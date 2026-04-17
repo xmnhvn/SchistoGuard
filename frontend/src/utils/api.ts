@@ -3,24 +3,9 @@
  * Dynamically switches between local and cloud backend
  */
 
+// @ts-ignore - Vite env type handling
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 const LOCAL_BACKEND_BASE_URL = 'http://localhost:3001';
-const CLOUD_BACKEND_BASE_URL = 'https://schistoguard-production.up.railway.app';
-
-function resolveApiBaseUrl(): string {
-  // @ts-ignore - Vite env type handling
-  const configured = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
-  if (configured) return configured;
-
-  if (typeof window !== 'undefined') {
-    const host = (window.location.hostname || '').toLowerCase();
-    const isLocalHost = host === 'localhost' || host === '127.0.0.1';
-    return isLocalHost ? LOCAL_BACKEND_BASE_URL : CLOUD_BACKEND_BASE_URL;
-  }
-
-  return '';
-}
-
-const API_BASE_URL = resolveApiBaseUrl();
 
 function buildApiUrl(endpoint: string, baseUrl = API_BASE_URL): string {
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
