@@ -1989,7 +1989,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   padding: screenWidth < 600 ? '16px' : screenWidth >= 1100 ? (isSmallDesktop ? '16px' : '18px') : '22px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   fontFamily: "'Poppins', sans-serif",
-                  animation: 'cardFadeIn 0.6s 0.7s ease-out both',
+                  animation: 'cardFadeIn 0.35s 0.3s ease-out both',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
