@@ -11,7 +11,6 @@ interface DashboardMapProps {
     lng: number;
     isActive?: boolean;
     isSelected?: boolean;
-    sitePhoto?: string | null;
   }>;
   /** Called when a site marker is clicked */
   onSiteSelect?: (siteId: string) => void;
@@ -40,7 +39,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const map = useRef<maplibregl.Map | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
   const markers = useRef<maplibregl.Marker[]>([]);
-  const photoBubbleMarker = useRef<maplibregl.Marker | null>(null);
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const previousSitesJson = useRef<string>('');
@@ -268,31 +266,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       previousSitesJson.current = sitesJson;
     }
 
-    const selectedPhotoSite = sitesToShow.find((site) => site.isSelected && site.sitePhoto);
-    if (photoBubbleMarker.current) {
-      photoBubbleMarker.current.remove();
-      photoBubbleMarker.current = null;
-    }
-
-    if (selectedPhotoSite && map.current) {
-      const bubbleEl = document.createElement('div');
-      bubbleEl.className = 'site-photo-bubble';
-      bubbleEl.innerHTML = `
-        <div class="site-photo-bubble__frame">
-          <img src="${selectedPhotoSite.sitePhoto}" alt="${selectedPhotoSite.name.replace(/"/g, '&quot;')}" class="site-photo-bubble__image" />
-        </div>
-        <div class="site-photo-bubble__stem"></div>
-        <div class="site-photo-bubble__tip"></div>
-      `;
-
-      photoBubbleMarker.current = new maplibregl.Marker({
-        element: bubbleEl,
-        anchor: 'bottom',
-      })
-        .setLngLat([selectedPhotoSite.lng, selectedPhotoSite.lat])
-        .addTo(map.current);
-    }
-
     // Wait for the map to become completely idle (all tiles loaded and painted)
     if (map.current!.loaded()) {
       onMapReady?.();
@@ -324,7 +297,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         map.current.remove();
         map.current = null;
         markers.current = [];
-        photoBubbleMarker.current = null;
         previousSitesJson.current = '';
       }
     };
