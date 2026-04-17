@@ -138,6 +138,7 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS longitude REAL');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS first_seen TEXT');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS last_seen TEXT');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS site_photo TEXT');
     await db.query(`
       CREATE OR REPLACE FUNCTION prevent_site_registry_coord_update()
       RETURNS trigger AS $$

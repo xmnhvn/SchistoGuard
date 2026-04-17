@@ -9,9 +9,8 @@ import {
   ChevronDown,
   LocateFixed,
   Download,
-  Thermometer,
-  Droplets,
   Info,
+  Camera,
 } from "lucide-react";
 import { DashboardMap } from "../DashboardMap";
 import type { DashboardMapHandle } from "../DashboardMap";
@@ -22,7 +21,7 @@ import {
   SensorIcon,
 } from "./LandingComponents";
 import { PWAInstructionsModal } from "../PWAInstructionsModal";
-import SensorMiniCard from "../SensorMiniCard";
+
 import { apiGet } from "../../utils/api";
 import { reverseGeocode } from "../../utils/reverseGeocode";
 
@@ -38,6 +37,7 @@ type SiteOption = {
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  sitePhoto?: string | null;
 };
 
 const ALL_SITES_KEY = 'all';
@@ -68,31 +68,7 @@ function resolveSiteCoordinates(site: SiteOption | null | undefined) {
   return null;
 }
 
-// Sensor status helper
-function getSensorStatus(
-  type: "temperature" | "turbidity" | "ph",
-  value: number
-): { label: string; color: string } {
-  if (type === "temperature") {
-    if (value >= 22 && value <= 30)
-      return { label: "Needs Attention", color: "#ef4444" };
-    if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
-      return { label: "Watch Zone", color: "#E7B213" };
-    return { label: "Safe", color: "#22c55e" };
-  }
-  if (type === "turbidity") {
-    if (value < 5) return { label: "Higher Clarity (Needs Attention)", color: "#ef4444" };
-    if (value <= 15) return { label: "Moderate Turbidity", color: "#E7B213" };
-    return { label: "Safe", color: "#22c55e" };
-  }
-  if (type === "ph") {
-    if (value >= 6.5 && value <= 8.0) return { label: "Needs Attention", color: "#ef4444" };
-    if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
-      return { label: "Watch Zone", color: "#f59e0b" };
-    return { label: "Safe", color: "#22c55e" };
-  }
-  return { label: "", color: "#9ca3af" };
-}
+
 
 function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -151,6 +127,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [liveReading, setLiveReading] = useState<any>(null);
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
   const [selectedSiteKey, setSelectedSiteKey] = useState<string>(ALL_SITES_KEY);
+  const [selectedSiteDBReading, setSelectedSiteDBReading] = useState<any>(null);
+  const [allSitesReadings, setAllSitesReadings] = useState<any[]>([]);
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const [showSiteDropdown, setShowSiteDropdown] = useState(false);
   const [selectedSiteAddress, setSelectedSiteAddress] = useState<string | null>(null);
@@ -464,6 +442,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             address: (site.address || '').toString().trim() || null,
             latitude: normalizeCoordinate(site.latitude),
             longitude: normalizeCoordinate(site.longitude),
+            sitePhoto: site.site_photo || null,
           }))
           .filter((site) => !!site.siteKey)
           .sort((a, b) => a.siteName.localeCompare(b.siteName));
@@ -677,6 +656,47 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch specific DB history for selected site if it differs from the active live site
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedSiteKey || selectedSiteKey === ALL_SITES_KEY) {
+      setSelectedSiteDBReading(null);
+      if (selectedSiteKey === ALL_SITES_KEY) {
+        apiGet('/api/sensors/latest-all')
+          .then((data) => {
+            if (!cancelled) setAllSitesReadings(Array.isArray(data) ? data : []);
+          })
+          .catch(() => {
+            if (!cancelled) setAllSitesReadings([]);
+          });
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    apiGet(`/api/sensors/history?siteKey=${encodeURIComponent(selectedSiteKey)}&limit=1`)
+      .then((data) => {
+        if (cancelled) return;
+        if (Array.isArray(data) && data.length > 0) {
+          setSelectedSiteDBReading({
+            ...data[0],
+            deviceConnected: false, // DB playback is inherently disconnected
+          });
+        } else {
+          setSelectedSiteDBReading(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedSiteDBReading(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSiteKey]);
+
   const handleLiveUpdatesClick = () => {
     setShowLiveUpdates(true);
     // Trigger resetView to animate to the new offset point
@@ -806,15 +826,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         )
     )
     : undefined;
-  const hasLiveSensorValues =
-    !!latestReading &&
-    Number.isFinite(Number(latestReading.temperature)) &&
-    Number.isFinite(Number(latestReading.turbidity)) &&
-    Number.isFinite(Number(latestReading.ph));
-  const showLiveSensorCards = selectedSiteOperational && hasLiveSensorValues;
-  const temperatureStatus = showLiveSensorCards ? getSensorStatus('temperature', Number(latestReading.temperature)) : null;
-  const turbidityStatus = showLiveSensorCards ? getSensorStatus('turbidity', Number(latestReading.turbidity)) : null;
-  const phStatus = showLiveSensorCards ? getSensorStatus('ph', Number(latestReading.ph)) : null;
+
   const desktopSidePadding = '10%';
   const liveUpdatesContentPadding = isMobileOrTablet
     ? (screenWidth < 400 ? '72px 16px 16px'
@@ -827,148 +839,110 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     : (isSmallDesktop ? 36 : 50);
 
   // ─── Risk Calculation Logic (Sync with Dashboard) ───────────────────────
-  const getOverallRisk = () => {
-    if (!latestReading) return "no-data";
-    const temp = latestReading.temperature;
-    const turbidity = latestReading.turbidity;
-    const ph = latestReading.ph;
+  const calculateRiskForReading = (reading: any): "safe" | "warning" | "critical" | "no-data" => {
+    if (!reading) return "no-data";
 
-    let risks = [];
-    if (temp >= 22 && temp <= 30) risks.push("critical");
-    else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) risks.push("warning");
+    const temp = reading.temperature != null ? Number(reading.temperature) : null;
+    const turb = reading.turbidity != null ? Number(reading.turbidity) : null;
+    const ph = reading.ph != null ? Number(reading.ph) : null;
 
-    if (turbidity < 5) risks.push("critical");
-    else if (turbidity <= 15) risks.push("warning");
+    if ((temp == null || !Number.isFinite(temp)) && (turb == null || !Number.isFinite(turb)) && (ph == null || !Number.isFinite(ph))) return "no-data";
 
-    if (ph >= 6.5 && ph <= 8.0) risks.push("critical");
-    else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) risks.push("warning");
+    const risks: string[] = [];
+    if (temp != null && Number.isFinite(temp)) {
+      if (temp >= 22 && temp <= 30) risks.push("critical");
+      else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) risks.push("warning");
+    }
+    if (turb != null && Number.isFinite(turb)) {
+      if (turb < 5) risks.push("critical");
+      else if (turb <= 15) risks.push("warning");
+    }
+    if (ph != null && Number.isFinite(ph)) {
+      if (ph >= 6.5 && ph <= 8.0) risks.push("critical");
+      else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) risks.push("warning");
+    }
 
     if (risks.includes("critical")) return "critical";
     if (risks.includes("warning")) return "warning";
     return "safe";
   };
 
-  const renderAnalysisCard = () => {
-    const overallRisk = getOverallRisk();
-    const riskData = {
-      safe: {
-        title: "Stable Conditions",
-        message: "Current readings are outside the most favorable range for snail activity.",
-        color: "#22c55e",
-        bgColor: "rgba(34,197,94,0.08)",
-        borderColor: "rgba(34,197,94,0.2)"
-      },
-      warning: {
-        title: "Watch Zone",
-        message: "Some readings are near ranges that can support snail activity. Continue monitoring.",
-        color: "#f59e0b",
-        bgColor: "rgba(245,158,11,0.08)",
-        borderColor: "rgba(245,158,11,0.2)"
-      },
-      critical: {
-        title: "Needs Attention",
-        message: "Current readings are within ranges linked to higher snail activity. Consider preventive action and closer monitoring.",
-        color: "#ef4444",
-        bgColor: "rgba(239,68,68,0.08)",
-        borderColor: "rgba(239,68,68,0.2)"
-      },
-      "no-data": {
-        title: "Waiting for Data",
-        message: "Establishing connection to SchistoGuard sensor for live analysis.",
-        color: "#64748b",
-        bgColor: "rgba(100,116,139,0.08)",
-        borderColor: "rgba(100,116,139,0.2)"
+  const getOverallRisk = (): "safe" | "warning" | "critical" | "no-data" => {
+    let reading = null;
+
+    if (selectedSiteKey === ALL_SITES_KEY) {
+      // For all sites, prefer live reading, fallback to DB
+      reading = latestReading || liveReading;
+    } else {
+      // If we selected a specific site, use its actual data
+      if (activeSiteKey === selectedSiteKey && deviceConnected && latestReading) {
+        reading = latestReading;
+      } else {
+        // Fallback to the DB specific to this site
+        reading = selectedSiteDBReading || liveReading; // liveReading might match if it's the active offline site
       }
-    };
+    }
 
-    const current = riskData[overallRisk as keyof typeof riskData];
-
-    return (
-      <div style={{
-        background: "#fff",
-        borderRadius: 20,
-        padding: screenWidth < 600 ? "16px" : screenWidth >= 1100 ? "18px" : "22px",
-        boxShadow: screenWidth < 600 ? "0 4px 18px rgba(0,0,0,0.11)" : "0 2px 12px rgba(0,0,0,0.09)",
-        fontFamily: "'Poppins', sans-serif",
-        animation: 'cardFadeIn 0.6s 0.6s ease-out both',
-        gridColumn: '1 / -1',
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        marginTop: 4, // Added margin to separate from the cards above
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 10,
-            background: "linear-gradient(135deg, #357D86, #4EA8B1)",
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <Activity size={18} color="#fff" />
-          </div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#337C85" }}>
-            Data Interpretation
-          </h3>
-        </div>
-
-        {/* Current Risk Interpretation */}
-        <div style={{
-          padding: "12px 14px",
-          borderRadius: 14,
-          background: current.bgColor,
-          border: `1px solid ${current.borderColor}`,
-          display: "flex",
-          gap: 10,
-          alignItems: "flex-start"
-        }}>
-          <Info size={16} color={current.color} style={{ marginTop: 2, flexShrink: 0 }} />
-          <div>
-            <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: current.color }}>
-              {current.title}
-            </p>
-            <p style={{ margin: 0, fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
-              {current.message}
-            </p>
-          </div>
-        </div>
-
-        {/* Threshold Quick Guide */}
-        <div style={{ marginTop: 4 }}>
-          <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Reference Ranges for Monitoring
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Thermometer size={14} color="#77ABB2" />
-                <span style={{ fontSize: 12, color: "#475569" }}>Temperature</span>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#0f766e", background: "rgba(15,118,110,0.12)", padding: "2px 8px", borderRadius: 4 }}>
-                22°C - 30°C
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Droplets size={14} color="#77ABB2" />
-                <span style={{ fontSize: 12, color: "#475569" }}>Turbidity</span>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#0f766e", background: "rgba(15,118,110,0.12)", padding: "2px 8px", borderRadius: 4 }}>
-                Higher clarity (&lt; 5 NTU)
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Info size={14} color="#77ABB2" />
-                <span style={{ fontSize: 12, color: "#475569" }}>pH Levels</span>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#0f766e", background: "rgba(15,118,110,0.12)", padding: "2px 8px", borderRadius: 4 }}>
-                6.5 - 8.0 pH
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return calculateRiskForReading(reading);
   };
+
+  // ─── Resident-Friendly Card Content ────────────────────────────────────
+  const overallRisk = getOverallRisk();
+
+  const riskContent = {
+    safe: {
+      statusLabel: "Safe",
+      statusColor: "#22c55e",
+      statusBg: "rgba(34,197,94,0.08)",
+      statusBorder: "rgba(34,197,94,0.18)",
+      action: "Safe to use water normally",
+      actionSub: "No unusual water conditions detected.",
+      reminder: "No elevated risk detected",
+      reminderSub: "Continue normal activities near water.",
+      guidance: "Water conditions at this site are currently within safe ranges. Normal activities near water areas can continue. The SchistoGuard system is actively monitoring for any changes.",
+    },
+    warning: {
+      statusLabel: "Moderate Risk",
+      statusColor: "#E7B213",
+      statusBg: "rgba(231,178,19,0.08)",
+      statusBorder: "rgba(231,178,19,0.18)",
+      action: "Exercise caution near water",
+      actionSub: "Limit unnecessary water contact.",
+      reminder: "Stay alert \u2014 conditions may change",
+      reminderSub: "Monitor updates from SchistoGuard.",
+      guidance: "Some water parameters are showing early-warning levels. Residents near this area should be aware and limit unnecessary water contact until conditions improve.",
+    },
+    critical: {
+      statusLabel: "High Risk",
+      statusColor: "#ef4444",
+      statusBg: "rgba(239,68,68,0.08)",
+      statusBorder: "rgba(239,68,68,0.18)",
+      action: "Avoid direct contact with water",
+      actionSub: "Wear protective footwear near water.",
+      reminder: "Schistosomiasis exposure risk is elevated",
+      reminderSub: "Take precautions immediately.",
+      guidance: "Water conditions at this site are within ranges associated with higher schistosomiasis transmission risk. These conditions create an ideal habitat for Oncomelania snails, the primary hosts of Schistosomiasis. Avoid wading, swimming, or washing in open water bodies. Wear protective footwear if you must cross water areas.",
+    },
+    "no-data": {
+      statusLabel: "No Data",
+      statusColor: "#94a3b8",
+      statusBg: "rgba(148,163,184,0.08)",
+      statusBorder: "rgba(148,163,184,0.18)",
+      action: "Waiting for sensor data",
+      actionSub: "System is connecting to sensors.",
+      reminder: "Checking water conditions",
+      reminderSub: "Risk assessment will appear shortly.",
+      guidance: "Connecting to SchistoGuard sensors. Risk assessment will appear once data becomes available.",
+    },
+  };
+
+  const currentRisk = riskContent[overallRisk];
+  
+  const isLiveData = selectedSiteKey === ALL_SITES_KEY
+    ? !!latestReading && deviceConnected
+    : activeSiteKey === selectedSiteKey && deviceConnected;
+
+  const dataSourceLabel = isLiveData ? "Live monitoring" : (overallRisk !== "no-data" ? "Last recorded data" : "");
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden bg-white">
@@ -983,6 +957,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               interactive={showLiveUpdates && screenWidth >= 600}
               mobileMode={isMobileOrTablet}
               sites={mapSites}
+              onSiteSelect={(siteId) => {
+                if (screenWidth >= 600) {
+                  setSelectedSiteKey(siteId);
+                }
+              }}
               allSitesPadding={landingAllSitesPadding}
               // On desktop preview, shift pin further right (-0.0032) to match Pic 2 framing
               lngOffset={!isMobileOrTablet ? (isPreviewActive ? desktopPreviewLngOffset : -0.0075) : undefined}
@@ -1373,7 +1352,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           className="fixed inset-0 z-40"
           style={{
             animation: isExitingLiveUpdates ? 'fadeOut 0.5s ease-out forwards' : 'fadeIn 0.3s ease-out forwards',
-            pointerEvents: 'auto',
+            pointerEvents: 'none',
           }}
         >
           {/* Dashboard-style gradient overlay - exact match to dashboard */}
@@ -1720,142 +1699,320 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ref={cardsGridRef}
               style={{
                 display: 'grid',
-                gridTemplateColumns: screenWidth >= 1100 ? '1fr 1fr 1fr' : '1fr 1fr',
+                gridTemplateColumns: screenWidth >= 1100 ? 'repeat(6, 1fr)' : '1fr 1fr',
                 gap: isSmallDesktop ? 14 : 20,
                 pointerEvents: 'auto',
                 marginTop: isSmallDesktop ? 14 : 20,
                 maxWidth: screenWidth < 1100 ? '100%' : (isSmallDesktop ? 520 : 580), 
               }}
             >
-              {/* Temperature Card - Full Width on Mobile */}
+              {/* Conditionally render Aggregate View or Individual Site View */}
+              {selectedSiteKey === ALL_SITES_KEY ? (
+                (() => {
+                  let critical = 0; let warning = 0; let safe = 0; let noData = 0;
+                  let trackedActive = 0; let trackedOffline = 0;
+
+                  allSitesReadings.forEach((reading) => {
+                    const r = calculateRiskForReading(reading);
+                    if (r === "critical") critical++;
+                    else if (r === "warning") warning++;
+                    else if (r === "safe") safe++;
+                    else noData++;
+
+                    if (reading.site_key === activeSiteKey && deviceConnected) trackedActive++;
+                    else trackedOffline++;
+                  });
+
+                  const totalTracked = critical + warning + safe + noData;
+                  let systemRisk: "critical" | "warning" | "safe" | "no-data" = "no-data";
+                  if (critical > 0) systemRisk = "critical";
+                  else if (warning > 0) systemRisk = "warning";
+                  else if (safe > 0) systemRisk = "safe";
+
+                  const sysColor = systemRisk === "critical" ? "#ef4444" : systemRisk === "warning" ? "#E7B213" : systemRisk === "safe" ? "#22c55e" : "#94a3b8";
+
+                  return (
+                    <>
+                      {/* Card 1: System Overview */}
+                      <div style={{
+                        gridColumn: screenWidth >= 1100 ? 'span 2' : 'auto',
+                        background: '#fff', borderRadius: 20,
+                        padding: screenWidth < 600 ? '14px' : screenWidth >= 1100 ? (isSmallDesktop ? '14px' : '16px 18px') : '20px 24px',
+                        boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                        position: 'relative', display: 'flex', flexDirection: 'column',
+                        fontFamily: "'Poppins', sans-serif", animation: 'cardFadeIn 0.6s 0.3s ease-out both',
+                      }}>
+                        <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 10.5 : 12), color: '#94a3b8', letterSpacing: 0.3 }}>System Overview</p>
+                        <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: screenWidth < 600 ? 22 : (isSmallDesktop ? 20 : 24), color: '#334155', lineHeight: 1.2 }}>
+                          {totalTracked} Sites Tracked
+                        </p>
+                        <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9.5 : (isSmallDesktop ? 9.5 : 11), fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                          {trackedActive} active • {trackedOffline} offline
+                        </p>
+                      </div>
+
+                      {/* Card 2: Risk Distribution */}
+                      <div style={{
+                        gridColumn: screenWidth >= 1100 ? 'span 2' : 'auto',
+                        background: '#fff', borderRadius: 20,
+                        padding: screenWidth < 600 ? '14px' : screenWidth >= 1100 ? (isSmallDesktop ? '14px' : '16px 18px') : '20px 24px',
+                        boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                        display: 'flex', flexDirection: 'column',
+                        fontFamily: "'Poppins', sans-serif", animation: 'cardFadeIn 0.6s 0.4s ease-out both',
+                      }}>
+                        <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 10.5 : 12), color: '#94a3b8', letterSpacing: 0.3 }}>Risk Snapshot</p>
+                        <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: screenWidth < 600 ? 14 : (isSmallDesktop ? 14 : 16), color: sysColor, lineHeight: 1.25 }}>
+                          {critical > 0 ? `${critical} Sites High Risk` : warning > 0 ? `${warning} Sites Moderate Risk` : safe > 0 ? 'All Sites Safe' : 'No Data'}
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px', fontSize: screenWidth < 600 ? 9.5 : (isSmallDesktop ? 9.5 : 11), color: '#8E8B8B', marginTop: 2 }}>
+                           {critical > 0 && <span><span style={{color: '#ef4444'}}>●</span> {critical} High</span>}
+                           {warning > 0 && <span><span style={{color: '#E7B213'}}>●</span> {warning} Mod</span>}
+                           {safe > 0 && <span><span style={{color: '#22c55e'}}>●</span> {safe} Safe</span>}
+                        </div>
+                      </div>
+
+                      {/* Card 3: Actionable Focus */}
+                      <div style={{
+                        gridColumn: screenWidth >= 1100 ? 'span 2' : '1 / -1',
+                        background: '#fff', borderRadius: 20,
+                        padding: screenWidth < 600 ? '14px' : screenWidth >= 1100 ? (isSmallDesktop ? '14px' : '16px 18px') : '20px 24px',
+                        boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                        display: 'flex', flexDirection: 'column',
+                        fontFamily: "'Poppins', sans-serif", animation: 'cardFadeIn 0.6s 0.5s ease-out both',
+                      }}>
+                        <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 10.5 : 12), color: '#94a3b8', letterSpacing: 0.3 }}>Recommended Focus</p>
+                        <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: screenWidth < 600 ? 14 : (isSmallDesktop ? 14 : 16), color: sysColor, lineHeight: 1.25 }}>
+                          {critical > 0 ? 'Prioritize critical area alerts' : warning > 0 ? 'Monitor moderate risk sites' : 'Standard monitoring protocol'}
+                        </p>
+                        <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9.5 : (isSmallDesktop ? 9.5 : 11), fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                          See individual sites on map for details.
+                        </p>
+                      </div>
+
+                      {/* Card 4: Community Guidance */}
+                      <div style={{
+                        gridColumn: screenWidth >= 1100 ? 'span 6' : '1 / -1', // take full width
+                        background: '#fff', borderRadius: 20,
+                        padding: screenWidth < 600 ? '16px' : screenWidth >= 1100 ? (isSmallDesktop ? '16px' : '18px') : '22px',
+                        boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                        fontFamily: "'Poppins', sans-serif", animation: 'cardFadeIn 0.6s 0.6s ease-out both',
+                        display: 'flex', flexDirection: 'column', gap: 10,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{
+                            width: 30, height: 30, borderRadius: 9,
+                            background: 'linear-gradient(135deg, #357D86, #4EA8B1)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          }}>
+                            <Users size={15} color="#fff" />
+                          </div>
+                          <p style={{ margin: 0, fontSize: screenWidth < 600 ? 13 : (isSmallDesktop ? 13 : 15), fontWeight: 600, color: '#337C85' }}>
+                            Regional Advisory
+                          </p>
+                        </div>
+                        <div style={{
+                          padding: '10px 12px', borderRadius: 12,
+                          background: critical > 0 ? 'rgba(239,68,68,0.08)' : warning > 0 ? 'rgba(231,178,19,0.08)' : 'rgba(34,197,94,0.08)',
+                          border: `1px solid ${critical > 0 ? 'rgba(239,68,68,0.18)' : warning > 0 ? 'rgba(231,178,19,0.18)' : 'rgba(34,197,94,0.18)'}`,
+                        }}>
+                          <p style={{ margin: 0, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 11 : 12.5), color: '#475569', lineHeight: 1.5, fontWeight: 400 }}>
+                            {critical > 0 
+                              ? "Several areas currently present elevated Schistosomiasis transmission risks. Please use the map to locate specific high-risk zones near your community and exercise appropriate caution." 
+                              : "Currently, no tracked sites exhibit critical risk levels. Please continue standard preventative behavior when interacting with local open water ecosystems."}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()
+              ) : (
+                <>
+                  {/* Card 1: Site Status */}
               <div
                 style={{
-                  gridColumn: 'auto',
+                  gridColumn: screenWidth >= 1100 ? 'span 2' : 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? (isSmallDesktop ? '12px 14px' : '14px 18px') : '20px 26px',
+                  padding: screenWidth < 600 ? '14px' : screenWidth >= 1100 ? (isSmallDesktop ? '14px' : '16px 18px') : '20px 24px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
                   fontFamily: "'Poppins', sans-serif",
                   animation: 'cardFadeIn 0.6s 0.3s ease-out both',
-                  minWidth: screenWidth < 600 ? 0 : 'auto',
                 }}
               >
                 <span style={{
                   position: 'absolute',
-                  top: screenWidth < 600 ? 14 : 20,
-                  right: screenWidth < 600 ? 14 : 20,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  background: temperatureStatus ? temperatureStatus.color : '#9ca3af',
-                  display: 'inline-block',
-                  animation: temperatureStatus ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                  "--dot-glow": temperatureStatus ? hexToRgba(temperatureStatus.color, 0.5) : 'transparent',
-                } as any} />
-                <img src="/icons/icon-temperature.svg" alt="temp"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 11.5 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 12) : 15, color: '#77ABB2' }}>Temperature</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
-                    {showLiveSensorCards ? Number(latestReading.temperature) : '—'}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> °C</span>
+                  top: screenWidth < 600 ? 14 : 18,
+                  right: screenWidth < 600 ? 14 : 18,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}>
+                  {isLiveData && (
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: '#fff',
+                      background: '#22c55e',
+                      borderRadius: 999,
+                      padding: '2px 7px',
+                      letterSpacing: 0.5,
+                      lineHeight: 1,
+                      textTransform: 'uppercase',
+                      animation: 'dotPulse 3s ease-in-out infinite',
+                      "--dot-glow": 'rgba(34,197,94,0.4)',
+                    } as any}>Live</span>
+                  )}
+                  <span style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: currentRisk.statusColor,
+                    display: 'inline-block',
+                    animation: overallRisk !== 'no-data' ? 'dotPulse 3s ease-in-out infinite' : 'none',
+                    "--dot-glow": hexToRgba(currentRisk.statusColor, 0.5),
+                  } as any} />
+                </span>
+                <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 10.5 : 12), color: '#94a3b8', letterSpacing: 0.3 }}>Site Status</p>
+                <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: screenWidth < 600 ? 22 : (isSmallDesktop ? 20 : 24), color: currentRisk.statusColor, lineHeight: 1.2 }}>
+                  {currentRisk.statusLabel}
                 </p>
-                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                  {temperatureStatus ? temperatureStatus.label : 'Device not connected'}
+                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9.5 : (isSmallDesktop ? 9.5 : 11), fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  {dataSourceLabel || 'Based on water quality readings'}
                 </p>
               </div>
 
-              {/* Turbidity Card */}
+              {/* Card 2: Recommended Action */}
               <div
                 style={{
+                  gridColumn: screenWidth >= 1100 ? 'span 2' : 'auto',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? (isSmallDesktop ? '12px 14px' : '16px 20px') : '20px 26px',
+                  padding: screenWidth < 600 ? '14px' : screenWidth >= 1100 ? (isSmallDesktop ? '14px' : '16px 18px') : '20px 24px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
-                  position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
                   fontFamily: "'Poppins', sans-serif",
                   animation: 'cardFadeIn 0.6s 0.4s ease-out both',
-                  minWidth: screenWidth < 600 ? 0 : 'auto',
                 }}
               >
-                <span style={{
-                  position: 'absolute',
-                  top: screenWidth < 600 ? 14 : 20,
-                  right: screenWidth < 600 ? 14 : 20,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  background: turbidityStatus ? turbidityStatus.color : '#9ca3af',
-                  display: 'inline-block',
-                  animation: turbidityStatus ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                  "--dot-glow": turbidityStatus ? hexToRgba(turbidityStatus.color, 0.5) : 'transparent',
-                } as any} />
-                <img src="/icons/icon-turbidity.svg" alt="turbidity"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 13) : 15, color: '#77ABB2' }}>Turbidity</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
-                    {showLiveSensorCards ? Number(latestReading.turbidity) : '—'}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 14 : 16) : 20, color: '#6b7280' }}> NTU</span>
+                <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 10.5 : 12), color: '#94a3b8', letterSpacing: 0.3 }}>Recommended Action</p>
+                <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: screenWidth < 600 ? 14 : (isSmallDesktop ? 14 : 16), color: currentRisk.statusColor, lineHeight: 1.25 }}>
+                  {currentRisk.action}
                 </p>
-                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                  {turbidityStatus ? turbidityStatus.label : 'Device not connected'}
+                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9.5 : (isSmallDesktop ? 9.5 : 11), fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  {currentRisk.actionSub}
                 </p>
               </div>
 
-              {/* pH Card */}
+              {/* Card 3: Schistosomiasis Reminder */}
               <div
                 style={{
-                  gridColumn: screenWidth >= 1100 ? 'auto' : '1 / -1',
+                  gridColumn: screenWidth >= 1100 ? 'span 2' : '1 / -1',
                   background: '#fff',
                   borderRadius: 20,
-                  padding: screenWidth < 600 ? '12px 14px' : screenWidth >= 1100 ? (isSmallDesktop ? '12px 14px' : '16px 20px') : '20px 26px',
+                  padding: screenWidth < 600 ? '14px' : screenWidth >= 1100 ? (isSmallDesktop ? '14px' : '16px 18px') : '20px 24px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
-                  position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
                   fontFamily: "'Poppins', sans-serif",
                   animation: 'cardFadeIn 0.6s 0.5s ease-out both',
-                  minWidth: screenWidth < 600 ? 0 : 'auto',
                 }}
               >
-                <span style={{
-                  position: 'absolute',
-                  top: screenWidth < 600 ? 14 : 20,
-                  right: screenWidth < 600 ? 14 : 20,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  background: phStatus ? phStatus.color : '#9ca3af',
-                  display: 'inline-block',
-                  animation: phStatus ? 'dotPulse 3s ease-in-out infinite' : 'none',
-                  "--dot-glow": phStatus ? hexToRgba(phStatus.color, 0.5) : 'transparent',
-                } as any} />
-                <img src="/icons/icon-ph.svg" alt="ph"
-                  style={{ width: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, height: screenWidth < 600 ? 32 : screenWidth >= 1100 ? (isSmallDesktop ? 32 : 36) : 44, objectFit: 'contain', marginBottom: screenWidth < 600 ? 6 : 8 }} />
-                <p style={{ margin: '0 0 6px', fontWeight: 500, fontSize: screenWidth < 600 ? 12 : screenWidth >= 1100 ? (isSmallDesktop ? 11 : 13) : 15, color: '#77ABB2' }}>pH Level</p>
-                <p style={{ margin: '0 0 6px', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: screenWidth < 600 ? 22 : screenWidth >= 1100 ? (isSmallDesktop ? 21 : 24) : 30, color: '#6b7280' }}>
-                    {showLiveSensorCards ? Number(latestReading.ph) : '—'}
-                  </span>
+                <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 10.5 : 12), color: '#94a3b8', letterSpacing: 0.3 }}>Schistosomiasis Reminder</p>
+                <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: screenWidth < 600 ? 14 : (isSmallDesktop ? 14 : 16), color: currentRisk.statusColor, lineHeight: 1.25 }}>
+                  {currentRisk.reminder}
                 </p>
-                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9 : 13, fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
-                  {phStatus ? phStatus.label : 'Device not connected'}
+                <p style={{ margin: 0, fontSize: screenWidth < 600 ? 9.5 : (isSmallDesktop ? 9.5 : 11), fontWeight: 400, color: '#8E8B8B', lineHeight: 1.3 }}>
+                  {currentRisk.reminderSub}
                 </p>
               </div>
 
-              {/* Data Interpretation & Analysis Card — persistent for educational guide */}
-              {renderAnalysisCard()}
-            </div>
-          </div>
+              {/* Card 4: Community Guidance */}
+              <div
+                style={{
+                  gridColumn: screenWidth >= 1100 ? 'span 3' : '1 / -1',
+                  background: '#fff',
+                  borderRadius: 20,
+                  padding: screenWidth < 600 ? '16px' : screenWidth >= 1100 ? (isSmallDesktop ? '16px' : '18px') : '22px',
+                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.6s ease-out both',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 9,
+                    background: 'linear-gradient(135deg, #357D86, #4EA8B1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <Info size={15} color="#fff" />
+                  </div>
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 13 : (isSmallDesktop ? 13 : 15), fontWeight: 600, color: '#337C85' }}>
+                    Community Guidance
+                  </p>
+                </div>
+                <div style={{
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  background: currentRisk.statusBg,
+                  border: `1px solid ${currentRisk.statusBorder}`,
+                }}>
+                  <p style={{ margin: 0, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 11 : 12.5), color: '#475569', lineHeight: 1.5, fontWeight: 400 }}>
+                    {currentRisk.guidance}
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 5: Site Photo Placeholder */}
+              <div
+                style={{
+                  gridColumn: screenWidth >= 1100 ? 'span 3' : '1 / -1',
+                  background: '#fff',
+                  borderRadius: 20,
+                  padding: screenWidth < 600 ? '16px' : screenWidth >= 1100 ? (isSmallDesktop ? '16px' : '18px') : '22px',
+                  boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
+                  fontFamily: "'Poppins', sans-serif",
+                  animation: 'cardFadeIn 0.6s 0.7s ease-out both',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  minHeight: screenWidth < 600 ? 100 : (isSmallDesktop ? 100 : 120),
+                }}
+              >
+                {selectedSite?.sitePhoto ? (
+                  <img 
+                    src={selectedSite.sitePhoto} 
+                    alt="Site" 
+                    style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      objectFit: "cover", 
+                      borderRadius: 20,
+                      animation: 'fadeIn 0.5s ease-out'
+                    }} 
+                  />
+                ) : (
+                  <>
+                    <Camera size={screenWidth < 600 ? 28 : 32} color="#cbd5e1" strokeWidth={1.5} />
+                    <p style={{ margin: 0, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 11 : 13), fontWeight: 500, color: '#94a3b8', textAlign: 'center' }}>
+                      Site photo coming soon
+                    </p>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
+      </div>
+    </div>
       )}
 
       {/* CSS Animations */}

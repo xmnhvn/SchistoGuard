@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { apiPost, apiGet, apiCall, apiPut } from "../utils/api";
-import { Trash2, MoreHorizontal, Search, CheckCircle2, KeyRound, Play, Square, Radio } from "lucide-react";
+import { Trash2, MoreHorizontal, Search, CheckCircle2, KeyRound, Play, Square, Radio, Camera, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
   DropdownMenu,
@@ -47,6 +47,7 @@ interface RegisteredSite {
   first_seen?: string | null;
   last_seen?: string | null;
   is_active?: number | boolean | null;
+  site_photo?: string | null;
 }
 
 interface AdminSettingsPageProps {
@@ -211,6 +212,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   const [loadingSites, setLoadingSites] = useState(true);
   const [sitesError, setSitesError] = useState("");
   const [siteNameDrafts, setSiteNameDrafts] = useState<Record<string, string>>({});
+  const [sitePhotoDrafts, setSitePhotoDrafts] = useState<Record<string, string | null>>({});
+  const [sitePhotoLoading, setSitePhotoLoading] = useState<Record<string, boolean>>({});
   const [savingSiteKey, setSavingSiteKey] = useState<string | null>(null);
   const [startingSiteKey, setStartingSiteKey] = useState<string | null>(null);
   const [stoppingSiteKey, setStoppingSiteKey] = useState<string | null>(null);
@@ -276,6 +279,15 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         });
         return next;
       });
+      setSitePhotoDrafts((prev) => {
+        const next = { ...prev };
+        sites.forEach((site: RegisteredSite) => {
+          if (next[site.site_key] === undefined) {
+            next[site.site_key] = site.site_photo || null;
+          }
+        });
+        return next;
+      });
     } catch (err: any) {
       setSitesError(err?.message || "Failed to fetch registered sites");
       setRegisteredSites([]);
@@ -284,8 +296,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     }
   };
 
-  const handleSaveSiteName = async (siteKey: string) => {
+  const handleSaveSiteSettings = async (siteKey: string) => {
     const nextName = (siteNameDrafts[siteKey] || "").trim();
+    const nextPhoto = sitePhotoDrafts[siteKey];
+
     if (!nextName) {
       setError("Site name cannot be empty");
       return;
@@ -297,14 +311,78 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setSuccess("");
       const result = await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
         siteName: nextName,
+        sitePhoto: nextPhoto,
       });
-      setSuccess(result?.success ? "Site name updated successfully" : "Site name updated");
+      setSuccess(result?.success ? "Site settings updated successfully" : "Site settings updated");
       await fetchRegisteredSites();
     } catch (err: any) {
-      setError(err?.message || "Failed to update site name");
+      setError(err?.message || "Failed to update site settings");
     } finally {
       setSavingSiteKey(null);
     }
+  };
+
+  const handleSitePhotoChange = (siteKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit for raw upload (will be resized)
+      setError("Original file is too large (max 10MB)");
+      return;
+    }
+
+    setSitePhotoLoading(prev => ({ ...prev, [siteKey]: true }));
+    setError("");
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Max dimensions
+        const MAX_WIDTH = 1000;
+        const MAX_HEIGHT = 1000;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // Compress to JPEG for smaller storage
+          const base64String = canvas.toDataURL('image/jpeg', 0.7);
+          setSitePhotoDrafts(prev => ({ ...prev, [siteKey]: base64String }));
+          setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
+        } else {
+          setError("Failed to process image");
+          setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
+        }
+      };
+      img.onerror = () => {
+        setError("Failed to load image for processing");
+        setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
+      };
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => {
+      setError("Failed to read file");
+      setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleStartReading = async (siteKey: string) => {
@@ -1374,7 +1452,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         ? "linear-gradient(180deg, rgba(20,184,166,0.07), rgba(255,255,255,0.98))"
                         : (idx % 2 === 0 ? "rgba(0,0,0,0.01)" : "#fff"),
                       display: "grid",
-                      gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1fr auto",
+                      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1.2fr auto",
                       gap: isMobile ? 14 : 18,
                       alignItems: isMobile ? "stretch" : "center",
                     }}
@@ -1422,6 +1500,58 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         style={{ marginTop: 6 }}
                         placeholder="Enter site name"
                       />
+                    </div>
+
+                    <div>
+                      <Label style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: POPPINS }}>Site Photo</Label>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+                        <div style={{ 
+                          width: 48, 
+                          height: 48, 
+                          borderRadius: 12, 
+                          background: "rgba(0,0,0,0.03)", 
+                          display: "flex", 
+                          alignItems: "center", 
+                          justifyContent: "center",
+                          overflow: "hidden",
+                          border: "1px solid rgba(0,0,0,0.05)"
+                        }}>
+                          {sitePhotoLoading[site.site_key] ? (
+                            <Loader2 size={20} className="animate-spin text-schistoguard-teal" />
+                          ) : sitePhotoDrafts[site.site_key] ? (
+                            <img src={sitePhotoDrafts[site.site_key]!} alt="Site" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <ImageIcon size={20} color="#cbd5e1" />
+                          )}
+                        </div>
+                        <Label
+                          htmlFor={`photo-upload-${site.site_key}`}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "8px 14px",
+                            borderRadius: 100,
+                            background: "rgba(53,125,134,0.06)",
+                            color: "#357D86",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            transition: "all 0.2s ease"
+                          }}
+                          className="hover:bg-schistoguard-teal hover:text-white"
+                        >
+                          <Camera size={14} />
+                          {sitePhotoDrafts[site.site_key] ? "Change" : "Upload"}
+                        </Label>
+                        <input
+                          id={`photo-upload-${site.site_key}`}
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => handleSitePhotoChange(site.site_key, e)}
+                        />
+                      </div>
                     </div>
 
                     <div style={{
@@ -1506,7 +1636,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       </div>
                       <Button
                         type="button"
-                        onClick={() => handleSaveSiteName(site.site_key)}
+                        onClick={() => handleSaveSiteSettings(site.site_key)}
                         disabled={savingSiteKey === site.site_key || isDeleting}
                         style={{
                           background: "#357D86",

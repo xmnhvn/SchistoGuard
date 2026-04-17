@@ -596,7 +596,7 @@ async function getConfiguredActiveSiteSnapshot() {
       if (!configuredSiteKey) return resolve(null);
 
       db.get(
-        `SELECT site_key, site_name, address
+        `SELECT site_key, site_name, address, site_photo
          FROM site_registry
          WHERE site_key = ?
          LIMIT 1`,
@@ -609,6 +609,7 @@ async function getConfiguredActiveSiteSnapshot() {
             siteKey: siteRow.site_key || null,
             siteName: siteRow.site_name || siteRow.address || GLOBAL_DEVICE_NAME,
             address: siteRow.address || null,
+            sitePhoto: siteRow.site_photo || null
           });
         }
       );
@@ -1594,7 +1595,7 @@ router.get("/latest", async (req, res) => {
   const sendDisconnectedWithLastLocation = () => {
     console.log('[API /latest] Triggered fallback: querying raw_readings for active site last GPS location...');
     db.get(
-      "SELECT latitude, longitude, address, timestamp, site_key FROM raw_readings WHERE site_key = ? AND latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+      "SELECT latitude, longitude, address, timestamp, site_key, temperature, turbidity, ph FROM raw_readings WHERE site_key = ? AND latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
       [activeSiteSnapshot.siteKey],
       (dbErr, row) => {
         if (dbErr) {
@@ -1611,6 +1612,9 @@ router.get("/latest", async (req, res) => {
             longitude: row.longitude,
             address: row.address || activeSiteSnapshot.address || null,
             timestamp: row.timestamp || null,
+            temperature: row.temperature != null ? row.temperature : null,
+            turbidity: row.turbidity != null ? row.turbidity : null,
+            ph: row.ph != null ? row.ph : null,
           });
         }
 
@@ -1644,13 +1648,33 @@ router.get("/latest", async (req, res) => {
   return sendDisconnectedWithLastLocation();
 });
 
+router.get("/latest-all", (req, res) => {
+  db.all(
+    `SELECT DISTINCT ON (r.site_key) 
+       r.site_key, r.temperature, r.turbidity, r.ph, r.timestamp,
+       s.site_name, s.first_seen, s.last_seen, s.site_photo
+     FROM raw_readings r
+     JOIN site_registry s ON r.site_key = s.site_key
+     ORDER BY r.site_key, r.timestamp DESC;`,
+    [],
+    (err, rows) => {
+      if (err) {
+        console.error('[API /latest-all] Query error:', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+      res.json(rows || []);
+    }
+  );
+});
+
 router.get("/history", (req, res) => {
   const site = (req.query.site || req.query.siteKey || req.query.address || '').toString().trim();
 
   const handleHistory = (siteKey) => {
+    const limit = parseInt(req.query.limit) || 288;
     const query = siteKey
-      ? "SELECT * FROM readings WHERE site_key = ? ORDER BY timestamp DESC LIMIT 288"
-      : "SELECT * FROM readings ORDER BY timestamp DESC LIMIT 288";
+      ? `SELECT * FROM readings WHERE site_key = ? ORDER BY timestamp DESC LIMIT ${limit}`
+      : `SELECT * FROM readings ORDER BY timestamp DESC LIMIT ${limit}`;
     const params = siteKey ? [siteKey] : [];
 
     db.all(query, params, (err, rows) => {
@@ -1775,6 +1799,7 @@ router.get('/sites', (req, res) => {
        longitude,
        first_seen,
        last_seen,
+       site_photo,
        CASE
          WHEN site_key = (
            SELECT value
@@ -1985,18 +2010,23 @@ router.post('/sites', async (req, res) => {
 
 router.put('/sites/:siteKey', (req, res) => {
   const { siteKey } = req.params;
-  const { siteName } = req.body;
+  const { siteName, sitePhoto } = req.body;
   const trimmedSiteName = (siteName || '').toString().trim();
 
   if (!trimmedSiteName) {
     return res.status(400).json({ error: 'siteName is required' });
   }
 
+  // Basic check for photo if provided (Base64 string)
+  if (sitePhoto && typeof sitePhoto !== 'string') {
+    return res.status(400).json({ error: 'sitePhoto must be a Base64 string' });
+  }
+
   db.run(
     `UPDATE site_registry
-     SET site_name = ?
+     SET site_name = ?, site_photo = ?
      WHERE site_key = ?`,
-    [trimmedSiteName, siteKey],
+    [trimmedSiteName, sitePhoto !== undefined ? sitePhoto : null, siteKey],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) {
