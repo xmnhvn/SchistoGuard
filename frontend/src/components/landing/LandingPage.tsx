@@ -745,6 +745,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isDesktopViewport = !isMobileOrTablet;
   const desktopPreviewLngOffset = isAllSitesSelected ? -0.0185 : -0.0050;
   const selectedSiteOperational = !!selectedSiteKey && !!activeSiteKey && selectedSiteKey === activeSiteKey && deviceConnected && backendOk && dataOk;
+  const mobilePreviewStatusLabel = selectedSiteOperational ? 'System Operational' : 'Device Not Connected';
   const hasLiveSensorValues =
     !!latestReading &&
     Number.isFinite(Number(latestReading.temperature)) &&
@@ -1337,9 +1338,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               overflowY: 'auto',
               scrollbarWidth: 'none' as const,
               msOverflowStyle: 'none' as const,
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehaviorY: 'contain',
+              touchAction: isMobileOrTablet ? 'pan-y' : 'auto',
               animation: 'contentSlideIn 0.7s 0.1s cubic-bezier(0.22,1,0.36,1) both',
               zIndex: 2,
-              pointerEvents: 'none', // Changed from 'auto' so clicks pass through to map
+              pointerEvents: isMobileOrTablet ? 'auto' : 'none',
             }}
           >
             {/* Back button */}
@@ -1404,9 +1408,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                flexDirection: screenWidth < 600 ? 'column' : 'row',
+                flexDirection: screenWidth < 600 ? 'row' : 'row',
                 justifyContent: 'flex-start',
-                width: screenWidth < 600 ? '100%' : 'auto',
+                width: screenWidth < 600 ? '100%' : (screenWidth < 1100 ? '100%' : (isSmallDesktop ? 520 : 580)),
+                maxWidth: screenWidth < 600 ? '100%' : (screenWidth < 1100 ? '100%' : (isSmallDesktop ? 520 : 580)),
                 gap: 8,
                 marginTop: 12,
                 pointerEvents: 'auto',
@@ -1420,7 +1425,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   gap: 6,
                   background: 'rgba(255,255,255,0.92)',
                   borderRadius: 999,
-                  padding: '6px 14px',
+                  padding: screenWidth < 600 ? '6px 12px' : '6px 14px',
                   minHeight: 34,
                   fontSize: 12,
                   fontWeight: 600,
@@ -1429,36 +1434,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                   backdropFilter: 'blur(4px)',
                   fontFamily: "'Poppins', sans-serif",
+                  width: screenWidth < 600 ? 'calc((100% - 8px) / 2)' : 'auto',
+                  minWidth: 0,
+                  flex: screenWidth < 600 ? '0 0 calc((100% - 8px) / 2)' : '0 0 auto',
+                  boxSizing: 'border-box',
                 }}>
                   <span style={{
-                    width: 7,
-                    height: 7,
+                    width: 8,
+                    minWidth: 8,
+                    maxWidth: 8,
+                    height: 8,
+                    minHeight: 8,
+                    maxHeight: 8,
                     borderRadius: '50%',
                     background: selectedSiteOperational ? '#22c55e' : '#9ca3af',
                     display: 'inline-block',
+                    flex: '0 0 8px',
                     animation: selectedSiteOperational ? 'dotPulse 3s ease-in-out infinite' : 'none',
                     "--dot-glow": selectedSiteOperational ? 'rgba(34,197,94,0.5)' : 'transparent',
                   } as any} />
-                  {selectedSiteOperational ? 'System Operational' : 'System Down'}
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {mobilePreviewStatusLabel}
+                  </span>
                 </div>
-                <div
-                  ref={siteDropdownRef}
-                  style={{
-                    position: 'relative',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    background: 'rgba(255,255,255,0.92)',
-                    borderRadius: 999,
-                    padding: '6px 14px',
-                    minHeight: 34,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                    backdropFilter: 'blur(4px)',
-                    width: screenWidth < 600 ? '100%' : fixedSiteControlWidth,
-                    minWidth: 0,
-                    maxWidth: screenWidth < 600 ? '100%' : `calc(100vw - ${isSmallDesktop ? 260 : 340}px)`,
-                    boxSizing: 'border-box',
-                  }}
-                >
+                <div style={{ width: screenWidth < 600 ? 'calc((100% - 8px) / 2)' : 'auto', minWidth: 0, flex: screenWidth < 600 ? '0 0 calc((100% - 8px) / 2)' : '1 1 auto' }}>
+                  <div
+                    ref={siteDropdownRef}
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: 'rgba(255,255,255,0.92)',
+                      borderRadius: 999,
+                      padding: screenWidth < 600 ? '6px 12px' : '6px 14px',
+                      minHeight: 34,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                      backdropFilter: 'blur(4px)',
+                      width: screenWidth < 600 ? '100%' : '100%',
+                      minWidth: 0,
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                  >
                   <button
                     type="button"
                     onClick={() => setShowSiteDropdown((prev) => !prev)}
@@ -1475,7 +1492,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       gap: 6,
                       width: '100%',
                       minWidth: 0,
-                      maxWidth: '100%',
                       outline: 'none',
                       cursor: 'pointer',
                     }}
@@ -1511,9 +1527,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         position: 'absolute',
                         top: 'calc(100% + 8px)',
                         left: 0,
-                        width: screenWidth < 600 ? '100%' : fixedSiteControlWidth,
-                        minWidth: 0,
-                        maxWidth: screenWidth < 600 ? '100%' : `calc(100vw - ${isSmallDesktop ? 48 : 64}px)`,
+                        width: screenWidth < 600 ? '100%' : '100%',
+                        minWidth: screenWidth < 600 ? '100%' : 0,
+                        maxWidth: '100%',
                         maxHeight: 220,
                         overflowY: 'auto',
                         overflowX: 'hidden',
@@ -1577,7 +1593,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                 alignItems: 'center',
                                 gap: 8,
                                 cursor: 'pointer',
-                                whiteSpace: 'nowrap',
                                 opacity: hasOperationalSite ? (isActive ? 1 : 0.82) : 1,
                               }}
                               title={selectedButInactive ? 'Selected site is not currently active' : ''}
@@ -1597,16 +1612,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                     : '0 0 0 2px rgba(148,163,184,0.2)',
                                 } as any}
                               />
-                              <span
-                                style={{
-                                  minWidth: 0,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  flex: 1,
-                                }}
-                                title={site.siteName}
-                              >
+                              <span style={{ whiteSpace: screenWidth < 600 ? 'normal' : 'nowrap', overflowWrap: screenWidth < 600 ? 'anywhere' : 'normal', lineHeight: screenWidth < 600 ? 1.25 : undefined, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: screenWidth < 600 ? undefined : 'ellipsis' }} title={site.siteName}>
                                 {site.siteName}
                               </span>
                             </button>
@@ -1615,6 +1621,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       )}
                     </div>
                   )}
+                  </div>
                 </div>
                 {screenWidth >= 600 && (
                   <button
