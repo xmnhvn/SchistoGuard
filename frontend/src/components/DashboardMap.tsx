@@ -107,11 +107,18 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     if (!mapContainer.current) return;
 
     const sitesToShow = sites && sites.length > 0 ? sites : [];
+    if (sitesToShow.length === 0) {
+      if (photoBubbleMarker.current) {
+        photoBubbleMarker.current.remove();
+        photoBubbleMarker.current = null;
+      }
+      previousPhotoBubbleKey.current = '';
+      return;
+    }
     const hasExplicitSelectedSite = sitesToShow.some((site) => !!site.isSelected);
     const isAllSitesOverview = sitesToShow.length > 1 && !hasExplicitSelectedSite;
 
-    // If no sites, center map to Philippines as neutral view
-    const center = sitesToShow[0] || { lat: 12.8797, lng: 121.7740, name: '', id: '' };
+    const center = sitesToShow[0];
     const currentViewKey = isAllSitesOverview
       ? `all-sites:${sitesToShow.map((site) => site.id).join('|')}`
       : center.id;
@@ -149,9 +156,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       } else if (sitesToShow.length >= 1) {
         mapCenter = [center.lng + lngOffset, center.lat + latOffset];
         mapZoom = 15; // Decreased zoom from 17 down to 15 for a wider view
-      } else {
-        mapCenter = [121.7740, 12.8797];
-        mapZoom = 6;
       }
       defaultView.current = { center: mapCenter, zoom: mapZoom };
       
@@ -308,13 +312,29 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
         const bubbleEl = document.createElement('div');
         bubbleEl.className = 'site-photo-pin';
+        const safeImageId = `site-photo-clip-${selectedPhotoSite.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
         bubbleEl.innerHTML = `
-          <div class="site-photo-pin__shell">
-            <div class="site-photo-pin__bridge"></div>
-            <div class="site-photo-pin__frame">
-              <img src="${selectedPhotoSite.sitePhoto}" alt="${selectedPhotoSite.name.replace(/"/g, '&quot;')}" class="site-photo-pin__image" />
-            </div>
-          </div>
+          <svg class="site-photo-pin__svg" viewBox="0 0 240 320" aria-hidden="true">
+            <defs>
+              <clipPath id="${safeImageId}">
+                <circle cx="120" cy="112" r="78" />
+              </clipPath>
+            </defs>
+            <path
+              class="site-photo-pin__shape"
+              d="M120 308C96 279 67 247 44 215C27 192 16 166 16 136C16 78.5624 62.5624 32 120 32C177.438 32 224 78.5624 224 136C224 166 213 192 196 215C173 247 144 279 120 308Z"
+            />
+            <image
+              href="${selectedPhotoSite.sitePhoto}"
+              x="42"
+              y="34"
+              width="156"
+              height="156"
+              preserveAspectRatio="xMidYMid slice"
+              clip-path="url(#${safeImageId})"
+              class="site-photo-pin__image"
+            />
+          </svg>
         `;
 
         photoBubbleMarker.current = new maplibregl.Marker({
@@ -323,6 +343,15 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         })
           .setLngLat(bubbleLngLat)
           .addTo(map.current);
+
+        const revealBubble = () => {
+          bubbleEl.classList.add('site-photo-pin--visible');
+        };
+        if (map.current.loaded()) {
+          requestAnimationFrame(revealBubble);
+        } else {
+          map.current.once('render', revealBubble);
+        }
 
         previousPhotoBubbleKey.current = photoBubbleKey;
       }
@@ -367,8 +396,8 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   }, []);
 
   if (mapUnavailable) {
-    return <div style={{ width: '100%', height: '100%', background: '#dbe9ed' }} />;
+    return <div style={{ width: '100%', height: '100%', background: '#ffffff' }} />;
   }
 
-  return <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />;
+  return <div ref={mapContainer} style={{ width: '100%', height: '100%', background: '#ffffff' }} />;
 });
