@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import heic2any from "heic2any";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -326,63 +327,101 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit for raw upload (will be resized)
-      setError("Original file is too large (max 10MB)");
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      setError("Please select a valid image file (JPG, PNG, etc).");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) { // Increased to 15MB for raw upload
+      setError("Original file is too large (max 15MB)");
       return;
     }
 
     setSitePhotoLoading(prev => ({ ...prev, [siteKey]: true }));
     setError("");
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+    const processFile = async (targetFile: File | Blob) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
 
-        // Max dimensions
-        const MAX_WIDTH = 1000;
-        const MAX_HEIGHT = 1000;
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const base64String = canvas.toDataURL('image/jpeg', 0.82);
+              setSitePhotoDrafts(prev => ({ ...prev, [siteKey]: base64String }));
+            } else {
+              setError("Failed to initialize image processor");
+            }
+          } catch (err) {
+            console.error("Image processing error:", err);
+            setError("Error resizing image. Please try a different photo.");
+          } finally {
+            setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
           }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          // Compress to JPEG for smaller storage
-          const base64String = canvas.toDataURL('image/jpeg', 0.7);
-          setSitePhotoDrafts(prev => ({ ...prev, [siteKey]: base64String }));
+        };
+        img.onerror = () => {
+          setError("The selected file is not a supported image format or is corrupted.");
           setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
-        } else {
-          setError("Failed to process image");
-          setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
+        };
+        if (event.target?.result) {
+          img.src = event.target.result as string;
         }
       };
-      img.onerror = () => {
-        setError("Failed to load image for processing");
+      reader.onerror = () => {
+        setError("Failed to read the file from your device.");
         setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
       };
-      img.src = reader.result as string;
+      reader.readAsDataURL(targetFile);
     };
-    reader.onerror = () => {
-      setError("Failed to read file");
-      setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
+
+    const runConversion = async () => {
+      const fileName = file.name.toLowerCase();
+      const isHEIC = fileName.endsWith(".heic") || fileName.endsWith(".heif") || file.type === "image/heic" || file.type === "image/heif";
+
+      if (isHEIC) {
+        try {
+          const converted = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8
+          });
+          const resultBlob = Array.isArray(converted) ? converted[0] : converted;
+          processFile(resultBlob);
+        } catch (err) {
+          console.error("HEIC conversion error:", err);
+          setError("Failed to convert HEIC image. Please try a JPG or PNG instead.");
+          setSitePhotoLoading(prev => ({ ...prev, [siteKey]: false }));
+        }
+      } else {
+        processFile(file);
+      }
     };
-    reader.readAsDataURL(file);
+
+    runConversion();
   };
 
   const handleStartReading = async (siteKey: string) => {
