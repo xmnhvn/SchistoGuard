@@ -277,6 +277,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
     if (fromRegistry.length > 0) return fromRegistry;
 
+    // Keep the landing page from briefly focusing on a single fallback point
+    // before the full site registry arrives. For the default "All sites" view,
+    // wait for registry-backed markers so the first camera state is already the overview.
+    if (isAllSitesSelected || sitesLoading) {
+      return undefined;
+    }
+
     if (gpsSites && gpsSites.length > 0) {
       return gpsSites.map((site) => ({
         ...site,
