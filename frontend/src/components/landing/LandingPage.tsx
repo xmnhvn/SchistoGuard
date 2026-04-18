@@ -1962,32 +1962,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   padding: screenWidth < 600 ? '16px' : screenWidth >= 1100 ? (isSmallDesktop ? '16px' : '18px') : '22px',
                   boxShadow: screenWidth < 600 ? '0 4px 18px rgba(0,0,0,0.11)' : '0 2px 12px rgba(0,0,0,0.09)',
                   fontFamily: "'Poppins', sans-serif",
-                  animation: 'cardFadeIn 0.35s 0.3s ease-out both',
+                  animation: 'cardFadeIn 0.45s ease-out both',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 10,
+                  gap: 12,
                   minHeight: screenWidth < 600 ? 100 : (isSmallDesktop ? 100 : 120),
                   position: 'relative',
                   overflow: 'hidden',
                 }}
               >
-                {selectedSite?.sitePhoto && !sitePhotoFailed ? (
-                  <>
-                    {!sitePhotoLoaded && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: screenWidth < 600 ? 16 : screenWidth >= 1100 ? (isSmallDesktop ? 16 : 18) : 22,
-                          borderRadius: 16,
-                          overflow: 'hidden',
-                          background: 'linear-gradient(90deg, rgba(226,232,240,0.8) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.8) 100%)',
-                          backgroundSize: '200% 100%',
-                          animation: 'sitePhotoShimmer 1.2s ease-in-out infinite',
-                        }}
-                      />
-                    )}
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    minHeight: screenWidth < 600 ? 92 : (isSmallDesktop ? 92 : 112),
+                    borderRadius: 16,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {selectedSite?.sitePhoto && !sitePhotoFailed && (
                     <img
                       src={selectedSite.sitePhoto}
                       alt="Site"
@@ -2000,34 +2000,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         setSitePhotoFailed(true);
                       }}
                       style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        borderRadius: 20,
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
                         animation: sitePhotoLoaded ? 'fadeIn 0.35s ease-out' : 'none',
                         opacity: sitePhotoLoaded ? 1 : 0,
                       }}
                     />
-                  </>
-                ) : sitesLoading && !isAllSitesSelected ? (
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: 16,
-                      background: 'linear-gradient(90deg, rgba(226,232,240,0.8) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.8) 100%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'sitePhotoShimmer 1.2s ease-in-out infinite',
-                    }}
-                  />
-                ) : (
-                  <>
-                    <Camera size={screenWidth < 600 ? 28 : 32} color="#cbd5e1" strokeWidth={1.5} />
-                    <p style={{ margin: 0, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 11 : 13), fontWeight: 500, color: '#94a3b8', textAlign: 'center' }}>
-                      Site photo coming soon
-                    </p>
-                  </>
-                )}
+                  )}
+
+                  {selectedSite?.sitePhoto && !sitePhotoLoaded && !sitePhotoFailed ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(90deg, rgba(226,232,240,0.8) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.8) 100%)',
+                        backgroundSize: '200% 100%',
+                        animation: 'sitePhotoShimmer 1.2s ease-in-out infinite',
+                      }}
+                    />
+                  ) : sitesLoading && !isAllSitesSelected ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(90deg, rgba(226,232,240,0.8) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.8) 100%)',
+                        backgroundSize: '200% 100%',
+                        animation: 'sitePhotoShimmer 1.2s ease-in-out infinite',
+                      }}
+                    />
+                  ) : !selectedSite?.sitePhoto || sitePhotoFailed ? (
+                    <>
+                      <Camera size={screenWidth < 600 ? 28 : 32} color="#cbd5e1" strokeWidth={1.5} />
+                      <p style={{ margin: 0, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 11 : 13), fontWeight: 500, color: '#94a3b8', textAlign: 'center' }}>
+                        Site photo coming soon
+                      </p>
+                    </>
+                  ) : null}
+                </div>
               </div>
             </>
           )}

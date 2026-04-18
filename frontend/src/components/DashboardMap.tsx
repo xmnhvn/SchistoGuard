@@ -39,6 +39,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const map = useRef<maplibregl.Map | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
   const markers = useRef<maplibregl.Marker[]>([]);
+  const hasReportedReady = useRef(false);
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const previousSitesJson = useRef<string>('');
@@ -220,6 +221,12 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       return;
     }
 
+    const reportMapReady = () => {
+      if (hasReportedReady.current) return;
+      hasReportedReady.current = true;
+      onMapReady?.();
+    };
+
     // Only touch markers if the actual site data changed
     if (previousSitesJson.current !== sitesJson) {
       // Remove old markers
@@ -269,13 +276,15 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       previousSitesJson.current = sitesJson;
     }
 
-    // Wait for the map to become completely idle (all tiles loaded and painted)
-    if (map.current!.loaded()) {
-      onMapReady?.();
+    // Report readiness as soon as the base style is ready or the first frame renders.
+    // Waiting for `idle` keeps the white placeholder visible for too long on slower networks.
+    if (map.current!.isStyleLoaded()) {
+      requestAnimationFrame(reportMapReady);
     } else {
-      map.current!.once('idle', () => {
-        onMapReady?.();
+      map.current!.once('load', () => {
+        requestAnimationFrame(reportMapReady);
       });
+      map.current!.once('render', reportMapReady);
     }
 
     const handleResize = () => {
@@ -300,6 +309,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         map.current.remove();
         map.current = null;
         markers.current = [];
+        hasReportedReady.current = false;
         previousSitesJson.current = '';
       }
     };
