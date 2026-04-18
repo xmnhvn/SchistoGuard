@@ -462,7 +462,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         hasLoadedSitesOnceRef.current = true;
 
         setSelectedSiteKey((prev) => {
-          if (prev === ALL_SITES_KEY) return prev;
+          if (!hasManualSiteSelectionRef.current && activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) {
+            return activeSiteKey;
+          }
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
           return ALL_SITES_KEY;
         });
@@ -625,9 +627,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           setDeviceConnected(true);
           if (data?.siteKey) {
             setSelectedSiteKey((prev) => {
-              if (prev === ALL_SITES_KEY) return prev;
               if (hasManualSiteSelectionRef.current) return prev || data.siteKey || '';
-              return data.siteKey || prev || '';
+              return data.siteKey || prev || ALL_SITES_KEY;
             });
           }
           if (data && data.siteName && data.siteName !== "Site Name") {
@@ -948,6 +949,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               sites={mapSites}
               onSiteSelect={(siteId) => {
                 if (screenWidth >= 600) {
+                  hasManualSiteSelectionRef.current = true;
                   setSelectedSiteKey(siteId);
                 }
               }}

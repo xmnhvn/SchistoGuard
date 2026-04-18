@@ -110,6 +110,7 @@ export function Dashboard({
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const selectedSiteKeyRef = useRef<string>('');
   const activeSiteKeyRef = useRef<string | null>(null);
+  const hasManualSiteSelectionRef = useRef(false);
   const liveReadingRef = useRef<any>(null);
   const readingsRequestRef = useRef(0);
   const alertsRequestRef = useRef(0);
@@ -510,6 +511,7 @@ export function Dashboard({
   const applyImmediateSiteSwitch = (nextSiteKey: string) => {
     if (!nextSiteKey) return;
     if (nextSiteKey === selectedSiteKeyRef.current) return;
+    hasManualSiteSelectionRef.current = true;
 
     const switchingToAllSites = nextSiteKey === ALL_SITES_KEY;
 
@@ -694,7 +696,9 @@ export function Dashboard({
         setAvailableSites(mapped);
 
         setSelectedSiteKey((prev) => {
-          if (prev === ALL_SITES_KEY) return prev;
+          if (!hasManualSiteSelectionRef.current && effectiveActiveSiteKey && mapped.some((site) => site.siteKey === effectiveActiveSiteKey)) {
+            return effectiveActiveSiteKey;
+          }
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
           return ALL_SITES_KEY;
         });
@@ -746,7 +750,10 @@ export function Dashboard({
             setLatestReading(null);
             setLiveReading({ ...data, deviceConnected: false });
             setActiveSiteKey(incomingActive || activeSiteKeyRef.current || null);
-            setSelectedSiteKey((prev) => prev || ALL_SITES_KEY);
+            setSelectedSiteKey((prev) => {
+              if (hasManualSiteSelectionRef.current) return prev || ALL_SITES_KEY;
+              return incomingActive || prev || ALL_SITES_KEY;
+            });
             setDeviceConnected(false);
             setBackendOk(true);
             setDataOk(false);
@@ -767,7 +774,10 @@ export function Dashboard({
             localStorage.setItem('sg_global_latest_siteName', data.siteName);
           }
 
-          setSelectedSiteKey((prev) => prev || ALL_SITES_KEY);
+          setSelectedSiteKey((prev) => {
+            if (hasManualSiteSelectionRef.current) return prev || ALL_SITES_KEY;
+            return resolvedActiveSiteKey || prev || ALL_SITES_KEY;
+          });
         })
         .catch(() => {
           setBackendOk(false);
