@@ -234,8 +234,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
     }
   }, [availableSites, selectedSite]);
 
-  const handleAcknowledgeAlert = (alertId: string, fullAlert?: any) => {
-    if (fullAlert) setSelectedAlert(fullAlert);
+  const handleAcknowledgeAlert = (alertId: string, _fullAlert?: any) => {
     setAlerts(prev => prev.map(alert =>
       alert.id === alertId ? {
         ...alert,

@@ -186,11 +186,11 @@ body {
 
 .sg-toaster [data-sonner-toast] {
   width: min(460px, calc(100vw - 48px));
-  min-height: 84px;
-  padding: 14px 16px !important;
+  min-height: 108px;
+  padding: 16px 18px !important;
   border-radius: 16px !important;
   backdrop-filter: blur(6px);
-  border-left: 4px solid #2f7f8c;
+  border-left: 5px solid #2f7f8c;
 }
 
 .sg-toaster [data-sonner-toast][data-type="error"] {
@@ -199,17 +199,31 @@ body {
 }
 
 .sg-toaster [data-title] {
-  font-weight: 800;
+  font-weight: 900;
+  font-size: 2rem;
+  line-height: 1.2;
   color: #123b49;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
+  margin-bottom: 6px;
+  text-wrap: balance;
 }
 
 .sg-toaster [data-description] {
+  font-size: 1.18rem;
+  line-height: 1.45;
+  font-weight: 600;
   color: #4b6673;
+  text-wrap: pretty;
+}
+
+.sg-toaster [data-content] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sg-toaster [data-icon] {
-  transform: scale(1.05);
+  transform: scale(1.2);
 }
 
 .sg-toaster [data-sonner-toast] [data-close-button] {
@@ -233,6 +247,14 @@ body {
     width: calc(100vw - 24px);
     min-height: 76px;
     padding: 12px 14px !important;
+  }
+
+  .sg-toaster [data-title] {
+    font-size: 1.05rem;
+  }
+
+  .sg-toaster [data-description] {
+    font-size: 0.93rem;
   }
 }
 

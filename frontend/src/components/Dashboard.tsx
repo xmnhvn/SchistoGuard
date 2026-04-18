@@ -1029,8 +1029,7 @@ export function Dashboard({
   // Use logged-in user for acknowledge (same as AlertsPage)
   const [userName] = useState(() => user ? `${user.firstName} ${user.lastName} (${user.role ? user.role.toUpperCase() : ''})` : "Unknown");
 
-  const handleAcknowledgeAlert = (alertId: string, fullAlert?: Alert) => {
-    if (fullAlert) setSelectedAlert(fullAlert);
+  const handleAcknowledgeAlert = (alertId: string, _fullAlert?: Alert) => {
     setAlerts((prev) =>
       prev.map((alert) =>
         alert.id === alertId ? { ...alert, isAcknowledged: true, acknowledgedBy: userName } : alert
@@ -1361,11 +1360,11 @@ export function Dashboard({
               const statusDotColor = isActive ? "#22c55e" : "#9ca3af";
               const rowBackground = hasOperationalSite
                 ? (isSelected
-                  ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
+                  ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "transparent" : "#3b82f6"))
                   : "transparent")
                 : "transparent";
               const rowTextColor = hasOperationalSite
-                ? (isSelected ? "#ffffff" : (isActive ? "#15803d" : "#64748b"))
+                ? (selectedButInactive ? "#ffffff" : (isActive ? "#15803d" : (isSelected ? "#ffffff" : "#64748b")))
                 : "#64748b";
               return (
                 <button
@@ -1532,11 +1531,11 @@ export function Dashboard({
               const statusDotColor = isActive ? "#22c55e" : "#9ca3af";
               const rowBackground = hasOperationalSite
                 ? (isSelected
-                  ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "#16a34a" : "#3b82f6"))
+                  ? (selectedButInactive ? "#94a3b8" : (selectedActive ? "transparent" : "#3b82f6"))
                   : "transparent")
                 : "transparent";
               const rowTextColor = hasOperationalSite
-                ? (isSelected ? "#ffffff" : (isActive ? "#15803d" : "#64748b"))
+                ? (selectedButInactive ? "#ffffff" : (isActive ? "#15803d" : (isSelected ? "#ffffff" : "#64748b")))
                 : "#64748b";
               return (
                 <button
