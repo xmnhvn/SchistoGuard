@@ -167,7 +167,7 @@ body {
 /* Toast alignment: match desktop content right padding and sit below fixed header */
 @media (min-width: 600px) {
   .sg-toaster {
-    top: 156px !important;
+    top: 150px !important;
     right: 20px !important;
   }
 }
@@ -185,22 +185,23 @@ body {
 }
 
 .sg-toaster [data-sonner-toast] {
-  width: min(520px, calc(100vw - 48px));
-  min-height: 88px;
-  padding: 13px 15px !important;
+  width: min(460px, calc(100vw - 48px));
+  min-height: 82px;
+  padding: 12px 14px !important;
   border-radius: 16px !important;
   backdrop-filter: blur(6px);
-  border-left: 5px solid #2f7f8c;
+  border-left: 4px solid #2f7f8c;
+  box-shadow: 0 10px 22px rgba(20, 42, 56, 0.12) !important;
 }
 
 @media (min-width: 1100px) {
   .sg-toaster {
-    right: 56px !important;
+    right: 40px !important;
   }
 
   .sg-toaster [data-sonner-toast] {
-    width: clamp(560px, calc(100vw - 560px), 760px);
-    max-width: calc(100vw - 112px);
+    width: clamp(420px, calc(100vw - 820px), 520px);
+    max-width: calc(100vw - 96px);
   }
 }
 
@@ -211,18 +212,18 @@ body {
 
 .sg-toaster [data-title] {
   font-weight: 900 !important;
-  font-size: 1.08rem;
-  line-height: 1.28;
+  font-size: 1.02rem !important;
+  line-height: 1.24 !important;
   color: #123b49;
   letter-spacing: -0.01em;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   text-wrap: balance;
 }
 
 .sg-toaster [data-description] {
-  font-size: 0.98rem;
-  line-height: 1.4;
-  font-weight: 500;
+  font-size: 0.9rem !important;
+  line-height: 1.34 !important;
+  font-weight: 500 !important;
   color: #4b6673;
   text-wrap: pretty;
 }
@@ -234,7 +235,7 @@ body {
 }
 
 .sg-toaster [data-icon] {
-  transform: scale(1.06);
+  transform: scale(0.98);
 }
 
 .sg-toaster [data-sonner-toast] [data-close-button] {
@@ -256,16 +257,16 @@ body {
 @media (max-width: 599px) {
   .sg-toaster [data-sonner-toast] {
     width: calc(100vw - 24px);
-    min-height: 76px;
-    padding: 12px 14px !important;
+    min-height: 74px;
+    padding: 11px 13px !important;
   }
 
   .sg-toaster [data-title] {
-    font-size: 0.98rem;
+    font-size: 0.95rem !important;
   }
 
   .sg-toaster [data-description] {
-    font-size: 0.9rem;
+    font-size: 0.86rem !important;
   }
 }
 
