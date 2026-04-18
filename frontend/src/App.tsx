@@ -60,11 +60,16 @@ export default function App() {
   const [adminUnlockError, setAdminUnlockError] = useState('');
   const [adminUnlockLoading, setAdminUnlockLoading] = useState(false);
   const [pendingAdminView, setPendingAdminView] = useState<ViewType | null>(null);
-  const knownUnacknowledgedAlertIdsRef = useRef<Set<string>>(new Set());
+  const knownUnacknowledgedAlertEventKeysRef = useRef<Set<string>>(new Set());
   const alertFeedInitializedRef = useRef(false);
-  const alertPollInFlightRef = useRef(false);
   const currentViewRef = useRef<ViewType>('landing');
   const pwaInstallPrompt = <PWAInstallPrompt />;
+
+  const getAlertEventKey = (alert: any) => {
+    const id = (alert?.id ?? '').toString();
+    const ts = (alert?.timestamp ?? alert?.createdAt ?? alert?.created_at ?? '').toString();
+    return `${id}|${ts}`;
+  };
 
   useEffect(() => {
     currentViewRef.current = currentView;
@@ -145,9 +150,8 @@ export default function App() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      knownUnacknowledgedAlertIdsRef.current = new Set();
+      knownUnacknowledgedAlertEventKeysRef.current = new Set();
       alertFeedInitializedRef.current = false;
-      alertPollInFlightRef.current = false;
       return;
     }
 
@@ -155,37 +159,31 @@ export default function App() {
     const ALERT_POLL_MS = 4000;
 
     const fetchAlerts = () => {
-      if (alertPollInFlightRef.current) return;
-      alertPollInFlightRef.current = true;
-
       apiGet('/api/sensors/alerts')
         .then((data) => {
           if (cancelled || !Array.isArray(data)) return;
 
           const sanitized = data.filter((alert) => ['Temperature', 'Turbidity', 'pH'].includes(alert.parameter));
           const currentUnacknowledged = sanitized.filter((alert) => !alert.isAcknowledged);
-          const currentIds = new Set(currentUnacknowledged.map((alert) => alert.id));
+          const currentEventKeys = new Set(currentUnacknowledged.map((alert) => getAlertEventKey(alert)));
 
           if (!alertFeedInitializedRef.current) {
-            knownUnacknowledgedAlertIdsRef.current = currentIds;
+            knownUnacknowledgedAlertEventKeysRef.current = currentEventKeys;
             alertFeedInitializedRef.current = true;
             return;
           }
 
           const newIncoming = currentUnacknowledged.filter(
-            (alert) => !knownUnacknowledgedAlertIdsRef.current.has(alert.id)
+            (alert) => !knownUnacknowledgedAlertEventKeysRef.current.has(getAlertEventKey(alert))
           );
 
-          knownUnacknowledgedAlertIdsRef.current = currentIds;
+          knownUnacknowledgedAlertEventKeysRef.current = currentEventKeys;
 
           if (newIncoming.length > 0) {
             void sendSystemAlertNotification(newIncoming);
           }
         })
-        .catch(() => { })
-        .finally(() => {
-          alertPollInFlightRef.current = false;
-        });
+        .catch(() => { });
     };
 
     fetchAlerts();
@@ -205,7 +203,6 @@ export default function App() {
       clearInterval(interval);
       window.removeEventListener('focus', handleVisibilityOrFocus);
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
-      alertPollInFlightRef.current = false;
     };
   }, [isAuthenticated]);
 
