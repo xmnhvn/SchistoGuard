@@ -62,7 +62,13 @@ export default function App() {
   const [pendingAdminView, setPendingAdminView] = useState<ViewType | null>(null);
   const knownUnacknowledgedAlertIdsRef = useRef<Set<string>>(new Set());
   const alertFeedInitializedRef = useRef(false);
+  const alertPollInFlightRef = useRef(false);
+  const currentViewRef = useRef<ViewType>('landing');
   const pwaInstallPrompt = <PWAInstallPrompt />;
+
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
 
   const sendSystemAlertNotification = async (incomingAlerts: any[]) => {
     if (incomingAlerts.length === 0 || typeof window === 'undefined') return;
@@ -77,7 +83,7 @@ export default function App() {
     const title = (rawTitle || '').toString().trim() || 'Water quality alert';
     const body = (rawBody || '').toString().trim() || 'A new alert was detected by SchistoGuard.';
 
-    if (currentView === 'dashboard') {
+    if (currentViewRef.current === 'dashboard') {
       toast.error(title, {
         id: 'sg-alert-stream-toast',
         description: body,
@@ -141,12 +147,17 @@ export default function App() {
     if (!isAuthenticated) {
       knownUnacknowledgedAlertIdsRef.current = new Set();
       alertFeedInitializedRef.current = false;
+      alertPollInFlightRef.current = false;
       return;
     }
 
     let cancelled = false;
+    const ALERT_POLL_MS = 4000;
 
     const fetchAlerts = () => {
+      if (alertPollInFlightRef.current) return;
+      alertPollInFlightRef.current = true;
+
       apiGet('/api/sensors/alerts')
         .then((data) => {
           if (cancelled || !Array.isArray(data)) return;
@@ -171,15 +182,30 @@ export default function App() {
             void sendSystemAlertNotification(newIncoming);
           }
         })
-        .catch(() => { });
+        .catch(() => { })
+        .finally(() => {
+          alertPollInFlightRef.current = false;
+        });
     };
 
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 10000);
+    const interval = setInterval(fetchAlerts, ALERT_POLL_MS);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAlerts();
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      alertPollInFlightRef.current = false;
     };
   }, [isAuthenticated]);
 
