@@ -422,6 +422,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const cardsGridRef = useRef<HTMLDivElement>(null);
   const desktopBaselineDprRef = useRef<number | null>(null);
   const hasManualSiteSelectionRef = useRef(false);
+  const hasLoadedSitesOnceRef = useRef(false);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -436,7 +437,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     const fetchSites = async () => {
       try {
-        setSitesLoading(true);
+        if (!hasLoadedSitesOnceRef.current) {
+          setSitesLoading(true);
+        }
         const data = await apiGet('/api/sensors/sites');
         if (!Array.isArray(data)) {
           setAvailableSites([]);
@@ -456,6 +459,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           .sort((a, b) => a.siteName.localeCompare(b.siteName));
 
         setAvailableSites(mapped);
+        hasLoadedSitesOnceRef.current = true;
 
         setSelectedSiteKey((prev) => {
           if (prev === ALL_SITES_KEY) return prev;
@@ -935,7 +939,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div className="fixed inset-0 z-0" style={{ backgroundColor: '#ffffff' }}>
 
         {/* Map loads behind gradient, fades in when ready - Dashboard style */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.22s ease-out' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.42s ease-out' }}>
           {shouldRenderMap && (
             <DashboardMap
               ref={mapRef}
@@ -1845,8 +1849,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       letterSpacing: 0.5,
                       lineHeight: 1,
                       textTransform: 'uppercase',
-                      animation: 'dotPulse 3s ease-in-out infinite',
-                      "--dot-glow": 'rgba(34,197,94,0.4)',
                     } as any}>Live</span>
                   )}
                   <span style={{
@@ -2021,7 +2023,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         animation: 'sitePhotoShimmer 1.2s ease-in-out infinite',
                       }}
                     />
-                  ) : sitesLoading && !isAllSitesSelected ? (
+                  ) : sitesLoading && !isAllSitesSelected && !selectedSite?.sitePhoto && !sitePhotoLoaded ? (
                     <div
                       style={{
                         position: 'absolute',

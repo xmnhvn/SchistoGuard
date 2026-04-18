@@ -1911,7 +1911,7 @@ export function Dashboard({
       <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.28s ease-out" }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.42s ease-out" }}>
           <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={mapSites} onSiteSelect={handleMapSiteSelect} latOffset={-0.00099} />
         </div>
 
@@ -2612,7 +2612,7 @@ export function Dashboard({
           zIndex: 0,
           pointerEvents: "auto",
           opacity: mapReady ? 1 : 0,
-          transition: "opacity 0.28s ease-out",
+          transition: "opacity 0.42s ease-out",
         }}
       >
         <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} onSiteSelect={handleMapSiteSelect} lngOffset={desktopMapLngOffset} />
