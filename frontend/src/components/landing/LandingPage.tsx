@@ -120,7 +120,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isMonitoringHovered, setIsMonitoringHovered] = useState(false);
   const [desktopZoomScale, setDesktopZoomScale] = useState(1);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [shouldRenderMap, setShouldRenderMap] = useState(false);
+  const [shouldRenderMap, setShouldRenderMap] = useState(true);
   const [showLiveUpdates, setShowLiveUpdates] = useState(false);
   const [isExitingLiveUpdates, setIsExitingLiveUpdates] = useState(false);
   const [latestReading, setLatestReading] = useState<any>(null);
@@ -276,6 +276,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       .sort((a, b) => Number(b.isSelected) - Number(a.isSelected));
 
     if (fromRegistry.length > 0) return fromRegistry;
+
+    if (isAllSitesSelected || sitesLoading) {
+      return undefined;
+    }
 
     if (gpsSites && gpsSites.length > 0) {
       return gpsSites.map((site) => ({
@@ -455,11 +459,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         setSelectedSiteKey((prev) => {
           if (prev === ALL_SITES_KEY) return prev;
-          if (!hasManualSiteSelectionRef.current && activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) {
-            return activeSiteKey;
-          }
           if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
-          if (activeSiteKey && mapped.some((site) => site.siteKey === activeSiteKey)) return activeSiteKey;
           return ALL_SITES_KEY;
         });
       } catch {
@@ -574,32 +574,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       window.visualViewport?.removeEventListener("resize", check);
     };
   }, []);
-
-  // Lazy-mount map to reduce initial landing page jank
-  React.useEffect(() => {
-    if (showLiveUpdates) {
-      setShouldRenderMap(true);
-      return;
-    }
-
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let idleId: number | null = null;
-
-    const run = () => setShouldRenderMap(true);
-
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(run, { timeout: 1200 });
-    } else {
-      timeoutId = setTimeout(run, 600);
-    }
-
-    return () => {
-      if (idleId !== null && typeof window !== "undefined" && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleId);
-      }
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [showLiveUpdates]);
 
   // Fetch sensor data when live updates is shown
   useEffect(() => {
@@ -958,10 +932,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden bg-white">
       {/* Solid White Background container */}
-      <div className="fixed inset-0 z-0" style={{ backgroundColor: '#e8eff1' }}>
+      <div className="fixed inset-0 z-0" style={{ backgroundColor: '#ffffff' }}>
 
         {/* Map loads behind gradient, fades in when ready - Dashboard style */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: mapLoaded ? 1 : 0, transition: 'opacity 0.22s ease-out' }}>
           {shouldRenderMap && (
             <DashboardMap
               ref={mapRef}
@@ -995,8 +969,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   : undefined
               }
               onMapReady={() => {
-                // Shorter delay - just wait for initial render
-                setTimeout(() => setMapLoaded(true), 300);
+                setMapLoaded(true);
               }}
             />
           )}

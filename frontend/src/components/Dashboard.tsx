@@ -106,7 +106,7 @@ export function Dashboard({
   const [readings, setReadings] = useState<any[]>([]);
   const [allSitesTransitioning, setAllSitesTransitioning] = useState(false);
   const [availableSites, setAvailableSites] = useState<SiteOption[]>([]);
-  const [selectedSiteKey, setSelectedSiteKey] = useState<string>('');
+  const [selectedSiteKey, setSelectedSiteKey] = useState<string>(ALL_SITES_KEY);
   const [activeSiteKey, setActiveSiteKey] = useState<string | null>(null);
   const selectedSiteKeyRef = useRef<string>('');
   const activeSiteKeyRef = useRef<string | null>(null);
@@ -694,10 +694,9 @@ export function Dashboard({
         setAvailableSites(mapped);
 
         setSelectedSiteKey((prev) => {
-          if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
           if (prev === ALL_SITES_KEY) return prev;
-          if (effectiveActiveSiteKey && mapped.some((site) => site.siteKey === effectiveActiveSiteKey)) return effectiveActiveSiteKey;
-          return mapped[0]?.siteKey || '';
+          if (prev && mapped.some((site) => site.siteKey === prev)) return prev;
+          return ALL_SITES_KEY;
         });
       } catch {
         setAvailableSites([]);
@@ -708,13 +707,6 @@ export function Dashboard({
     const interval = setInterval(fetchSites, 15000);
     return () => clearInterval(interval);
   }, [effectiveActiveSiteKey]);
-
-  // Only initialize selectedSiteKey to activeSiteKey on first load with no selection
-  useEffect(() => {
-    if (!selectedSiteKey && effectiveActiveSiteKey) {
-      setSelectedSiteKey(effectiveActiveSiteKey);
-    }
-  }, [selectedSiteKey, effectiveActiveSiteKey]);
 
   useEffect(() => {
     const fetchLatest = () => {
@@ -754,8 +746,7 @@ export function Dashboard({
             setLatestReading(null);
             setLiveReading({ ...data, deviceConnected: false });
             setActiveSiteKey(incomingActive || activeSiteKeyRef.current || null);
-            // Only initialize selectedSiteKey if nothing is selected yet (first load)
-            setSelectedSiteKey((prev) => prev || '');
+            setSelectedSiteKey((prev) => prev || ALL_SITES_KEY);
             setDeviceConnected(false);
             setBackendOk(true);
             setDataOk(false);
@@ -776,10 +767,7 @@ export function Dashboard({
             localStorage.setItem('sg_global_latest_siteName', data.siteName);
           }
 
-          // Only initialize selectedSiteKey if nothing is selected yet (first load)
-          if (resolvedActiveSiteKey) {
-            setSelectedSiteKey((prev) => prev || resolvedActiveSiteKey || '');
-          }
+          setSelectedSiteKey((prev) => prev || ALL_SITES_KEY);
         })
         .catch(() => {
           setBackendOk(false);
@@ -1923,7 +1911,7 @@ export function Dashboard({
       <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "#e8eff1" }}>
 
         {/* ── MAP BACKGROUND — real MapLibre map ── */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.8s ease" }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: mapReady ? 1 : 0, transition: "opacity 0.28s ease-out" }}>
           <DashboardMap ref={mapRef} mobileMode={true} interactive={isTablet} onMapReady={() => setMapReady(true)} sites={mapSites} onSiteSelect={handleMapSiteSelect} latOffset={-0.00099} />
         </div>
 
@@ -2624,7 +2612,7 @@ export function Dashboard({
           zIndex: 0,
           pointerEvents: "auto",
           opacity: mapReady ? 1 : 0,
-          transition: "opacity 0.8s ease",
+          transition: "opacity 0.28s ease-out",
         }}
       >
         <DashboardMap ref={mapRef} onMapReady={() => setMapReady(true)} sites={mapSites} onSiteSelect={handleMapSiteSelect} lngOffset={desktopMapLngOffset} />

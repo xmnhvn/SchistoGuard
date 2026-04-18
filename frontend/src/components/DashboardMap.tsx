@@ -96,11 +96,17 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     if (!mapContainer.current) return;
 
     const sitesToShow = sites && sites.length > 0 ? sites : [];
+    if (sitesToShow.length === 0) {
+      markers.current.forEach((marker) => marker.remove());
+      markers.current = [];
+      previousSitesJson.current = '';
+      previousSelectedSiteId.current = null;
+      return;
+    }
     const hasExplicitSelectedSite = sitesToShow.some((site) => !!site.isSelected);
     const isAllSitesOverview = sitesToShow.length > 1 && !hasExplicitSelectedSite;
 
-    // If no sites, center map to Philippines as neutral view
-    const center = sitesToShow[0] || { lat: 12.8797, lng: 121.7740, name: '', id: '' };
+    const center = sitesToShow[0];
     const currentViewKey = isAllSitesOverview
       ? `all-sites:${sitesToShow.map((site) => site.id).join('|')}`
       : center.id;
@@ -138,9 +144,6 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       } else if (sitesToShow.length >= 1) {
         mapCenter = [center.lng + lngOffset, center.lat + latOffset];
         mapZoom = 15; // Decreased zoom from 17 down to 15 for a wider view
-      } else {
-        mapCenter = [121.7740, 12.8797];
-        mapZoom = 6;
       }
       defaultView.current = { center: mapCenter, zoom: mapZoom };
       
@@ -303,8 +306,8 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   }, []);
 
   if (mapUnavailable) {
-    return <div style={{ width: '100%', height: '100%', background: '#dbe9ed' }} />;
+    return <div style={{ width: '100%', height: '100%', background: '#ffffff' }} />;
   }
 
-  return <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />;
+  return <div ref={mapContainer} style={{ width: '100%', height: '100%', background: '#ffffff' }} />;
 });
