@@ -1687,7 +1687,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              disabled={savingPhotoSiteKey === site.site_key || !!sitePhotoLoading[site.site_key] || !sitePhotoDrafts[site.site_key]}
+                              disabled={savingPhotoSiteKey === site.site_key || !!sitePhotoLoading[site.site_key] || !(sitePhotoDrafts[site.site_key] || site.site_photo)}
                               aria-label="Photo actions"
                               style={{
                                 width: 36,
@@ -1695,11 +1695,11 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                                 borderRadius: 999,
                                 border: "1px solid rgba(53,125,134,0.12)",
                                 background: "rgba(53,125,134,0.06)",
-                                color: !sitePhotoDrafts[site.site_key] ? "#94a3b8" : "#215f67",
+                                color: !(sitePhotoDrafts[site.site_key] || site.site_photo) ? "#94a3b8" : "#215f67",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                cursor: !sitePhotoDrafts[site.site_key] ? "not-allowed" : "pointer",
+                                cursor: !(sitePhotoDrafts[site.site_key] || site.site_photo) ? "not-allowed" : "pointer",
                                 transition: "all 0.2s ease",
                               }}
                             >
