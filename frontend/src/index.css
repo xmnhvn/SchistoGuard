@@ -223,8 +223,8 @@ body {
 .sg-toaster [data-description] {
   font-size: 0.9rem !important;
   line-height: 1.34 !important;
-  font-weight: 500 !important;
-  color: #4b6673;
+  font-weight: 400 !important;
+  color: #4b5563;
   text-wrap: pretty;
 }
 
