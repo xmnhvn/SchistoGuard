@@ -11,6 +11,7 @@ interface DashboardMapProps {
     lng: number;
     isActive?: boolean;
     isSelected?: boolean;
+    sitePhoto?: string | null;
   }>;
   /** Called when a site marker is clicked */
   onSiteSelect?: (siteId: string) => void;
@@ -39,11 +40,21 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const map = useRef<maplibregl.Map | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
   const markers = useRef<maplibregl.Marker[]>([]);
+  const [expandedPhotoSiteId, setExpandedPhotoSiteId] = useState<string | null>(null);
   const hasReportedReady = useRef(false);
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const previousSitesJson = useRef<string>('');
   const previousSelectedSiteId = useRef<string | null>(null);
+  const previousExpandedPhotoSiteId = useRef<string | null>(null);
+
+  const escapeHtml = (value: string) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
 
   useImperativeHandle(ref, () => ({
     resetView: (center?: { lat: number; lng: number }) => {
@@ -91,6 +102,13 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
   // Use JSON stringify to prevent infinite unneeded re-renders when parent passes a new array reference
   const sitesJson = sites ? JSON.stringify(sites) : '';
+
+  useEffect(() => {
+    if (!expandedPhotoSiteId) return;
+    if (!sites?.some((site) => site.id === expandedPhotoSiteId)) {
+      setExpandedPhotoSiteId(null);
+    }
+  }, [sites, expandedPhotoSiteId]);
 
   useEffect(() => {
     if (mapUnavailable) return;
@@ -228,7 +246,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     };
 
     // Only touch markers if the actual site data changed
-    if (previousSitesJson.current !== sitesJson) {
+    const expandedPhotoChanged = previousExpandedPhotoSiteId.current !== expandedPhotoSiteId;
+
+    if (previousSitesJson.current !== sitesJson || expandedPhotoChanged) {
       // Remove old markers
       markers.current.forEach(m => m.remove());
       markers.current = [];
@@ -245,8 +265,17 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               ? 'site-marker--active'
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
+            const hasExpandedPhoto = expandedPhotoSiteId === site.id && !!site.sitePhoto;
+            const photoMarkup = hasExpandedPhoto
+              ? `
+                <div class="site-marker__photo-bubble">
+                  <img class="site-marker__photo-image" src="${escapeHtml(site.sitePhoto!)}" alt="${escapeHtml(site.name)} site photo" />
+                </div>`
+              : '';
+
             el.innerHTML = `
               <div class="site-marker ${markerStateClass}">
+                ${photoMarkup}
                 <div class="site-marker__pulse"></div>
                 <div class="site-marker__ring"></div>
                 <div class="site-marker__dot"></div>
@@ -255,6 +284,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
             if (site?.id) {
               el.addEventListener('click', (event) => {
                 event.stopPropagation();
+                setExpandedPhotoSiteId((current) => current === site.id ? null : site.id);
                 onSiteSelect?.(site.id);
               });
             }
@@ -274,6 +304,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
         }
       }
       previousSitesJson.current = sitesJson;
+      previousExpandedPhotoSiteId.current = expandedPhotoSiteId;
     }
 
     // Report readiness as soon as the base style is ready or the first frame renders.
@@ -299,7 +330,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [sitesJson, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, allSitesPadding, mapUnavailable]);
+  }, [sitesJson, expandedPhotoSiteId, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, allSitesPadding, mapUnavailable]);
 
 
   // Destroy map on unmount
