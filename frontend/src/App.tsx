@@ -68,7 +68,7 @@ export default function App() {
     if (incomingAlerts.length === 0 || typeof window === 'undefined') return;
 
     const criticalCount = incomingAlerts.filter((alert) => alert.level === 'critical').length;
-    const rawTitle = criticalCount > 0 ? 'Critical water quality alert' : 'New water quality alert';
+    const rawTitle = criticalCount > 0 ? 'Critical Water Quality Alert' : 'New Water Quality Alert';
     const rawBody =
       incomingAlerts.length === 1
         ? (incomingAlerts[0].message || 'A new alert was detected by SchistoGuard.')
@@ -77,11 +77,13 @@ export default function App() {
     const title = (rawTitle || '').toString().trim() || 'Water quality alert';
     const body = (rawBody || '').toString().trim() || 'A new alert was detected by SchistoGuard.';
 
-    toast.error(title, {
-      id: 'sg-alert-stream-toast',
-      description: body,
-      duration: 7000,
-    });
+    if (currentView === 'dashboard') {
+      toast.error(title, {
+        id: 'sg-alert-stream-toast',
+        description: body,
+        duration: 7000,
+      });
+    }
 
     if (!("Notification" in window)) return;
     if (Notification.permission !== 'granted') return;
@@ -180,6 +182,12 @@ export default function App() {
       clearInterval(interval);
     };
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (currentView !== 'dashboard') {
+      toast.dismiss('sg-alert-stream-toast');
+    }
+  }, [currentView]);
   const isViewType = (view: string | null): view is ViewType => {
     return (
       view === 'landing' ||

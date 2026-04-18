@@ -21,9 +21,9 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 68px;
-  height: 68px;
-  transform: translate(-50%, -108px);
+  width: 52px;
+  height: 52px;
+  transform: translate(-50%, -88px);
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid rgba(255, 255, 255, 0.95);
@@ -105,11 +105,11 @@
 @keyframes site-photo-pop {
   from {
     opacity: 0;
-    transform: translate(-50%, -96px) scale(0.9);
+    transform: translate(-50%, -78px) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -108px) scale(1);
+    transform: translate(-50%, -88px) scale(1);
   }
 }
 

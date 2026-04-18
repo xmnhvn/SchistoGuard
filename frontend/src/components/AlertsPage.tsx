@@ -606,6 +606,11 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
                     <div style={{ flex: 1, minWidth: 0, opacity: deleteMode && !selectedIds.has(alert.id) ? 0.7 : 1, transition: "opacity 0.2s ease" }}>
                       <div onClick={(e) => {
 
+                        const target = e.target as HTMLElement | null;
+                        if (target?.closest('[data-alert-ack-button="true"]')) {
+                          return;
+                        }
+
                         if (deleteMode) {
 
                           e.preventDefault();
@@ -745,7 +750,13 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {filteredAlerts.length > 0 ? (
                   filteredAlerts.map((alert) => (
-                    <div key={alert.id} onClick={() => setSelectedAlert(alert)}>
+                    <div key={alert.id} onClick={(e) => {
+                      const target = e.target as HTMLElement | null;
+                      if (target?.closest('[data-alert-ack-button="true"]')) {
+                        return;
+                      }
+                      setSelectedAlert(alert);
+                    }}>
                       <AlertItem
                         {...alert}
                         isSelected={selectedAlert?.id === alert.id}

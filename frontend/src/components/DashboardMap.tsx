@@ -47,6 +47,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const previousSitesJson = useRef<string>('');
   const previousSelectedSiteId = useRef<string | null>(null);
   const previousExpandedPhotoSiteId = useRef<string | null>(null);
+  const canShowPhotoPreview = !mobileMode;
 
   const escapeHtml = (value: string) =>
     value
@@ -109,6 +110,12 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       setExpandedPhotoSiteId(null);
     }
   }, [sites, expandedPhotoSiteId]);
+
+  useEffect(() => {
+    if (!canShowPhotoPreview && expandedPhotoSiteId) {
+      setExpandedPhotoSiteId(null);
+    }
+  }, [canShowPhotoPreview, expandedPhotoSiteId]);
 
   useEffect(() => {
     if (mapUnavailable) return;
@@ -265,7 +272,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               ? 'site-marker--active'
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
-            const hasExpandedPhoto = expandedPhotoSiteId === site.id && !!site.sitePhoto;
+            const hasExpandedPhoto = canShowPhotoPreview && expandedPhotoSiteId === site.id && !!site.sitePhoto;
             const photoMarkup = hasExpandedPhoto
               ? `
                 <div class="site-marker__photo-bubble">
@@ -284,7 +291,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
             if (site?.id) {
               el.addEventListener('click', (event) => {
                 event.stopPropagation();
-                setExpandedPhotoSiteId((current) => current === site.id ? null : site.id);
+                if (canShowPhotoPreview) {
+                  setExpandedPhotoSiteId((current) => current === site.id ? null : site.id);
+                }
                 onSiteSelect?.(site.id);
               });
             }

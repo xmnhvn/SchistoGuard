@@ -62,6 +62,10 @@ export function AlertItem({
     onAcknowledge?.(id);
   };
 
+  const stopAcknowledgePropagation = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
+
   // Determine accent bar color based on level
   const accentColor = level === "critical" ? "#D14343" : level === "warning" ? "#F1A11A" : "#357D86";
 
@@ -218,7 +222,11 @@ export function AlertItem({
               {!isAcknowledged && onAcknowledge && (
                 <Button
                   size="sm"
+                  data-alert-ack-button="true"
                   onClick={handleAcknowledge}
+                  onMouseDown={stopAcknowledgePropagation}
+                  onPointerDown={stopAcknowledgePropagation}
+                  onTouchStart={stopAcknowledgePropagation}
                   className={`${compact ? "h-6 px-3" : "h-7 px-4"} bg-schistoguard-teal hover:bg-schistoguard-teal/90 rounded-md shadow-sm`}
                   style={{
                     fontSize: compact ? "9px" : "10px",

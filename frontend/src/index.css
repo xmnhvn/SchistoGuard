@@ -199,8 +199,9 @@ body {
 }
 
 .sg-toaster [data-title] {
-  font-weight: 700;
-  color: #1d4f60;
+  font-weight: 800;
+  color: #123b49;
+  letter-spacing: -0.01em;
 }
 
 .sg-toaster [data-description] {
