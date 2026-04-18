@@ -1683,22 +1683,57 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         >
                           {savingPhotoSiteKey === site.site_key ? "Saving Photo..." : "Save Photo"}
                         </Button>
-                        <button
-                          type="button"
-                          disabled={savingPhotoSiteKey === site.site_key || !!sitePhotoLoading[site.site_key] || !sitePhotoDrafts[site.site_key]}
-                          onClick={() => handleRemoveSitePhoto(site.site_key)}
-                          style={{
-                            border: "none",
-                            background: "transparent",
-                            color: !sitePhotoDrafts[site.site_key] ? "#94a3b8" : "#dc2626",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            cursor: !sitePhotoDrafts[site.site_key] ? "not-allowed" : "pointer",
-                            fontFamily: POPPINS,
-                          }}
-                        >
-                          Remove Photo
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              disabled={savingPhotoSiteKey === site.site_key || !!sitePhotoLoading[site.site_key] || !sitePhotoDrafts[site.site_key]}
+                              aria-label="Photo actions"
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 999,
+                                border: "1px solid rgba(53,125,134,0.12)",
+                                background: "rgba(53,125,134,0.06)",
+                                color: !sitePhotoDrafts[site.site_key] ? "#94a3b8" : "#215f67",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: !sitePhotoDrafts[site.site_key] ? "not-allowed" : "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            style={{
+                              minWidth: 160,
+                              borderRadius: 14,
+                              border: "1px solid rgba(53,125,134,0.12)",
+                              background: "#ffffff",
+                              padding: 6,
+                              boxShadow: "0 18px 48px rgba(15, 23, 42, 0.14)",
+                            }}
+                          >
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => handleRemoveSitePhoto(site.site_key)}
+                              style={{
+                                borderRadius: 10,
+                                fontFamily: POPPINS,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#dc2626",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Trash2 size={14} />
+                              Remove Photo
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
 
