@@ -12,6 +12,9 @@ interface DashboardMapProps {
     isActive?: boolean;
     isSelected?: boolean;
     sitePhoto?: string | null;
+    noticeTone?: 'critical' | 'warning' | 'safe' | 'offline';
+    noticePill?: string;
+    noticeMessage?: string;
   }>;
   /** Called when a site marker is clicked */
   onSiteSelect?: (siteId: string) => void;
@@ -41,13 +44,130 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const [mapUnavailable, setMapUnavailable] = useState(false);
   const markers = useRef<maplibregl.Marker[]>([]);
   const [expandedPhotoSiteId, setExpandedPhotoSiteId] = useState<string | null>(null);
+  const [closingPhotoSiteId, setClosingPhotoSiteId] = useState<string | null>(null);
+  const [pendingPhotoSiteId, setPendingPhotoSiteId] = useState<string | null>(null);
   const hasReportedReady = useRef(false);
   const defaultView = useRef<{ center: [number, number]; zoom: number }>({ center: [0, 0], zoom: 12 });
   const originalDashboardView = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const previousSitesJson = useRef<string>('');
+  const latestSitesRef = useRef<NonNullable<DashboardMapProps['sites']>>([]);
   const previousSelectedSiteId = useRef<string | null>(null);
   const previousExpandedPhotoSiteId = useRef<string | null>(null);
+  const previousClosingPhotoSiteId = useRef<string | null>(null);
+  const closePhotoTimeoutRef = useRef<number | null>(null);
+  const pendingOpenTimeoutRef = useRef<number | null>(null);
+  const pendingMoveEndHandlerRef = useRef<(() => void) | null>(null);
   const canShowPhotoPreview = !mobileMode;
+  const CLOSE_ANIMATION_MS = 260;
+
+  const clearPendingOpen = () => {
+    if (pendingOpenTimeoutRef.current !== null) {
+      window.clearTimeout(pendingOpenTimeoutRef.current);
+      pendingOpenTimeoutRef.current = null;
+    }
+
+    if (map.current && pendingMoveEndHandlerRef.current) {
+      map.current.off('moveend', pendingMoveEndHandlerRef.current);
+      pendingMoveEndHandlerRef.current = null;
+    }
+  };
+
+  const isSiteOverlayReady = (siteId: string) => {
+    const liveSites = latestSitesRef.current || [];
+    const target = liveSites.find((site) => site.id === siteId);
+    if (!target) return false;
+
+    const hasPhoto = !!normalizePhotoSrc(target.sitePhoto);
+    const hasNotice = !!target.noticeTone && !!target.noticePill && !!target.noticeMessage;
+    return hasPhoto && hasNotice;
+  };
+
+  const scheduleOpenAfterMapSettles = (siteId: string) => {
+    clearPendingOpen();
+    setPendingPhotoSiteId(siteId);
+
+    const openWhenReady = () => {
+      if (!isSiteOverlayReady(siteId)) {
+        pendingOpenTimeoutRef.current = window.setTimeout(openWhenReady, 120);
+        return;
+      }
+
+      clearPendingOpen();
+      setPendingPhotoSiteId((current) => (current === siteId ? null : current));
+      setClosingPhotoSiteId(null);
+      setExpandedPhotoSiteId(siteId);
+    };
+
+    const waitForMoveEnd = () => {
+      if (!map.current) {
+        openWhenReady();
+        return;
+      }
+
+      const handler = () => {
+        openWhenReady();
+      };
+
+      pendingMoveEndHandlerRef.current = handler;
+      map.current.on('moveend', handler);
+    };
+
+    // Give parent selection handlers one tick to trigger map easing first.
+    pendingOpenTimeoutRef.current = window.setTimeout(() => {
+      const mapInstance = map.current;
+      if (!mapInstance) {
+        openWhenReady();
+        return;
+      }
+
+      if (mapInstance.isMoving()) {
+        waitForMoveEnd();
+        return;
+      }
+
+      let checks = 0;
+      const maxChecks = 8;
+      const pollForMovement = () => {
+        const liveMap = map.current;
+        if (!liveMap) {
+          openWhenReady();
+          return;
+        }
+
+        if (liveMap.isMoving()) {
+          waitForMoveEnd();
+          return;
+        }
+
+        if (checks >= maxChecks) {
+          openWhenReady();
+          return;
+        }
+
+        checks += 1;
+        pendingOpenTimeoutRef.current = window.setTimeout(pollForMovement, 40);
+      };
+
+      pollForMovement();
+    }, 0);
+  };
+
+  const normalizePhotoSrc = (photoValue: string | null | undefined): string | null => {
+    const raw = (photoValue || '').toString().trim();
+    if (!raw) return null;
+
+    const lower = raw.toLowerCase();
+    if (
+      lower.startsWith('data:image/') ||
+      lower.startsWith('http://') ||
+      lower.startsWith('https://') ||
+      lower.startsWith('blob:')
+    ) {
+      return raw;
+    }
+
+    return `data:image/jpeg;base64,${raw}`;
+  };
 
   const escapeHtml = (value: string) =>
     value
@@ -105,6 +225,10 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const sitesJson = sites ? JSON.stringify(sites) : '';
 
   useEffect(() => {
+    latestSitesRef.current = sites || [];
+  }, [sites]);
+
+  useEffect(() => {
     if (!expandedPhotoSiteId) return;
     if (!sites?.some((site) => site.id === expandedPhotoSiteId)) {
       setExpandedPhotoSiteId(null);
@@ -112,10 +236,34 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   }, [sites, expandedPhotoSiteId]);
 
   useEffect(() => {
+    if (!closingPhotoSiteId) return;
+    if (!sites?.some((site) => site.id === closingPhotoSiteId)) {
+      setClosingPhotoSiteId(null);
+    }
+  }, [sites, closingPhotoSiteId]);
+
+  useEffect(() => {
     if (!canShowPhotoPreview && expandedPhotoSiteId) {
       setExpandedPhotoSiteId(null);
     }
-  }, [canShowPhotoPreview, expandedPhotoSiteId]);
+    if (!canShowPhotoPreview && closingPhotoSiteId) {
+      setClosingPhotoSiteId(null);
+    }
+    if (!canShowPhotoPreview && pendingPhotoSiteId) {
+      clearPendingOpen();
+      setPendingPhotoSiteId(null);
+    }
+  }, [canShowPhotoPreview, expandedPhotoSiteId, closingPhotoSiteId, pendingPhotoSiteId]);
+
+  useEffect(() => {
+    return () => {
+      if (closePhotoTimeoutRef.current !== null) {
+        window.clearTimeout(closePhotoTimeoutRef.current);
+        closePhotoTimeoutRef.current = null;
+      }
+      clearPendingOpen();
+    };
+  }, []);
 
   useEffect(() => {
     if (mapUnavailable) return;
@@ -254,8 +402,9 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
 
     // Only touch markers if the actual site data changed
     const expandedPhotoChanged = previousExpandedPhotoSiteId.current !== expandedPhotoSiteId;
+    const closingPhotoChanged = previousClosingPhotoSiteId.current !== closingPhotoSiteId;
 
-    if (previousSitesJson.current !== sitesJson || expandedPhotoChanged) {
+    if (previousSitesJson.current !== sitesJson || expandedPhotoChanged || closingPhotoChanged) {
       // Remove old markers
       markers.current.forEach(m => m.remove());
       markers.current = [];
@@ -272,11 +421,26 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               ? 'site-marker--active'
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
-            const hasExpandedPhoto = canShowPhotoPreview && expandedPhotoSiteId === site.id && !!site.sitePhoto;
-            const photoMarkup = hasExpandedPhoto
+            const normalizedPhotoSrc = normalizePhotoSrc(site.sitePhoto);
+            const hasNoticeContent = !!site.noticeTone && !!site.noticePill && !!site.noticeMessage;
+            const hasExpandedPhoto = canShowPhotoPreview && expandedPhotoSiteId === site.id && !!normalizedPhotoSrc;
+            const hasClosingPhoto = canShowPhotoPreview && closingPhotoSiteId === site.id && !!normalizedPhotoSrc;
+            const shouldRenderPhoto = (hasExpandedPhoto || hasClosingPhoto) && hasNoticeContent;
+            const photoAnimationClass = hasClosingPhoto ? 'is-closing' : 'is-opening';
+            const noticeMarkup = hasNoticeContent
               ? `
-                <div class="site-marker__photo-bubble">
-                  <img class="site-marker__photo-image" src="${escapeHtml(site.sitePhoto!)}" alt="${escapeHtml(site.name)} site photo" />
+                <div class="site-marker__photo-notice ${photoAnimationClass}" data-tone="${escapeHtml(site.noticeTone!)}" role="note" aria-label="Area notice">
+                  <div class="site-marker__photo-content">
+                    <span class="site-marker__photo-pill">${escapeHtml(site.noticePill!)}</span>
+                    <p class="site-marker__photo-note-text">${escapeHtml(site.noticeMessage!)}</p>
+                  </div>
+                </div>`
+              : '';
+            const photoMarkup = shouldRenderPhoto
+              ? `
+                ${noticeMarkup}
+                <div class="site-marker__photo-bubble ${photoAnimationClass}">
+                  <img class="site-marker__photo-image" src="${escapeHtml(normalizedPhotoSrc!)}" alt="${escapeHtml(site.name)} site photo" />
                 </div>`
               : '';
 
@@ -292,7 +456,34 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               el.addEventListener('click', (event) => {
                 event.stopPropagation();
                 if (canShowPhotoPreview) {
-                  setExpandedPhotoSiteId((current) => current === site.id ? null : site.id);
+                  const isSameSiteToggle = expandedPhotoSiteId === site.id;
+
+                  if (isSameSiteToggle) {
+                    clearPendingOpen();
+                    setPendingPhotoSiteId(null);
+                    setClosingPhotoSiteId(site.id);
+                    setExpandedPhotoSiteId(null);
+                    if (closePhotoTimeoutRef.current !== null) {
+                      window.clearTimeout(closePhotoTimeoutRef.current);
+                    }
+                    closePhotoTimeoutRef.current = window.setTimeout(() => {
+                      setClosingPhotoSiteId((closingCurrent) => (closingCurrent === site.id ? null : closingCurrent));
+                      closePhotoTimeoutRef.current = null;
+                    }, CLOSE_ANIMATION_MS);
+                    onSiteSelect?.(site.id);
+                    return;
+                  }
+
+                  if (closePhotoTimeoutRef.current !== null) {
+                    window.clearTimeout(closePhotoTimeoutRef.current);
+                    closePhotoTimeoutRef.current = null;
+                  }
+
+                  setClosingPhotoSiteId(null);
+                  setExpandedPhotoSiteId(null);
+                  onSiteSelect?.(site.id);
+                  scheduleOpenAfterMapSettles(site.id);
+                  return;
                 }
                 onSiteSelect?.(site.id);
               });
@@ -314,6 +505,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
       }
       previousSitesJson.current = sitesJson;
       previousExpandedPhotoSiteId.current = expandedPhotoSiteId;
+      previousClosingPhotoSiteId.current = closingPhotoSiteId;
     }
 
     // Report readiness as soon as the base style is ready or the first frame renders.
@@ -339,7 +531,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [sitesJson, expandedPhotoSiteId, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, allSitesPadding, mapUnavailable]);
+  }, [sitesJson, expandedPhotoSiteId, closingPhotoSiteId, onSiteSelect, mobileMode, interactive, lngOffset, latOffset, allSitesPadding, mapUnavailable]);
 
 
   // Destroy map on unmount

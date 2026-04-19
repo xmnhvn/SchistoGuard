@@ -446,14 +446,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           return;
         }
 
+        const seenPhotoPayloads = new Set<string>();
+
         const mapped: SiteOption[] = data
           .map((site: any) => ({
+            sitePhoto: (() => {
+              const raw = (site.site_photo || '').toString().trim();
+              if (!raw) return null;
+              if (seenPhotoPayloads.has(raw)) return null;
+              seenPhotoPayloads.add(raw);
+              return raw;
+            })(),
             siteKey: (site.site_key || '').toString().trim(),
             siteName: (site.site_name || site.address || site.site_key || 'Unnamed Site').toString().trim(),
             address: (site.address || '').toString().trim() || null,
             latitude: normalizeCoordinate(site.latitude),
             longitude: normalizeCoordinate(site.longitude),
-            sitePhoto: site.site_photo || null,
           }))
           .filter((site) => !!site.siteKey)
           .sort((a, b) => a.siteName.localeCompare(b.siteName));
@@ -1603,7 +1611,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             : 'transparent';
                           const rowTextColor = hasOperationalSite
                             ? (isSelected ? '#ffffff' : (isActive ? '#15803d' : '#64748b'))
-                            : '#64748b';
+                            : (isSelected ? '#337C85' : '#64748b');
                           return (
                             <button
                               key={site.siteKey}
@@ -1623,7 +1631,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                 color: rowTextColor,
                                 fontFamily: "'Poppins', sans-serif",
                                 fontSize: 13,
-                                fontWeight: isSelected ? 600 : 500,
+                                fontWeight: isSelected ? 700 : 500,
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 8,

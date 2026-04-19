@@ -454,8 +454,49 @@ export function Dashboard({
     : (selectedSite?.siteName || siteData.siteName || selectedSiteLabel);
 
   const mapSites = (() => {
+    const getNoticeFromReading = (reading: any, isOnline: boolean): { tone: 'critical' | 'warning' | 'safe'; pill: string; message: string } | null => {
+      if (!reading) {
+        return null;
+      }
+
+      const values = [
+        { type: 'temperature' as const, value: Number(reading.temperature) },
+        { type: 'turbidity' as const, value: Number(reading.turbidity) },
+        { type: 'ph' as const, value: Number(reading.ph) },
+      ].filter((entry) => Number.isFinite(entry.value));
+
+      if (values.length === 0) {
+        return null;
+      }
+
+      const hasCritical = values.some((entry) => getSensorStatus(entry.type, entry.value).severity === 'critical');
+      const hasWarning = values.some((entry) => getSensorStatus(entry.type, entry.value).severity === 'warning');
+
+      if (hasCritical) {
+        return {
+          tone: 'critical',
+          pill: isOnline ? 'Live High Risk' : 'High Possible Risk',
+          message: 'Higher-risk conditions detected. Avoid direct contact with open water.',
+        };
+      }
+
+      if (hasWarning) {
+        return {
+          tone: 'warning',
+          pill: isOnline ? 'Live Moderate Risk' : 'Moderate Risk',
+          message: 'Use caution in this area and limit unnecessary water exposure.',
+        };
+      }
+
+      return {
+        tone: 'safe',
+        pill: isOnline ? 'Live Stable' : 'Stable Conditions',
+        message: 'Current readings look stable. Continue routine precautions near water.',
+      };
+    };
+
     const fromRegistry = availableSites
-      .reduce<Array<{ id: string; name: string; lat: number; lng: number; isActive: boolean; isSelected: boolean; sitePhoto?: string | null }>>((acc, site) => {
+      .reduce<Array<{ id: string; name: string; lat: number; lng: number; isActive: boolean; isSelected: boolean; sitePhoto?: string | null; noticeTone?: 'critical' | 'warning' | 'safe' | 'offline'; noticePill?: string; noticeMessage?: string }>>((acc, site) => {
         const coords = resolveSiteCoordinates(site);
         if (!coords) return acc;
 
@@ -466,14 +507,29 @@ export function Dashboard({
           hasLiveActiveDevice &&
           site.siteKey === effectiveActiveSiteKey &&
           (hasManualActivation || isFreshSite);
+
+        const isSelectedSite = site.siteKey === selectedSiteKey;
+        const selectedSiteIsOnline =
+          isSelectedSite &&
+          !!deviceConnected &&
+          !!liveReading?.deviceConnected &&
+          !!effectiveActiveSiteKey &&
+          site.siteKey === effectiveActiveSiteKey;
+        const latestSiteReading = readings.length > 0 ? readings[readings.length - 1] : null;
+        const noticeReading = selectedSiteIsOnline ? liveReading : latestSiteReading;
+        const notice = isSelectedSite ? getNoticeFromReading(noticeReading, selectedSiteIsOnline) : null;
+
         acc.push({
           id: site.siteKey,
           name: site.siteName,
           lat: coords.lat,
           lng: coords.lng,
           isActive: isMarkerActive,
-          isSelected: site.siteKey === selectedSiteKey,
+          isSelected: isSelectedSite,
           sitePhoto: site.sitePhoto || null,
+          noticeTone: notice?.tone,
+          noticePill: notice?.pill,
+          noticeMessage: notice?.message,
         });
         return acc;
       }, [])
@@ -681,8 +737,17 @@ export function Dashboard({
           return;
         }
 
+        const seenPhotoPayloads = new Set<string>();
+
         const mapped: SiteOption[] = data
           .map((site: any) => ({
+            sitePhoto: (() => {
+              const raw = (site.site_photo || '').toString().trim();
+              if (!raw) return null;
+              if (seenPhotoPayloads.has(raw)) return null;
+              seenPhotoPayloads.add(raw);
+              return raw;
+            })(),
             siteKey: (site.site_key || '').toString().trim(),
             siteName: (site.site_name || site.address || site.site_key || 'Unnamed Site').toString().trim(),
             address: (site.address || '').toString().trim() || null,
@@ -690,7 +755,6 @@ export function Dashboard({
             longitude: normalizeCoordinate(site.longitude),
             lastSeen: site.last_seen || site.first_seen || null,
             isActive: site.is_active === 1 || site.is_active === true,
-            sitePhoto: (site.site_photo || '').toString().trim() || null,
           }))
           .filter((site) => !!site.siteKey)
           .filter((site) => !isHiddenPlaceholderSite(site))
@@ -852,25 +916,22 @@ export function Dashboard({
         return;
       }
 
-      if (selectedSiteKey !== ALL_SITES_KEY && (!effectiveActiveSiteKey || selectedSiteKey !== effectiveActiveSiteKey)) {
-        if (requestId !== readingsRequestRef.current) return;
-        setReadings([]);
-        setLatestReading(null);
-        setDeviceConnected(false);
-        setDataOk(false);
-        return;
-      }
-
       const requestedSiteKey = selectedSiteKey === ALL_SITES_KEY ? ALL_SITES_KEY : selectedSiteKey;
       apiGet(`/api/sensors/history?siteKey=${encodeURIComponent(requestedSiteKey)}&interval=${getIntervalString()}&range=24h`)
         .then((data) => {
           if (requestId !== readingsRequestRef.current) return;
           if (selectedSiteKeyRef.current !== requestedSiteKey) return;
 
-          if (Array.isArray(data)) {
-            setReadings(data);
+          const normalizedReadings = Array.isArray(data)
+            ? data
+            : (Array.isArray((data as any)?.readings)
+              ? (data as any).readings
+              : (Array.isArray((data as any)?.data) ? (data as any).data : []));
 
-            const latestFromHistory = data.length > 0 ? data[data.length - 1] : null;
+          if (Array.isArray(normalizedReadings)) {
+            setReadings(normalizedReadings);
+
+            const latestFromHistory = normalizedReadings.length > 0 ? normalizedReadings[normalizedReadings.length - 1] : null;
             const currentLive = liveReadingRef.current;
             const selectedIsActiveSite = !!activeSiteKey && selectedSiteKey === activeSiteKey && !!currentLive?.deviceConnected;
             const hasAllSitesLiveDevice = !!currentLive?.deviceConnected && !!effectiveActiveSiteKey;
@@ -956,20 +1017,20 @@ export function Dashboard({
         return;
       }
 
-      if (selectedSiteKey !== ALL_SITES_KEY && (!effectiveActiveSiteKey || selectedSiteKey !== effectiveActiveSiteKey)) {
-        if (requestId !== alertsRequestRef.current) return;
-        setAlerts([]);
-        return;
-      }
-
       const requestedSiteKey = selectedSiteKey === ALL_SITES_KEY ? ALL_SITES_KEY : selectedSiteKey;
       apiGet(`/api/sensors/alerts?siteKey=${encodeURIComponent(requestedSiteKey)}`)
         .then((data) => {
           if (requestId !== alertsRequestRef.current) return;
           if (selectedSiteKeyRef.current !== requestedSiteKey) return;
 
-          if (Array.isArray(data)) {
-            const sanitized = data
+          const normalizedAlerts = Array.isArray(data)
+            ? data
+            : (Array.isArray((data as any)?.alerts)
+              ? (data as any).alerts
+              : (Array.isArray((data as any)?.data) ? (data as any).data : []));
+
+          if (Array.isArray(normalizedAlerts)) {
+            const sanitized = normalizedAlerts
               .filter((alert) =>
                 ["Temperature", "Turbidity", "pH"].includes(alert.parameter)
               )
@@ -1196,13 +1257,17 @@ export function Dashboard({
   };
 
   const stableLatestReading = allSitesTransitioning ? null : latestReading;
-  const sensorDataVisible = !allSitesTransitioning && deviceConnected && !!stableLatestReading;
+  const latestHistoryReading = !allSitesTransitioning && readings.length > 0 ? readings[readings.length - 1] : null;
+  const displayReading = stableLatestReading || latestHistoryReading;
+  const riskSourceReading = isAllSitesSelected
+    ? (deviceConnected ? stableLatestReading : null)
+    : (stableLatestReading || latestHistoryReading);
+  const sensorDataVisible = !allSitesTransitioning && !!deviceConnected && !!stableLatestReading;
   const displayedReadingsCount = allSitesTransitioning ? 0 : readings.length;
-  const riskDataAvailable = !allSitesTransitioning && deviceConnected;
-  const displayReading = sensorDataVisible ? stableLatestReading : null;
-  const temperatureStatus = displayReading ? getSensorStatus("temperature", displayReading.temperature) : null;
-  const turbidityStatus = displayReading ? getSensorStatus("turbidity", displayReading.turbidity) : null;
-  const phStatus = displayReading ? getSensorStatus("ph", displayReading.ph) : null;
+  const riskDataAvailable = !allSitesTransitioning && !!riskSourceReading;
+  const temperatureStatus = riskSourceReading ? getSensorStatus("temperature", riskSourceReading.temperature) : null;
+  const turbidityStatus = riskSourceReading ? getSensorStatus("turbidity", riskSourceReading.turbidity) : null;
+  const phStatus = riskSourceReading ? getSensorStatus("ph", riskSourceReading.ph) : null;
   const overallRiskComputed: "critical" | "warning" | "safe" =
     temperatureStatus?.severity === "critical" ||
     turbidityStatus?.severity === "critical" ||
@@ -1217,11 +1282,7 @@ export function Dashboard({
         : "safe";
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setStableOverallRisk((current) => (current === overallRiskComputed ? current : overallRiskComputed));
-    }, 1500);
-
-    return () => window.clearTimeout(timeout);
+    setStableOverallRisk((current) => (current === overallRiskComputed ? current : overallRiskComputed));
   }, [overallRiskComputed]);
 
   const overallRiskLabel = getOverallRiskLabel(stableOverallRisk);
@@ -1365,7 +1426,7 @@ export function Dashboard({
                 : "transparent";
               const rowTextColor = hasOperationalSite
                 ? (selectedButInactive ? "#ffffff" : (isActive ? "#15803d" : (isSelected ? "#ffffff" : "#64748b")))
-                : "#64748b";
+                : (isSelected ? "#337C85" : "#64748b");
               return (
                 <button
                   key={site.siteKey}
@@ -1384,7 +1445,7 @@ export function Dashboard({
                     color: rowTextColor,
                     fontFamily: POPPINS,
                     fontSize: 13,
-                    fontWeight: isSelected ? 600 : 500,
+                    fontWeight: isSelected ? 700 : 500,
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
@@ -1536,7 +1597,7 @@ export function Dashboard({
                 : "transparent";
               const rowTextColor = hasOperationalSite
                 ? (selectedButInactive ? "#ffffff" : (isActive ? "#15803d" : (isSelected ? "#ffffff" : "#64748b")))
-                : "#64748b";
+                : (isSelected ? "#337C85" : "#64748b");
               return (
                 <button
                   key={site.siteKey}
@@ -1555,7 +1616,7 @@ export function Dashboard({
                     color: rowTextColor,
                     fontFamily: POPPINS,
                     fontSize: 13,
-                    fontWeight: isSelected ? 600 : 500,
+                    fontWeight: isSelected ? 700 : 500,
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
@@ -1870,10 +1931,10 @@ export function Dashboard({
             <SensorMiniCard
               label="Temperature"
               iconSrc="/icons/icon-temperature.svg"
-              value={!sensorDataVisible ? "-" : `${latestReading.temperature}`}
+              value={!sensorDataVisible ? "-" : `${displayReading.temperature}`}
               unit="°C"
-              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", latestReading.temperature).label}
-              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color}
+              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", displayReading.temperature).label}
+              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", displayReading.temperature).color}
               active={sensorDataVisible}
               compact={compactCards}
               fadeIn={animationEnabled}
@@ -1882,10 +1943,10 @@ export function Dashboard({
             <SensorMiniCard
               label="Turbidity"
               iconSrc="/icons/icon-turbidity.svg"
-              value={!sensorDataVisible ? "-" : `${latestReading.turbidity}`}
+              value={!sensorDataVisible ? "-" : `${displayReading.turbidity}`}
               unit="NTU"
-              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", latestReading.turbidity).label}
-              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color}
+              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", displayReading.turbidity).label}
+              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", displayReading.turbidity).color}
               active={sensorDataVisible}
               compact={compactCards}
               fadeIn={animationEnabled}
@@ -1894,10 +1955,10 @@ export function Dashboard({
             <SensorMiniCard
               label="pH Level"
               iconSrc="/icons/icon-ph.svg"
-              value={!sensorDataVisible ? "-" : `${latestReading.ph}`}
+              value={!sensorDataVisible ? "-" : `${displayReading.ph}`}
               unit=""
-              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", latestReading.ph).label}
-              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color}
+              sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", displayReading.ph).label}
+              dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", displayReading.ph).color}
               active={sensorDataVisible}
               compact={compactCards}
               fadeIn={animationEnabled}
@@ -2032,10 +2093,10 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Temperature"
                   iconSrc="/icons/icon-temperature.svg"
-                  value={!sensorDataVisible ? "-" : `${latestReading.temperature}`}
+                  value={!sensorDataVisible ? "-" : `${displayReading.temperature}`}
                   unit="°C"
-                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", latestReading.temperature).label}
-                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color}
+                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", displayReading.temperature).label}
+                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", displayReading.temperature).color}
                   active={sensorDataVisible}
                   compact
                   fixedHeight={140}
@@ -2051,10 +2112,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color,
+                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", displayReading.temperature).color,
                     display: "inline-block",
                     animation: sensorDataVisible ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("temperature", latestReading.temperature).color, 0.5) : "transparent",
+                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("temperature", displayReading.temperature).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-temperature.svg" alt="temp"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -2062,7 +2123,7 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!sensorDataVisible ? "-" : latestReading.temperature}
+                        {!sensorDataVisible ? "-" : displayReading.temperature}
                       </span>
                       {sensorDataVisible && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> °C</span>}
                     </p>
@@ -2072,7 +2133,7 @@ export function Dashboard({
                       </p>
                     ) : (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
-                        {getSensorStatus("temperature", latestReading.temperature).label}
+                        {getSensorStatus("temperature", displayReading.temperature).label}
                       </p>
                     )}
                   </div>
@@ -2084,10 +2145,10 @@ export function Dashboard({
                 <SensorMiniCard
                   label="Turbidity"
                   iconSrc="/icons/icon-turbidity.svg"
-                  value={!sensorDataVisible ? "-" : `${latestReading.turbidity}`}
+                  value={!sensorDataVisible ? "-" : `${displayReading.turbidity}`}
                   unit="NTU"
-                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", latestReading.turbidity).label}
-                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color}
+                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", displayReading.turbidity).label}
+                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", displayReading.turbidity).color}
                   active={sensorDataVisible}
                   compact
                   fixedHeight={140}
@@ -2103,10 +2164,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color,
+                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", displayReading.turbidity).color,
                     display: "inline-block",
                     animation: sensorDataVisible ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("turbidity", latestReading.turbidity).color, 0.5) : "transparent",
+                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("turbidity", displayReading.turbidity).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-turbidity.svg" alt="turbidity"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -2114,7 +2175,7 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.15s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!sensorDataVisible ? "-" : latestReading.turbidity}
+                        {!sensorDataVisible ? "-" : displayReading.turbidity}
                       </span>
                       {sensorDataVisible && <span style={{ fontWeight: 700, fontSize: 14, color: "#6b7280" }}> NTU</span>}
                     </p>
@@ -2124,7 +2185,7 @@ export function Dashboard({
                       </p>
                     ) : (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
-                        {getSensorStatus("turbidity", latestReading.turbidity).label}
+                        {getSensorStatus("turbidity", displayReading.turbidity).label}
                       </p>
                     )}
                   </div>
@@ -2136,10 +2197,10 @@ export function Dashboard({
                 <SensorMiniCard
                   label="pH Level"
                   iconSrc="/icons/icon-ph.svg"
-                  value={!sensorDataVisible ? "-" : `${latestReading.ph}`}
+                  value={!sensorDataVisible ? "-" : `${displayReading.ph}`}
                   unit=""
-                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", latestReading.ph).label}
-                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color}
+                  sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", displayReading.ph).label}
+                  dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", displayReading.ph).color}
                   active={sensorDataVisible}
                   compact
                   fixedHeight={140}
@@ -2155,10 +2216,10 @@ export function Dashboard({
                   <span style={{
                     position: "absolute", top: 14, right: 14,
                     width: 9, height: 9, borderRadius: "50%",
-                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color,
+                    background: !sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", displayReading.ph).color,
                     display: "inline-block",
                     animation: sensorDataVisible ? "dotPulse 3s ease-in-out infinite" : "none",
-                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("ph", latestReading.ph).color, 0.5) : "transparent",
+                    "--dot-glow": sensorDataVisible ? hexToRgba(getSensorStatus("ph", displayReading.ph).color, 0.5) : "transparent",
                   } as React.CSSProperties} />
                   <img src="/icons/icon-ph.svg" alt="ph"
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 8 }} />
@@ -2166,7 +2227,7 @@ export function Dashboard({
                   <div style={{ animation: animationEnabled ? 'cardDataFadeIn 0.8s 0.3s ease both' : undefined }}>
                     <p style={{ margin: "0 0 4px", lineHeight: 1.1, display: "flex", alignItems: "baseline", gap: 2 }}>
                       <span style={{ fontWeight: 700, fontSize: 26, color: "#6b7280" }}>
-                        {!sensorDataVisible ? "-" : latestReading.ph}
+                        {!sensorDataVisible ? "-" : displayReading.ph}
                       </span>
                     </p>
                     {!sensorDataVisible ? (
@@ -2175,7 +2236,7 @@ export function Dashboard({
                       </p>
                     ) : (
                       <p style={{ margin: 0, fontSize: 11, color: "#8E8B8B", lineHeight: 1.3 }}>
-                        {getSensorStatus("ph", latestReading.ph).label}
+                        {getSensorStatus("ph", displayReading.ph).label}
                       </p>
                     )}
                   </div>
@@ -2446,10 +2507,10 @@ export function Dashboard({
           <SensorMiniCard
             label="Temperature"
             iconSrc="/icons/icon-temperature.svg"
-            value={!sensorDataVisible ? "-" : `${latestReading.temperature}`}
+            value={!sensorDataVisible ? "-" : `${displayReading.temperature}`}
             unit="°C"
-            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", latestReading.temperature).label}
-            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", latestReading.temperature).color}
+            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("temperature", displayReading.temperature).label}
+            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("temperature", displayReading.temperature).color}
             active={sensorDataVisible}
             compact
             fixedHeight={cardH}
@@ -2459,10 +2520,10 @@ export function Dashboard({
           <SensorMiniCard
             label="Turbidity"
             iconSrc="/icons/icon-turbidity.svg"
-            value={!sensorDataVisible ? "-" : `${latestReading.turbidity}`}
+            value={!sensorDataVisible ? "-" : `${displayReading.turbidity}`}
             unit="NTU"
-            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", latestReading.turbidity).label}
-            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", latestReading.turbidity).color}
+            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("turbidity", displayReading.turbidity).label}
+            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("turbidity", displayReading.turbidity).color}
             active={sensorDataVisible}
             compact
             fixedHeight={cardH}
@@ -2472,10 +2533,10 @@ export function Dashboard({
           <SensorMiniCard
             label="pH Level"
             iconSrc="/icons/icon-ph.svg"
-            value={!sensorDataVisible ? "-" : `${latestReading.ph}`}
+            value={!sensorDataVisible ? "-" : `${displayReading.ph}`}
             unit=""
-            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", latestReading.ph).label}
-            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", latestReading.ph).color}
+            sub={!sensorDataVisible ? "Device not connected" : getSensorStatus("ph", displayReading.ph).label}
+            dot={!sensorDataVisible ? "#9ca3af" : getSensorStatus("ph", displayReading.ph).color}
             active={sensorDataVisible}
             compact
             fixedHeight={cardH}
