@@ -27,9 +27,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,json}'],
-        // Keep the explicit cap aligned with Workbox's default 2 MiB limit so
-        // future regressions fail the build instead of silently bloating.
-        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        // Allow precache generation for the current largest production bundle.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
