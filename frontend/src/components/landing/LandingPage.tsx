@@ -1466,6 +1466,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
+                  justifyContent: 'flex-start',
                   background: 'rgba(255,255,255,0.92)',
                   borderRadius: 999,
                   padding: screenWidth < 600 ? '6px 12px' : '6px 14px',
@@ -1496,7 +1497,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     animation: selectedSiteOperational ? 'dotPulse 3s ease-in-out infinite' : 'none',
                     "--dot-glow": selectedSiteOperational ? 'rgba(34,197,94,0.5)' : 'transparent',
                   } as any} />
-                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
                     {mobilePreviewStatusLabel}
                   </span>
                 </div>

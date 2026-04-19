@@ -57,7 +57,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const closePhotoTimeoutRef = useRef<number | null>(null);
   const pendingOpenTimeoutRef = useRef<number | null>(null);
   const pendingMoveEndHandlerRef = useRef<(() => void) | null>(null);
-  const canShowPhotoPreview = !mobileMode;
+  const canShowPhotoPreview = !mobileMode && (typeof window === 'undefined' ? true : window.innerWidth >= 1100);
   const CLOSE_ANIMATION_MS = 260;
 
   const clearPendingOpen = () => {

@@ -2052,7 +2052,7 @@ export function Dashboard({
                   animation: dashboardOperational ? "dotPulse 3s ease-in-out infinite" : "none",
                   "--dot-glow": dashboardOperational ? "rgba(34,197,94,0.5)" : "transparent",
                 } as React.CSSProperties} />
-                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
                   {dashboardStatusLabel}
                 </span>
               </div>
