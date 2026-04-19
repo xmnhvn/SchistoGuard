@@ -1125,6 +1125,9 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         border-radius: 100px !important;
         padding: 12px 16px !important;
         height: 48px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
         font-family: ${POPPINS} !important;
         font-size: 14px !important;
         transition: all 0.2s ease !important;
@@ -1773,7 +1776,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
         <div className="glass-card premium-shadow w-full" style={{
           borderRadius: 28,
-          padding: 32,
+          padding: isMobile ? 18 : 32,
           marginTop: gap,
           border: "1px solid rgba(0,0,0,0.03)",
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none"
@@ -1930,10 +1933,13 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               ref={siteBuilderRef}
               style={{
                 marginTop: 16,
-                padding: 16,
+                padding: isMobile ? 12 : 16,
                 borderRadius: 18,
                 border: "1px solid rgba(53,125,134,0.18)",
                 background: "linear-gradient(180deg, rgba(53,125,134,0.05), rgba(255,255,255,0.92))",
+                width: "100%",
+                maxWidth: "100%",
+                boxSizing: "border-box",
               }}
             >
               <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
@@ -2015,14 +2021,14 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                 </div>
 
                 <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))" }}>
-                  <div style={{ borderRadius: 16, border: "1px solid rgba(67,198,182,0.22)", background: "#ffffff", padding: 14 }}>
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(67,198,182,0.22)", background: "#ffffff", padding: 14, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Temperature Rules</div>
                     <div style={{ display: "grid", gap: 8 }}>
                       <Select
                         value={sensorRiskTargets.temperature}
                         onValueChange={(value: SensorRiskTarget) => setSensorRiskTargets((prev) => ({ ...prev, temperature: value }))}
                       >
-                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS }}>
+                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
                           <SelectValue placeholder="Temperature risk target" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2031,20 +2037,20 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           <SelectItem value="high" style={{ fontFamily: POPPINS }}>Sensitive High-Risk detection</SelectItem>
                         </SelectContent>
                       </Select>
-                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
                         High: {newSiteThresholds.tempHighMin}-{newSiteThresholds.tempHighMax} | Moderate: {newSiteThresholds.tempModerateLowMin}-{newSiteThresholds.tempModerateLowMax} and {newSiteThresholds.tempModerateHighMin}-{newSiteThresholds.tempModerateHighMax}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ borderRadius: 16, border: "1px solid rgba(65,135,214,0.18)", background: "#ffffff", padding: 14 }}>
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(65,135,214,0.18)", background: "#ffffff", padding: 14, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>pH Rules</div>
                     <div style={{ display: "grid", gap: 8 }}>
                       <Select
                         value={sensorRiskTargets.ph}
                         onValueChange={(value: SensorRiskTarget) => setSensorRiskTargets((prev) => ({ ...prev, ph: value }))}
                       >
-                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS }}>
+                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
                           <SelectValue placeholder="pH risk target" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2053,20 +2059,20 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           <SelectItem value="high" style={{ fontFamily: POPPINS }}>Sensitive High-Risk detection</SelectItem>
                         </SelectContent>
                       </Select>
-                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
                         High: {newSiteThresholds.phHighMin}-{newSiteThresholds.phHighMax} | Moderate: {newSiteThresholds.phModerateLowMin}-{newSiteThresholds.phModerateLowMax} and {newSiteThresholds.phModerateHighMin}-{newSiteThresholds.phModerateHighMax}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ borderRadius: 16, border: "1px solid rgba(44,82,130,0.16)", background: "#ffffff", padding: 14 }}>
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(44,82,130,0.16)", background: "#ffffff", padding: 14, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Turbidity Rules</div>
                     <div style={{ display: "grid", gap: 8 }}>
                       <Select
                         value={sensorRiskTargets.turbidity}
                         onValueChange={(value: SensorRiskTarget) => setSensorRiskTargets((prev) => ({ ...prev, turbidity: value }))}
                       >
-                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS }}>
+                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
                           <SelectValue placeholder="Turbidity risk target" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2075,7 +2081,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                           <SelectItem value="high" style={{ fontFamily: POPPINS }}>Sensitive High-Risk detection</SelectItem>
                         </SelectContent>
                       </Select>
-                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
                         High if below {newSiteThresholds.turbidityHighMax} | Moderate: {newSiteThresholds.turbidityModerateMin}-{newSiteThresholds.turbidityModerateMax}
                       </div>
                     </div>
@@ -2148,9 +2154,9 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
                 <div style={{ borderTop: "1px dashed rgba(100,116,139,0.24)", paddingTop: 12, display: "grid", gap: 10 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>Update Existing Site Rules</div>
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr auto", gap: 10, alignItems: "center" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr auto", gap: 10, alignItems: "center", minWidth: 0 }}>
                     <Select value={selectedThresholdSiteKey} onValueChange={setSelectedThresholdSiteKey}>
-                      <SelectTrigger style={{ background: "#fff", borderRadius: 14, height: 48, fontFamily: POPPINS }}>
+                      <SelectTrigger style={{ background: "#fff", borderRadius: 14, height: 48, fontFamily: POPPINS, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
                         <SelectValue placeholder="Choose site" />
                       </SelectTrigger>
                       <SelectContent>
