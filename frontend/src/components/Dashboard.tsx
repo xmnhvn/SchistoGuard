@@ -19,6 +19,7 @@ import { createPortal } from "react-dom";
 
 import { apiGet, apiPost, apiPut } from "../utils/api";
 import { reverseGeocode } from "../utils/reverseGeocode";
+import { getSensorStatus as getConfiguredSensorStatus, type SiteRiskThresholds } from "../utils/siteRiskConfig";
 
 // Module-level flag: animation plays only on the very first load, not on re-navigation
 let _dashboardFirstLoadDone = false;
@@ -41,6 +42,7 @@ type SiteOption = {
   lastSeen?: string | null;
   isActive?: boolean;
   sitePhoto?: string | null;
+  thresholds?: SiteRiskThresholds | null;
 };
 
 const SITE_STALE_MS = 15000;
@@ -427,6 +429,15 @@ export function Dashboard({
       );
 
   const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+  const selectedSiteThresholds =
+    selectedSite?.thresholds ||
+    liveReading?.thresholds ||
+    latestReading?.thresholds ||
+    null;
+  const getSensorStatus = (
+    type: "temperature" | "turbidity" | "ph",
+    value: number,
+  ) => getConfiguredSensorStatus(type, value, selectedSiteThresholds);
   const hasPresentLiveLocation =
     !!liveReading?.deviceConnected &&
     typeof liveReading?.latitude === "number" &&
@@ -755,6 +766,7 @@ export function Dashboard({
             longitude: normalizeCoordinate(site.longitude),
             lastSeen: site.last_seen || site.first_seen || null,
             isActive: site.is_active === 1 || site.is_active === true,
+            thresholds: site.thresholds || null,
           }))
           .filter((site) => !!site.siteKey)
           .filter((site) => !isHiddenPlaceholderSite(site))
@@ -2966,30 +2978,4 @@ function SensorMiniCard({
       </div>
     </div>
   );
-}
-
-// ─── Helper: sensor status label + color ─────────────────────────────────
-function getSensorStatus(
-  type: "temperature" | "turbidity" | "ph",
-  value: number
-): { label: string; color: string; severity: "critical" | "warning" | "safe" } {
-  if (type === "temperature") {
-    if (value >= 22 && value <= 30)
-      return { label: "Needs Attention", color: "#ef4444", severity: "critical" };
-    if ((value >= 20 && value < 22) || (value > 30 && value <= 35))
-      return { label: "Watch Zone", color: "#E7B213", severity: "warning" };
-    return { label: "Safe", color: "#22c55e", severity: "safe" };
-  }
-  if (type === "turbidity") {
-    if (value < 5) return { label: "Needs Attention", color: "#ef4444", severity: "critical" };
-    if (value <= 15) return { label: "Watch Zone", color: "#E7B213", severity: "warning" };
-    return { label: "Safe", color: "#22c55e", severity: "safe" };
-  }
-  if (type === "ph") {
-    if (value >= 6.5 && value <= 8.0) return { label: "Needs Attention", color: "#ef4444", severity: "critical" };
-    if ((value >= 6.0 && value < 6.5) || (value > 8.0 && value <= 8.5))
-      return { label: "Watch Zone", color: "#f59e0b", severity: "warning" };
-    return { label: "Safe", color: "#22c55e", severity: "safe" };
-  }
-  return { label: "", color: "#9ca3af", severity: "safe" };
 }

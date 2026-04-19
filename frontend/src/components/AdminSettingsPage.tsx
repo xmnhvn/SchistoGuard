@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { useResponsiveScale } from "../utils/useResponsiveScale";
+import { DEFAULT_SITE_RISK_THRESHOLDS, normalizeSiteRiskThresholds, type SiteRiskThresholds } from "../utils/siteRiskConfig";
+import { reverseGeocode } from "../utils/reverseGeocode";
 
 let _adminSettingsFirstLoadDone = false;
 
@@ -49,7 +51,16 @@ interface RegisteredSite {
   last_seen?: string | null;
   is_active?: number | boolean | null;
   site_photo?: string | null;
+  thresholds?: SiteRiskThresholds;
 }
+
+type SensorRiskTarget = 'safe' | 'moderate' | 'high';
+
+type SensorRiskTargetForm = {
+  temperature: SensorRiskTarget;
+  ph: SensorRiskTarget;
+  turbidity: SensorRiskTarget;
+};
 
 interface AdminSettingsPageProps {
   user?: { id: number; email: string; firstName: string; lastName: string; role: string } | null;
@@ -59,6 +70,199 @@ function isPlaceholderSite(site: RegisteredSite): boolean {
   const key = (site.site_key || '').toString().trim().toLowerCase();
   const name = (site.site_name || '').toString().trim().toLowerCase();
   return key.includes('esp32-local') || name.includes('esp32.local');
+}
+
+function createThresholdFormState(
+  thresholds: SiteRiskThresholds = DEFAULT_SITE_RISK_THRESHOLDS,
+): Record<string, string> {
+  const normalized = normalizeSiteRiskThresholds(thresholds);
+  return {
+    tempHighMin: String(normalized.temperature.highMin),
+    tempHighMax: String(normalized.temperature.highMax),
+    tempModerateLowMin: String(normalized.temperature.moderateLowMin),
+    tempModerateLowMax: String(normalized.temperature.moderateLowMax),
+    tempModerateHighMin: String(normalized.temperature.moderateHighMin),
+    tempModerateHighMax: String(normalized.temperature.moderateHighMax),
+    phHighMin: String(normalized.ph.highMin),
+    phHighMax: String(normalized.ph.highMax),
+    phModerateLowMin: String(normalized.ph.moderateLowMin),
+    phModerateLowMax: String(normalized.ph.moderateLowMax),
+    phModerateHighMin: String(normalized.ph.moderateHighMin),
+    phModerateHighMax: String(normalized.ph.moderateHighMax),
+    turbidityHighMax: String(normalized.turbidity.highMax),
+    turbidityModerateMin: String(normalized.turbidity.moderateMin),
+    turbidityModerateMax: String(normalized.turbidity.moderateMax),
+  };
+}
+
+function parseThresholdFormState(form: Record<string, string>): SiteRiskThresholds {
+  return normalizeSiteRiskThresholds({
+    temperature: {
+      highMin: Number(form.tempHighMin),
+      highMax: Number(form.tempHighMax),
+      moderateLowMin: Number(form.tempModerateLowMin),
+      moderateLowMax: Number(form.tempModerateLowMax),
+      moderateHighMin: Number(form.tempModerateHighMin),
+      moderateHighMax: Number(form.tempModerateHighMax),
+    },
+    ph: {
+      highMin: Number(form.phHighMin),
+      highMax: Number(form.phHighMax),
+      moderateLowMin: Number(form.phModerateLowMin),
+      moderateLowMax: Number(form.phModerateLowMax),
+      moderateHighMin: Number(form.phModerateHighMin),
+      moderateHighMax: Number(form.phModerateHighMax),
+    },
+    turbidity: {
+      highMax: Number(form.turbidityHighMax),
+      moderateMin: Number(form.turbidityModerateMin),
+      moderateMax: Number(form.turbidityModerateMax),
+    },
+  });
+}
+
+function createDefaultSensorRiskTargets(): SensorRiskTargetForm {
+  return {
+    temperature: 'moderate',
+    ph: 'moderate',
+    turbidity: 'moderate',
+  };
+}
+
+function buildThresholdsFromSensorRiskTargets(targets: SensorRiskTargetForm): SiteRiskThresholds {
+  const tempMap: Record<SensorRiskTarget, SiteRiskThresholds['temperature']> = {
+    safe: {
+      highMin: 24.5,
+      highMax: 27.5,
+      moderateLowMin: 22.5,
+      moderateLowMax: 24.5,
+      moderateHighMin: 27.5,
+      moderateHighMax: 30.5,
+    },
+    moderate: {
+      highMin: 22,
+      highMax: 30,
+      moderateLowMin: 20,
+      moderateLowMax: 22,
+      moderateHighMin: 30,
+      moderateHighMax: 35,
+    },
+    high: {
+      highMin: 21,
+      highMax: 31,
+      moderateLowMin: 19,
+      moderateLowMax: 21,
+      moderateHighMin: 31,
+      moderateHighMax: 36,
+    },
+  };
+
+  const phMap: Record<SensorRiskTarget, SiteRiskThresholds['ph']> = {
+    safe: {
+      highMin: 6.7,
+      highMax: 7.8,
+      moderateLowMin: 6.4,
+      moderateLowMax: 6.7,
+      moderateHighMin: 7.8,
+      moderateHighMax: 8.2,
+    },
+    moderate: {
+      highMin: 6.5,
+      highMax: 8,
+      moderateLowMin: 6,
+      moderateLowMax: 6.5,
+      moderateHighMin: 8,
+      moderateHighMax: 8.5,
+    },
+    high: {
+      highMin: 6.3,
+      highMax: 8.2,
+      moderateLowMin: 5.8,
+      moderateLowMax: 6.3,
+      moderateHighMin: 8.2,
+      moderateHighMax: 8.8,
+    },
+  };
+
+  const turbidityMap: Record<SensorRiskTarget, SiteRiskThresholds['turbidity']> = {
+    safe: {
+      highMax: 3.5,
+      moderateMin: 3.5,
+      moderateMax: 10,
+    },
+    moderate: {
+      highMax: 5,
+      moderateMin: 5,
+      moderateMax: 15,
+    },
+    high: {
+      highMax: 8,
+      moderateMin: 8,
+      moderateMax: 20,
+    },
+  };
+
+  return normalizeSiteRiskThresholds({
+    temperature: tempMap[targets.temperature],
+    ph: phMap[targets.ph],
+    turbidity: turbidityMap[targets.turbidity],
+  });
+}
+
+function inferRiskTargetsFromThresholds(thresholds: SiteRiskThresholds): SensorRiskTargetForm {
+  const normalized = normalizeSiteRiskThresholds(thresholds);
+
+  const toClosest = <T extends SensorRiskTarget>(
+    current: number,
+    values: Record<T, number>,
+  ): T => {
+    let closestKey = Object.keys(values)[0] as T;
+    let closestDistance = Math.abs(current - values[closestKey]);
+
+    (Object.keys(values) as T[]).forEach((key) => {
+      const distance = Math.abs(current - values[key]);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestKey = key;
+      }
+    });
+
+    return closestKey;
+  };
+
+  return {
+    temperature: toClosest(normalized.temperature.highMax - normalized.temperature.highMin, {
+      safe: 3,
+      moderate: 8,
+      high: 10,
+    }),
+    ph: toClosest(normalized.ph.highMax - normalized.ph.highMin, {
+      safe: 1.1,
+      moderate: 1.5,
+      high: 1.9,
+    }),
+    turbidity: toClosest(normalized.turbidity.highMax, {
+      safe: 3.5,
+      moderate: 5,
+      high: 8,
+    }),
+  };
+}
+
+function formatSiteLocationForInput(rawAddress: string): string {
+  const parts = rawAddress
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) return rawAddress.trim();
+
+  const startIndex = parts.findIndex((part) =>
+    /(street|st\.?|road|rd\.?|avenue|ave\.?|boulevard|blvd\.?|drive|dr\.?|lane|ln\.?|highway|hwy\.?|barangay|brgy\.?|purok|sitio|district)/i.test(part),
+  );
+
+  if (startIndex <= 0) return parts.join(", ");
+  return parts.slice(startIndex).join(", ");
 }
 
 export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
@@ -192,9 +396,18 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     latitude: "",
     longitude: "",
   });
+  const [newSiteThresholds, setNewSiteThresholds] = useState<Record<string, string>>(() => createThresholdFormState());
+  const [sensorRiskTargets, setSensorRiskTargets] = useState<SensorRiskTargetForm>(() => createDefaultSensorRiskTargets());
   const [addingSite, setAddingSite] = useState(false);
+  const [locatingSite, setLocatingSite] = useState(false);
   const [newSitePhotoDraft, setNewSitePhotoDraft] = useState<string | null>(null);
   const [newSitePhotoLoading, setNewSitePhotoLoading] = useState(false);
+  const [showAdvancedSiteBuilder, setShowAdvancedSiteBuilder] = useState(false);
+  const [advancedBuilderUnlocked, setAdvancedBuilderUnlocked] = useState(false);
+  const [selectedThresholdSiteKey, setSelectedThresholdSiteKey] = useState<string>("new");
+  const [savingThresholdSiteKey, setSavingThresholdSiteKey] = useState<string | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const siteBuilderRef = useRef<HTMLDivElement | null>(null);
   const {
     isMobile,
     isTablet,
@@ -258,6 +471,71 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     }
   };
 
+  const unlockAdvancedSiteBuilder = () => {
+    setAdvancedBuilderUnlocked(true);
+    setShowAdvancedSiteBuilder(true);
+    window.setTimeout(() => {
+      siteBuilderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    toast.success("Advanced site setup unlocked");
+  };
+
+  const startAdvancedBuilderLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+    }
+
+    longPressTimerRef.current = window.setTimeout(() => {
+      unlockAdvancedSiteBuilder();
+      longPressTimerRef.current = null;
+    }, 900);
+  };
+
+  const cancelAdvancedBuilderLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleAdvancedBuilderButtonClick = () => {
+    if (showAdvancedSiteBuilder) {
+      setShowAdvancedSiteBuilder(false);
+      setAdvancedBuilderUnlocked(false);
+      return;
+    }
+
+    setShowAdvancedSiteBuilder(true);
+  };
+
+  const handleSaveThresholdProfile = async () => {
+    if (selectedThresholdSiteKey === "new") {
+      toast.error("Create the site first before saving a threshold profile.");
+      return;
+    }
+
+    const targetSite = registeredSites.find((site) => site.site_key === selectedThresholdSiteKey);
+    if (!targetSite) {
+      toast.error("Selected site was not found.");
+      return;
+    }
+
+    try {
+      setSavingThresholdSiteKey(selectedThresholdSiteKey);
+      await apiPut(`/api/sensors/sites/${encodeURIComponent(selectedThresholdSiteKey)}`, {
+        siteName: (targetSite.site_name || targetSite.address || targetSite.site_key).trim(),
+        sitePhoto: targetSite.site_photo || null,
+        thresholds: parseThresholdFormState(newSiteThresholds),
+      });
+      toast.success("Site safety profile updated");
+      await fetchRegisteredSites();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save site thresholds");
+    } finally {
+      setSavingThresholdSiteKey(null);
+    }
+  };
+
   const handleSaveSiteSettings = async (siteKey: string) => {
     const site = registeredSites.find(s => s.site_key === siteKey);
     const nextName = (siteNameDrafts[siteKey] !== undefined ? siteNameDrafts[siteKey] : (site?.site_name || "")).trim();
@@ -274,6 +552,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       const result = await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
         siteName: nextName,
         sitePhoto: nextPhoto,
+        thresholds: site?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
       });
       setShowSuccess(true);
       
@@ -314,6 +593,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
         siteName: nextName,
         sitePhoto: nextPhoto,
+        thresholds: site.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
       });
       setShowSuccess(true);
       await fetchRegisteredSites();
@@ -339,6 +619,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       await apiPut(`/api/sensors/sites/${encodeURIComponent(siteKey)}`, {
         siteName: nextName,
         sitePhoto: null,
+        thresholds: site.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
       });
       setSitePhotoDrafts((prev) => ({ ...prev, [siteKey]: null }));
       setShowSuccess(true);
@@ -580,7 +861,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     }
   };
 
-  const handleAddManualSite = async () => {
+  const handleAddManualSite = async (options?: { withThresholds?: boolean }) => {
+    const withThresholds = options?.withThresholds ?? false;
     const siteName = newSiteForm.siteName.trim();
     const location = newSiteForm.location.trim();
     const latitude = Number(newSiteForm.latitude);
@@ -598,13 +880,19 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
     try {
       setAddingSite(true);
-      const result = await apiPost("/api/sensors/sites", {
+      const payload: Record<string, unknown> = {
         siteName,
         location,
         latitude,
         longitude,
         sitePhoto: newSitePhotoDraft,
-      });
+      };
+
+      if (withThresholds) {
+        payload.thresholds = parseThresholdFormState(newSiteThresholds);
+      }
+
+      const result = await apiPost("/api/sensors/sites", payload);
 
       toast.success(result?.message || "Site added successfully");
       setNewSiteForm({
@@ -613,12 +901,68 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         latitude: "",
         longitude: "",
       });
+      setNewSiteThresholds(createThresholdFormState());
+      setSensorRiskTargets(createDefaultSensorRiskTargets());
       setNewSitePhotoDraft(null);
+      setSelectedThresholdSiteKey("new");
       await fetchRegisteredSites();
     } catch (err: any) {
       toast.error(err?.message || "Failed to add site");
     } finally {
       setAddingSite(false);
+    }
+  };
+
+  const handleUseCurrentLocation = async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Geolocation is not supported on this device.");
+      return;
+    }
+
+    const getCurrentPosition = () => new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      });
+    });
+
+    try {
+      setLocatingSite(true);
+      const position = await getCurrentPosition();
+      const latitude = Number(position.coords.latitude.toFixed(6));
+      const longitude = Number(position.coords.longitude.toFixed(6));
+
+      setNewSiteForm((prev) => ({
+        ...prev,
+        latitude: String(latitude),
+        longitude: String(longitude),
+      }));
+
+      const resolvedAddress = await reverseGeocode(latitude, longitude);
+      if (resolvedAddress) {
+        const formattedLocation = formatSiteLocationForInput(resolvedAddress);
+        setNewSiteForm((prev) => ({
+          ...prev,
+          location: formattedLocation,
+        }));
+        toast.success("Coordinates and current address filled.");
+      } else {
+        toast.success("Coordinates captured. You can type location manually if needed.");
+      }
+    } catch (err: any) {
+      const code = err?.code;
+      if (code === 1) {
+        toast.error("Location permission denied. Please allow GPS access.");
+      } else if (code === 2) {
+        toast.error("Unable to detect your current location.");
+      } else if (code === 3) {
+        toast.error("Location request timed out. Please try again.");
+      } else {
+        toast.error("Failed to get your current location.");
+      }
+    } finally {
+      setLocatingSite(false);
     }
   };
 
@@ -640,6 +984,34 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     if (!_adminSettingsFirstLoadDone) {
       setTimeout(() => { _adminSettingsFirstLoadDone = true; }, 50);
     }
+  }, []);
+
+  useEffect(() => {
+    if (selectedThresholdSiteKey === "new") {
+      setNewSiteThresholds(createThresholdFormState());
+      setSensorRiskTargets(createDefaultSensorRiskTargets());
+      return;
+    }
+
+    const targetSite = registeredSites.find((site) => site.site_key === selectedThresholdSiteKey);
+    if (targetSite?.thresholds) {
+      const normalized = normalizeSiteRiskThresholds(targetSite.thresholds);
+      setNewSiteThresholds(createThresholdFormState(normalized));
+      setSensorRiskTargets(inferRiskTargetsFromThresholds(normalized));
+    }
+  }, [registeredSites, selectedThresholdSiteKey]);
+
+  useEffect(() => {
+    const generated = buildThresholdsFromSensorRiskTargets(sensorRiskTargets);
+    setNewSiteThresholds(createThresholdFormState(generated));
+  }, [sensorRiskTargets]);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -814,14 +1186,24 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
           animation: animate ? "contentSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" : "none",
         }}>
           <div>
-            <h1 style={{
+            <h1
+              onPointerDown={startAdvancedBuilderLongPress}
+              onPointerUp={cancelAdvancedBuilderLongPress}
+              onPointerLeave={cancelAdvancedBuilderLongPress}
+              onPointerCancel={cancelAdvancedBuilderLongPress}
+              style={{
               fontSize: isMobile ? 18 : (isNarrowDesktop ? 24 : 26),
               fontWeight: 700,
               color: "#1a2a3a",
               margin: 0,
               fontFamily: POPPINS,
-              letterSpacing: "-0.01em"
-            }}>
+              letterSpacing: "-0.01em",
+              cursor: "default",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              touchAction: "manipulation",
+            }}
+            >
               Admin Settings
             </h1>
             <p style={{
@@ -831,7 +1213,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
               fontFamily: POPPINS,
               fontWeight: 400
             }}>
-              Manage system users and administrative permissions
+              Manage system users and administrative permissions{advancedBuilderUnlocked ? " • advanced site setup unlocked" : ""}
             </p>
           </div>
         </div>
@@ -1401,68 +1783,83 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
             Rename registered sites here. This updates the persistent site registry label used by the system.
           </p>
 
-          <div style={{
-            marginTop: 16,
-            padding: 14,
-            borderRadius: 14,
-            border: "1px solid rgba(53,125,134,0.2)",
-            background: "rgba(53,125,134,0.04)",
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1.05fr 1.05fr 0.8fr 0.8fr 1fr auto",
-            gap: 10,
-            alignItems: "end",
-          }}>
-            <div>
-              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Site Name</Label>
-              <Input
-                value={newSiteForm.siteName}
-                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, siteName: e.target.value }))}
-                className="custom-input"
-                style={{ marginTop: 6 }}
-                placeholder="Example: Crossing Riverside"
-              />
-            </div>
+          {(!advancedBuilderUnlocked || !showAdvancedSiteBuilder) && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 18,
+                border: "1px solid rgba(148,163,184,0.24)",
+                background: "#ffffff",
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1e293b" }}>Add Site</div>
 
-            <div>
-              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Location</Label>
-              <Input
-                value={newSiteForm.location}
-                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, location: e.target.value }))}
-                className="custom-input"
-                style={{ marginTop: 6 }}
-                placeholder="Barangay or full address"
-              />
-            </div>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+                <div>
+                  <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Site Name</Label>
+                  <Input
+                    value={newSiteForm.siteName}
+                    onChange={(e) => setNewSiteForm((prev) => ({ ...prev, siteName: e.target.value }))}
+                    className="custom-input"
+                    style={{ marginTop: 6 }}
+                    placeholder="Example: Main Water Tank"
+                  />
+                </div>
+                <div>
+                  <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Location</Label>
+                  <Input
+                    value={newSiteForm.location}
+                    onChange={(e) => setNewSiteForm((prev) => ({ ...prev, location: e.target.value }))}
+                    className="custom-input"
+                    style={{ marginTop: 6 }}
+                    placeholder="Barangay or room identifier"
+                  />
+                </div>
+                <div>
+                  <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Latitude</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={newSiteForm.latitude}
+                    onChange={(e) => setNewSiteForm((prev) => ({ ...prev, latitude: e.target.value }))}
+                    className="custom-input"
+                    style={{ marginTop: 6 }}
+                    placeholder="7.123456"
+                  />
+                </div>
+                <div>
+                  <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Longitude</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={newSiteForm.longitude}
+                    onChange={(e) => setNewSiteForm((prev) => ({ ...prev, longitude: e.target.value }))}
+                    className="custom-input"
+                    style={{ marginTop: 6 }}
+                    placeholder="125.123456"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Latitude</Label>
-              <Input
-                type="number"
-                step="any"
-                value={newSiteForm.latitude}
-                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, latitude: e.target.value }))}
-                className="custom-input"
-                style={{ marginTop: 6 }}
-                placeholder="7.123456"
-              />
-            </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleUseCurrentLocation}
+                  disabled={locatingSite}
+                  style={{ borderRadius: 999, fontFamily: POPPINS }}
+                >
+                  {locatingSite ? "Getting GPS..." : "Use Current GPS"}
+                </Button>
+                <span style={{ fontSize: 11.5, color: "#64748b" }}>
+                  Auto-fills latitude, longitude, and current address.
+                </span>
+              </div>
 
-            <div>
-              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Longitude</Label>
-              <Input
-                type="number"
-                step="any"
-                value={newSiteForm.longitude}
-                onChange={(e) => setNewSiteForm((prev) => ({ ...prev, longitude: e.target.value }))}
-                className="custom-input"
-                style={{ marginTop: 6 }}
-                placeholder="125.123456"
-              />
-            </div>
-
-            <div>
-              <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Site Photo (Optional)</Label>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div style={{
                   width: 48,
                   height: 48,
@@ -1483,7 +1880,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   )}
                 </div>
                 <Label
-                  htmlFor="new-site-photo-upload"
+                  htmlFor="new-site-photo-upload-quick"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -1498,44 +1895,287 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   }}
                 >
                   <Camera size={14} />
-                  {newSitePhotoDraft ? "Change" : "Upload"}
+                  {newSitePhotoDraft ? "Change Photo" : "Upload Photo"}
                 </Label>
                 {newSitePhotoDraft && (
                   <button
                     type="button"
                     onClick={() => setNewSitePhotoDraft(null)}
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "#dc2626",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: POPPINS,
-                    }}
+                    style={{ border: "none", background: "transparent", color: "#dc2626", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: POPPINS }}
                   >
                     Remove
                   </button>
                 )}
                 <input
-                  id="new-site-photo-upload"
+                  id="new-site-photo-upload-quick"
                   type="file"
                   accept="image/*"
                   style={{ display: "none" }}
                   onChange={handleNewSitePhotoChange}
                 />
+                <Button
+                  type="button"
+                  onClick={() => handleAddManualSite({ withThresholds: false })}
+                  disabled={addingSite || newSitePhotoLoading}
+                  style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 18px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 13 }}
+                >
+                  {addingSite ? "Adding..." : "Add Site"}
+                </Button>
               </div>
             </div>
+          )}
 
-            <Button
-              type="button"
-              onClick={handleAddManualSite}
-              disabled={addingSite || newSitePhotoLoading}
-              style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 18px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 13, width: isMobile ? "100%" : "auto" }}
+          {advancedBuilderUnlocked && (
+            <div
+              ref={siteBuilderRef}
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 18,
+                border: "1px solid rgba(53,125,134,0.18)",
+                background: "linear-gradient(180deg, rgba(53,125,134,0.05), rgba(255,255,255,0.92))",
+              }}
             >
-              {addingSite ? "Adding..." : "Add Site"}
-            </Button>
-          </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAdvancedBuilderButtonClick}
+                  style={{
+                    borderRadius: 999,
+                    fontFamily: POPPINS,
+                  }}
+                >
+                  {showAdvancedSiteBuilder ? "Hide Builder" : "Show Builder"}
+                </Button>
+              </div>
+
+              {showAdvancedSiteBuilder && (
+              <div style={{ marginTop: 16, display: "grid", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+                  <div>
+                    <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Site Name</Label>
+                    <Input
+                      value={newSiteForm.siteName}
+                      onChange={(e) => setNewSiteForm((prev) => ({ ...prev, siteName: e.target.value }))}
+                      className="custom-input"
+                      style={{ marginTop: 6 }}
+                      placeholder="Example: Main Water Tank"
+                    />
+                  </div>
+                  <div>
+                    <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Location</Label>
+                    <Input
+                      value={newSiteForm.location}
+                      onChange={(e) => setNewSiteForm((prev) => ({ ...prev, location: e.target.value }))}
+                      className="custom-input"
+                      style={{ marginTop: 6 }}
+                      placeholder="Barangay or room identifier"
+                    />
+                  </div>
+                  <div>
+                    <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Latitude</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      value={newSiteForm.latitude}
+                      onChange={(e) => setNewSiteForm((prev) => ({ ...prev, latitude: e.target.value }))}
+                      className="custom-input"
+                      style={{ marginTop: 6 }}
+                      placeholder="7.123456"
+                    />
+                  </div>
+                  <div>
+                    <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Longitude</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      value={newSiteForm.longitude}
+                      onChange={(e) => setNewSiteForm((prev) => ({ ...prev, longitude: e.target.value }))}
+                      className="custom-input"
+                      style={{ marginTop: 6 }}
+                      placeholder="125.123456"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleUseCurrentLocation}
+                    disabled={locatingSite}
+                    style={{ borderRadius: 999, fontFamily: POPPINS }}
+                  >
+                    {locatingSite ? "Getting GPS..." : "Use Current GPS"}
+                  </Button>
+                  <span style={{ fontSize: 11.5, color: "#64748b" }}>
+                    Auto-fills latitude, longitude, and current address.
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))" }}>
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(67,198,182,0.22)", background: "#ffffff", padding: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Temperature Rules</div>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <Select
+                        value={sensorRiskTargets.temperature}
+                        onValueChange={(value: SensorRiskTarget) => setSensorRiskTargets((prev) => ({ ...prev, temperature: value }))}
+                      >
+                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS }}>
+                          <SelectValue placeholder="Temperature risk target" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="safe" style={{ fontFamily: POPPINS }}>Prefer Safe (stable shifts)</SelectItem>
+                          <SelectItem value="moderate" style={{ fontFamily: POPPINS }}>Balanced (natural variation)</SelectItem>
+                          <SelectItem value="high" style={{ fontFamily: POPPINS }}>Sensitive High-Risk detection</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px" }}>
+                        High: {newSiteThresholds.tempHighMin}-{newSiteThresholds.tempHighMax} | Moderate: {newSiteThresholds.tempModerateLowMin}-{newSiteThresholds.tempModerateLowMax} and {newSiteThresholds.tempModerateHighMin}-{newSiteThresholds.tempModerateHighMax}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(65,135,214,0.18)", background: "#ffffff", padding: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>pH Rules</div>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <Select
+                        value={sensorRiskTargets.ph}
+                        onValueChange={(value: SensorRiskTarget) => setSensorRiskTargets((prev) => ({ ...prev, ph: value }))}
+                      >
+                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS }}>
+                          <SelectValue placeholder="pH risk target" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="safe" style={{ fontFamily: POPPINS }}>Prefer Safe (stable pH window)</SelectItem>
+                          <SelectItem value="moderate" style={{ fontFamily: POPPINS }}>Balanced (natural variation)</SelectItem>
+                          <SelectItem value="high" style={{ fontFamily: POPPINS }}>Sensitive High-Risk detection</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px" }}>
+                        High: {newSiteThresholds.phHighMin}-{newSiteThresholds.phHighMax} | Moderate: {newSiteThresholds.phModerateLowMin}-{newSiteThresholds.phModerateLowMax} and {newSiteThresholds.phModerateHighMin}-{newSiteThresholds.phModerateHighMax}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(44,82,130,0.16)", background: "#ffffff", padding: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Turbidity Rules</div>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <Select
+                        value={sensorRiskTargets.turbidity}
+                        onValueChange={(value: SensorRiskTarget) => setSensorRiskTargets((prev) => ({ ...prev, turbidity: value }))}
+                      >
+                        <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS }}>
+                          <SelectValue placeholder="Turbidity risk target" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="safe" style={{ fontFamily: POPPINS }}>Prefer Safe (clear-water bias)</SelectItem>
+                          <SelectItem value="moderate" style={{ fontFamily: POPPINS }}>Balanced (natural variation)</SelectItem>
+                          <SelectItem value="high" style={{ fontFamily: POPPINS }}>Sensitive High-Risk detection</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px" }}>
+                        High if below {newSiteThresholds.turbidityHighMax} | Moderate: {newSiteThresholds.turbidityModerateMin}-{newSiteThresholds.turbidityModerateMax}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: "rgba(0,0,0,0.03)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    border: "1px solid rgba(0,0,0,0.05)"
+                  }}>
+                    {newSitePhotoLoading ? (
+                      <Loader2 size={20} className="animate-spin text-schistoguard-teal" />
+                    ) : newSitePhotoDraft ? (
+                      <img src={newSitePhotoDraft} alt="New site" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <ImageIcon size={20} color="#cbd5e1" />
+                    )}
+                  </div>
+                  <Label
+                    htmlFor="new-site-photo-upload"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "8px 14px",
+                      borderRadius: 100,
+                      background: "rgba(53,125,134,0.06)",
+                      color: "#357D86",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Camera size={14} />
+                    {newSitePhotoDraft ? "Change Photo" : "Upload Photo"}
+                  </Label>
+                  {newSitePhotoDraft && (
+                    <button
+                      type="button"
+                      onClick={() => setNewSitePhotoDraft(null)}
+                      style={{ border: "none", background: "transparent", color: "#dc2626", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: POPPINS }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                  <input
+                    id="new-site-photo-upload"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleNewSitePhotoChange}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => handleAddManualSite({ withThresholds: true })}
+                    disabled={addingSite || newSitePhotoLoading}
+                    style={{ background: "#357D86", color: "#fff", borderRadius: 100, padding: "10px 18px", fontWeight: 600, border: "none", fontFamily: POPPINS, fontSize: 13 }}
+                  >
+                    {addingSite ? "Adding..." : "Create Site With Rules"}
+                  </Button>
+                </div>
+
+                <div style={{ borderTop: "1px dashed rgba(100,116,139,0.24)", paddingTop: 12, display: "grid", gap: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>Update Existing Site Rules</div>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr auto", gap: 10, alignItems: "center" }}>
+                    <Select value={selectedThresholdSiteKey} onValueChange={setSelectedThresholdSiteKey}>
+                      <SelectTrigger style={{ background: "#fff", borderRadius: 14, height: 48, fontFamily: POPPINS }}>
+                        <SelectValue placeholder="Choose site" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new" style={{ fontFamily: POPPINS }}>New site draft</SelectItem>
+                        {registeredSites.map((site) => (
+                          <SelectItem key={site.site_key} value={site.site_key} style={{ fontFamily: POPPINS }}>
+                            {site.site_name || site.address || site.site_key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      onClick={handleSaveThresholdProfile}
+                      disabled={selectedThresholdSiteKey === "new" || !!savingThresholdSiteKey}
+                      style={{ borderRadius: 999, fontFamily: POPPINS }}
+                    >
+                      {savingThresholdSiteKey ? "Saving..." : "Save Existing Site Rules"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              )}
+            </div>
+          )}
 
           {sitesError && (
             <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", fontSize: 13 }}>

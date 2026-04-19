@@ -139,6 +139,21 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS first_seen TEXT');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS last_seen TEXT');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS site_photo TEXT');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS temp_high_min REAL DEFAULT 22');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS temp_high_max REAL DEFAULT 30');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS temp_moderate_low_min REAL DEFAULT 20');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS temp_moderate_low_max REAL DEFAULT 22');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS temp_moderate_high_min REAL DEFAULT 30');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS temp_moderate_high_max REAL DEFAULT 35');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS ph_high_min REAL DEFAULT 6.5');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS ph_high_max REAL DEFAULT 8.0');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS ph_moderate_low_min REAL DEFAULT 6.0');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS ph_moderate_low_max REAL DEFAULT 6.5');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS ph_moderate_high_min REAL DEFAULT 8.0');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS ph_moderate_high_max REAL DEFAULT 8.5');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS turbidity_high_max REAL DEFAULT 5');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS turbidity_moderate_min REAL DEFAULT 5');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS turbidity_moderate_max REAL DEFAULT 15');
     await db.query(`
       CREATE OR REPLACE FUNCTION prevent_site_registry_coord_update()
       RETURNS trigger AS $$

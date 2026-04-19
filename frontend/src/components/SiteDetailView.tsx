@@ -15,6 +15,7 @@ import { loadHtml2Pdf, triggerPdfDownload, captureCleanElement } from "../utils/
 import { reverseGeocode } from "../utils/reverseGeocode";
 import { PDFHeader } from "./PDFHeader";
 import { useResponsiveScale } from "../utils/useResponsiveScale";
+import { normalizeSiteRiskThresholds, type SiteRiskThresholds } from "../utils/siteRiskConfig";
 
 const POPPINS = "'Poppins', sans-serif";
 
@@ -24,6 +25,7 @@ interface SiteOption {
   siteKey: string;
   siteName: string;
   address?: string | null;
+  thresholds?: SiteRiskThresholds | null;
 }
 
 
@@ -200,7 +202,7 @@ export function SiteDetailView({
             const siteName = (s.site_name || s.address || s.site_key || '').toString().trim();
             const siteAddress = normalizeAddress(s.address);
             if (siteKey && siteName && !uniqueSites.has(siteKey)) {
-              uniqueSites.set(siteKey, { siteKey, siteName, address: siteAddress || null });
+              uniqueSites.set(siteKey, { siteKey, siteName, address: siteAddress || null, thresholds: s.thresholds || null });
             }
           });
           setAvailableSites(
@@ -240,6 +242,10 @@ export function SiteDetailView({
       }
     }
   }, [selectedSite, availableSites]);
+
+  const selectedThresholds = normalizeSiteRiskThresholds(
+    availableSites.find((site) => site.siteKey === selectedSite)?.thresholds || null
+  );
 
   // Export handler for chart as PDF
   const handleExportChartPDF = async () => {
@@ -570,16 +576,16 @@ export function SiteDetailView({
     const avgTurb = (filterData.reduce((acc, c) => acc + c.turbidity, 0) / filterData.length).toFixed(1);
 
     let tempStatus = "Safe";
-    if (filterData.some(c => c.temperature >= 22 && c.temperature <= 30)) tempStatus = "Critical";
-    else if (filterData.some(c => (c.temperature >= 20 && c.temperature < 22) || (c.temperature > 30 && c.temperature <= 35))) tempStatus = "Warning";
+    if (filterData.some(c => c.temperature >= selectedThresholds.temperature.highMin && c.temperature <= selectedThresholds.temperature.highMax)) tempStatus = "Critical";
+    else if (filterData.some(c => (c.temperature >= selectedThresholds.temperature.moderateLowMin && c.temperature < selectedThresholds.temperature.moderateLowMax) || (c.temperature > selectedThresholds.temperature.moderateHighMin && c.temperature <= selectedThresholds.temperature.moderateHighMax))) tempStatus = "Warning";
 
     let phStatus = "Safe";
-    if (filterData.some(c => c.ph >= 6.5 && c.ph <= 8.0)) phStatus = "Critical";
-    else if (filterData.some(c => (c.ph >= 6.0 && c.ph < 6.5) || (c.ph > 8.0 && c.ph <= 8.5))) phStatus = "Warning";
+    if (filterData.some(c => c.ph >= selectedThresholds.ph.highMin && c.ph <= selectedThresholds.ph.highMax)) phStatus = "Critical";
+    else if (filterData.some(c => (c.ph >= selectedThresholds.ph.moderateLowMin && c.ph < selectedThresholds.ph.moderateLowMax) || (c.ph > selectedThresholds.ph.moderateHighMin && c.ph <= selectedThresholds.ph.moderateHighMax))) phStatus = "Warning";
 
     let turbStatus = "Safe";
-    if (filterData.some(c => c.turbidity < 5)) turbStatus = "Critical";
-    else if (filterData.some(c => c.turbidity >= 5 && c.turbidity <= 15)) turbStatus = "Warning";
+    if (filterData.some(c => c.turbidity < selectedThresholds.turbidity.highMax)) turbStatus = "Critical";
+    else if (filterData.some(c => c.turbidity >= selectedThresholds.turbidity.moderateMin && c.turbidity <= selectedThresholds.turbidity.moderateMax)) turbStatus = "Warning";
 
     if (tempStatus === "Safe" && phStatus === "Safe" && turbStatus === "Safe") {
       return `Water conditions are NORMAL (Avg: ${avgTemp}°C, pH ${avgPh}, ${avgTurb} NTU). The environment is currently unfavorable for schistosomiasis transmission.`;
@@ -992,8 +998,8 @@ export function SiteDetailView({
                           <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Temperature (°C)</span>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>22 – 30</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>20 – 21.99 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 30.01 – 35</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>{selectedThresholds.temperature.highMin} – {selectedThresholds.temperature.highMax}</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>{selectedThresholds.temperature.moderateLowMin} – {selectedThresholds.temperature.moderateLowMax} <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> {selectedThresholds.temperature.moderateHighMin} – {selectedThresholds.temperature.moderateHighMax}</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
@@ -1003,8 +1009,8 @@ export function SiteDetailView({
                           <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>pH Level</span>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>6.5 – 8.0</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>6.0 – 6.49 <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> 8.01 – 8.5</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>{selectedThresholds.ph.highMin} – {selectedThresholds.ph.highMax}</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>{selectedThresholds.ph.moderateLowMin} – {selectedThresholds.ph.moderateLowMax} <span style={{ color: "#cbd5e1", margin: "0 4px" }}>|</span> {selectedThresholds.ph.moderateHighMin} – {selectedThresholds.ph.moderateHighMax}</span></div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>Outside ranges</span></div>
                         </div>
                       </div>
@@ -1014,9 +1020,9 @@ export function SiteDetailView({
                           <span style={{ fontSize: isExporting ? 12 : (mobileResponsive ? 13 : 14), fontWeight: 600, color: "#1e293b" }}>Turbidity (NTU)</span>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: mobileResponsive ? 6 : 8, fontSize: isExporting ? 11 : (mobileResponsive ? 12 : 13) }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; 5</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>5 – 15</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; 15</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>High Possible Risk</span><span style={{ fontWeight: 600, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 6 }}>&lt; {selectedThresholds.turbidity.highMax}</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Moderate Possible Risk</span><span style={{ fontWeight: 600, color: "#f59e0b", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>{selectedThresholds.turbidity.moderateMin} – {selectedThresholds.turbidity.moderateMax}</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ color: "#64748b", fontWeight: 500 }}>Safe</span><span style={{ fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "2px 8px", borderRadius: 6 }}>&gt; {selectedThresholds.turbidity.moderateMax}</span></div>
                         </div>
                       </div>
                     </div>

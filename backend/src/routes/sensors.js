@@ -1,6 +1,13 @@
 const router = require("express").Router();
 const fs = require('fs');
 const classifyWater = require("../utils/classifyWater");
+const {
+  DEFAULT_SITE_RISK_THRESHOLDS,
+  validateThresholds,
+  extractThresholdsFromSiteRow,
+  buildThresholdDbFields,
+  classifySensorValue,
+} = require("../utils/siteRiskConfig");
 const { validatePhoneNumber, formatPhoneNumber } = require("../utils/validatePhone");
 const { calculateRiskLevel } = require("../utils/generateReport");
 const db = require("../db");
@@ -161,6 +168,15 @@ function buildSiteIdentity(data) {
     siteName: identity.siteName,
     address: identity.address,
     siteKey: identity.siteKey
+  };
+}
+
+function serializeSiteRow(row) {
+  if (!row) return null;
+
+  return {
+    ...row,
+    thresholds: extractThresholdsFromSiteRow(row),
   };
 }
 
@@ -557,7 +573,10 @@ async function markSmsSummarySent(slotTime, sentAtIso) {
 async function getCurrentSiteSnapshot() {
   return new Promise((resolve, reject) => {
     db.get(
-      `SELECT site_key, site_name, address
+      `SELECT site_key, site_name, address,
+              temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
+              ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
+              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
        FROM site_registry
        ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC
        LIMIT 1`,
@@ -570,6 +589,7 @@ async function getCurrentSiteSnapshot() {
             siteKey: siteRow.site_key || null,
             siteName: siteRow.site_name || siteRow.address || GLOBAL_DEVICE_NAME,
             address: siteRow.address || null,
+            thresholds: extractThresholdsFromSiteRow(siteRow),
           });
         }
 
@@ -596,7 +616,10 @@ async function getConfiguredActiveSiteSnapshot() {
       if (!configuredSiteKey) return resolve(null);
 
       db.get(
-        `SELECT site_key, site_name, address, site_photo
+        `SELECT site_key, site_name, address, site_photo,
+                temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
+                ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
+                turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
          FROM site_registry
          WHERE site_key = ?
          LIMIT 1`,
@@ -609,7 +632,8 @@ async function getConfiguredActiveSiteSnapshot() {
             siteKey: siteRow.site_key || null,
             siteName: siteRow.site_name || siteRow.address || GLOBAL_DEVICE_NAME,
             address: siteRow.address || null,
-            sitePhoto: siteRow.site_photo || null
+            sitePhoto: siteRow.site_photo || null,
+            thresholds: extractThresholdsFromSiteRow(siteRow),
           });
         }
       );
@@ -620,7 +644,10 @@ async function getConfiguredActiveSiteSnapshot() {
 async function getActiveSiteSnapshots() {
   return new Promise((resolve, reject) => {
     db.all(
-      `SELECT site_key, site_name, address, last_seen
+      `SELECT site_key, site_name, address, last_seen,
+              temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
+              ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
+              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
        FROM site_registry
        ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC`,
       [],
@@ -640,6 +667,7 @@ async function getActiveSiteSnapshots() {
             siteName: row.site_name || row.address || GLOBAL_DEVICE_NAME,
             address: row.address || null,
             lastSeen: row.last_seen || null,
+            thresholds: extractThresholdsFromSiteRow(row),
           }));
 
         resolve(activeSites);
@@ -1464,26 +1492,17 @@ function classifyLevel(status) {
   return "safe";
 }
 
-function classifyParameterRisk(parameter, data) {
+function classifyParameterRisk(parameter, data, thresholds = DEFAULT_SITE_RISK_THRESHOLDS) {
   if (parameter === "Temperature") {
-    if (data.temperature == null) return "safe";
-    if (data.temperature >= 22 && data.temperature <= 30) return "critical";
-    if ((data.temperature >= 20 && data.temperature < 22) || (data.temperature > 30 && data.temperature <= 35)) return "warning";
-    return "safe";
+    return classifySensorValue("temperature", data.temperature, thresholds);
   }
 
   if (parameter === "pH") {
-    if (data.ph == null) return "safe";
-    if (data.ph >= 6.5 && data.ph <= 8.0) return "critical";
-    if ((data.ph >= 6.0 && data.ph < 6.5) || (data.ph > 8.0 && data.ph <= 8.5)) return "warning";
-    return "safe";
+    return classifySensorValue("ph", data.ph, thresholds);
   }
 
   if (parameter === "Turbidity") {
-    if (data.turbidity == null) return "safe";
-    if (data.turbidity < 5) return "critical";
-    if (data.turbidity >= 5 && data.turbidity <= 15) return "warning";
-    return "safe";
+    return classifySensorValue("turbidity", data.turbidity, thresholds);
   }
 
   return "safe";
@@ -1512,9 +1531,10 @@ function buildSmsLine(parameter, value, level) {
 function checkAndAlertImmediate(data) {
   let alertMessages = [];
   const identity = buildSiteIdentity(data);
+  const thresholds = data.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
 
   ["Temperature", "pH", "Turbidity"].forEach((parameter) => {
-    const level = classifyParameterRisk(parameter, data);
+    const level = classifyParameterRisk(parameter, data, thresholds);
     if (level === "safe") return;
     const value = formatAlertValue(parameter, data);
     alertMessages.push(buildSmsLine(parameter, value, level));
@@ -1526,7 +1546,6 @@ function checkAndAlertImmediate(data) {
 
 router.post("/", async (req, res) => {
   const { turbidity, temperature, ph, device_ip, latitude, longitude } = req.body;
-  const status = classifyWater(temperature, ph, turbidity);
   let address = null;
   if (typeof latitude === 'number' && typeof longitude === 'number' && latitude !== null && longitude !== null) {
     try {
@@ -1541,6 +1560,7 @@ router.post("/", async (req, res) => {
   try {
     const activeSiteSnapshot = await getConfiguredActiveSiteSnapshot();
     if (!activeSiteSnapshot?.siteKey) {
+      const status = classifyWater(temperature, ph, turbidity, DEFAULT_SITE_RISK_THRESHOLDS);
       latestData = null;
       return res.json({
         success: true,
@@ -1551,6 +1571,9 @@ router.post("/", async (req, res) => {
       });
     }
 
+    const activeThresholds = activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
+    const status = classifyWater(temperature, ph, turbidity, activeThresholds);
+
     latestData = {
       turbidity,
       temperature,
@@ -1560,6 +1583,7 @@ router.post("/", async (req, res) => {
       longitude,
       address: activeSiteSnapshot.address || address || null,
       siteKey: activeSiteSnapshot.siteKey,
+      thresholds: activeThresholds,
       status,
       timestamp: new Date()
     };
@@ -1577,7 +1601,8 @@ router.post("/", async (req, res) => {
   res.json({
     success: true,
     status,
-    address
+    address,
+    thresholds: latestData?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS
   });
 });
 
@@ -1615,6 +1640,7 @@ router.get("/latest", async (req, res) => {
             temperature: row.temperature != null ? row.temperature : null,
             turbidity: row.turbidity != null ? row.turbidity : null,
             ph: row.ph != null ? row.ph : null,
+            thresholds: activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
           });
         }
 
@@ -1623,6 +1649,7 @@ router.get("/latest", async (req, res) => {
           siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
           siteKey: activeSiteSnapshot.siteKey,
           address: activeSiteSnapshot.address || null,
+          thresholds: activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
         });
       }
     );
@@ -1640,7 +1667,8 @@ router.get("/latest", async (req, res) => {
         siteKey: activeSiteSnapshot.siteKey,
         deviceConnected: true,
         timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
-        address: latestData.address || activeSiteSnapshot.address || null
+        address: latestData.address || activeSiteSnapshot.address || null,
+        thresholds: latestData.thresholds || activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
       });
     }
   }
@@ -1800,6 +1828,21 @@ router.get('/sites', (req, res) => {
        first_seen,
        last_seen,
        site_photo,
+       temp_high_min,
+       temp_high_max,
+       temp_moderate_low_min,
+       temp_moderate_low_max,
+       temp_moderate_high_min,
+       temp_moderate_high_max,
+       ph_high_min,
+       ph_high_max,
+       ph_moderate_low_min,
+       ph_moderate_low_max,
+       ph_moderate_high_min,
+       ph_moderate_high_max,
+       turbidity_high_max,
+       turbidity_moderate_min,
+       turbidity_moderate_max,
        CASE
          WHEN site_key = (
            SELECT value
@@ -1820,7 +1863,7 @@ router.get('/sites', (req, res) => {
         return res.status(500).json({ error: err.message });
       }
       console.log(`[GET /sites] Found ${rows?.length || 0} sites`);
-      res.json(rows || []);
+      res.json((rows || []).map(serializeSiteRow));
     }
   );
 });
@@ -1962,10 +2005,19 @@ router.post('/sites', async (req, res) => {
       return res.status(400).json({ error: 'sitePhoto must be a Base64 string' });
     }
 
+    const thresholdValidation = validateThresholds(req.body.thresholds || {});
+    if (!thresholdValidation.isValid) {
+      return res.status(400).json({ error: thresholdValidation.errors[0] });
+    }
+    const thresholdFields = buildThresholdDbFields(thresholdValidation.thresholds);
+
     const nearbySiteKey = await findNearestExistingSite(latitude, longitude);
     if (nearbySiteKey) {
       const existing = await db.query(
-        `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen
+        `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
+                temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
+                ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
+                turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
          FROM site_registry
          WHERE site_key = $1
          LIMIT 1`,
@@ -1977,7 +2029,7 @@ router.post('/sites', async (req, res) => {
           success: true,
           exists: true,
           message: 'Nearby site already exists. Using existing site.',
-          site: existing.rows[0],
+          site: serializeSiteRow(existing.rows[0]),
         });
       }
     }
@@ -2001,23 +2053,41 @@ router.post('/sites', async (req, res) => {
     }
 
     const insertResult = await db.query(
-      `INSERT INTO site_registry (site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo`,
-      [siteKey, siteName, address, latitude, longitude, nowIso, nowIso, sitePhoto ?? null]
+      `INSERT INTO site_registry (
+         site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
+         temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
+         ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
+         turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+       )
+       VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8,
+         $9, $10, $11, $12, $13, $14,
+         $15, $16, $17, $18, $19, $20,
+         $21, $22, $23
+       )
+       RETURNING site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
+                 temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
+                 ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
+                 turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max`,
+      [
+        siteKey, siteName, address, latitude, longitude, nowIso, nowIso, sitePhoto ?? null,
+        thresholdFields.temp_high_min, thresholdFields.temp_high_max, thresholdFields.temp_moderate_low_min, thresholdFields.temp_moderate_low_max, thresholdFields.temp_moderate_high_min, thresholdFields.temp_moderate_high_max,
+        thresholdFields.ph_high_min, thresholdFields.ph_high_max, thresholdFields.ph_moderate_low_min, thresholdFields.ph_moderate_low_max, thresholdFields.ph_moderate_high_min, thresholdFields.ph_moderate_high_max,
+        thresholdFields.turbidity_high_max, thresholdFields.turbidity_moderate_min, thresholdFields.turbidity_moderate_max,
+      ]
     );
 
     return res.status(201).json({
       success: true,
       message: 'Site added successfully',
-      site: insertResult.rows[0],
+      site: serializeSiteRow(insertResult.rows[0]),
     });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to add site' });
   }
 });
 
-router.put('/sites/:siteKey', (req, res) => {
+router.put('/sites/:siteKey', async (req, res) => {
   const { siteKey } = req.params;
   const { siteName, sitePhoto } = req.body;
   const trimmedSiteName = (siteName || '').toString().trim();
@@ -2031,28 +2101,69 @@ router.put('/sites/:siteKey', (req, res) => {
     return res.status(400).json({ error: 'sitePhoto must be a Base64 string' });
   }
 
-  db.run(
-    `UPDATE site_registry
-     SET site_name = ?, site_photo = ?
-     WHERE site_key = ?`,
-    [trimmedSiteName, sitePhoto !== undefined ? sitePhoto : null, siteKey],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message || 'Failed to update site' });
-      }
+  const thresholdValidation = validateThresholds(req.body.thresholds || {});
+  if (!thresholdValidation.isValid) {
+    return res.status(400).json({ error: thresholdValidation.errors[0] });
+  }
+  const thresholdFields = buildThresholdDbFields(thresholdValidation.thresholds);
 
-      db.get(
-        `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo
-         FROM site_registry
-         WHERE site_key = ?`,
-        [siteKey],
-        (selectErr, row) => {
-          if (selectErr) return res.status(500).json({ error: selectErr.message });
-          res.json({ success: true, site: row });
-        }
-      );
-    }
-  );
+  try {
+    await db.query(
+      `UPDATE site_registry
+       SET site_name = $1,
+           site_photo = $2,
+           temp_high_min = $3,
+           temp_high_max = $4,
+           temp_moderate_low_min = $5,
+           temp_moderate_low_max = $6,
+           temp_moderate_high_min = $7,
+           temp_moderate_high_max = $8,
+           ph_high_min = $9,
+           ph_high_max = $10,
+           ph_moderate_low_min = $11,
+           ph_moderate_low_max = $12,
+           ph_moderate_high_min = $13,
+           ph_moderate_high_max = $14,
+           turbidity_high_max = $15,
+           turbidity_moderate_min = $16,
+           turbidity_moderate_max = $17
+       WHERE site_key = $18`,
+      [
+        trimmedSiteName,
+        sitePhoto !== undefined ? sitePhoto : null,
+        thresholdFields.temp_high_min,
+        thresholdFields.temp_high_max,
+        thresholdFields.temp_moderate_low_min,
+        thresholdFields.temp_moderate_low_max,
+        thresholdFields.temp_moderate_high_min,
+        thresholdFields.temp_moderate_high_max,
+        thresholdFields.ph_high_min,
+        thresholdFields.ph_high_max,
+        thresholdFields.ph_moderate_low_min,
+        thresholdFields.ph_moderate_low_max,
+        thresholdFields.ph_moderate_high_min,
+        thresholdFields.ph_moderate_high_max,
+        thresholdFields.turbidity_high_max,
+        thresholdFields.turbidity_moderate_min,
+        thresholdFields.turbidity_moderate_max,
+        siteKey,
+      ]
+    );
+
+    const result = await db.query(
+      `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
+              temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
+              ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
+              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+       FROM site_registry
+       WHERE site_key = $1`,
+      [siteKey]
+    );
+
+    return res.json({ success: true, site: serializeSiteRow(result.rows[0]) });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Failed to update site' });
+  }
 });
 
 router.delete('/sites/:siteKey', async (req, res) => {

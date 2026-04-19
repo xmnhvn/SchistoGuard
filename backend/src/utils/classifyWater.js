@@ -1,51 +1,39 @@
 // WHO/DOH Schistosomiasis Water Quality Risk Classification
 // Combines temperature, pH, and turbidity parameters for comprehensive risk assessment
 
+const {
+    DEFAULT_SITE_RISK_THRESHOLDS,
+    classifySensorValue,
+} = require("./siteRiskConfig");
+
 /**
  * Classifies water risk level based on all three environmental parameters
  * @param {number} temperature - Water temperature in °C
  * @param {number} ph - Water pH level (0-14)
  * @param {number} turbidity - Water turbidity in NTU (Nephelometric Turbidity Units)
+ * @param {object} thresholds - Optional per-site thresholds
  * @returns {string} Risk classification: "high-risk", "possible-risk", or "low-risk"
  */
-function classifyWater(temperature, pH, turbidity) {
+function classifyWater(temperature, pH, turbidity, thresholds = DEFAULT_SITE_RISK_THRESHOLDS) {
     // Handle missing data
     const parameterCount = [temperature, pH, turbidity].filter(p => p != null).length;
     if (parameterCount === 0) return "unknown";
 
     let riskLevels = [];
 
-    // Temperature classification (22-30°C optimal for snail/cercariae)
     if (temperature != null) {
-        if (temperature >= 22 && temperature <= 30) {
-            riskLevels.push("high-risk");
-        } else if ((temperature >= 20 && temperature < 22) || (temperature > 30 && temperature <= 35)) {
-            riskLevels.push("possible-risk");
-        } else {
-            riskLevels.push("low-risk");
-        }
+        const level = classifySensorValue("temperature", temperature, thresholds);
+        riskLevels.push(level === "critical" ? "high-risk" : level === "warning" ? "possible-risk" : "low-risk");
     }
 
-    // pH classification (6.5-8.0 optimal for snail survival)
     if (pH != null) {
-        if (pH >= 6.5 && pH <= 8.0) {
-            riskLevels.push("high-risk");
-        } else if ((pH >= 6.0 && pH < 6.5) || (pH > 8.0 && pH <= 8.5)) {
-            riskLevels.push("possible-risk");
-        } else {
-            riskLevels.push("low-risk");
-        }
+        const level = classifySensorValue("ph", pH, thresholds);
+        riskLevels.push(level === "critical" ? "high-risk" : level === "warning" ? "possible-risk" : "low-risk");
     }
 
-    // Turbidity classification (low turbidity = slower water, favors snails)
     if (turbidity != null) {
-        if (turbidity < 5) {
-            riskLevels.push("high-risk");    // Clear/stagnant water
-        } else if (turbidity >= 5 && turbidity <= 15) {
-            riskLevels.push("possible-risk"); // Moderate clarity
-        } else {
-            riskLevels.push("low-risk");      // High turbidity inhibits transmission
-        }
+        const level = classifySensorValue("turbidity", turbidity, thresholds);
+        riskLevels.push(level === "critical" ? "high-risk" : level === "warning" ? "possible-risk" : "low-risk");
     }
 
     // Overall classification: highest risk level detected
