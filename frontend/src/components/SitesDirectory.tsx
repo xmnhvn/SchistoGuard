@@ -687,6 +687,10 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
     });
   });
 
+  const selectedSiteDisplayName = selectedSite === 'all'
+    ? 'All Sites'
+    : (availableSites.find((site) => site.siteKey === selectedSite)?.siteName || dynamicSiteName || selectedSite);
+
   if (!visible) return null;
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -1342,7 +1346,7 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
         }}
       >
         <PDFHeader
-          dynamicSiteName={dynamicSiteName}
+          dynamicSiteName={selectedSiteDisplayName}
           address={address}
           logoNudge={10}
         />
