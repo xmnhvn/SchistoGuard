@@ -255,6 +255,15 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       const now = new Date();
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dmy = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
+      const sanitizeFileNamePart = (value: string) =>
+        value
+          .normalize('NFKD')
+          .replace(/[^\x20-\x7E]/g, '')
+          .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '')
+          .replace(/\s+/g, '_')
+          .trim()
+          .replace(/[._-]+$/g, '')
+          .slice(0, 80);
 
       const columns = [
         { header: 'Time', dataKey: 'time' },
@@ -504,10 +513,26 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       
       const barW = pw - margin * 2;
       const barH = 10;
+      const segmentGap = 1.5;
+      const segments = [
+        { pct: sPct, color: [35, 182, 126] as [number, number, number] },
+        { pct: wPct, color: [241, 161, 26] as [number, number, number] },
+        { pct: cPct, color: [209, 67, 67] as [number, number, number] },
+      ].filter((segment) => segment.pct > 0);
+
+      const totalGapWidth = Math.max(0, segments.length - 1) * segmentGap;
+      const usableBarWidth = Math.max(0, barW - totalGapWidth);
       let curX = margin;
-      if (sPct > 0) { doc.setFillColor(35, 182, 126); doc.roundedRect(curX, y, barW * sPct, barH, 4, 4, 'F'); curX += barW * sPct; }
-      if (wPct > 0) { doc.setFillColor(241, 161, 26); if(sPct===0) doc.roundedRect(curX,y,barW*wPct,barH,4,4,'F'); else doc.rect(curX, y, barW * wPct, barH, 'F'); curX += barW * wPct; }
-      if (cPct > 0) { doc.setFillColor(209, 67, 67); doc.roundedRect(curX, y, barW * cPct, barH, 4, 4, 'F'); }
+      segments.forEach((segment, index) => {
+        const isLast = index === segments.length - 1;
+        const width = isLast
+          ? margin + barW - curX
+          : usableBarWidth * segment.pct;
+
+        doc.setFillColor(segment.color[0], segment.color[1], segment.color[2]);
+        doc.roundedRect(curX, y, width, barH, 4, 4, 'F');
+        curX += width + segmentGap;
+      });
       
       y += barH + 16;
       doc.setFontSize(8);
@@ -533,7 +558,13 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
       y += 12;
       // Removed generation info text to keep the report clean and focused on data.
 
-      const filename = `SchistoGuard_Timeseries_${risk}_${timeRangeText}_${dmy}.pdf`;
+      const selectedSiteLabel = selectedSite === 'all'
+        ? 'All_Sites'
+        : (availableSites.find((site) => site.siteKey === selectedSite)?.siteName || dynamicSiteName || selectedSite || 'Unknown_Site');
+      const siteForFile = sanitizeFileNamePart(selectedSiteLabel) || 'Unknown_Site';
+      const riskForFile = sanitizeFileNamePart(risk) || 'AllRisk';
+      const timeRangeForFile = sanitizeFileNamePart(timeRangeText) || 'AllTime';
+      const filename = `SchistoGuard_Timeseries_${siteForFile}_${riskForFile}_${timeRangeForFile}_${dmy}.pdf`;
       doc.save(filename);
     } finally {
       setIsExporting(false);

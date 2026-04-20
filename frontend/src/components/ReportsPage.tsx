@@ -832,7 +832,8 @@ export const ReportsPage: React.FC = () => {
 
       const readableTitle = sanitizeFileNamePart(selectedReport.title);
       const readablePeriod = sanitizeFileNamePart(selectedReport.period);
-      const descriptor = [readableTitle, readablePeriod].filter(Boolean).join(' - ');
+      const readableSite = sanitizeFileNamePart(selectedReport.siteName || dynamicSiteName || selectedReport.siteKey || 'Unknown Site');
+      const descriptor = [readableSite, readableTitle, readablePeriod].filter(Boolean).join(' - ');
       const truncatedDescriptor = descriptor.slice(0, 120).trim();
       const fileName = `${truncatedDescriptor || 'Water Quality Report'} - ${formattedDate}.pdf`;
 
