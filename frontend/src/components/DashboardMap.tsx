@@ -54,6 +54,7 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
   const previousSelectedSiteId = useRef<string | null>(null);
   const previousExpandedPhotoSiteId = useRef<string | null>(null);
   const previousClosingPhotoSiteId = useRef<string | null>(null);
+  const noticeCacheRef = useRef<Record<string, { tone: 'critical' | 'warning' | 'safe' | 'offline'; pill: string; message: string }>>({});
   const closePhotoTimeoutRef = useRef<number | null>(null);
   const pendingOpenTimeoutRef = useRef<number | null>(null);
   const pendingMoveEndHandlerRef = useRef<(() => void) | null>(null);
@@ -72,13 +73,29 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
     }
   };
 
+  const getEffectiveNotice = (site: NonNullable<DashboardMapProps['sites']>[number]) => {
+    const hasLiveNotice = !!site.noticeTone && !!site.noticePill && !!site.noticeMessage;
+    if (hasLiveNotice) {
+      const liveNotice = {
+        tone: site.noticeTone!,
+        pill: site.noticePill!,
+        message: site.noticeMessage!,
+      };
+      noticeCacheRef.current[site.id] = liveNotice;
+      return liveNotice;
+    }
+
+    return noticeCacheRef.current[site.id] || null;
+  };
+
   const isSiteOverlayReady = (siteId: string) => {
     const liveSites = latestSitesRef.current || [];
     const target = liveSites.find((site) => site.id === siteId);
     if (!target) return false;
 
     const hasPhoto = !!normalizePhotoSrc(target.sitePhoto);
-    const hasNotice = !!target.noticeTone && !!target.noticePill && !!target.noticeMessage;
+    const effectiveNotice = getEffectiveNotice(target);
+    const hasNotice = !!effectiveNotice;
     return hasPhoto && hasNotice;
   };
 
@@ -422,17 +439,18 @@ export const DashboardMap = forwardRef<DashboardMapHandle, DashboardMapProps>(fu
               : (site.isSelected ? 'site-marker--selected-inactive' : 'site-marker--inactive');
 
             const normalizedPhotoSrc = normalizePhotoSrc(site.sitePhoto);
-            const hasNoticeContent = !!site.noticeTone && !!site.noticePill && !!site.noticeMessage;
+            const effectiveNotice = getEffectiveNotice(site);
+            const hasNoticeContent = !!effectiveNotice;
             const hasExpandedPhoto = canShowPhotoPreview && expandedPhotoSiteId === site.id && !!normalizedPhotoSrc;
             const hasClosingPhoto = canShowPhotoPreview && closingPhotoSiteId === site.id && !!normalizedPhotoSrc;
             const shouldRenderPhoto = (hasExpandedPhoto || hasClosingPhoto) && hasNoticeContent;
             const photoAnimationClass = hasClosingPhoto ? 'is-closing' : 'is-opening';
             const noticeMarkup = hasNoticeContent
               ? `
-                <div class="site-marker__photo-notice ${photoAnimationClass}" data-tone="${escapeHtml(site.noticeTone!)}" role="note" aria-label="Area notice">
+                <div class="site-marker__photo-notice ${photoAnimationClass}" data-tone="${escapeHtml(effectiveNotice!.tone)}" role="note" aria-label="Area notice">
                   <div class="site-marker__photo-content">
-                    <span class="site-marker__photo-pill">${escapeHtml(site.noticePill!)}</span>
-                    <p class="site-marker__photo-note-text">${escapeHtml(site.noticeMessage!)}</p>
+                    <span class="site-marker__photo-pill">${escapeHtml(effectiveNotice!.pill)}</span>
+                    <p class="site-marker__photo-note-text">${escapeHtml(effectiveNotice!.message)}</p>
                   </div>
                 </div>`
               : '';
