@@ -47,6 +47,7 @@
             "react-chartjs-2": "*",
             "react-day-picker": "^8.10.1",
             "react-dom": "^18.3.1",
+            "date-fns": "^2.30.0",
             "react-hook-form": "^7.55.0",
             "react-resizable-panels": "^2.1.7",
             "react-router-dom": "^7.11.0",
@@ -70,5 +71,9 @@
             "build": "vite build",
             "build:cloud": "vite build --mode cloud",
             "build:local": "vite build --mode localdev"
-      }
+      },
+                  "overrides": {
+                  "sourcemap-codec": "npm:@jridgewell/sourcemap-codec@^1.5.5",
+                  "source-map": "npm:@jridgewell/source-map@0.3.11"
+            }
 }
