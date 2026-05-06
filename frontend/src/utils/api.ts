@@ -4,7 +4,11 @@
  */
 
 // @ts-ignore - Vite env type handling
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+// Normalize VITE_API_BASE_URL: trim, remove trailing slashes and stray trailing dots
+const _rawApiBase = (import.meta.env.VITE_API_BASE_URL || '').toString().trim();
+const API_BASE_URL = _rawApiBase
+  ? _rawApiBase.replace(/\/+$/, '').replace(/\.+$/, '')
+  : '';
 const LOCAL_BACKEND_BASE_URL = 'http://localhost:3001';
 
 function buildApiUrl(endpoint: string, baseUrl = API_BASE_URL): string {
