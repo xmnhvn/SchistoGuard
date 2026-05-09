@@ -241,8 +241,28 @@ function roundReading(value, decimals) {
   return Math.round(value * factor) / factor;
 }
 
-function generateControlledReadings(siteSnapshot, sourceTimestamp = new Date()) {
+function buildEffectiveThresholdsForDisplay(siteSnapshot) {
   const thresholds = siteSnapshot?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
+
+  if (!normalizeControlledMode(siteSnapshot?.controlledMode)) {
+    return thresholds;
+  }
+
+  return {
+    ...thresholds,
+    temperature: {
+      highMin: 10,
+      highMax: 15,
+      moderateLowMin: 8,
+      moderateLowMax: 10,
+      moderateHighMin: 15,
+      moderateHighMax: 18,
+    },
+  };
+}
+
+function generateControlledReadings(siteSnapshot, sourceTimestamp = new Date()) {
+  const thresholds = buildEffectiveThresholdsForDisplay(siteSnapshot);
   const safeTempMin = thresholds.temperature.highMin;
   const safeTempMax = thresholds.temperature.highMax;
   const safePhMin = thresholds.ph.highMin;
@@ -272,7 +292,7 @@ function generateControlledReadings(siteSnapshot, sourceTimestamp = new Date()) 
 
 function applySiteDisplayMode(data, siteSnapshot) {
   const controlledMode = normalizeControlledMode(siteSnapshot?.controlledMode);
-  const thresholds = siteSnapshot?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
+  const thresholds = buildEffectiveThresholdsForDisplay(siteSnapshot);
   const presetValues = normalizePresetValues(siteSnapshot?.presetValues);
 
   if (controlledMode) {
@@ -1806,7 +1826,7 @@ router.get("/latest", async (req, res) => {
             status: row.status || null,
             controlledMode: normalizeControlledMode(activeSiteSnapshot.controlledMode),
             presetValues: normalizePresetValues(activeSiteSnapshot.presetValues),
-            thresholds: activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
+            thresholds: buildEffectiveThresholdsForDisplay(activeSiteSnapshot),
           });
         }
 
@@ -1815,7 +1835,7 @@ router.get("/latest", async (req, res) => {
           siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
           siteKey: activeSiteSnapshot.siteKey,
           address: activeSiteSnapshot.address || null,
-          thresholds: activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
+          thresholds: buildEffectiveThresholdsForDisplay(activeSiteSnapshot),
         });
       }
     );
@@ -1834,7 +1854,7 @@ router.get("/latest", async (req, res) => {
         deviceConnected: true,
         timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
         address: latestData.address || activeSiteSnapshot.address || null,
-        thresholds: latestData.thresholds || activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
+        thresholds: latestData.thresholds || buildEffectiveThresholdsForDisplay(activeSiteSnapshot),
         controlledMode: normalizeControlledMode(activeSiteSnapshot.controlledMode),
         presetValues: normalizePresetValues(activeSiteSnapshot.presetValues),
       });

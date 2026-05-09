@@ -211,6 +211,28 @@ function buildThresholdsFromSensorRiskTargets(targets: SensorRiskTargetForm): Si
   });
 }
 
+function getDisplayThresholdSummary(
+  thresholds: SiteRiskThresholds,
+  siteOutputMode: SiteOutputMode,
+  sensor: 'temperature' | 'ph' | 'turbidity',
+) {
+  const normalized = normalizeSiteRiskThresholds(thresholds);
+
+  if (sensor === 'temperature' && siteOutputMode === 'controlled') {
+    return 'Safe: 10-15 | Watch: 8-10 and 15-18';
+  }
+
+  if (sensor === 'temperature') {
+    return `Safe: ${normalized.temperature.highMin}-${normalized.temperature.highMax} | Watch: ${normalized.temperature.moderateLowMin}-${normalized.temperature.moderateLowMax} and ${normalized.temperature.moderateHighMin}-${normalized.temperature.moderateHighMax}`;
+  }
+
+  if (sensor === 'ph') {
+    return `Safe: ${normalized.ph.highMin}-${normalized.ph.highMax} | Watch: ${normalized.ph.moderateLowMin}-${normalized.ph.moderateLowMax} and ${normalized.ph.moderateHighMin}-${normalized.ph.moderateHighMax}`;
+  }
+
+  return `Safe if below ${normalized.turbidity.highMax} | Watch: ${normalized.turbidity.moderateMin}-${normalized.turbidity.moderateMax}`;
+}
+
 function inferRiskTargetsFromThresholds(thresholds: SiteRiskThresholds): SensorRiskTargetForm {
   const normalized = normalizeSiteRiskThresholds(thresholds);
 
@@ -2047,7 +2069,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                       </SelectContent>
                     </Select>
                     <div style={{ marginTop: 8, fontSize: 11.5, color: "#475569", lineHeight: 1.45 }}>
-                      Controlled mode auto-generates moving values inside the rule ranges below. Those changing values are the ones shown on the website, saved in the database, and pushed to the LCD.
+                      Controlled mode auto-generates moving values inside the rule ranges below. For secret sites, temperature safe range is fixed to 10-15C. Those changing values are the ones shown on the website, saved in the database, and pushed to the LCD. Live mode still uses the real sensor readings.
                     </div>
                   </div>
                 </div>
@@ -2070,7 +2092,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </SelectContent>
                       </Select>
                       <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
-                        Safe: {newSiteThresholds.tempHighMin}-{newSiteThresholds.tempHighMax} | Watch: {newSiteThresholds.tempModerateLowMin}-{newSiteThresholds.tempModerateLowMax} and {newSiteThresholds.tempModerateHighMin}-{newSiteThresholds.tempModerateHighMax}
+                        {getDisplayThresholdSummary(parseThresholdFormState(newSiteThresholds), siteOutputMode, 'temperature')}
                       </div>
                     </div>
                   </div>
@@ -2092,7 +2114,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </SelectContent>
                       </Select>
                       <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
-                        Safe: {newSiteThresholds.phHighMin}-{newSiteThresholds.phHighMax} | Watch: {newSiteThresholds.phModerateLowMin}-{newSiteThresholds.phModerateLowMax} and {newSiteThresholds.phModerateHighMin}-{newSiteThresholds.phModerateHighMax}
+                        {getDisplayThresholdSummary(parseThresholdFormState(newSiteThresholds), siteOutputMode, 'ph')}
                       </div>
                     </div>
                   </div>
@@ -2114,7 +2136,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </SelectContent>
                       </Select>
                       <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
-                        Safe if below {newSiteThresholds.turbidityHighMax} | Watch: {newSiteThresholds.turbidityModerateMin}-{newSiteThresholds.turbidityModerateMax}
+                        {getDisplayThresholdSummary(parseThresholdFormState(newSiteThresholds), siteOutputMode, 'turbidity')}
                       </div>
                     </div>
                   </div>
