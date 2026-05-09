@@ -429,10 +429,15 @@ export function Dashboard({
       );
 
   const selectedSite = availableSites.find((site) => site.siteKey === selectedSiteKey) || null;
+  const selectedSiteMatchesLive =
+    !!selectedSite &&
+    !!liveReading?.siteKey &&
+    selectedSite.siteKey === liveReading.siteKey;
   const selectedSiteThresholds =
-    selectedSite?.thresholds ||
+    (selectedSiteMatchesLive ? (liveReading?.thresholds || latestReading?.thresholds || selectedSite?.thresholds || null) : null) ||
     liveReading?.thresholds ||
     latestReading?.thresholds ||
+    selectedSite?.thresholds ||
     null;
   const getSensorStatus = (
     type: "temperature" | "turbidity" | "ph",
