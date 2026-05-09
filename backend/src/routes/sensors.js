@@ -215,19 +215,59 @@ function normalizePresetValues(candidate = {}) {
   };
 }
 
-function validatePresetValues(candidate = {}) {
-  const presetValues = normalizePresetValues(candidate);
-  const missingKeys = Object.entries(presetValues)
-    .filter(([, value]) => value === null)
-    .map(([key]) => key);
+function hashString(value = '') {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
 
-  return {
-    isValid: missingKeys.length === 0,
-    errors: missingKeys.length > 0
-      ? [`Controlled mode requires preset values for: ${missingKeys.join(', ')}`]
-      : [],
-    presetValues,
-  };
+function seededUnit(seed) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function interpolate(min, max, ratio) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  if (max <= min) return min;
+  return min + ((max - min) * ratio);
+}
+
+function roundReading(value, decimals) {
+  if (!Number.isFinite(value)) return null;
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+function generateControlledReadings(siteSnapshot, sourceTimestamp = new Date()) {
+  const thresholds = siteSnapshot?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
+  const safeTempMin = thresholds.temperature.highMin;
+  const safeTempMax = thresholds.temperature.highMax;
+  const safePhMin = thresholds.ph.highMin;
+  const safePhMax = thresholds.ph.highMax;
+  const safeTurbidityMax = thresholds.turbidity.highMax;
+  const safeTurbidityMin = Math.max(0.2, safeTurbidityMax * 0.35);
+
+  const timestampMs = sourceTimestamp instanceof Date ? sourceTimestamp.getTime() : new Date(sourceTimestamp).getTime();
+  const bucket = Number.isFinite(timestampMs) ? Math.floor(timestampMs / 15000) : Math.floor(Date.now() / 15000);
+  const siteSeed = hashString(`${siteSnapshot?.siteKey || 'controlled-site'}:${bucket}`);
+
+  const temperature = roundReading(
+    interpolate(safeTempMin, safeTempMax, 0.15 + (seededUnit(siteSeed + 11) * 0.7)),
+    1
+  );
+  const ph = roundReading(
+    interpolate(safePhMin, safePhMax, 0.15 + (seededUnit(siteSeed + 29) * 0.7)),
+    2
+  );
+  const turbidity = roundReading(
+    interpolate(safeTurbidityMin, safeTurbidityMax * 0.92, 0.1 + (seededUnit(siteSeed + 47) * 0.75)),
+    1
+  );
+
+  return { temperature, ph, turbidity };
 }
 
 function applySiteDisplayMode(data, siteSnapshot) {
@@ -236,17 +276,18 @@ function applySiteDisplayMode(data, siteSnapshot) {
   const presetValues = normalizePresetValues(siteSnapshot?.presetValues);
 
   if (controlledMode) {
+    const controlledReadings = generateControlledReadings(siteSnapshot, data.timestamp || new Date());
     const status = classifyWater(
-      presetValues.temperature,
-      presetValues.ph,
-      presetValues.turbidity,
+      controlledReadings.temperature,
+      controlledReadings.ph,
+      controlledReadings.turbidity,
       thresholds
     );
 
     return {
-      temperature: presetValues.temperature,
-      ph: presetValues.ph,
-      turbidity: presetValues.turbidity,
+      temperature: controlledReadings.temperature,
+      ph: controlledReadings.ph,
+      turbidity: controlledReadings.turbidity,
       device_ip: data.device_ip,
       latitude: typeof data.latitude === 'number' ? data.latitude : null,
       longitude: typeof data.longitude === 'number' ? data.longitude : null,
@@ -256,7 +297,7 @@ function applySiteDisplayMode(data, siteSnapshot) {
       status,
       timestamp: new Date(),
       controlledMode: true,
-      presetValues,
+      presetValues: controlledReadings,
     };
   }
 
@@ -1825,7 +1866,17 @@ router.get('/device-display-config', async (req, res) => {
     });
   }
 
-  const presetValues = normalizePresetValues(activeSiteSnapshot.presetValues);
+  const presetValues = (
+    latestData &&
+    latestData.siteKey === activeSiteSnapshot.siteKey &&
+    normalizeControlledMode(activeSiteSnapshot.controlledMode)
+  )
+    ? {
+        temperature: latestData.temperature ?? null,
+        ph: latestData.ph ?? null,
+        turbidity: latestData.turbidity ?? null,
+      }
+    : generateControlledReadings(activeSiteSnapshot, new Date());
   return res.json({
     controlledMode: normalizeControlledMode(activeSiteSnapshot.controlledMode),
     siteKey: activeSiteSnapshot.siteKey,
@@ -2171,13 +2222,7 @@ router.post('/sites', async (req, res) => {
     }
 
     const controlledMode = normalizeControlledMode(req.body.controlledMode);
-    const presetValidation = controlledMode
-      ? validatePresetValues(req.body.presetValues || {})
-      : { isValid: true, errors: [], presetValues: normalizePresetValues(req.body.presetValues || {}) };
-
-    if (!presetValidation.isValid) {
-      return res.status(400).json({ error: presetValidation.errors[0] });
-    }
+    const presetValues = normalizePresetValues(req.body.presetValues || {});
 
     const thresholdValidation = validateThresholds(req.body.thresholds || {});
     if (!thresholdValidation.isValid) {
@@ -2252,7 +2297,7 @@ router.post('/sites', async (req, res) => {
         thresholdFields.temp_high_min, thresholdFields.temp_high_max, thresholdFields.temp_moderate_low_min, thresholdFields.temp_moderate_low_max, thresholdFields.temp_moderate_high_min, thresholdFields.temp_moderate_high_max,
         thresholdFields.ph_high_min, thresholdFields.ph_high_max, thresholdFields.ph_moderate_low_min, thresholdFields.ph_moderate_low_max, thresholdFields.ph_moderate_high_min, thresholdFields.ph_moderate_high_max,
         thresholdFields.turbidity_high_max, thresholdFields.turbidity_moderate_min, thresholdFields.turbidity_moderate_max,
-        controlledMode, presetValidation.presetValues.temperature, presetValidation.presetValues.ph, presetValidation.presetValues.turbidity,
+        controlledMode, presetValues.temperature, presetValues.ph, presetValues.turbidity,
       ]
     );
 
@@ -2286,13 +2331,7 @@ router.put('/sites/:siteKey', async (req, res) => {
   }
   const thresholdFields = buildThresholdDbFields(thresholdValidation.thresholds);
   const controlledMode = normalizeControlledMode(req.body.controlledMode);
-  const presetValidation = controlledMode
-    ? validatePresetValues(req.body.presetValues || {})
-    : { isValid: true, errors: [], presetValues: normalizePresetValues(req.body.presetValues || {}) };
-
-  if (!presetValidation.isValid) {
-    return res.status(400).json({ error: presetValidation.errors[0] });
-  }
+  const presetValues = normalizePresetValues(req.body.presetValues || {});
 
   try {
     await db.query(
@@ -2338,9 +2377,9 @@ router.put('/sites/:siteKey', async (req, res) => {
         thresholdFields.turbidity_moderate_min,
         thresholdFields.turbidity_moderate_max,
         controlledMode,
-        presetValidation.presetValues.temperature,
-        presetValidation.presetValues.ph,
-        presetValidation.presetValues.turbidity,
+        presetValues.temperature,
+        presetValues.ph,
+        presetValues.turbidity,
         siteKey,
       ]
     );
