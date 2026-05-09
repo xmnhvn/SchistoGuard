@@ -241,6 +241,26 @@ function roundReading(value, decimals) {
   return Math.round(value * factor) / factor;
 }
 
+function clampNumber(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function moveTowards(previous, target, maxStep, min, max, decimals) {
+  const boundedTarget = clampNumber(target, min, max);
+  if (!Number.isFinite(previous)) {
+    return roundReading(boundedTarget, decimals);
+  }
+
+  const delta = boundedTarget - previous;
+  const nextValue =
+    Math.abs(delta) <= maxStep
+      ? boundedTarget
+      : previous + (Math.sign(delta) * maxStep);
+
+  return roundReading(clampNumber(nextValue, min, max), decimals);
+}
+
 function buildEffectiveThresholdsForDisplay(siteSnapshot) {
   const thresholds = siteSnapshot?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
 
@@ -261,7 +281,7 @@ function buildEffectiveThresholdsForDisplay(siteSnapshot) {
   };
 }
 
-function generateControlledReadings(siteSnapshot, sourceTimestamp = new Date()) {
+function generateControlledReadings(siteSnapshot, sourceTimestamp = new Date(), previousReadings = null) {
   const thresholds = buildEffectiveThresholdsForDisplay(siteSnapshot);
   const safeTempMin = thresholds.temperature.highMin;
   const safeTempMax = thresholds.temperature.highMax;
@@ -274,18 +294,26 @@ function generateControlledReadings(siteSnapshot, sourceTimestamp = new Date()) 
   const bucket = Number.isFinite(timestampMs) ? Math.floor(timestampMs / 15000) : Math.floor(Date.now() / 15000);
   const siteSeed = hashString(`${siteSnapshot?.siteKey || 'controlled-site'}:${bucket}`);
 
-  const temperature = roundReading(
+  const targetTemperature = roundReading(
     interpolate(safeTempMin, safeTempMax, 0.15 + (seededUnit(siteSeed + 11) * 0.7)),
     1
   );
-  const ph = roundReading(
+  const targetPh = roundReading(
     interpolate(safePhMin, safePhMax, 0.15 + (seededUnit(siteSeed + 29) * 0.7)),
     2
   );
-  const turbidity = roundReading(
+  const targetTurbidity = roundReading(
     interpolate(safeTurbidityMin, safeTurbidityMax * 0.92, 0.1 + (seededUnit(siteSeed + 47) * 0.75)),
     1
   );
+
+  const previousTemperature = toNullableFiniteNumber(previousReadings?.temperature);
+  const previousPh = toNullableFiniteNumber(previousReadings?.ph);
+  const previousTurbidity = toNullableFiniteNumber(previousReadings?.turbidity);
+
+  const temperature = moveTowards(previousTemperature, targetTemperature, 0.3, safeTempMin, safeTempMax, 1);
+  const ph = moveTowards(previousPh, targetPh, 0.04, safePhMin, safePhMax, 2);
+  const turbidity = moveTowards(previousTurbidity, targetTurbidity, 0.3, safeTurbidityMin, safeTurbidityMax * 0.92, 1);
 
   return { temperature, ph, turbidity };
 }
@@ -296,7 +324,17 @@ function applySiteDisplayMode(data, siteSnapshot) {
   const presetValues = normalizePresetValues(siteSnapshot?.presetValues);
 
   if (controlledMode) {
-    const controlledReadings = generateControlledReadings(siteSnapshot, data.timestamp || new Date());
+    const previousControlledReadings =
+      latestData &&
+      latestData.siteKey === siteSnapshot?.siteKey &&
+      latestData.controlledMode
+        ? latestData
+        : null;
+    const controlledReadings = generateControlledReadings(
+      siteSnapshot,
+      data.timestamp || new Date(),
+      previousControlledReadings
+    );
     const status = classifyWater(
       controlledReadings.temperature,
       controlledReadings.ph,
