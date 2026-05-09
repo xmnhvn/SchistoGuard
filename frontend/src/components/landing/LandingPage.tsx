@@ -746,14 +746,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const sampleAlerts = [
     {
       id: "1",
-      title: "Turbidity Needs Attention",
+      title: "Turbidity High Possible Risk",
       details: "Turbidity 18.2 NTU — Barangay San Miguel River",
       level: "critical" as const,
       timestamp: "2025-09-15 14:31",
     },
     {
       id: "2",
-      title: "Temperature Watch Zone",
+      title: "Temperature Moderate Possible Risk",
       details: "Water temp 32°C — Barangay Riverside",
       level: "warning" as const,
       timestamp: "2025-09-15 13:45",
@@ -900,7 +900,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       guidance: "Water conditions at this site are currently within safe ranges. Normal activities near water areas can continue. The SchistoGuard system is actively monitoring for any changes.",
     },
     warning: {
-      statusLabel: "Moderate Risk",
+      statusLabel: "Moderate Possible Risk",
       statusColor: "#E7B213",
       statusBg: "rgba(231,178,19,0.08)",
       statusBorder: "rgba(231,178,19,0.18)",
@@ -1761,7 +1761,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       }}>
                         <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: screenWidth < 600 ? 11 : (isSmallDesktop ? 10.5 : 12), color: '#94a3b8', letterSpacing: 0.3 }}>Risk Snapshot</p>
                         <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: screenWidth < 600 ? 14 : (isSmallDesktop ? 14 : 16), color: sysColor, lineHeight: 1.25 }}>
-                          {critical > 0 ? `${critical} Sites High Risk` : warning > 0 ? `${warning} Sites Moderate Risk` : safe > 0 ? 'All Sites Safe' : 'No Data'}
+                          {critical > 0 ? `${critical} Sites High Possible Risk` : warning > 0 ? `${warning} Sites Moderate Possible Risk` : safe > 0 ? 'All Sites Safe' : 'No Data'}
                         </p>
                         <div style={{ display: 'flex', gap: '8px', fontSize: screenWidth < 600 ? 9.5 : (isSmallDesktop ? 9.5 : 11), color: '#8E8B8B', marginTop: 2 }}>
                            {critical > 0 && <span><span style={{color: '#ef4444'}}>●</span> {critical} High</span>}

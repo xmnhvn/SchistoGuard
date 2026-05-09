@@ -219,18 +219,18 @@ function getDisplayThresholdSummary(
   const normalized = normalizeSiteRiskThresholds(thresholds);
 
   if (sensor === 'temperature' && siteOutputMode === 'controlled') {
-    return 'Safe: 10-15 | Watch: 8-10 and 15-18';
+    return 'High Risk: 10-15 | Watch: 8-10 and 15-18';
   }
 
   if (sensor === 'temperature') {
-    return `Safe: ${normalized.temperature.highMin}-${normalized.temperature.highMax} | Watch: ${normalized.temperature.moderateLowMin}-${normalized.temperature.moderateLowMax} and ${normalized.temperature.moderateHighMin}-${normalized.temperature.moderateHighMax}`;
+    return `High Risk: ${normalized.temperature.highMin}-${normalized.temperature.highMax} | Watch: ${normalized.temperature.moderateLowMin}-${normalized.temperature.moderateLowMax} and ${normalized.temperature.moderateHighMin}-${normalized.temperature.moderateHighMax} | Safe: outside ranges`;
   }
 
   if (sensor === 'ph') {
-    return `Safe: ${normalized.ph.highMin}-${normalized.ph.highMax} | Watch: ${normalized.ph.moderateLowMin}-${normalized.ph.moderateLowMax} and ${normalized.ph.moderateHighMin}-${normalized.ph.moderateHighMax}`;
+    return `High Risk: ${normalized.ph.highMin}-${normalized.ph.highMax} | Watch: ${normalized.ph.moderateLowMin}-${normalized.ph.moderateLowMax} and ${normalized.ph.moderateHighMin}-${normalized.ph.moderateHighMax} | Safe: outside ranges`;
   }
 
-  return `Safe if below ${normalized.turbidity.highMax} | Watch: ${normalized.turbidity.moderateMin}-${normalized.turbidity.moderateMax}`;
+  return `High Risk: below ${normalized.turbidity.highMax} | Watch: ${normalized.turbidity.moderateMin}-${normalized.turbidity.moderateMax} | Safe: above ${normalized.turbidity.moderateMax}`;
 }
 
 function inferRiskTargetsFromThresholds(thresholds: SiteRiskThresholds): SensorRiskTargetForm {

@@ -195,7 +195,7 @@ export const SiteSpotCard: React.FC<SiteSpotProps> = ({
 
   const riskLabels = {
     safe: 'Safe',
-    warning: 'Moderate Risk',
+    warning: 'Moderate Possible Risk',
     critical: 'High Possible Risk'
   };
 

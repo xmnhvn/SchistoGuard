@@ -660,8 +660,8 @@ export const SitesDirectory: React.FC<SitesDirectoryProps> = ({ onViewSiteDetail
 
   function getRiskLevel(param: string, value: number) {
     if (param === 'turbidity') {
-      if (value > 15) return 'critical';
-      if (value > 5) return 'warning';
+      if (value < 5) return 'critical';
+      if (value >= 5 && value <= 15) return 'warning';
       return 'safe';
     }
     if (param === 'temperature') {

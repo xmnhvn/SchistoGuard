@@ -993,8 +993,8 @@ function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime })
   const riskLabel = riskValue === 'high' || riskValue === 'high-risk'
     ? 'High Possible Risk'
     : riskValue === 'moderate' || riskValue === 'possible-risk'
-      ? 'Moderate Risk'
-      : 'Safe/Low Risk';
+      ? 'Moderate Possible Risk'
+      : 'Safe';
 
   const readingLine = stats.latestReading
     ? `Latest: T ${Number(stats.latestReading.temperature || 0).toFixed(1)} C | pH ${Number(stats.latestReading.ph || 0).toFixed(2)} | Turbidity ${Number(stats.latestReading.turbidity || 0).toFixed(1)} NTU`
@@ -1007,7 +1007,7 @@ function buildSmsSummaryMessage({ siteName, startIso, endIso, stats, slotTime })
   const alertLine = `Alerts: ${stats.totalAlerts} total (${stats.criticalAlerts} critical, ${stats.warningAlerts} warning)`;
   const advice = riskLabel === 'High Possible Risk'
     ? 'Action: Verify on site immediately and monitor closely.'
-    : riskLabel === 'Moderate Risk'
+    : riskLabel === 'Moderate Possible Risk'
       ? 'Action: Continue monitoring and validate the readings.'
       : 'Action: Continue routine monitoring.';
 

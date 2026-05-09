@@ -80,37 +80,37 @@ export function getSensorStatus(
 
   if (type === 'temperature') {
     if (value >= config.temperature.highMin && value <= config.temperature.highMax) {
-      return { label: 'Safe', color: '#22c55e', severity: 'safe' };
+      return { label: 'High Possible Risk', color: '#ef4444', severity: 'critical' };
     }
     if (
       (value >= config.temperature.moderateLowMin && value < config.temperature.moderateLowMax) ||
       (value > config.temperature.moderateHighMin && value <= config.temperature.moderateHighMax)
     ) {
-      return { label: 'Watch Zone', color: '#E7B213', severity: 'warning' };
+      return { label: 'Moderate Possible Risk', color: '#E7B213', severity: 'warning' };
     }
-    return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
+    return { label: 'Safe', color: '#22c55e', severity: 'safe' };
   }
 
   if (type === 'turbidity') {
     if (value < config.turbidity.highMax) {
-      return { label: 'Safe', color: '#22c55e', severity: 'safe' };
+      return { label: 'High Possible Risk', color: '#ef4444', severity: 'critical' };
     }
     if (value >= config.turbidity.moderateMin && value <= config.turbidity.moderateMax) {
-      return { label: 'Watch Zone', color: '#E7B213', severity: 'warning' };
+      return { label: 'Moderate Possible Risk', color: '#E7B213', severity: 'warning' };
     }
-    return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
+    return { label: 'Safe', color: '#22c55e', severity: 'safe' };
   }
 
   if (value >= config.ph.highMin && value <= config.ph.highMax) {
-    return { label: 'Safe', color: '#22c55e', severity: 'safe' };
+    return { label: 'High Possible Risk', color: '#ef4444', severity: 'critical' };
   }
   if (
     (value >= config.ph.moderateLowMin && value < config.ph.moderateLowMax) ||
     (value > config.ph.moderateHighMin && value <= config.ph.moderateHighMax)
   ) {
-    return { label: 'Watch Zone', color: '#f59e0b', severity: 'warning' };
+    return { label: 'Moderate Possible Risk', color: '#f59e0b', severity: 'warning' };
   }
-  return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
+  return { label: 'Safe', color: '#22c55e', severity: 'safe' };
 }
 
 export function getOverallRiskFromReading(

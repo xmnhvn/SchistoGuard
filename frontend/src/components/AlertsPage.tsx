@@ -397,7 +397,7 @@ export function AlertsPage({ onNavigate, visible = true, user, deviceConnected =
             <SelectContent>
               <SelectItem value="all">All Levels</SelectItem>
               <SelectItem value="critical">High Possible Risk</SelectItem>
-              <SelectItem value="warning">Moderate Risk</SelectItem>
+              <SelectItem value="warning">Moderate Possible Risk</SelectItem>
             </SelectContent>
           </Select>
 

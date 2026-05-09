@@ -197,7 +197,7 @@ export function AlertItem({
                     fontFamily: POPPINS,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
-                  }}>Moderate Risk</span>
+                  }}>Moderate Possible Risk</span>
                 ) }
                 {isAcknowledged && (
                   <span style={{

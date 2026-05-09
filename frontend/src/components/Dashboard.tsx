@@ -491,7 +491,7 @@ export function Dashboard({
       if (hasCritical) {
         return {
           tone: 'critical',
-          pill: isOnline ? 'Live High Risk' : 'High Possible Risk',
+          pill: isOnline ? 'Live High Possible Risk' : 'High Possible Risk',
           message: 'Higher-risk conditions detected. Avoid direct contact with open water.',
         };
       }
@@ -499,7 +499,7 @@ export function Dashboard({
       if (hasWarning) {
         return {
           tone: 'warning',
-          pill: isOnline ? 'Live Moderate Risk' : 'Moderate Risk',
+          pill: isOnline ? 'Live Moderate Possible Risk' : 'Moderate Possible Risk',
           message: 'Use caution in this area and limit unnecessary water exposure.',
         };
       }
@@ -1148,14 +1148,14 @@ export function Dashboard({
         borderColor: "rgba(34,197,94,0.2)"
       },
       warning: {
-        title: "Watch Zone",
+        title: "Moderate Possible Risk",
         message: "Some readings are near ranges that can support snail activity. Continue monitoring.",
         color: "#f59e0b",
         bgColor: "rgba(245,158,11,0.08)",
         borderColor: "rgba(245,158,11,0.2)"
       },
       critical: {
-        title: "Needs Attention",
+        title: "High Possible Risk",
         message: "Current readings are within ranges linked to higher snail activity. Consider preventive action and closer monitoring.",
         color: "#ef4444",
         bgColor: "rgba(239,68,68,0.08)",
@@ -1268,8 +1268,8 @@ export function Dashboard({
         : "linear-gradient(135deg, #4ade80 0%, #16a34a 100%)";
 
   const getOverallRiskLabel = (risk: "critical" | "warning" | "safe") => {
-    if (risk === "critical") return "Needs Attention";
-    if (risk === "warning") return "Watch Zone";
+    if (risk === "critical") return "High Possible Risk";
+    if (risk === "warning") return "Moderate Possible Risk";
     return "Safe";
   };
 
