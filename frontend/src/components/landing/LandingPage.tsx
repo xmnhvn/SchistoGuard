@@ -24,6 +24,7 @@ import { PWAInstructionsModal } from "../PWAInstructionsModal";
 
 import { apiGet } from "../../utils/api";
 import { reverseGeocode } from "../../utils/reverseGeocode";
+import { getOverallRiskFromReading, type SiteRiskThresholds } from "../../utils/siteRiskConfig";
 
 interface LandingPageProps {
   onViewMap?: () => void;
@@ -38,6 +39,7 @@ type SiteOption = {
   latitude?: number | null;
   longitude?: number | null;
   sitePhoto?: string | null;
+  thresholds?: SiteRiskThresholds | null;
 };
 
 const ALL_SITES_KEY = 'all';
@@ -462,6 +464,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             address: (site.address || '').toString().trim() || null,
             latitude: normalizeCoordinate(site.latitude),
             longitude: normalizeCoordinate(site.longitude),
+            thresholds: site.thresholds || null,
           }))
           .filter((site) => !!site.siteKey)
           .sort((a, b) => a.siteName.localeCompare(b.siteName));
@@ -835,6 +838,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const liveUpdatesBackButtonLeft = isMobileOrTablet
     ? (screenWidth < 400 ? 16 : screenWidth < 600 ? 20 : screenWidth < 800 ? 24 : 28)
     : (isSmallDesktop ? 36 : 50);
+  const selectedSiteMatchesLive =
+    !!selectedSite &&
+    !!liveReading?.siteKey &&
+    selectedSite.siteKey === liveReading.siteKey;
+  const selectedSiteThresholds =
+    (selectedSiteMatchesLive ? (liveReading?.thresholds || latestReading?.thresholds || selectedSite?.thresholds || null) : null) ||
+    liveReading?.thresholds ||
+    latestReading?.thresholds ||
+    selectedSite?.thresholds ||
+    null;
 
   // ─── Risk Calculation Logic (Sync with Dashboard) ───────────────────────
   const calculateRiskForReading = (reading: any): "safe" | "warning" | "critical" | "no-data" => {
@@ -846,23 +859,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
     if ((temp == null || !Number.isFinite(temp)) && (turb == null || !Number.isFinite(turb)) && (ph == null || !Number.isFinite(ph))) return "no-data";
 
-    const risks: string[] = [];
-    if (temp != null && Number.isFinite(temp)) {
-      if (temp >= 22 && temp <= 30) risks.push("critical");
-      else if ((temp >= 20 && temp < 22) || (temp > 30 && temp <= 35)) risks.push("warning");
-    }
-    if (turb != null && Number.isFinite(turb)) {
-      if (turb < 5) risks.push("critical");
-      else if (turb <= 15) risks.push("warning");
-    }
-    if (ph != null && Number.isFinite(ph)) {
-      if (ph >= 6.5 && ph <= 8.0) risks.push("critical");
-      else if ((ph >= 6.0 && ph < 6.5) || (ph > 8.0 && ph <= 8.5)) risks.push("warning");
-    }
-
-    if (risks.includes("critical")) return "critical";
-    if (risks.includes("warning")) return "warning";
-    return "safe";
+    return getOverallRiskFromReading(
+      { temperature: temp, turbidity: turb, ph },
+      selectedSiteThresholds
+    );
   };
 
   const getOverallRisk = (): "safe" | "warning" | "critical" | "no-data" => {

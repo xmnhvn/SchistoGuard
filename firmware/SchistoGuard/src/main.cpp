@@ -867,18 +867,25 @@ void loop() {
   Serial.print(turbStdDev, 1);
   Serial.print(" ");
 
-  // Determine schistosomiasis risk based on thresholds
-  bool alertTemp = tempValid && (tempC >= TEMP_HIGH_RISK_MIN && tempC <= TEMP_HIGH_RISK_MAX);
-  bool alertPH = phSensorConnected && (phValue >= PH_HIGH_RISK_MIN && phValue <= PH_HIGH_RISK_MAX);
-  bool alertTurbidity = turbSensorConnected && (turbidityNTU < TURBIDITY_CLEAR); // Clear water = higher schisto risk
+  const float effectiveTemp = controlledDisplayMode ? controlledDisplayTemp : tempC;
+  const float effectivePH = controlledDisplayMode ? controlledDisplayPH : phValue;
+  const float effectiveTurbidity = controlledDisplayMode ? controlledDisplayTurbidity : turbidityNTU;
+  const bool effectiveTempValid = controlledDisplayMode ? true : tempValid;
+  const bool effectivePHConnected = controlledDisplayMode ? true : phSensorConnected;
+  const bool effectiveTurbConnected = controlledDisplayMode ? true : turbSensorConnected;
+
+  // Determine schistosomiasis risk based on the effective values being displayed for the current mode.
+  bool alertTemp = effectiveTempValid && (effectiveTemp >= TEMP_HIGH_RISK_MIN && effectiveTemp <= TEMP_HIGH_RISK_MAX);
+  bool alertPH = effectivePHConnected && (effectivePH >= PH_HIGH_RISK_MIN && effectivePH <= PH_HIGH_RISK_MAX);
+  bool alertTurbidity = effectiveTurbConnected && (effectiveTurbidity < TURBIDITY_CLEAR); // Clear water = higher schisto risk
 
   // Update LCD — show controlled preset values when the active site is in controlled mode.
   lcd.clear();
   lcd.setCursor(0, 0);
   if (controlledDisplayMode) {
-    lcd.print("T:"); lcd.print(controlledDisplayTemp, 1); lcd.print("C ");
+    lcd.print("T:"); lcd.print(effectiveTemp, 1); lcd.print("C ");
     lcd.print("pH:");
-    lcd.print(controlledDisplayPH, 2);
+    lcd.print(effectivePH, 2);
   } else {
     if (tempValid) {
       lcd.print("T:"); lcd.print(tempC, 1); lcd.print("C ");
@@ -896,7 +903,7 @@ void loop() {
   lcd.setCursor(0, 1);
   lcd.print("Tu:");
   if (controlledDisplayMode) {
-    lcd.print(controlledDisplayTurbidity, 1); lcd.print("NTU");
+    lcd.print(effectiveTurbidity, 1); lcd.print("NTU");
   } else {
     if (turbSensorConnected) {
       lcd.print(turbidityNTU, 1); lcd.print("NTU");
@@ -906,13 +913,13 @@ void loop() {
   }
 
   Serial.print("TEMP,");
-  if (tempValid) Serial.print(tempC, 2); else Serial.print("NaN");
+  if (effectiveTempValid) Serial.print(effectiveTemp, 2); else Serial.print("NaN");
   Serial.print(",PH,");
-  if (phSensorConnected) Serial.print(phValue, 2); else Serial.print("NaN");
+  if (effectivePHConnected) Serial.print(effectivePH, 2); else Serial.print("NaN");
   Serial.print(",TURB_NTU,");
-  if (turbSensorConnected) Serial.print(turbidityNTU, 2); else Serial.print("NaN");
-  if (!phSensorConnected) Serial.print(",PH_SENSOR_DISCONNECTED");
-  if (!turbSensorConnected) Serial.print(",TURB_SENSOR_DISCONNECTED");
+  if (effectiveTurbConnected) Serial.print(effectiveTurbidity, 2); else Serial.print("NaN");
+  if (!effectivePHConnected) Serial.print(",PH_SENSOR_DISCONNECTED");
+  if (!effectiveTurbConnected) Serial.print(",TURB_SENSOR_DISCONNECTED");
 
   if (alertTemp) Serial.print(",ALERT_TEMP_HIGH_RISK");
   if (alertPH) Serial.print(",ALERT_PH_HIGH_RISK");

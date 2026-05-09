@@ -1632,9 +1632,10 @@ setInterval(async () => {
 function generateAlertsFromData(data, now = new Date(), prebuiltIdentity = null) {
   let alertMessages = [];
   const identity = prebuiltIdentity || buildSiteIdentity(data);
+  const thresholds = data.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
 
   ["Temperature", "pH", "Turbidity"].forEach((parameter) => {
-    const level = classifyParameterRisk(parameter, data);
+    const level = classifyParameterRisk(parameter, data, thresholds);
     if (level === "safe") return;
 
     const value = formatAlertValue(parameter, data);
