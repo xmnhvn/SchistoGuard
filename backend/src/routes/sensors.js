@@ -1557,10 +1557,11 @@ router.post("/", async (req, res) => {
       address = null;
     }
   }
+  let status;
   try {
     const activeSiteSnapshot = await getConfiguredActiveSiteSnapshot();
     if (!activeSiteSnapshot?.siteKey) {
-      const status = classifyWater(temperature, ph, turbidity, DEFAULT_SITE_RISK_THRESHOLDS);
+      status = classifyWater(temperature, ph, turbidity, DEFAULT_SITE_RISK_THRESHOLDS);
       latestData = null;
       return res.json({
         success: true,
@@ -1572,7 +1573,7 @@ router.post("/", async (req, res) => {
     }
 
     const activeThresholds = activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
-    const status = classifyWater(temperature, ph, turbidity, activeThresholds);
+    status = classifyWater(temperature, ph, turbidity, activeThresholds);
 
     latestData = {
       turbidity,
