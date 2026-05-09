@@ -2263,6 +2263,7 @@ router.post('/sites', async (req, res) => {
     const sitePhoto = req.body.sitePhoto;
     const latitude = Number(req.body.latitude);
     const longitude = Number(req.body.longitude);
+    const preventNearbyDuplicate = req.body.preventNearbyDuplicate === true;
 
     if (!siteNameInput && !addressInput) {
       return res.status(400).json({ error: 'siteName or location is required' });
@@ -2289,7 +2290,10 @@ router.post('/sites', async (req, res) => {
     }
     const thresholdFields = buildThresholdDbFields(thresholdValidation.thresholds);
 
-    const nearbySiteKey = await findNearestExistingSite(latitude, longitude);
+    const nearbySiteKey = preventNearbyDuplicate
+      ? await findNearestExistingSite(latitude, longitude)
+      : null;
+
     if (nearbySiteKey) {
       const existing = await db.query(
         `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
