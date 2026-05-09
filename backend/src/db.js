@@ -154,6 +154,10 @@ const initPostgresTables = async () => {
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS turbidity_high_max REAL DEFAULT 5');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS turbidity_moderate_min REAL DEFAULT 5');
     await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS turbidity_moderate_max REAL DEFAULT 15');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS controlled_mode BOOLEAN DEFAULT FALSE');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS controlled_temperature REAL');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS controlled_ph REAL');
+    await db.query('ALTER TABLE site_registry ADD COLUMN IF NOT EXISTS controlled_turbidity REAL');
     await db.query(`
       CREATE OR REPLACE FUNCTION prevent_site_registry_coord_update()
       RETURNS trigger AS $$

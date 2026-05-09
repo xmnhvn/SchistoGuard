@@ -24,6 +24,7 @@ let SMS_SUMMARY_TIMES = [...SMS_SUMMARY_DEFAULT_TIMES];
 let SMS_SUMMARY_LAST_SENT = {};
 const SMS_SUMMARY_IN_FLIGHT = new Set();
 const SMS_SUMMARY_CONNECTED_WINDOW_MS = 10000;
+const DEVICE_CONNECTED_WINDOW_MS = 10000;
 const SMS_SUMMARY_TIMEZONE = process.env.SMS_SUMMARY_TIMEZONE || 'Asia/Manila';
 const SMS_TRANSPORT_MODE = (process.env.SMS_TRANSPORT_MODE || 'esp32-http').toLowerCase();
 const SMS_RELAY_TOKEN = process.env.SMS_RELAY_TOKEN || '';
@@ -174,9 +175,106 @@ function buildSiteIdentity(data) {
 function serializeSiteRow(row) {
   if (!row) return null;
 
+  const presetValues = {
+    temperature: typeof row.controlled_temperature === 'number' ? row.controlled_temperature : null,
+    ph: typeof row.controlled_ph === 'number' ? row.controlled_ph : null,
+    turbidity: typeof row.controlled_turbidity === 'number' ? row.controlled_turbidity : null,
+  };
+
   return {
     ...row,
+    controlledMode: row.controlled_mode === true || row.controlled_mode === 1,
+    presetValues,
     thresholds: extractThresholdsFromSiteRow(row),
+  };
+}
+
+function toNullableFiniteNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeControlledMode(value) {
+  return value === true || value === 1 || value === '1' || value === 'true';
+}
+
+function normalizePresetValues(candidate = {}) {
+  if (!candidate || typeof candidate !== 'object') {
+    return {
+      temperature: null,
+      ph: null,
+      turbidity: null,
+    };
+  }
+
+  return {
+    temperature: toNullableFiniteNumber(candidate.temperature),
+    ph: toNullableFiniteNumber(candidate.ph),
+    turbidity: toNullableFiniteNumber(candidate.turbidity),
+  };
+}
+
+function validatePresetValues(candidate = {}) {
+  const presetValues = normalizePresetValues(candidate);
+  const missingKeys = Object.entries(presetValues)
+    .filter(([, value]) => value === null)
+    .map(([key]) => key);
+
+  return {
+    isValid: missingKeys.length === 0,
+    errors: missingKeys.length > 0
+      ? [`Controlled mode requires preset values for: ${missingKeys.join(', ')}`]
+      : [],
+    presetValues,
+  };
+}
+
+function applySiteDisplayMode(data, siteSnapshot) {
+  const controlledMode = normalizeControlledMode(siteSnapshot?.controlledMode);
+  const thresholds = siteSnapshot?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
+  const presetValues = normalizePresetValues(siteSnapshot?.presetValues);
+
+  if (controlledMode) {
+    const status = classifyWater(
+      presetValues.temperature,
+      presetValues.ph,
+      presetValues.turbidity,
+      thresholds
+    );
+
+    return {
+      temperature: presetValues.temperature,
+      ph: presetValues.ph,
+      turbidity: presetValues.turbidity,
+      device_ip: data.device_ip,
+      latitude: typeof data.latitude === 'number' ? data.latitude : null,
+      longitude: typeof data.longitude === 'number' ? data.longitude : null,
+      address: siteSnapshot.address || data.address || null,
+      siteKey: siteSnapshot.siteKey,
+      thresholds,
+      status,
+      timestamp: new Date(),
+      controlledMode: true,
+      presetValues,
+    };
+  }
+
+  const status = classifyWater(data.temperature, data.ph, data.turbidity, thresholds);
+  return {
+    turbidity: data.turbidity,
+    temperature: data.temperature,
+    ph: data.ph,
+    device_ip: data.device_ip,
+    latitude: typeof data.latitude === 'number' ? data.latitude : null,
+    longitude: typeof data.longitude === 'number' ? data.longitude : null,
+    address: siteSnapshot.address || data.address || null,
+    siteKey: siteSnapshot.siteKey,
+    thresholds,
+    status,
+    timestamp: new Date(),
+    controlledMode: false,
+    presetValues,
   };
 }
 
@@ -576,7 +674,8 @@ async function getCurrentSiteSnapshot() {
       `SELECT site_key, site_name, address,
               temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
               ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
-              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max,
+              controlled_mode, controlled_temperature, controlled_ph, controlled_turbidity
        FROM site_registry
        ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC
        LIMIT 1`,
@@ -590,6 +689,12 @@ async function getCurrentSiteSnapshot() {
             siteName: siteRow.site_name || siteRow.address || GLOBAL_DEVICE_NAME,
             address: siteRow.address || null,
             thresholds: extractThresholdsFromSiteRow(siteRow),
+            controlledMode: normalizeControlledMode(siteRow.controlled_mode),
+            presetValues: normalizePresetValues({
+              temperature: siteRow.controlled_temperature,
+              ph: siteRow.controlled_ph,
+              turbidity: siteRow.controlled_turbidity,
+            }),
           });
         }
 
@@ -619,7 +724,8 @@ async function getConfiguredActiveSiteSnapshot() {
         `SELECT site_key, site_name, address, site_photo,
                 temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
                 ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
-                turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+                turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max,
+                controlled_mode, controlled_temperature, controlled_ph, controlled_turbidity
          FROM site_registry
          WHERE site_key = ?
          LIMIT 1`,
@@ -634,6 +740,12 @@ async function getConfiguredActiveSiteSnapshot() {
             address: siteRow.address || null,
             sitePhoto: siteRow.site_photo || null,
             thresholds: extractThresholdsFromSiteRow(siteRow),
+            controlledMode: normalizeControlledMode(siteRow.controlled_mode),
+            presetValues: normalizePresetValues({
+              temperature: siteRow.controlled_temperature,
+              ph: siteRow.controlled_ph,
+              turbidity: siteRow.controlled_turbidity,
+            }),
           });
         }
       );
@@ -647,7 +759,8 @@ async function getActiveSiteSnapshots() {
       `SELECT site_key, site_name, address, last_seen,
               temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
               ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
-              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max,
+              controlled_mode, controlled_temperature, controlled_ph, controlled_turbidity
        FROM site_registry
        ORDER BY COALESCE(last_seen, first_seen) DESC, id DESC`,
       [],
@@ -668,6 +781,12 @@ async function getActiveSiteSnapshots() {
             address: row.address || null,
             lastSeen: row.last_seen || null,
             thresholds: extractThresholdsFromSiteRow(row),
+            controlledMode: normalizeControlledMode(row.controlled_mode),
+            presetValues: normalizePresetValues({
+              temperature: row.controlled_temperature,
+              ph: row.controlled_ph,
+              turbidity: row.controlled_turbidity,
+            }),
           }));
 
         resolve(activeSites);
@@ -1572,22 +1691,19 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const activeThresholds = activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS;
-    status = classifyWater(temperature, ph, turbidity, activeThresholds);
-
-    latestData = {
-      turbidity,
-      temperature,
-      ph,
-      device_ip,
-      latitude,
-      longitude,
-      address: activeSiteSnapshot.address || address || null,
-      siteKey: activeSiteSnapshot.siteKey,
-      thresholds: activeThresholds,
-      status,
-      timestamp: new Date()
-    };
+    latestData = applySiteDisplayMode(
+      {
+        turbidity,
+        temperature,
+        ph,
+        device_ip,
+        latitude,
+        longitude,
+        address,
+      },
+      activeSiteSnapshot
+    );
+    status = latestData.status;
   } catch (activeSiteErr) {
     console.error('[active site resolve error]', activeSiteErr.message);
     return res.status(500).json({ success: false, error: 'Failed to resolve active site' });
@@ -1621,7 +1737,7 @@ router.get("/latest", async (req, res) => {
   const sendDisconnectedWithLastLocation = () => {
     console.log('[API /latest] Triggered fallback: querying raw_readings for active site last GPS location...');
     db.get(
-      "SELECT latitude, longitude, address, timestamp, site_key, temperature, turbidity, ph FROM raw_readings WHERE site_key = ? AND latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+      "SELECT latitude, longitude, address, timestamp, site_key, temperature, turbidity, ph, status FROM raw_readings WHERE site_key = ? ORDER BY timestamp DESC LIMIT 1",
       [activeSiteSnapshot.siteKey],
       (dbErr, row) => {
         if (dbErr) {
@@ -1630,17 +1746,25 @@ router.get("/latest", async (req, res) => {
         }
 
         if (row) {
+          const rowTimestampMs = row.timestamp ? new Date(row.timestamp).getTime() : Number.NaN;
+          const isFreshDbReading =
+            Number.isFinite(rowTimestampMs) &&
+            (Date.now() - rowTimestampMs) < DEVICE_CONNECTED_WINDOW_MS;
+
           return res.json({
-            deviceConnected: false,
+            deviceConnected: isFreshDbReading,
             siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
             siteKey: activeSiteSnapshot.siteKey,
-            latitude: row.latitude,
-            longitude: row.longitude,
+            latitude: typeof row.latitude === 'number' ? row.latitude : null,
+            longitude: typeof row.longitude === 'number' ? row.longitude : null,
             address: row.address || activeSiteSnapshot.address || null,
             timestamp: row.timestamp || null,
             temperature: row.temperature != null ? row.temperature : null,
             turbidity: row.turbidity != null ? row.turbidity : null,
             ph: row.ph != null ? row.ph : null,
+            status: row.status || null,
+            controlledMode: normalizeControlledMode(activeSiteSnapshot.controlledMode),
+            presetValues: normalizePresetValues(activeSiteSnapshot.presetValues),
             thresholds: activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
           });
         }
@@ -1661,7 +1785,7 @@ router.get("/latest", async (req, res) => {
     const ts = new Date(latestData.timestamp).getTime();
     const diffMs = Math.abs(now - ts);
 
-    if (diffMs < 10000) {
+    if (diffMs < DEVICE_CONNECTED_WINDOW_MS) {
       return res.json({
         ...latestData,
         siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
@@ -1670,11 +1794,47 @@ router.get("/latest", async (req, res) => {
         timestamp: latestData.timestamp instanceof Date ? latestData.timestamp.toISOString() : latestData.timestamp,
         address: latestData.address || activeSiteSnapshot.address || null,
         thresholds: latestData.thresholds || activeSiteSnapshot.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
+        controlledMode: normalizeControlledMode(activeSiteSnapshot.controlledMode),
+        presetValues: normalizePresetValues(activeSiteSnapshot.presetValues),
       });
     }
   }
 
   return sendDisconnectedWithLastLocation();
+});
+
+router.get('/device-display-config', async (req, res) => {
+  const activeSiteSnapshot = await getConfiguredActiveSiteSnapshot().catch((err) => {
+    console.error('[API /device-display-config] Failed to resolve configured active site:', err.message);
+    return null;
+  });
+
+  if (!activeSiteSnapshot?.siteKey) {
+    return res.json({
+      controlledMode: false,
+      siteKey: null,
+      siteName: GLOBAL_DEVICE_NAME,
+      temperature: null,
+      ph: null,
+      turbidity: null,
+      presetValues: {
+        temperature: null,
+        ph: null,
+        turbidity: null,
+      },
+    });
+  }
+
+  const presetValues = normalizePresetValues(activeSiteSnapshot.presetValues);
+  return res.json({
+    controlledMode: normalizeControlledMode(activeSiteSnapshot.controlledMode),
+    siteKey: activeSiteSnapshot.siteKey,
+    siteName: activeSiteSnapshot.siteName || GLOBAL_DEVICE_NAME,
+    temperature: presetValues.temperature,
+    ph: presetValues.ph,
+    turbidity: presetValues.turbidity,
+    presetValues,
+  });
 });
 
 router.get("/latest-all", (req, res) => {
@@ -1844,6 +2004,10 @@ router.get('/sites', (req, res) => {
        turbidity_high_max,
        turbidity_moderate_min,
        turbidity_moderate_max,
+       controlled_mode,
+       controlled_temperature,
+       controlled_ph,
+       controlled_turbidity,
        CASE
          WHEN site_key = (
            SELECT value
@@ -2006,6 +2170,15 @@ router.post('/sites', async (req, res) => {
       return res.status(400).json({ error: 'sitePhoto must be a Base64 string' });
     }
 
+    const controlledMode = normalizeControlledMode(req.body.controlledMode);
+    const presetValidation = controlledMode
+      ? validatePresetValues(req.body.presetValues || {})
+      : { isValid: true, errors: [], presetValues: normalizePresetValues(req.body.presetValues || {}) };
+
+    if (!presetValidation.isValid) {
+      return res.status(400).json({ error: presetValidation.errors[0] });
+    }
+
     const thresholdValidation = validateThresholds(req.body.thresholds || {});
     if (!thresholdValidation.isValid) {
       return res.status(400).json({ error: thresholdValidation.errors[0] });
@@ -2018,7 +2191,8 @@ router.post('/sites', async (req, res) => {
         `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
                 temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
                 ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
-                turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+                turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max,
+                controlled_mode, controlled_temperature, controlled_ph, controlled_turbidity
          FROM site_registry
          WHERE site_key = $1
          LIMIT 1`,
@@ -2058,23 +2232,27 @@ router.post('/sites', async (req, res) => {
          site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
          temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
          ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
-         turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+         turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max,
+         controlled_mode, controlled_temperature, controlled_ph, controlled_turbidity
        )
        VALUES (
          $1, $2, $3, $4, $5, $6, $7, $8,
          $9, $10, $11, $12, $13, $14,
          $15, $16, $17, $18, $19, $20,
-         $21, $22, $23
+         $21, $22, $23,
+         $24, $25, $26, $27
        )
        RETURNING site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
                  temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
                  ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
-                 turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max`,
+                 turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max,
+                 controlled_mode, controlled_temperature, controlled_ph, controlled_turbidity`,
       [
         siteKey, siteName, address, latitude, longitude, nowIso, nowIso, sitePhoto ?? null,
         thresholdFields.temp_high_min, thresholdFields.temp_high_max, thresholdFields.temp_moderate_low_min, thresholdFields.temp_moderate_low_max, thresholdFields.temp_moderate_high_min, thresholdFields.temp_moderate_high_max,
         thresholdFields.ph_high_min, thresholdFields.ph_high_max, thresholdFields.ph_moderate_low_min, thresholdFields.ph_moderate_low_max, thresholdFields.ph_moderate_high_min, thresholdFields.ph_moderate_high_max,
         thresholdFields.turbidity_high_max, thresholdFields.turbidity_moderate_min, thresholdFields.turbidity_moderate_max,
+        controlledMode, presetValidation.presetValues.temperature, presetValidation.presetValues.ph, presetValidation.presetValues.turbidity,
       ]
     );
 
@@ -2107,6 +2285,14 @@ router.put('/sites/:siteKey', async (req, res) => {
     return res.status(400).json({ error: thresholdValidation.errors[0] });
   }
   const thresholdFields = buildThresholdDbFields(thresholdValidation.thresholds);
+  const controlledMode = normalizeControlledMode(req.body.controlledMode);
+  const presetValidation = controlledMode
+    ? validatePresetValues(req.body.presetValues || {})
+    : { isValid: true, errors: [], presetValues: normalizePresetValues(req.body.presetValues || {}) };
+
+  if (!presetValidation.isValid) {
+    return res.status(400).json({ error: presetValidation.errors[0] });
+  }
 
   try {
     await db.query(
@@ -2127,8 +2313,12 @@ router.put('/sites/:siteKey', async (req, res) => {
            ph_moderate_high_max = $14,
            turbidity_high_max = $15,
            turbidity_moderate_min = $16,
-           turbidity_moderate_max = $17
-       WHERE site_key = $18`,
+           turbidity_moderate_max = $17,
+           controlled_mode = $18,
+           controlled_temperature = $19,
+           controlled_ph = $20,
+           controlled_turbidity = $21
+       WHERE site_key = $22`,
       [
         trimmedSiteName,
         sitePhoto !== undefined ? sitePhoto : null,
@@ -2147,6 +2337,10 @@ router.put('/sites/:siteKey', async (req, res) => {
         thresholdFields.turbidity_high_max,
         thresholdFields.turbidity_moderate_min,
         thresholdFields.turbidity_moderate_max,
+        controlledMode,
+        presetValidation.presetValues.temperature,
+        presetValidation.presetValues.ph,
+        presetValidation.presetValues.turbidity,
         siteKey,
       ]
     );
@@ -2155,7 +2349,8 @@ router.put('/sites/:siteKey', async (req, res) => {
       `SELECT site_key, site_name, address, latitude, longitude, first_seen, last_seen, site_photo,
               temp_high_min, temp_high_max, temp_moderate_low_min, temp_moderate_low_max, temp_moderate_high_min, temp_moderate_high_max,
               ph_high_min, ph_high_max, ph_moderate_low_min, ph_moderate_low_max, ph_moderate_high_min, ph_moderate_high_max,
-              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max
+              turbidity_high_max, turbidity_moderate_min, turbidity_moderate_max,
+              controlled_mode, controlled_temperature, controlled_ph, controlled_turbidity
        FROM site_registry
        WHERE site_key = $1`,
       [siteKey]

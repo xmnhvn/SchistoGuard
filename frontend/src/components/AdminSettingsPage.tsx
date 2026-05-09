@@ -52,9 +52,16 @@ interface RegisteredSite {
   is_active?: number | boolean | null;
   site_photo?: string | null;
   thresholds?: SiteRiskThresholds;
+  controlledMode?: boolean;
+  presetValues?: {
+    temperature?: number | null;
+    ph?: number | null;
+    turbidity?: number | null;
+  } | null;
 }
 
 type SensorRiskTarget = 'safe' | 'moderate' | 'high';
+type SiteOutputMode = 'live' | 'controlled';
 
 type SensorRiskTargetForm = {
   temperature: SensorRiskTarget;
@@ -119,6 +126,24 @@ function parseThresholdFormState(form: Record<string, string>): SiteRiskThreshol
       moderateMax: Number(form.turbidityModerateMax),
     },
   });
+}
+
+function createPresetFormState(
+  presetValues?: RegisteredSite['presetValues'] | null,
+): Record<string, string> {
+  return {
+    temperature: presetValues?.temperature != null ? String(presetValues.temperature) : '26',
+    ph: presetValues?.ph != null ? String(presetValues.ph) : '7.2',
+    turbidity: presetValues?.turbidity != null ? String(presetValues.turbidity) : '4',
+  };
+}
+
+function parsePresetFormState(form: Record<string, string>) {
+  return {
+    temperature: Number(form.temperature),
+    ph: Number(form.ph),
+    turbidity: Number(form.turbidity),
+  };
 }
 
 function createDefaultSensorRiskTargets(): SensorRiskTargetForm {
@@ -398,6 +423,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
   });
   const [newSiteThresholds, setNewSiteThresholds] = useState<Record<string, string>>(() => createThresholdFormState());
   const [sensorRiskTargets, setSensorRiskTargets] = useState<SensorRiskTargetForm>(() => createDefaultSensorRiskTargets());
+  const [siteOutputMode, setSiteOutputMode] = useState<SiteOutputMode>('controlled');
+  const [controlledPresetValues, setControlledPresetValues] = useState<Record<string, string>>(() => createPresetFormState());
   const [addingSite, setAddingSite] = useState(false);
   const [locatingSite, setLocatingSite] = useState(false);
   const [newSitePhotoDraft, setNewSitePhotoDraft] = useState<string | null>(null);
@@ -416,6 +443,10 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     pad,
   } = useResponsiveScale();
   const gap = isMobile ? 16 : isTablet ? 18 : 24;
+  const buildControlledPayload = () => ({
+    controlledMode: siteOutputMode === 'controlled',
+    presetValues: parsePresetFormState(controlledPresetValues),
+  });
 
   const fetchUsers = async () => {
     try {
@@ -526,6 +557,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         siteName: (targetSite.site_name || targetSite.address || targetSite.site_key).trim(),
         sitePhoto: targetSite.site_photo || null,
         thresholds: parseThresholdFormState(newSiteThresholds),
+        ...buildControlledPayload(),
       });
       toast.success("Site safety profile updated");
       await fetchRegisteredSites();
@@ -553,6 +585,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         siteName: nextName,
         sitePhoto: nextPhoto,
         thresholds: site?.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
+        controlledMode: !!site?.controlledMode,
+        presetValues: parsePresetFormState(createPresetFormState(site?.presetValues)),
       });
       setShowSuccess(true);
       
@@ -594,6 +628,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         siteName: nextName,
         sitePhoto: nextPhoto,
         thresholds: site.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
+        controlledMode: !!site.controlledMode,
+        presetValues: parsePresetFormState(createPresetFormState(site.presetValues)),
       });
       setShowSuccess(true);
       await fetchRegisteredSites();
@@ -620,6 +656,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
         siteName: nextName,
         sitePhoto: null,
         thresholds: site.thresholds || DEFAULT_SITE_RISK_THRESHOLDS,
+        controlledMode: !!site.controlledMode,
+        presetValues: parsePresetFormState(createPresetFormState(site.presetValues)),
       });
       setSitePhotoDrafts((prev) => ({ ...prev, [siteKey]: null }));
       setShowSuccess(true);
@@ -890,6 +928,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
 
       if (withThresholds) {
         payload.thresholds = parseThresholdFormState(newSiteThresholds);
+        Object.assign(payload, buildControlledPayload());
       }
 
       const result = await apiPost("/api/sensors/sites", payload);
@@ -903,6 +942,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       });
       setNewSiteThresholds(createThresholdFormState());
       setSensorRiskTargets(createDefaultSensorRiskTargets());
+      setSiteOutputMode('controlled');
+      setControlledPresetValues(createPresetFormState());
       setNewSitePhotoDraft(null);
       setSelectedThresholdSiteKey("new");
       await fetchRegisteredSites();
@@ -990,6 +1031,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
     if (selectedThresholdSiteKey === "new") {
       setNewSiteThresholds(createThresholdFormState());
       setSensorRiskTargets(createDefaultSensorRiskTargets());
+      setSiteOutputMode('controlled');
+      setControlledPresetValues(createPresetFormState());
       return;
     }
 
@@ -999,6 +1042,8 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
       setNewSiteThresholds(createThresholdFormState(normalized));
       setSensorRiskTargets(inferRiskTargetsFromThresholds(normalized));
     }
+    setSiteOutputMode(targetSite?.controlledMode ? 'controlled' : 'live');
+    setControlledPresetValues(createPresetFormState(targetSite?.presetValues));
   }, [registeredSites, selectedThresholdSiteKey]);
 
   useEffect(() => {
@@ -2020,6 +2065,69 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                   </span>
                 </div>
 
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1.9fr" }}>
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(53,125,134,0.18)", background: "#ffffff", padding: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Output Mode</div>
+                    <Select value={siteOutputMode} onValueChange={(value: SiteOutputMode) => setSiteOutputMode(value)}>
+                      <SelectTrigger style={{ background: "#fff", borderRadius: 12, height: 40, fontFamily: POPPINS, width: "100%" }}>
+                        <SelectValue placeholder="Choose mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="controlled" style={{ fontFamily: POPPINS }}>Controlled preset values</SelectItem>
+                        <SelectItem value="live" style={{ fontFamily: POPPINS }}>Live sensor values</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div style={{ marginTop: 8, fontSize: 11.5, color: "#475569", lineHeight: 1.45 }}>
+                      Controlled mode shows only the preset values on the website, stores those values in the database, and pushes the same numbers to the device LCD.
+                    </div>
+                  </div>
+
+                  <div style={{ borderRadius: 16, border: "1px solid rgba(33,95,103,0.16)", background: "#ffffff", padding: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Controlled Preset Values</div>
+                    <div style={{ display: "grid", gap: 10, gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", opacity: siteOutputMode === 'controlled' ? 1 : 0.55 }}>
+                      <div>
+                        <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Temperature</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={controlledPresetValues.temperature}
+                          onChange={(e) => setControlledPresetValues((prev) => ({ ...prev, temperature: e.target.value }))}
+                          className="custom-input"
+                          style={{ marginTop: 6 }}
+                          disabled={siteOutputMode !== 'controlled'}
+                          placeholder="26.0"
+                        />
+                      </div>
+                      <div>
+                        <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>pH</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={controlledPresetValues.ph}
+                          onChange={(e) => setControlledPresetValues((prev) => ({ ...prev, ph: e.target.value }))}
+                          className="custom-input"
+                          style={{ marginTop: 6 }}
+                          disabled={siteOutputMode !== 'controlled'}
+                          placeholder="7.2"
+                        />
+                      </div>
+                      <div>
+                        <Label style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontFamily: POPPINS }}>Turbidity</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={controlledPresetValues.turbidity}
+                          onChange={(e) => setControlledPresetValues((prev) => ({ ...prev, turbidity: e.target.value }))}
+                          className="custom-input"
+                          style={{ marginTop: 6 }}
+                          disabled={siteOutputMode !== 'controlled'}
+                          placeholder="4.0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))" }}>
                   <div style={{ borderRadius: 16, border: "1px solid rgba(67,198,182,0.22)", background: "#ffffff", padding: 14, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Temperature Rules</div>
@@ -2038,7 +2146,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </SelectContent>
                       </Select>
                       <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
-                        High: {newSiteThresholds.tempHighMin}-{newSiteThresholds.tempHighMax} | Moderate: {newSiteThresholds.tempModerateLowMin}-{newSiteThresholds.tempModerateLowMax} and {newSiteThresholds.tempModerateHighMin}-{newSiteThresholds.tempModerateHighMax}
+                        Safe: {newSiteThresholds.tempHighMin}-{newSiteThresholds.tempHighMax} | Watch: {newSiteThresholds.tempModerateLowMin}-{newSiteThresholds.tempModerateLowMax} and {newSiteThresholds.tempModerateHighMin}-{newSiteThresholds.tempModerateHighMax}
                       </div>
                     </div>
                   </div>
@@ -2060,7 +2168,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </SelectContent>
                       </Select>
                       <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
-                        High: {newSiteThresholds.phHighMin}-{newSiteThresholds.phHighMax} | Moderate: {newSiteThresholds.phModerateLowMin}-{newSiteThresholds.phModerateLowMax} and {newSiteThresholds.phModerateHighMin}-{newSiteThresholds.phModerateHighMax}
+                        Safe: {newSiteThresholds.phHighMin}-{newSiteThresholds.phHighMax} | Watch: {newSiteThresholds.phModerateLowMin}-{newSiteThresholds.phModerateLowMax} and {newSiteThresholds.phModerateHighMin}-{newSiteThresholds.phModerateHighMax}
                       </div>
                     </div>
                   </div>
@@ -2082,7 +2190,7 @@ export function AdminSettingsPage({ user }: AdminSettingsPageProps) {
                         </SelectContent>
                       </Select>
                       <div style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.45, background: "rgba(248,250,252,0.92)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 10, padding: "8px 10px", overflowWrap: "anywhere" }}>
-                        High if below {newSiteThresholds.turbidityHighMax} | Moderate: {newSiteThresholds.turbidityModerateMin}-{newSiteThresholds.turbidityModerateMax}
+                        Safe if below {newSiteThresholds.turbidityHighMax} | Watch: {newSiteThresholds.turbidityModerateMin}-{newSiteThresholds.turbidityModerateMax}
                       </div>
                     </div>
                   </div>

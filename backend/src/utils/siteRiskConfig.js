@@ -148,33 +148,33 @@ function classifySensorValue(sensorKey, value, thresholds = DEFAULT_SITE_RISK_TH
 
   if (sensorKey === 'temperature') {
     const temp = config.temperature;
-    if (normalizedValue >= temp.highMin && normalizedValue <= temp.highMax) return 'critical';
+    if (normalizedValue >= temp.highMin && normalizedValue <= temp.highMax) return 'safe';
     if (
       (normalizedValue >= temp.moderateLowMin && normalizedValue < temp.moderateLowMax) ||
       (normalizedValue > temp.moderateHighMin && normalizedValue <= temp.moderateHighMax)
     ) {
       return 'warning';
     }
-    return 'safe';
+    return 'critical';
   }
 
   if (sensorKey === 'ph') {
     const ph = config.ph;
-    if (normalizedValue >= ph.highMin && normalizedValue <= ph.highMax) return 'critical';
+    if (normalizedValue >= ph.highMin && normalizedValue <= ph.highMax) return 'safe';
     if (
       (normalizedValue >= ph.moderateLowMin && normalizedValue < ph.moderateLowMax) ||
       (normalizedValue > ph.moderateHighMin && normalizedValue <= ph.moderateHighMax)
     ) {
       return 'warning';
     }
-    return 'safe';
+    return 'critical';
   }
 
   if (sensorKey === 'turbidity') {
     const turbidity = config.turbidity;
-    if (normalizedValue < turbidity.highMax) return 'critical';
+    if (normalizedValue < turbidity.highMax) return 'safe';
     if (normalizedValue >= turbidity.moderateMin && normalizedValue <= turbidity.moderateMax) return 'warning';
-    return 'safe';
+    return 'critical';
   }
 
   return 'safe';

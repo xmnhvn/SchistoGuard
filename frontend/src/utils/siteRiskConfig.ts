@@ -80,7 +80,7 @@ export function getSensorStatus(
 
   if (type === 'temperature') {
     if (value >= config.temperature.highMin && value <= config.temperature.highMax) {
-      return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
+      return { label: 'Safe', color: '#22c55e', severity: 'safe' };
     }
     if (
       (value >= config.temperature.moderateLowMin && value < config.temperature.moderateLowMax) ||
@@ -88,21 +88,21 @@ export function getSensorStatus(
     ) {
       return { label: 'Watch Zone', color: '#E7B213', severity: 'warning' };
     }
-    return { label: 'Safe', color: '#22c55e', severity: 'safe' };
+    return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
   }
 
   if (type === 'turbidity') {
     if (value < config.turbidity.highMax) {
-      return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
+      return { label: 'Safe', color: '#22c55e', severity: 'safe' };
     }
     if (value >= config.turbidity.moderateMin && value <= config.turbidity.moderateMax) {
       return { label: 'Watch Zone', color: '#E7B213', severity: 'warning' };
     }
-    return { label: 'Safe', color: '#22c55e', severity: 'safe' };
+    return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
   }
 
   if (value >= config.ph.highMin && value <= config.ph.highMax) {
-    return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
+    return { label: 'Safe', color: '#22c55e', severity: 'safe' };
   }
   if (
     (value >= config.ph.moderateLowMin && value < config.ph.moderateLowMax) ||
@@ -110,7 +110,7 @@ export function getSensorStatus(
   ) {
     return { label: 'Watch Zone', color: '#f59e0b', severity: 'warning' };
   }
-  return { label: 'Safe', color: '#22c55e', severity: 'safe' };
+  return { label: 'Needs Attention', color: '#ef4444', severity: 'critical' };
 }
 
 export function getOverallRiskFromReading(

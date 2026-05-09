@@ -72,6 +72,12 @@ float latestPH = 0.0;
 bool latestPHConnected = false;
 float latestTurbidity = 0.0;
 bool latestTurbConnected = false;
+bool controlledDisplayMode = false;
+float controlledDisplayTemp = 26.0;
+float controlledDisplayPH = 7.2;
+float controlledDisplayTurbidity = 4.0;
+unsigned long lastDisplayConfigFetchMs = 0;
+const unsigned long DISPLAY_CONFIG_REFRESH_MS = 5000;
 
 float turbCalVoltClear = TURB_CAL_VOLT_CLEAR;
 float turbCalNtuClear = TURB_CAL_NTU_CLEAR;
@@ -86,6 +92,85 @@ String serialCommandBuffer;
 bool turbLiveMode = false;
 unsigned long lastTurbLivePrintMs = 0;
 const unsigned long TURB_LIVE_PRINT_INTERVAL_MS = 1000;
+
+bool extractJsonBool(const String &json, const char *key, bool fallback) {
+  const String marker = String("\"") + key + "\":";
+  const int start = json.indexOf(marker);
+  if (start < 0) return fallback;
+
+  const int valueStart = start + marker.length();
+  if (json.startsWith("true", valueStart)) return true;
+  if (json.startsWith("false", valueStart)) return false;
+  return fallback;
+}
+
+bool extractJsonFloat(const String &json, const char *key, float &outValue) {
+  const String marker = String("\"") + key + "\":";
+  const int start = json.indexOf(marker);
+  if (start < 0) return false;
+
+  int valueStart = start + marker.length();
+  while (valueStart < json.length() && json.charAt(valueStart) == ' ') {
+    valueStart++;
+  }
+
+  int valueEnd = valueStart;
+  while (valueEnd < json.length()) {
+    const char ch = json.charAt(valueEnd);
+    if (ch == ',' || ch == '}') break;
+    valueEnd++;
+  }
+
+  const String raw = json.substring(valueStart, valueEnd);
+  if (raw == "null" || raw.length() == 0) return false;
+
+  const float parsed = raw.toFloat();
+  if (!isnan(parsed)) {
+    outValue = parsed;
+    return true;
+  }
+
+  return false;
+}
+
+void refreshDisplayConfig() {
+  if (!otaReady || WiFi.status() != WL_CONNECTED) return;
+  if (millis() - lastDisplayConfigFetchMs < DISPLAY_CONFIG_REFRESH_MS) return;
+  lastDisplayConfigFetchMs = millis();
+
+  HTTPClient http;
+  const String displayConfigUrl = String(BACKEND_URL) + "/device-display-config";
+  http.begin(displayConfigUrl);
+  const int httpResponseCode = http.GET();
+
+  if (httpResponseCode != HTTP_CODE_OK) {
+    http.end();
+    return;
+  }
+
+  const String payload = http.getString();
+  http.end();
+
+  controlledDisplayMode = extractJsonBool(payload, "controlledMode", false);
+
+  if (!controlledDisplayMode) {
+    return;
+  }
+
+  float nextTemp = controlledDisplayTemp;
+  float nextPH = controlledDisplayPH;
+  float nextTurbidity = controlledDisplayTurbidity;
+
+  if (extractJsonFloat(payload, "temperature", nextTemp)) {
+    controlledDisplayTemp = nextTemp;
+  }
+  if (extractJsonFloat(payload, "ph", nextPH)) {
+    controlledDisplayPH = nextPH;
+  }
+  if (extractJsonFloat(payload, "turbidity", nextTurbidity)) {
+    controlledDisplayTurbidity = nextTurbidity;
+  }
+}
 
 int readAnalogAverage(int pin, int samples, float &stddev) {
   long sum = 0;
@@ -704,6 +789,7 @@ void loop() {
   if (otaReady && WiFi.status() == WL_CONNECTED) {
     ArduinoOTA.handle();
     server.handleClient();
+    refreshDisplayConfig();
   } else if (otaReady && WiFi.status() != WL_CONNECTED) {
     otaReady = false;
     otaInProgress = false;
@@ -786,27 +872,37 @@ void loop() {
   bool alertPH = phSensorConnected && (phValue >= PH_HIGH_RISK_MIN && phValue <= PH_HIGH_RISK_MAX);
   bool alertTurbidity = turbSensorConnected && (turbidityNTU < TURBIDITY_CLEAR); // Clear water = higher schisto risk
 
-  // Update LCD — show sensor values only
+  // Update LCD — show controlled preset values when the active site is in controlled mode.
   lcd.clear();
   lcd.setCursor(0, 0);
-  if (tempValid) {
-    lcd.print("T:"); lcd.print(tempC, 1); lcd.print("C ");
+  if (controlledDisplayMode) {
+    lcd.print("T:"); lcd.print(controlledDisplayTemp, 1); lcd.print("C ");
+    lcd.print("pH:");
+    lcd.print(controlledDisplayPH, 2);
   } else {
-    lcd.print("T:N/A ");
-  }
-  lcd.print("pH:");
-  if (phSensorConnected) {
-    lcd.print(phValue, 2);
-  } else {
-    lcd.print("N/A");
+    if (tempValid) {
+      lcd.print("T:"); lcd.print(tempC, 1); lcd.print("C ");
+    } else {
+      lcd.print("T:N/A ");
+    }
+    lcd.print("pH:");
+    if (phSensorConnected) {
+      lcd.print(phValue, 2);
+    } else {
+      lcd.print("N/A");
+    }
   }
 
   lcd.setCursor(0, 1);
   lcd.print("Tu:");
-  if (turbSensorConnected) {
-    lcd.print(turbidityNTU, 1); lcd.print("NTU");
+  if (controlledDisplayMode) {
+    lcd.print(controlledDisplayTurbidity, 1); lcd.print("NTU");
   } else {
-    lcd.print("N/A");
+    if (turbSensorConnected) {
+      lcd.print(turbidityNTU, 1); lcd.print("NTU");
+    } else {
+      lcd.print("N/A");
+    }
   }
 
   Serial.print("TEMP,");
